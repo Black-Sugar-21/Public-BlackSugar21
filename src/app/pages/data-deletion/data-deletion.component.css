@@ -1,0 +1,439 @@
+/* Estilos base para la página legal */
+.legal-page-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(to bottom, #831bfc, #9c59ea);
+  background-attachment: fixed;
+  color: #ffffff;
+  font-family: 'Helvetica Neue', sans-serif;
+}
+
+.legal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.logo-small img {
+  display: block;
+}
+
+.back-link {
+  color: #FFD700;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.back-link:hover {
+  color: #FFA500;
+}
+
+.legal-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+
+.intro-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin-bottom: 3rem;
+  color: #e0e0e0;
+  text-align: center;
+}
+
+.legal-section {
+  margin-bottom: 2rem;
+}
+
+.policy-block {
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  border-left: 4px solid #FFD700;
+}
+
+.policy-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #FFD700;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.policy-block p {
+  line-height: 1.8;
+  color: #ffffff;
+  font-size: 1.05rem;
+  opacity: 0.95;
+}
+
+.icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.legal-footer {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #999;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+}
+
+/* Estilos específicos para listas */
+.steps-list {
+  margin: 2rem 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: step-counter;
+}
+
+.steps-list li {
+  position: relative;
+  padding: 1.5rem 1.75rem 1.5rem 4.5rem;
+  margin-bottom: 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  line-height: 1.8;
+  counter-increment: step-counter;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1.05rem;
+  color: #ffffff;
+}
+
+.steps-list li:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.steps-list li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #831bfc;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.data-list {
+  margin: 2rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.data-list li {
+  position: relative;
+  padding: 1.25rem 1.5rem 1.25rem 3.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.7;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1.05rem;
+  color: #ffffff;
+}
+
+.data-list li:hover {
+  background: rgba(255, 255, 255, 0.13);
+  transform: translateX(4px);
+}
+
+.data-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 1.25rem;
+  top: 1.25rem;
+  color: #4ade80;
+  font-weight: 900;
+  font-size: 1.4rem;
+}
+
+.retention-list {
+  margin: 2rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.retention-list li {
+  margin-bottom: 1.75rem;
+  padding: 1.75rem 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  line-height: 1.8;
+  border-left: 4px solid #FFD700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  color: #ffffff;
+  border-left: 4px solid #FFD700;
+}
+
+.retention-list li:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-width: 6px;
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.15);
+  transform: translateX(4px);
+}
+
+.retention-list li strong {
+  color: #FFD700;
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.highlight {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.15)) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.15) !important;
+  padding: 2.5rem !important;
+}
+
+.info {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.15)) !important;
+  border: 1px solid rgba(255, 193, 7, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(255, 193, 7, 0.15) !important;
+  padding: 2.5rem !important;
+}
+
+.info h3 {
+  color: #ffc107 !important;
+}
+
+.policy-block {
+  padding: 2rem !important;
+  margin-bottom: 2.5rem !important;
+}
+
+.policy-block h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.policy-block p {
+  font-size: 1.05rem;
+  opacity: 0.95;
+  line-height: 1.8;
+}
+
+@media (max-width: 768px) {
+  .legal-page-container {
+    padding: 1rem;
+  }
+
+  .legal-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .logo-small {
+    order: 1;
+  }
+
+  .back-link {
+    order: 2;
+  }
+
+  .legal-content {
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .intro-text {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .policy-block {
+    padding: 1.5rem !important;
+    margin-bottom: 2rem !important;
+  }
+
+  .policy-block h3 {
+    font-size: 1.25rem;
+    gap: 0.6rem;
+  }
+
+  .policy-block p {
+    font-size: 1rem;
+  }
+
+  .icon {
+    font-size: 1.3rem;
+  }
+
+  .steps-list {
+    margin: 1.5rem 0;
+  }
+
+  .steps-list li {
+    padding: 1.25rem 1rem 1.25rem 3.75rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .steps-list li::before {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    left: 1rem;
+  }
+
+  .data-list {
+    margin: 1.5rem 0;
+  }
+
+  .data-list li {
+    padding: 1rem 1rem 1rem 3rem;
+    font-size: 1rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .data-list li::before {
+    left: 1rem;
+    top: 1rem;
+    font-size: 1.2rem;
+  }
+
+  .retention-list {
+    margin: 1.5rem 0;
+  }
+
+  .retention-list li {
+    padding: 1.5rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .retention-list li strong {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .highlight, .info {
+    padding: 2rem 1.5rem !important;
+  }
+
+  .legal-footer {
+    margin-top: 2rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .legal-page-container {
+    padding: 0.75rem;
+  }
+
+  .legal-content {
+    padding: 1.5rem 1.25rem;
+    border-radius: 16px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .intro-text {
+    font-size: 0.95rem;
+  }
+
+  .policy-block {
+    padding: 1.25rem !important;
+    border-radius: 12px;
+  }
+
+  .policy-block h3 {
+    font-size: 1.15rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .steps-list li {
+    padding: 1rem 0.875rem 1rem 3.5rem;
+    font-size: 0.95rem;
+    border-radius: 12px;
+  }
+
+  .steps-list li::before {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    left: 0.875rem;
+  }
+
+  .data-list li {
+    padding: 0.875rem 0.875rem 0.875rem 2.75rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .data-list li::before {
+    left: 0.875rem;
+    font-size: 1.1rem;
+  }
+
+  .retention-list li {
+    padding: 1.25rem 1rem;
+    border-radius: 12px;
+  }
+
+  .retention-list li strong {
+    font-size: 1rem;
+  }
+
+  .highlight, .info {
+    padding: 1.5rem 1.25rem !important;
+  }
+
+  .legal-footer {
+    font-size: 0.8rem;
+    padding-top: 1.25rem;
+  }
+}

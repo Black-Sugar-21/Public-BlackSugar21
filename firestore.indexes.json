@@ -47,6 +47,20 @@
             ]
         },
         {
+            "collectionGroup": "matches",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "usersMatched",
+                    "arrayConfig": "CONTAINS"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "swipes",
             "queryScope": "COLLECTION_GROUP",
             "fields": [

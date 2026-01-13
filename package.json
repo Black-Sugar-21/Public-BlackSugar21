@@ -9,7 +9,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "npm run build:prod && firebase deploy",
-    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting"
+    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting",
+    "populate-test-data": "node scripts/populate-test-matches.js",
+    "cleanup-test-data": "node scripts/cleanup-test-matches.js"
   },
   "prettier": {
     "printWidth": 100,
@@ -40,6 +42,7 @@
     "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.0",
     "@angular/compiler-cli": "^21.0.0",
+    "firebase-admin": "^13.6.0",
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"

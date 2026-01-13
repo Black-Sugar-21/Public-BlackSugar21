@@ -29,12 +29,12 @@ export class TranslationService {
       en: 'Exclusive Content +18'
     },
     'age.restricted': {
-      es: 'Debes tener 21 años o más para acceder.',
-      en: 'You must be 21 or older to access.'
+      es: 'Debes tener 18 años o más para acceder.',
+      en: 'You must be 18 or older to access.'
     },
     'age.button': {
-      es: 'Tengo 21 años o más',
-      en: "I'm 21 or older"
+      es: 'Tengo 18 años o más',
+      en: "I'm 18 or older"
     },
     'age.terms': {
       es: 'Al entrar, aceptas nuestros términos.',
@@ -61,8 +61,8 @@ export class TranslationService {
       en: 'BLACK SUGAR 21'
     },
     'hero.tagline': {
-      es: 'La red exclusiva +21 para Sugar Mommies y Sugar Babies.',
-      en: 'The exclusive +21 network for Sugar Mommies and Sugar Babies.'
+      es: 'La red exclusiva +18 para Sugar Mommies y Sugar Babies.',
+      en: 'The exclusive +18 network for Sugar Mommies and Sugar Babies.'
     },
     'hero.subtitle': {
       es: 'Donde el lujo encuentra la compañía perfecta.',
@@ -87,8 +87,8 @@ export class TranslationService {
       en: 'Welcome to Black Sugar 21. By using our application, you agree to comply with the following terms:'
     },
     'terms.age': {
-      es: 'Debes tener al menos 21 años de edad para utilizar esta aplicación.',
-      en: 'You must be at least 21 years old to use this application.'
+      es: 'Debes tener al menos 18 años de edad para utilizar esta aplicación.',
+      en: 'You must be at least 18 years old to use this application.'
     },
     'terms.content': {
       es: 'El contenido es para uso personal y entretenimiento.',
@@ -121,8 +121,8 @@ export class TranslationService {
       en: 'Data Collection'
     },
     'privacy.collectionText': {
-      es: 'Solo recopilamos los datos necesarios para el funcionamiento de la app (email, edad verificada 21+, preferencias).',
-      en: 'We only collect data necessary for app functionality (email, verified age 21+, preferences).'
+      es: 'Solo recopilamos los datos necesarios para el funcionamiento de la app (email, edad verificada 18+, preferencias).',
+      en: 'We only collect data necessary for app functionality (email, verified age 18+, preferences).'
     },
     'privacy.usage': {
       es: 'Uso de Datos',
@@ -141,10 +141,238 @@ export class TranslationService {
       en: 'We use military-grade encryption to protect your information.'
     },
 
+    // Data Deletion
+    'dataDeletion.title': {
+      es: 'Eliminación de Datos',
+      en: 'Data Deletion'
+    },
+    'dataDeletion.intro': {
+      es: 'En Black Sugar 21, respetamos tu derecho a controlar tus datos personales. Puedes eliminar tu cuenta y todos tus datos de forma permanente directamente desde la aplicación.',
+      en: 'At Black Sugar 21, we respect your right to control your personal data. You can permanently delete your account and all your data directly from the app.'
+    },
+    'dataDeletion.inApp': {
+      es: 'Cómo Eliminar tu Cuenta y Datos',
+      en: 'How to Delete Your Account and Data'
+    },
+    'dataDeletion.inAppText': {
+      es: 'La eliminación de tu cuenta es un proceso inmediato y permanente que se realiza desde la aplicación Black Sugar 21:',
+      en: 'Deleting your account is an immediate and permanent process done from the Black Sugar 21 app:'
+    },
+    'dataDeletion.step1': {
+      es: 'Abre la aplicación Black Sugar 21 en tu dispositivo',
+      en: 'Open the Black Sugar 21 app on your device'
+    },
+    'dataDeletion.step2': {
+      es: 'Ve a tu perfil y accede a "Configuración"',
+      en: 'Go to your profile and access "Settings"'
+    },
+    'dataDeletion.step3': {
+      es: 'Selecciona "Eliminar Cuenta" al final de la página',
+      en: 'Select "Delete Account" at the bottom of the page'
+    },
+    'dataDeletion.step4': {
+      es: 'Confirma la eliminación. Tu cuenta y todos tus datos se eliminarán inmediatamente',
+      en: 'Confirm deletion. Your account and all your data will be deleted immediately'
+    },
+    'dataDeletion.whatDeleted': {
+      es: 'Datos que se Eliminan',
+      en: 'Data that Gets Deleted'
+    },
+    'dataDeletion.whatDeletedText': {
+      es: 'Cuando eliminas tu cuenta, se borran de forma permanente los siguientes datos:',
+      en: 'When you delete your account, the following data is permanently erased:'
+    },
+    'dataDeletion.data1': {
+      es: 'Información de perfil (nombre, fecha de nacimiento, biografía, preferencias)',
+      en: 'Profile information (name, date of birth, bio, preferences)'
+    },
+    'dataDeletion.data2': {
+      es: 'Todas tus fotos y contenido multimedia',
+      en: 'All your photos and media content'
+    },
+    'dataDeletion.data3': {
+      es: 'Historial de conversaciones y mensajes',
+      en: 'Conversation history and messages'
+    },
+    'dataDeletion.data4': {
+      es: 'Matches y conexiones con otros usuarios',
+      en: 'Matches and connections with other users'
+    },
+    'dataDeletion.data5': {
+      es: 'Datos de ubicación y preferencias de búsqueda',
+      en: 'Location data and search preferences'
+    },
+    'dataDeletion.data6': {
+      es: 'Historial de actividad en la aplicación',
+      en: 'Activity history in the app'
+    },
+    'dataDeletion.retention': {
+      es: 'Periodo de Retención',
+      en: 'Retention Period'
+    },
+    'dataDeletion.retentionText': {
+      es: 'Nuestro compromiso con tu privacidad incluye los siguientes plazos de eliminación:',
+      en: 'Our commitment to your privacy includes the following deletion timelines:'
+    },
+    'dataDeletion.immediate': {
+      es: 'Inmediato:',
+      en: 'Immediate:'
+    },
+    'dataDeletion.immediateText': {
+      es: 'Tu cuenta se desactiva al instante y tus datos dejan de ser accesibles para otros usuarios.',
+      en: 'Your account is deactivated instantly and your data is no longer accessible to other users.'
+    },
+    'dataDeletion.backup': {
+      es: '30 días:',
+      en: '30 days:'
+    },
+    'dataDeletion.backupText': {
+      es: 'Los datos se eliminan completamente de nuestras copias de seguridad activas.',
+      en: 'Data is completely removed from our active backup systems.'
+    },
+    'dataDeletion.legal': {
+      es: 'Excepciones legales:',
+      en: 'Legal exceptions:'
+    },
+    'dataDeletion.legalText': {
+      es: 'Solo conservamos datos mínimos si es requerido por ley (registros de auditoría, prevención de fraude) por un máximo de 90 días.',
+      en: 'We only retain minimal data if required by law (audit logs, fraud prevention) for a maximum of 90 days.'
+    },
+    'dataDeletion.important': {
+      es: 'Importante',
+      en: 'Important'
+    },
+    'dataDeletion.importantText': {
+      es: 'La eliminación de tu cuenta es irreversible. Una vez confirmada, no podrás recuperar tu cuenta ni tus datos. Si deseas volver a usar Black Sugar 21 en el futuro, tendrás que crear una cuenta nueva.',
+      en: 'Account deletion is irreversible. Once confirmed, you cannot recover your account or data. If you wish to use Black Sugar 21 in the future, you will need to create a new account.'
+    },
+
+    // Safety Standards
+    'safety.title': {
+      es: 'Estándares de Seguridad Infantil',
+      en: 'Child Safety Standards'
+    },
+    'safety.intro': {
+      es: 'En Black Sugar 21, la protección de menores y la prevención del abuso sexual infantil son nuestra máxima prioridad. Hemos implementado sistemas de seguridad avanzados con inteligencia artificial para garantizar un entorno seguro y protegido.',
+      en: 'At Black Sugar 21, protecting minors and preventing child sexual abuse are our highest priority. We have implemented advanced AI-powered security systems to ensure a safe and protected environment.'
+    },
+    'safety.ageVerification': {
+      es: 'Verificación Rigurosa de Edad',
+      en: 'Strict Age Verification'
+    },
+    'safety.ageVerificationText': {
+      es: 'Implementamos múltiples capas de verificación para garantizar que todos los usuarios sean mayores de 18 años:',
+      en: 'We implement multiple verification layers to ensure all users are over 18 years old:'
+    },
+    'safety.age1': {
+      es: 'Verificación obligatoria de fecha de nacimiento durante el registro',
+      en: 'Mandatory date of birth verification during registration'
+    },
+    'safety.age2': {
+      es: 'Validación automática de edad por país según normativas locales',
+      en: 'Automatic age validation by country according to local regulations'
+    },
+    'safety.age3': {
+      es: 'Restricción absoluta: Solo usuarios mayores de 18 años pueden acceder a la plataforma',
+      en: 'Absolute restriction: Only users over 18 years old can access the platform'
+    },
+    'safety.childProtection': {
+      es: 'Protección Contra Explotación y Abuso Sexual Infantil (EASI)',
+      en: 'Protection Against Child Sexual Exploitation and Abuse (CSEA)'
+    },
+    'safety.childProtectionText': {
+      es: 'Nuestra plataforma cuenta con sistemas de detección proactiva para prevenir cualquier forma de explotación o abuso:',
+      en: 'Our platform features proactive detection systems to prevent any form of exploitation or abuse:'
+    },
+    'safety.child1': {
+      es: 'Cero tolerancia: Prohibición absoluta de contenido relacionado con menores de edad',
+      en: 'Zero tolerance: Absolute prohibition of content related to minors'
+    },
+    'safety.child2': {
+      es: 'Bloqueo inmediato y permanente de cuentas que intenten acceder siendo menores',
+      en: 'Immediate and permanent blocking of accounts attempting to access as minors'
+    },
+    'safety.child3': {
+      es: 'Colaboración activa con autoridades competentes ante cualquier sospecha',
+      en: 'Active collaboration with competent authorities in case of any suspicion'
+    },
+    'safety.child4': {
+      es: 'Reportes automáticos al NCMEC (National Center for Missing & Exploited Children) cuando corresponda',
+      en: 'Automatic reports to NCMEC (National Center for Missing & Exploited Children) when applicable'
+    },
+    'safety.aiModeration': {
+      es: 'Moderación Inteligente con IA 24/7',
+      en: 'Intelligent AI Moderation 24/7'
+    },
+    'safety.aiModerationText': {
+      es: 'Utilizamos tecnología de inteligencia artificial de última generación para proteger nuestra comunidad:',
+      en: 'We use state-of-the-art artificial intelligence technology to protect our community:'
+    },
+    'safety.ai1': {
+      es: 'Análisis automático de todas las fotos de perfil con Google Cloud Vision AI para detectar contenido inapropiado',
+      en: 'Automatic analysis of all profile photos with Google Cloud Vision AI to detect inappropriate content'
+    },
+    'safety.ai2': {
+      es: 'Escaneo en tiempo real de mensajes con Google Gemini AI para identificar lenguaje ofensivo, acoso o contenido ilegal',
+      en: 'Real-time message scanning with Google Gemini AI to identify offensive language, harassment, or illegal content'
+    },
+    'safety.ai3': {
+      es: 'Detección proactiva de comportamientos sospechosos y patrones de abuso',
+      en: 'Proactive detection of suspicious behaviors and abuse patterns'
+    },
+    'safety.ai4': {
+      es: 'Eliminación automática de contenido que viole nuestras políticas de seguridad',
+      en: 'Automatic removal of content that violates our security policies'
+    },
+    'safety.reporting': {
+      es: 'Sistema de Reportes y Respuesta Rápida',
+      en: 'Reporting System and Rapid Response'
+    },
+    'safety.reportingText': {
+      es: 'Facilitamos a nuestros usuarios herramientas para mantener la comunidad segura:',
+      en: 'We provide our users with tools to keep the community safe:'
+    },
+    'safety.report1': {
+      es: 'Botón de reporte accesible en todos los perfiles y conversaciones',
+      en: 'Accessible report button on all profiles and conversations'
+    },
+    'safety.report2': {
+      es: 'Revisión inmediata de reportes por parte de nuestro equipo de seguridad',
+      en: 'Immediate review of reports by our security team'
+    },
+    'safety.report3': {
+      es: 'Bloqueo preventivo de usuarios reportados mientras se investiga el caso',
+      en: 'Preventive blocking of reported users while the case is investigated'
+    },
+    'safety.contact': {
+      es: 'Información de Contacto para Seguridad',
+      en: 'Safety Contact Information'
+    },
+    'safety.contactText': {
+      es: 'Para reportar cualquier problema de seguridad, contenido inapropiado o sospecha de actividad ilegal, contáctanos de inmediato:',
+      en: 'To report any security issues, inappropriate content, or suspicion of illegal activity, contact us immediately:'
+    },
+    'safety.email': {
+      es: 'Email de Seguridad',
+      en: 'Safety Email'
+    },
+    'safety.support': {
+      es: 'Soporte General',
+      en: 'General Support'
+    },
+    'safety.compliance': {
+      es: 'Cumplimiento Legal y Normativo',
+      en: 'Legal and Regulatory Compliance'
+    },
+    'safety.complianceText': {
+      es: 'Black Sugar 21 cumple estrictamente con todas las leyes y regulaciones aplicables, incluyendo COPPA (Children\'s Online Privacy Protection Act), GDPR, y normativas locales de cada país. Cooperamos plenamente con las autoridades en la investigación y persecución de cualquier actividad ilegal relacionada con menores.',
+      en: 'Black Sugar 21 strictly complies with all applicable laws and regulations, including COPPA (Children\'s Online Privacy Protection Act), GDPR, and local regulations of each country. We fully cooperate with authorities in investigating and prosecuting any illegal activity related to minors.'
+    },
+
     // Footer
     'footer.tagline': {
-      es: 'Donde el lujo encuentra la compañía perfecta • Solo mayores de 21 años',
-      en: 'Where luxury meets the perfect company • 21+ only'
+      es: 'Donde el lujo encuentra la compañía perfecta • Solo mayores de 18 años',
+      en: 'Where luxury meets the perfect company • 18+ only'
     },
     'footer.home': {
       es: 'Inicio',

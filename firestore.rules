@@ -67,8 +67,15 @@ service cloud.firestore {
                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_MOMMY'))
               );
         
-        // No permitir actualizar o eliminar mensajes
-        allow update, delete: if false;
+        // Permitir actualizar solo campos de carga de fotos efímeras (por el remitente)
+        allow update: if request.auth != null &&
+              request.auth.uid == resource.data.senderId &&
+              request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched &&
+              // Solo permitir actualizar uploadProgress, photoUrl, isUploading
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading']);
+        
+        // No permitir eliminar mensajes
+        allow delete: if false;
       }
     }
 
@@ -163,44 +170,16 @@ service cloud.firestore {
 
     // --- STORIES ---
     match /stories/{storyId} {
-      // Helper function: verificar si el usuario participa en el match
-      function isMatchParticipant(matchId) {
-        return request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched;
-      }
+      // Lectura: cualquier usuario autenticado puede leer stories
+      // La lógica de filtrado se maneja en el cliente
+      allow read: if request.auth != null;
       
-      // Lectura: permitir para:
-      // 1. Stories globales (cualquiera puede verlas)
-      // 2. Stories personales (cualquiera puede ver METADATOS para mostrar indicador)
-      // 3. Stories de match donde el usuario es participante del match
-      allow read: if request.auth != null && 
-        (resource.data.get('isGlobal', false) == true ||
-         resource.data.get('isPersonal', false) == true ||
-         // Verificar si es participante del match (para stories de match)
-         (resource.data.keys().hasAny(['matchId']) && 
-          isMatchParticipant(resource.data.matchId)));
-      
-      // Crear story: usuario autenticado puede crear globales, personales o de match
+      // Crear story: usuario autenticado
       allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.senderId &&
-        (
-          // Story global: solo verificar que es el creador
-          (request.resource.data.get('isGlobal', false) == true) ||
-          // Story personal: solo verificar que es el creador
-          (request.resource.data.get('isPersonal', false) == true) ||
-          // Story de match: verificar que es participante del match
-          (request.resource.data.keys().hasAny(['matchId']) && 
-           isMatchParticipant(request.resource.data.matchId))
-        );
+        request.auth.uid == request.resource.data.senderId;
       
-      // Actualizar (marcar como visto): permitir solo si:
-      // 1. Es una story global
-      // 2. Es una story personal
-      // 3. Es participante del match (para stories de match)
-      allow update: if request.auth != null &&
-        (resource.data.get('isGlobal', false) == true ||
-         resource.data.get('isPersonal', false) == true ||
-         (resource.data.keys().hasAny(['matchId']) && 
-          isMatchParticipant(resource.data.matchId)));
+      // Actualizar (marcar como visto): usuario autenticado puede actualizar
+      allow update: if request.auth != null;
       
       // Eliminar: solo el creador
       allow delete: if request.auth != null &&

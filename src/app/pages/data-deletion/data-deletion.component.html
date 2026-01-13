@@ -1,0 +1,76 @@
+<div class="legal-page-container">
+  <div class="legal-header">
+    <div class="logo-small">
+      <img src="logo-21.png" alt="Black Sugar 21" width="50" height="50" />
+    </div>
+    <a routerLink="/" class="back-link">← {{ t('footer.home') }}</a>
+  </div>
+
+  <div class="legal-content glass-panel">
+    <h1>{{ t('dataDeletion.title') }}</h1>
+
+    <div class="legal-section">
+      <p class="intro-text">{{ t('dataDeletion.intro') }}</p>
+
+      <div class="policy-block">
+        <h3>
+          <span class="icon">📱</span>
+          {{ t('dataDeletion.inApp') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('dataDeletion.inAppText') }}</p>
+        <ol class="steps-list">
+          <li>{{ t('dataDeletion.step1') }}</li>
+          <li>{{ t('dataDeletion.step2') }}</li>
+          <li>{{ t('dataDeletion.step3') }}</li>
+          <li>{{ t('dataDeletion.step4') }}</li>
+        </ol>
+      </div>
+
+      <div class="policy-block highlight">
+        <h3>
+          <span class="icon">🗑️</span>
+          {{ t('dataDeletion.whatDeleted') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('dataDeletion.whatDeletedText') }}</p>
+        <ul class="data-list">
+          <li>{{ t('dataDeletion.data1') }}</li>
+          <li>{{ t('dataDeletion.data2') }}</li>
+          <li>{{ t('dataDeletion.data3') }}</li>
+          <li>{{ t('dataDeletion.data4') }}</li>
+          <li>{{ t('dataDeletion.data5') }}</li>
+          <li>{{ t('dataDeletion.data6') }}</li>
+        </ul>
+      </div>
+
+      <div class="policy-block">
+        <h3>
+          <span class="icon">⏱️</span>
+          {{ t('dataDeletion.retention') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('dataDeletion.retentionText') }}</p>
+        <ul class="retention-list">
+          <li>
+            <strong>{{ t('dataDeletion.immediate') }}</strong>
+            {{ t('dataDeletion.immediateText') }}
+          </li>
+          <li>
+            <strong>{{ t('dataDeletion.backup') }}</strong>
+            {{ t('dataDeletion.backupText') }}
+          </li>
+          <li>
+            <strong>{{ t('dataDeletion.legal') }}</strong>
+            {{ t('dataDeletion.legalText') }}
+          </li>
+        </ul>
+      </div>
+
+      <div class="policy-block info">
+        <h3>
+          <span class="icon">⚠️</span>
+          {{ t('dataDeletion.important') }}
+        </h3>
+        <p>{{ t('dataDeletion.importantText') }}</p>
+      </div>
+    </div>
+  </div>
+</div>
