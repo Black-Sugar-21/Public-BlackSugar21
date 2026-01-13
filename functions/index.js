@@ -6,46 +6,6 @@ const {logger} = require('firebase-functions/v2');
 admin.initializeApp();
 
 /**
- * Obtener textos localizados según el idioma del usuario
- */
-const getLocalizedTexts = (language, type, params = {}) => {
-  const translations = {
-    match: {
-      es: {
-        title: '💘 ¡Nuevo Match!',
-        body: `Tienes un match con ${params.otherUserName}`,
-      },
-      en: {
-        title: '💘 New Match!',
-        body: `You have a match with ${params.otherUserName}`,
-      },
-      pt: {
-        title: '💘 Novo Match!',
-        body: `Você tem um match com ${params.otherUserName}`,
-      },
-    },
-    message: {
-      es: {
-        title: params.senderName,
-        body: params.messagePreview,
-      },
-      en: {
-        title: params.senderName,
-        body: params.messagePreview,
-      },
-      pt: {
-        title: params.senderName,
-        body: params.messagePreview,
-      },
-    },
-  };
-
-  // Default a español si el idioma no está soportado
-  const lang = ['es', 'en', 'pt'].includes(language) ? language : 'es';
-  return translations[type][lang];
-};
-
-/**
  * Cloud Function: Enviar notificación cuando se crea un nuevo match
  * Trigger: Firestore onCreate en collection 'matches'
  */
@@ -116,16 +76,9 @@ exports.onMatchCreated = onDocumentCreated(
       return;
     }
 
-    // Enviar notificaciones
+    // Enviar notificaciones usando localización nativa de FCM
     const notifications = fcmTokens.map(async ({token, otherUserName, language}) => {
-      // Obtener textos localizados según el idioma del usuario
-      const localizedText = getLocalizedTexts(language, 'match', {otherUserName});
-      
       const message = {
-        notification: {
-          title: localizedText.title,
-          body: localizedText.body,
-        },
         data: {
           type: 'new_match',
           matchId: matchId,
@@ -137,11 +90,21 @@ exports.onMatchCreated = onDocumentCreated(
             aps: {
               sound: 'default',
               badge: 1,
+              alert: {
+                // iOS usa guiones en las keys
+                'title-loc-key': 'notification-new-match-title',
+                'loc-key': 'notification-new-match-body',
+                'loc-args': [otherUserName],
+              },
             },
           },
         },
         android: {
           notification: {
+            // Android usa underscores en las keys
+            titleLocKey: 'notification_new_match_title',
+            bodyLocKey: 'notification_new_match_body',
+            bodyLocArgs: [otherUserName],
             sound: 'default',
             channelId: 'matches',
             priority: 'high',
@@ -238,30 +201,21 @@ exports.onMessageCreated = onDocumentCreated(
 
     const senderName = senderDoc.exists ? senderDoc.data().name : 'Usuario';
     const fcmToken = receiverDoc.data().fcmToken;
-    const receiverLanguage = receiverDoc.data().language || receiverDoc.data().locale || 'es';
 
     // Truncar mensaje si es muy largo
     const messagePreview = message.text.length > 100 ?
       `${message.text.substring(0, 100)}...` :
       message.text;
 
-    // Obtener textos localizados según el idioma del receptor
-    const localizedText = getLocalizedTexts(receiverLanguage, 'message', {
-      senderName,
-      messagePreview,
-    });
-
+    // Usar localización nativa de FCM
     const notification = {
-      notification: {
-        title: localizedText.title,
-        body: localizedText.body,
-      },
       data: {
         type: 'new_message',
         matchId: message.matchId,
         messageId: messageId,
         senderId: message.senderId,
         timestamp: Date.now().toString(),
+        messagePreview: messagePreview, // Pasar mensaje en data para el body
       },
       token: fcmToken,
       apns: {
@@ -269,11 +223,23 @@ exports.onMessageCreated = onDocumentCreated(
           aps: {
             sound: 'default',
             badge: 1,
+            alert: {
+              // iOS: título localizado con nombre del remitente
+              'title-loc-key': 'notification-new-message-title',
+              'title-loc-args': [senderName],
+              // Body es el mensaje directo, no necesita localización
+              body: messagePreview,
+            },
           },
         },
       },
       android: {
         notification: {
+          // Android: título localizado con nombre del remitente  
+          titleLocKey: 'notification_new_message_title',
+          titleLocArgs: [senderName],
+          // Body es el mensaje directo
+          body: messagePreview,
           sound: 'default',
           channelId: 'messages',
           priority: 'high',
