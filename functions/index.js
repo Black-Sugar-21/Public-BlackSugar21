@@ -1,7 +1,12 @@
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
+const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {onCall} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const {logger} = require('firebase-functions/v2');
+const sharp = require('sharp');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
 
 admin.initializeApp();
 
@@ -145,11 +150,11 @@ exports.onMatchCreated = onDocumentCreated(
 
 /**
  * Cloud Function: Enviar notificación cuando se crea un nuevo mensaje
- * Trigger: Firestore onCreate en collection 'messages'
+ * Trigger: Firestore onCreate en subcollection 'messages' dentro de 'matches'
  */
 exports.onMessageCreated = onDocumentCreated(
   {
-    document: 'messages/{messageId}',
+    document: 'matches/{matchId}/messages/{messageId}',
     database: '(default)',
     region: 'us-central1'
   },
@@ -162,18 +167,25 @@ exports.onMessageCreated = onDocumentCreated(
 
   const message = snapshot.data();
   const messageId = event.params.messageId;
+  const matchId = event.params.matchId;  // 🔥 Obtenemos matchId del path
 
   logger.info(`New message created: ${messageId}`, {
-    matchId: message.matchId,
+    matchId: matchId,
     senderId: message.senderId,
   });
 
   try {
+    
+    if (!matchId) {
+      logger.warn('Message has no chatId or matchId');
+      return;
+    }
+    
     // Obtener información del match para determinar el receptor
-    const matchDoc = await admin.firestore().collection('matches').doc(message.matchId).get();
+    const matchDoc = await admin.firestore().collection('matches').doc(matchId).get();
 
     if (!matchDoc.exists) {
-      logger.warn(`Match not found: ${message.matchId}`);
+      logger.warn(`Match not found: ${matchId}`);
       return;
     }
 
@@ -202,20 +214,25 @@ exports.onMessageCreated = onDocumentCreated(
     const senderName = senderDoc.exists ? senderDoc.data().name : 'Usuario';
     const fcmToken = receiverDoc.data().fcmToken;
 
-    // Truncar mensaje si es muy largo
-    const messagePreview = message.text.length > 100 ?
-      `${message.text.substring(0, 100)}...` :
-      message.text;
+    // ⚠️ PRIVACIDAD: No mostrar contenido del mensaje en la notificación
+    // Solo avisar que hay un mensaje nuevo
+    // El usuario debe abrir la app → ir a Matches → ver el mensaje
 
     // Usar localización nativa de FCM
     const notification = {
       data: {
         type: 'new_message',
-        matchId: message.matchId,
+        action: 'open_chat', // Acción específica: abrir chat
+        screen: 'ChatView', // Pantalla destino
+        matchId: matchId,
+        chatId: matchId, // Redundancia para compatibilidad
         messageId: messageId,
         senderId: message.senderId,
+        senderName: senderName, // Nombre del remitente para navegación directa
+        receiverId: receiverId, // ID del receptor
+        navigationPath: 'home/messages/chat', // Ruta de navegación: Home → TabBar Messages → ChatView
         timestamp: Date.now().toString(),
-        messagePreview: messagePreview, // Pasar mensaje en data para el body
+        // NO incluir messagePreview por privacidad
       },
       token: fcmToken,
       apns: {
@@ -227,8 +244,8 @@ exports.onMessageCreated = onDocumentCreated(
               // iOS: título localizado con nombre del remitente
               'title-loc-key': 'notification-new-message-title',
               'title-loc-args': [senderName],
-              // Body es el mensaje directo, no necesita localización
-              body: messagePreview,
+              // Body: mensaje genérico localizado (sin contenido real del mensaje)
+              'loc-key': 'notification-new-message-body',
             },
           },
         },
@@ -238,8 +255,8 @@ exports.onMessageCreated = onDocumentCreated(
           // Android: título localizado con nombre del remitente  
           titleLocKey: 'notification_new_message_title',
           titleLocArgs: [senderName],
-          // Body es el mensaje directo
-          body: messagePreview,
+          // Body: mensaje genérico localizado (sin contenido real del mensaje)
+          bodyLocKey: 'notification_new_message_body',
           sound: 'default',
           channelId: 'messages',
           priority: 'high',
@@ -355,3 +372,212 @@ exports.updateFCMToken = onCall(async (request) => {
     throw new Error(`Failed to update FCM token: ${error.message}`);
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROCESAMIENTO DE IMÁGENES — Pipeline progresivo (shimmer → thumb → full)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cloud Function: Generar thumbnail al subir imagen de perfil (safety net)
+ *
+ * Trigger: Firebase Storage onObjectFinalized
+ * Path relevante: users/{userId}/{uuid}.jpg
+ * Output:         users/{userId}/{uuid}_thumb.jpg  (400px max, JPEG 75%)
+ *
+ * Rol en la arquitectura:
+ *   - iOS y Android ya generan _thumb.jpg en el cliente durante el upload.
+ *   - Esta función actúa como safety net: si el cliente falla al subir el thumb,
+ *     la Cloud Function lo regenera automáticamente en el servidor.
+ *   - También procesa imágenes subidas por otros medios (admin, scripts).
+ *
+ * Reglas de skip:
+ *   - Archivos _thumb (evita bucle infinito de triggers)
+ *   - Paths fuera de users/ (stories, chat son full-size sin thumb)
+ *   - No-JPEG (PNG, GIF, etc. no usan el pipeline progresivo)
+ *   - Thumb ya existente (idempotente)
+ */
+exports.generateProfileThumbnail = onObjectFinalized(
+  {
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 60,
+  },
+  async (event) => {
+    const filePath = event.data.name;        // ej: 'users/abc123/uuid.jpg'
+    const contentType = event.data.contentType;
+    const bucket = admin.storage().bucket(event.data.bucket);
+
+    // ── REGLA 1: Solo imágenes ────────────────────────────────────────────────
+    if (!contentType || !contentType.startsWith('image/')) {
+      logger.info(`[thumb] Skipping — not an image: ${filePath}`);
+      return;
+    }
+
+    // ── REGLA 2: Solo fotos de perfil (users/) ───────────────────────────────
+    // Stories van a: stories/{matchId}/ y stories/personal_stories/{userId}/
+    // Esos paths NO necesitan thumbnail (se cargan full-size, son temporales 24h)
+    if (!filePath.startsWith('users/')) {
+      logger.info(`[thumb] Skipping — not a profile picture: ${filePath}`);
+      return;
+    }
+
+    // ── REGLA 3: No procesar _thumb para evitar bucle ─────────────────────────
+    const fileName = path.basename(filePath);
+    if (fileName.includes('_thumb')) {
+      logger.info(`[thumb] Skipping — already a thumbnail: ${filePath}`);
+      return;
+    }
+
+    // ── REGLA 4: Solo JPEG (el formato que usan iOS y Android) ───────────────
+    const ext = path.extname(fileName).toLowerCase();
+    if (ext !== '.jpg' && ext !== '.jpeg') {
+      logger.info(`[thumb] Skipping — not JPEG: ${filePath}`);
+      return;
+    }
+
+    // ── Construir path del thumbnail ──────────────────────────────────────────
+    const dir = path.dirname(filePath);
+    const nameWithoutExt = path.basename(fileName, ext);
+    const thumbFileName = `${nameWithoutExt}_thumb.jpg`;
+    const thumbPath = `${dir}/${thumbFileName}`;
+
+    // ── REGLA 5: Idempotente — saltar si thumb ya existe ─────────────────────
+    const [thumbExists] = await bucket.file(thumbPath).exists();
+    if (thumbExists) {
+      logger.info(`[thumb] Skipping — thumbnail already exists: ${thumbPath}`);
+      return;
+    }
+
+    logger.info(`[thumb] Generating: ${filePath} → ${thumbPath}`);
+
+    const tmpOriginal = path.join(os.tmpdir(), `orig_${fileName}`);
+    const tmpThumb = path.join(os.tmpdir(), `th_${thumbFileName}`);
+
+    try {
+      // Descargar imagen original a /tmp
+      await bucket.file(filePath).download({destination: tmpOriginal});
+
+      // Generar thumbnail 400px max — igual que el cliente iOS/Android
+      // fit: 'inside' conserva aspect ratio sin recortar
+      // withoutEnlargement: no agranda si ya es ≤ 400px
+      await sharp(tmpOriginal)
+        .resize(400, 400, {fit: 'inside', withoutEnlargement: true})
+        .jpeg({quality: 75, progressive: true})
+        .toFile(tmpThumb);
+
+      // Subir thumbnail con metadata explicativa
+      await bucket.upload(tmpThumb, {
+        destination: thumbPath,
+        metadata: {
+          contentType: 'image/jpeg',
+          metadata: {
+            generatedBy: 'generateProfileThumbnail',
+            originalFile: filePath,
+            generatedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      logger.info(`[thumb] ✅ Thumbnail generado: ${thumbPath}`);
+    } finally {
+      // Limpiar /tmp siempre, incluso si hay error
+      if (fs.existsSync(tmpOriginal)) fs.unlinkSync(tmpOriginal);
+      if (fs.existsSync(tmpThumb)) fs.unlinkSync(tmpThumb);
+    }
+  },
+);
+
+/**
+ * Callable Function: Generar thumbnails faltantes de forma retroactiva
+ *
+ * Útil para imágenes históricas subidas antes de implementar el pipeline
+ * progresivo, o imágenes cuyo cliente falló al subir el _thumb.jpg.
+ *
+ * Parámetros:
+ *   - userId (opcional): si se pasa, solo procesa fotos de ese usuario.
+ *     Si no se pasa, procesa TODOS los usuarios (operación costosa).
+ *
+ * Uso desde Firebase Console o script admin:
+ *   firebase functions:call generateMissingThumbnails --data '{"userId":"abc123"}'
+ */
+exports.generateMissingThumbnails = onCall(
+  {
+    region: 'us-central1',
+    memory: '1GiB',
+    timeoutSeconds: 540,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new Error('Authentication required');
+    }
+
+    const {userId} = request.data || {};
+    const bucket = admin.storage().bucket();
+    const prefix = userId ? `users/${userId}/` : 'users/';
+
+    logger.info(`[generateMissingThumbnails] Starting scan: prefix="${prefix}"`);
+
+    const [files] = await bucket.getFiles({prefix});
+
+    let processed = 0;
+    let skipped = 0;
+    let errors = 0;
+    const errorList = [];
+
+    for (const file of files) {
+      const filePath = file.name;
+      const fileName = path.basename(filePath);
+
+      // Saltar: thumbnails existentes, no-JPEG
+      const ext = path.extname(fileName).toLowerCase();
+      if (fileName.includes('_thumb') || (ext !== '.jpg' && ext !== '.jpeg')) {
+        skipped++;
+        continue;
+      }
+
+      // Construir path del thumbnail esperado
+      const dir = path.dirname(filePath);
+      const nameWithoutExt = path.basename(fileName, ext);
+      const thumbFileName = `${nameWithoutExt}_thumb.jpg`;
+      const thumbPath = `${dir}/${thumbFileName}`;
+
+      // Saltar si thumb ya existe
+      const [thumbExists] = await bucket.file(thumbPath).exists();
+      if (thumbExists) {
+        skipped++;
+        continue;
+      }
+
+      const tmpOriginal = path.join(os.tmpdir(), `orig_${fileName}`);
+      const tmpThumb = path.join(os.tmpdir(), `th_${thumbFileName}`);
+
+      try {
+        await bucket.file(filePath).download({destination: tmpOriginal});
+        await sharp(tmpOriginal)
+          .resize(400, 400, {fit: 'inside', withoutEnlargement: true})
+          .jpeg({quality: 75, progressive: true})
+          .toFile(tmpThumb);
+        await bucket.upload(tmpThumb, {
+          destination: thumbPath,
+          metadata: {
+            contentType: 'image/jpeg',
+            metadata: {generatedBy: 'generateMissingThumbnails', originalFile: filePath},
+          },
+        });
+        processed++;
+        logger.info(`[generateMissingThumbnails] ✅ ${thumbPath}`);
+      } catch (e) {
+        errors++;
+        errorList.push({file: filePath, error: e.message});
+        logger.error(`[generateMissingThumbnails] ❌ ${filePath}: ${e.message}`);
+      } finally {
+        if (fs.existsSync(tmpOriginal)) fs.unlinkSync(tmpOriginal);
+        if (fs.existsSync(tmpThumb)) fs.unlinkSync(tmpThumb);
+      }
+    }
+
+    const summary = {processed, skipped, errors, total: files.length, errorList};
+    logger.info(`[generateMissingThumbnails] Done:`, summary);
+    return summary;
+  },
+);
