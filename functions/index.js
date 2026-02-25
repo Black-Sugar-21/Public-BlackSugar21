@@ -30,16 +30,24 @@ exports.onMatchCreated = onDocumentCreated(
   const match = snapshot.data();
   const matchId = event.params.matchId;
 
-  logger.info(`New match created: ${matchId}`, {
-    userId1: match.userId1,
-    userId2: match.userId2,
-  });
+  // ✅ Las apps (iOS y Android) escriben usersMatched[] y users[]
+  // NO usan userId1/userId2 — compatibilidad total con ambas plataformas
+  const usersMatched = match.usersMatched || match.users || [];
+  const userId1 = usersMatched[0];
+  const userId2 = usersMatched[1];
+
+  logger.info(`New match created: ${matchId}`, { userId1, userId2 });
+
+  if (!userId1 || !userId2) {
+    logger.warn(`Match ${matchId} has no valid usersMatched/users array`, { match });
+    return;
+  }
 
   try {
     // Obtener tokens FCM de ambos usuarios
     const [user1Doc, user2Doc] = await Promise.all([
-      admin.firestore().collection('users').doc(match.userId1).get(),
-      admin.firestore().collection('users').doc(match.userId2).get(),
+      admin.firestore().collection('users').doc(userId1).get(),
+      admin.firestore().collection('users').doc(userId2).get(),
     ]);
 
     const fcmTokens = [];
@@ -49,8 +57,8 @@ exports.onMatchCreated = onDocumentCreated(
       const user1Data = user1Doc.data();
       fcmTokens.push({
         token: user1Data.fcmToken,
-        userId: match.userId1,
-        otherUserId: match.userId2,
+        userId: userId1,
+        otherUserId: userId2,
         otherUserName: user2Doc.exists ? user2Doc.data().name : 'Usuario',
         language: user1Data.language || user1Data.locale || 'es',
       });
@@ -61,8 +69,8 @@ exports.onMatchCreated = onDocumentCreated(
       const user2Data = user2Doc.data();
       fcmTokens.push({
         token: user2Data.fcmToken,
-        userId: match.userId2,
-        otherUserId: match.userId1,
+        userId: userId2,
+        otherUserId: userId1,
         otherUserName: user1Doc.exists ? user1Doc.data().name : 'Usuario',
         language: user2Data.language || user2Data.locale || 'es',
       });
@@ -190,7 +198,13 @@ exports.onMessageCreated = onDocumentCreated(
     }
 
     const match = matchDoc.data();
-    const receiverId = match.userId1 === message.senderId ? match.userId2 : match.userId1;
+    // ✅ Las apps escriben usersMatched[] — NO usan userId1/userId2
+    const usersMatched = match.usersMatched || match.users || [];
+    const receiverId = usersMatched.find(uid => uid !== message.senderId) || null;
+    if (!receiverId) {
+      logger.warn(`Cannot determine receiver for message ${messageId} in match ${matchId}`);
+      return;
+    }
 
     // Obtener perfil del receptor y remitente
     const [receiverDoc, senderDoc] = await Promise.all([
