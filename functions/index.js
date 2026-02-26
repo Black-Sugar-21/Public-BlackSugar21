@@ -34,6 +34,53 @@ function haversineDistanceKm(lat1, lon1, lat2, lon2) {
 }
 
 /**
+ * Codifica coordenadas a geohash base32.
+ * Algoritmo idéntico a GeoHashUtils.encode() de iOS y Android.
+ * @param {number} latitude
+ * @param {number} longitude
+ * @param {number} precision - Caracteres del geohash (default 9 ≈ 4.77m×4.77m)
+ * @return {string} geohash
+ */
+const GEOHASH_BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+function encodeGeohash(latitude, longitude, precision = 9) {
+  let lat = [latitude, -90.0, 90.0];
+  let lon = [longitude, -180.0, 180.0];
+  let geohash = '';
+  let isEven = true;
+  let bit = 0;
+  let ch = 0;
+
+  while (geohash.length < precision) {
+    if (isEven) {
+      const mid = (lon[1] + lon[2]) / 2;
+      if (lon[0] > mid) {
+        ch |= (1 << (4 - bit));
+        lon[1] = mid;
+      } else {
+        lon[2] = mid;
+      }
+    } else {
+      const mid = (lat[1] + lat[2]) / 2;
+      if (lat[0] > mid) {
+        ch |= (1 << (4 - bit));
+        lat[1] = mid;
+      } else {
+        lat[2] = mid;
+      }
+    }
+    isEven = !isEven;
+    if (bit < 4) {
+      bit++;
+    } else {
+      geohash += GEOHASH_BASE32[ch];
+      bit = 0;
+      ch = 0;
+    }
+  }
+  return geohash;
+}
+
+/**
  * Calcula la edad en años a partir de un Firestore Timestamp o Date.
  */
 function calcAge(birthDate) {
@@ -2978,8 +3025,9 @@ exports.autoModerateMessage = onDocumentCreated(
 );
 
 /**
- * Trigger: Validar geohash cuando se actualiza la ubicación del usuario.
- * Si el usuario tiene lat/lng pero no campo "g" (geohash), lo registra en logs de monitoreo.
+ * Trigger: Validar y auto-reparar geohash cuando se actualiza la ubicación del usuario.
+ * Si el usuario tiene lat/lng pero no campo "g" (geohash), lo calcula y escribe automáticamente.
+ * Algoritmo encodeGeohash() idéntico al de iOS y Android.
  */
 exports.validateGeohashOnUpdate = onDocumentUpdated(
   {document: 'users/{userId}', region: 'us-central1'},
@@ -2993,21 +3041,20 @@ exports.validateGeohashOnUpdate = onDocumentUpdated(
 
     // Verificar que el geohash "g" exista — campo "g" NOT "geohash"
     if (!after.g) {
-      logger.warn(`[validateGeohashOnUpdate] User ${event.params.userId} has coords but no geohash "g"`);
-      await admin.firestore().collection('geohashValidationLogs').add({
-        userId: event.params.userId,
-        latitude: after.latitude,
-        longitude: after.longitude,
-        issue: 'missing_geohash',
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      const userId = event.params.userId;
+      logger.warn(`[validateGeohashOnUpdate] User ${userId} has coords but no geohash "g" — auto-repairing`);
+      
+      // Auto-reparar: calcular y escribir el geohash
+      const geohash = encodeGeohash(after.latitude, after.longitude);
+      await admin.firestore().collection('users').doc(userId).update({g: geohash});
+      logger.info(`[validateGeohashOnUpdate] Auto-repaired geohash for ${userId}: ${geohash}`);
     }
   },
 );
 
 /**
- * Scheduled: Monitorear geohashes faltantes cada 6 horas.
- * Los geohashes se calculan en el cliente — esta función solo monitorea.
+ * Scheduled: Detectar y reparar geohashes faltantes cada 6 horas.
+ * Batch-fix: calcula y escribe el campo "g" para usuarios que tengan lat/lng sin geohash.
  */
 exports.updategeohashesscheduled = onSchedule(
   {schedule: 'every 6 hours', region: 'us-central1', memory: '256MiB', timeoutSeconds: 300},
@@ -3018,15 +3065,26 @@ exports.updategeohashesscheduled = onSchedule(
       .limit(500)
       .get();
 
-    let missingCount = 0;
+    let fixedCount = 0;
+    const batch = db.batch();
+    
     for (const doc of usersSnap.docs) {
       const data = doc.data();
       if (data.latitude && data.longitude && !data.g) {
-        missingCount++;
+        const geohash = encodeGeohash(data.latitude, data.longitude);
+        batch.update(doc.ref, {g: geohash});
+        fixedCount++;
+        // Firestore batch limit = 500 writes
+        if (fixedCount >= 400) break;
       }
     }
-
-    logger.info(`[updategeohashesscheduled] Found ${missingCount} users with missing geohash out of ${usersSnap.docs.length}`);
+    
+    if (fixedCount > 0) {
+      await batch.commit();
+      logger.info(`[updategeohashesscheduled] Auto-repaired ${fixedCount} missing geohashes out of ${usersSnap.docs.length} users`);
+    } else {
+      logger.info(`[updategeohashesscheduled] All ${usersSnap.docs.length} users have valid geohashes ✅`);
+    }
   },
 );
 
