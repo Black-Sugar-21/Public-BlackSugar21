@@ -203,6 +203,7 @@ exports.getCompatibleProfileIds = onCall(
     const currentUser = userDoc.data();
     const currentUserMale = currentUser.male === true;
     const currentUserOrientation = (currentUser.orientation || 'both').toLowerCase();
+    const currentUserAge = calcAge(currentUser.birthDate);
     const userMinAge = currentUser.minAge || 18;
     const userMaxAge = currentUser.maxAge || 99;
     const userLat = currentUser.latitude;
@@ -315,6 +316,11 @@ exports.getCompatibleProfileIds = onCall(
           // Excluir bloqueados por moderación o IA
           if (candidate.blocked === true) continue;
 
+          // Excluir si el candidato ha bloqueado al usuario actual (bloqueo bidireccional)
+          // El campo "blocked" es un array de IDs cuando el usuario bloquea a otros
+          const candidateBlockedArray = candidate.blocked;
+          if (Array.isArray(candidateBlockedArray) && candidateBlockedArray.includes(currentUserId)) continue;
+
           // Excluir visibilidad reducida (usuarios reportados)
           if (candidate.visibilityReduced === true) continue;
 
@@ -330,9 +336,17 @@ exports.getCompatibleProfileIds = onCall(
           if (currentUserMale && candidateOrientation === 'women') continue;
           if (!currentUserMale && candidateOrientation === 'men') continue;
 
-          // Filtrar por rango de edad
+          // Filtrar por rango de edad del usuario actual → edad del candidato
           const candidateAge = calcAge(candidate.birthDate);
           if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+
+          // Filtro bidireccional de edad: verificar que la edad del usuario actual
+          // esté dentro del rango de búsqueda del candidato
+          if (currentUserAge > 0) {
+            const candidateMinAge = candidate.minAge || 18;
+            const candidateMaxAge = candidate.maxAge || 99;
+            if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+          }
 
           // Verificar distancia exacta con Haversine (geohash es aproximado)
           const candidateLat = candidate.latitude;
@@ -370,12 +384,23 @@ exports.getCompatibleProfileIds = onCall(
         if (candidate.blocked === true) continue;
         if (candidate.visibilityReduced === true) continue;
 
+        // Excluir si el candidato ha bloqueado al usuario actual (bloqueo bidireccional)
+        const candidateBlockedArray = candidate.blocked;
+        if (Array.isArray(candidateBlockedArray) && candidateBlockedArray.includes(currentUserId)) continue;
+
         const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
         if (currentUserMale && candidateOrientation === 'women') continue;
         if (!currentUserMale && candidateOrientation === 'men') continue;
 
         const candidateAge = calcAge(candidate.birthDate);
         if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+
+        // Filtro bidireccional de edad
+        if (currentUserAge > 0) {
+          const candidateMinAge = candidate.minAge || 18;
+          const candidateMaxAge = candidate.maxAge || 99;
+          if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+        }
 
         compatibleIds.push(doc.id);
       }
