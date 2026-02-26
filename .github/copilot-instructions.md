@@ -289,6 +289,8 @@ validateProfileImage
 | `bulk_query_batch_size` | Number | 50 | Tamaño de batch para queries múltiples |
 | `minimum_age_by_country` | JSON String | `{"default": 18}` | Edad mínima por país |
 | `enable_bio_ai_suggestions` | Boolean | false | Habilitar sugerencias de bio con IA |
+| `reviewer_test_phone` | String | `"+16505550123"` | Teléfono de prueba para revisores Apple/Google |
+| `reviewer_test_code` | String | `"123456"` | Código de verificación para el test phone del reviewer |
 
 **Intervalo de actualización:** 3600 segundos (idéntico iOS `services/RemoteConfigService.swift` y Android `core/firebase/RemoteConfigManager.kt`)
 
@@ -521,3 +523,111 @@ grep -rn "logEvent" /Users/daniel/AndroidStudioProjects/iOS/black-sugar-21/ --in
 # Comparar eventos analytics Android
 grep -rn "logEvent" /Users/daniel/AndroidStudioProjects/BlackSugar212/ --include="*.kt" | grep '"[a-z_]*"' | sed 's/.*"\([a-z_]*\)".*/\1/' | sort -u
 ```
+
+---
+
+## Setup & Deployment
+
+### Android — Setup Local
+
+1. **Gemini API Key** en `local.properties`:
+   ```properties
+   sdk.dir=/Users/daniel/Library/Android/sdk
+   GEMINI_API_KEY=tu_api_key_aqui
+   ```
+   Obtener en: https://aistudio.google.com/app/apikey
+
+2. **Keystore** para release:
+   ```bash
+   keytool -genkey -v -keystore blacksugar-release-key.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 -alias blacksugar-key-alias
+   cp keystore.properties.template keystore.properties
+   # Editar keystore.properties con passwords reales
+   ```
+
+3. **Build:**
+   ```bash
+   ./gradlew assembleRelease    # APK
+   ./gradlew bundleRelease      # AAB (Google Play)
+   ```
+
+4. **Debug vs Prod:** centralizado en `AppConfig` (`core/config/AppConfig.kt`). Logging via `AppLogger` (solo `e()` en prod).
+
+### iOS — Setup Local
+
+1. **Xcode:** Abrir `black-sugar-21.xcodeproj`
+2. **GoogleService-Info.plist** debe estar en el proyecto
+3. **Build:** `Cmd+B` en Xcode o:
+   ```bash
+   xcodebuild -project black-sugar-21.xcodeproj -scheme black-sugar-21 -configuration Debug build CODE_SIGNING_ALLOWED=NO
+   ```
+
+### iOS — CI/CD (GitHub Actions)
+
+Secrets requeridos en GitHub (ver `.github/*.md` en repo iOS para detalles):
+
+| Secret | Descripción |
+|---|---|
+| `FIREBASE_IOS_APP_ID` | `1:706595096331:ios:xxx` (Firebase Console → Settings) |
+| `FIREBASE_SERVICE_ACCOUNT` | JSON de cuenta de servicio Firebase Admin |
+| `IOS_CERTIFICATE_BASE64` | Certificado `.p12` en base64 |
+| `IOS_CERTIFICATE_PASSWORD` | Password del `.p12` |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Provisioning profile en base64 |
+| `APP_STORE_CONNECT_API_KEY_ID` | Key ID de App Store Connect API |
+| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | Archivo `.p8` en base64 |
+| `IOS_DIST_CERTIFICATE_BASE64` | Certificado de distribución en base64 |
+| `IOS_PROVISIONING_PROFILE_DIST_BASE64` | Profile de App Store en base64 |
+
+### Web (Angular) — Deploy
+
+```bash
+cd /Users/daniel/IdeaProjects/Public-BlackSugar21
+./deploy.sh                          # Automático
+# o manual:
+npm run build:prod && firebase deploy --only hosting
+```
+
+**URL:** https://black-sugar21.web.app
+
+### App Check — Debug Token Web
+
+Si error 403 en localhost:
+1. Copiar debug token de consola del navegador
+2. Firebase Console → App Check → Apps → Web app → Manage debug tokens → Add
+3. Recargar localhost
+
+### Cuenta Reviewer (Apple App Store / Google Play)
+
+Cuenta de prueba pre-cargada para validadores de tiendas.
+
+| Campo | Valor |
+|---|---|
+| Teléfono | `+16505550123` (US, rango 555-01XX reservado ficción) |
+| Código OTP | `123456` |
+| Auth UID | `VrZigyvzLFR3XoGEkUbpxVTjvd72` |
+| Nombre | Ricardo |
+| Tipo | SUGAR_DADDY, 35 años, hombre |
+| Ubicación | Santiago, Chile (-33.4489, -70.6693) |
+| Remote Config | `reviewer_test_phone`, `reviewer_test_code` |
+
+**Datos pre-cargados:**
+- 3 fotos de perfil con thumbnails (Storage: `users/{uid}/{uuid}.jpg` + `_thumb.jpg`)
+- 8 perfiles de discovery (mujeres, SUGAR_BABY/SUGAR_MOMMY, 21-30 años, Santiago)
+- 3 matches con conversaciones de chat (5, 4, 6 mensajes c/u)
+- Todos marcados con `isTest: true, isReviewer: true`
+
+**Script de seed:**
+```bash
+# Crear/recrear toda la data del reviewer
+cd /Users/daniel/IdeaProjects/Public-BlackSugar21
+node scripts/seed-reviewer.js --clean
+
+# Solo eliminar data existente
+node scripts/seed-reviewer.js --delete
+```
+
+**Paso manual OBLIGATORIO** (Firebase Console):
+1. Ir a Firebase Console → Authentication → Sign-in method → Phone
+2. En "Phone numbers for testing" agregar: `+16505550123` con código `123456`
+3. Sin este paso, el teléfono no funcionará (Firebase enviará SMS real al número inexistente)

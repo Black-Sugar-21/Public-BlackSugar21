@@ -9,9 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "npm run build:prod && firebase deploy",
-    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting",
-    "populate-test-data": "node scripts/populate-test-matches.js",
-    "cleanup-test-data": "node scripts/cleanup-test-matches.js"
+    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting"
   },
   "prettier": {
     "printWidth": 100,

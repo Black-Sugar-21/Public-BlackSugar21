@@ -1321,12 +1321,28 @@ exports.getMatchesWithMetadata = onCall(
         hasUnreadMessage = lastMsgMs > lastSeenMs;
       }
 
+      // Calcular edad desde birthDate
+      let age = null;
+      if (user.birthDate) {
+        const bd = user.birthDate.toDate ? user.birthDate.toDate() : new Date(user.birthDate);
+        const today = new Date();
+        age = today.getFullYear() - bd.getFullYear();
+        const monthDiff = today.getMonth() - bd.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < bd.getDate())) age--;
+      }
+
+      // firstPictureName: primer elemento del array pictures (usado por iOS y Android)
+      const pictures = Array.isArray(user.pictures) ? user.pictures : [];
+      const firstPictureName = pictures.length > 0 ? pictures[0] : null;
+
       return {
         id: matchId,
         userId: uid,
         name: user.name || '',
+        age,
         birthDate: user.birthDate ? (user.birthDate.toDate ? user.birthDate.toDate().toISOString() : user.birthDate) : null,
-        photoFileName: user.photoFileName || user.profileImageUrl || null,
+        firstPictureName,
+        pictures,
         lastMessage: data.lastMessage || null,
         lastMessageSenderId: data.lastMessageSenderId || null,
         lastMessageTimestamp: data.lastMessageTimestamp || null,
@@ -2297,19 +2313,33 @@ function estimateTravelMin(km) {
  * Devuelve { user1: {lat,lng}, user2: {lat,lng}, midpoint: {latitude,longitude} }
  */
 async function getMatchUsersLocations(matchId, currentUserId) {
-  const matchDoc = await db.collection('matches').doc(matchId).get();
+  const firestore = admin.firestore();
+  const matchDoc = await firestore.collection('matches').doc(matchId).get();
   if (!matchDoc.exists) throw new Error('Match not found');
   const usersMatched = matchDoc.data().usersMatched || [];
   if (usersMatched.length < 2) throw new Error('Invalid match');
 
   const [u1Snap, u2Snap] = await Promise.all(
-    usersMatched.map((uid) => db.collection('users').doc(uid).get()),
+    usersMatched.map((uid) => firestore.collection('users').doc(uid).get()),
   );
   const u1 = u1Snap.data() || {};
   const u2 = u2Snap.data() || {};
 
   const user1 = {lat: u1.latitude || 0, lng: u1.longitude || 0, id: usersMatched[0]};
   const user2 = {lat: u2.latitude || 0, lng: u2.longitude || 0, id: usersMatched[1]};
+
+  // Validar que ambos usuarios tengan ubicaciones reales (no 0,0)
+  if (user1.lat === 0 && user1.lng === 0 && user2.lat === 0 && user2.lng === 0) {
+    throw new Error('NO_LOCATION_DATA');
+  }
+  // Si solo un usuario tiene ubicación, usar esa como base
+  if (user1.lat === 0 && user1.lng === 0) {
+    user1.lat = user2.lat;
+    user1.lng = user2.lng;
+  } else if (user2.lat === 0 && user2.lng === 0) {
+    user2.lat = user1.lat;
+    user2.lng = user1.lng;
+  }
 
   // Determinar cuál es current y cuál es other
   let currentUser, otherUser;
