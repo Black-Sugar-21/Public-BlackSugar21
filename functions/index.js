@@ -81,6 +81,70 @@ function encodeGeohash(latitude, longitude, precision = 9) {
 }
 
 /**
+ * Calcula la precisión óptima del geohash basada en el radio de búsqueda.
+ * Homologado con GeoHashUtils.precisionForRadius() de iOS y Android.
+ */
+function precisionForRadius(radiusInKm) {
+  if (radiusInKm > 630) return 2;
+  if (radiusInKm > 78) return 3;
+  if (radiusInKm > 20) return 4;
+  if (radiusInKm > 2.4) return 5;
+  if (radiusInKm > 0.61) return 6;
+  if (radiusInKm > 0.076) return 7;
+  if (radiusInKm > 0.019) return 8;
+  return 9;
+}
+
+/**
+ * Normaliza longitud al rango [-180, 180].
+ * Homologado con GeoHashUtils.normalizeLongitude() de iOS y Android.
+ */
+function normalizeLongitude(lon) {
+  let normalized = lon % 360;
+  if (normalized > 180) normalized -= 360;
+  if (normalized < -180) normalized += 360;
+  return normalized;
+}
+
+/**
+ * Genera rangos de geohash para consulta geográfica.
+ * Calcula el centro + 8 puntos cardinales/intercardinales en el borde del radio.
+ * Homologado con GeoHashUtils.queryBounds() de iOS y Android (hasta 9 rangos únicos).
+ *
+ * @param {number} latitude
+ * @param {number} longitude
+ * @param {number} radiusInKm
+ * @return {Array<{start: string, end: string}>}
+ */
+function queryBoundsForRadius(latitude, longitude, radiusInKm) {
+  const precision = precisionForRadius(radiusInKm);
+
+  // Geohash del centro
+  const hashes = new Set();
+  hashes.add(encodeGeohash(latitude, longitude, precision));
+
+  // Offsets para N, NE, E, SE, S, SW, W, NW
+  const offsets = [
+    [1, 0], [1, 1], [0, 1], [-1, 1],
+    [-1, 0], [-1, -1], [0, -1], [1, -1],
+  ];
+
+  // km → grados
+  const latDelta = radiusInKm / 110.574;
+  const cosLat = Math.cos(latitude * Math.PI / 180);
+  const lonDelta = cosLat > 0.001 ? radiusInKm / (111.320 * cosLat) : radiusInKm / 111.320;
+
+  for (const [dLat, dLon] of offsets) {
+    const edgeLat = Math.min(90, Math.max(-90, latitude + dLat * latDelta));
+    const edgeLon = normalizeLongitude(longitude + dLon * lonDelta);
+    hashes.add(encodeGeohash(edgeLat, edgeLon, precision));
+  }
+
+  // Convertir cada hash único a un rango de query
+  return Array.from(hashes).sort().map((h) => ({start: h, end: h + '~'}));
+}
+
+/**
  * Calcula la edad en años a partir de un Firestore Timestamp o Date.
  */
 function calcAge(birthDate) {
@@ -202,74 +266,122 @@ exports.getCompatibleProfileIds = onCall(
 
     logger.info(`[getCompatibleProfileIds] Excluded: ${excludedIds.size} users (cooldown: ${cooldownDays}d)`);
 
-    // 4. Construir query base con filtros de orientación y estado
-    //    Homologado con Android getCompatibleUsersTraditional()
-    let query = db.collection('users')
-      .where('accountStatus', '==', 'active')
-      .where('paused', '==', false);
+    // 4. GEOHASH-BASED QUERY — Homologado con iOS ProfileCardRepository.getCompatibleUsersWithGeoQuery()
+    //    y Android UserServiceImpl.getCompatibleUsersWithGeoQuery()
+    //
+    //    En lugar de escanear 200 docs arbitrarios, usamos geohash bounds para
+    //    limitar geográficamente los candidatos. Si el usuario no tiene coordenadas,
+    //    se usa un fallback sin filtro geográfico.
 
-    // Filtrar por género del candidato según la orientación del usuario actual
-    // Si el usuario busca "men": candidatos deben ser male=true
-    // Si el usuario busca "women": candidatos deben ser male=false
-    // Si el usuario busca "both": sin filtro de género en la query
-    if (currentUserOrientation === 'men') {
-      query = query.where('male', '==', true);
-    } else if (currentUserOrientation === 'women') {
-      query = query.where('male', '==', false);
-    }
-
-    // Limitar a 200 documentos (reducir costos Firestore, suficiente antes del filtrado)
-    query = query.limit(200);
-
-    const candidatesSnap = await query.get();
-
-    logger.info(`[getCompatibleProfileIds] Raw candidates from Firestore: ${candidatesSnap.docs.length}`);
-
-    // 5. Filtrar en memoria: exclusión, orientación inversa, edad, distancia,
-    //    blocked, visibilityReduced
     const compatibleIds = [];
+    const seenUserIds = new Set(); // Dedup entre rangos de geohash superpuestos
 
-    for (const doc of candidatesSnap.docs) {
-      // Excluir IDs ya marcados
-      if (excludedIds.has(doc.id)) continue;
+    const useGeoQuery = userLat != null && userLon != null;
 
-      const candidate = doc.data();
+    if (useGeoQuery) {
+      // Generar rangos de geohash (hasta 9 celdas: centro + 8 puntos cardinales)
+      const bounds = queryBoundsForRadius(userLat, userLon, maxDistanceKm);
+      logger.info(`[getCompatibleProfileIds] Geohash query: ${bounds.length} ranges, radius: ${maxDistanceKm}km`);
 
-      // Excluir bloqueados por moderación o IA
-      if (candidate.blocked === true) continue;
+      for (const bound of bounds) {
+        if (compatibleIds.length >= limit) break;
 
-      // Excluir visibilidad reducida (usuarios reportados)
-      if (candidate.visibilityReduced === true) continue;
+        // Query con geohash range + filtros de estado
+        let query = db.collection('users')
+          .where('g', '>=', bound.start)
+          .where('g', '<=', bound.end);
 
-      // Filtrar por orientación del candidato:
-      // Un candidato con orientation="women" no debería aparecer a otro usuario male
-      // (a menos que el usuario actual busque "both")
-      // Nota: a los hombres gay (orientation=men) solo se les muestran otros hombres, etc.
-      // El filtro "la orientación del candidato no excluye al usuario actual":
-      const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
-      if (currentUserMale && candidateOrientation === 'women') continue;
-      if (!currentUserMale && candidateOrientation === 'men') continue;
+        // Nota: Firestore no permite inequality en 2 campos distintos (g + male),
+        // así que male se filtra en memoria junto a los demás filtros.
 
-      // Filtrar por rango de edad
-      const candidateAge = calcAge(candidate.birthDate);
-      if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+        const snap = await query.get();
 
-      // Filtrar por distancia si ambos tienen coordenadas
-      const candidateLat = candidate.latitude;
-      const candidateLon = candidate.longitude;
-      if (
-        userLat != null && userLon != null &&
-        candidateLat != null && candidateLon != null
-      ) {
-        const distKm = haversineDistanceKm(userLat, userLon, candidateLat, candidateLon);
-        if (distKm > maxDistanceKm) continue;
+        for (const doc of snap.docs) {
+          if (compatibleIds.length >= limit) break;
+
+          // Dedup entre rangos superpuestos
+          if (seenUserIds.has(doc.id)) continue;
+          seenUserIds.add(doc.id);
+
+          // Excluir IDs ya marcados (swipes, matches, bloqueados, self)
+          if (excludedIds.has(doc.id)) continue;
+
+          const candidate = doc.data();
+
+          // Excluir cuentas no activas o pausadas
+          if (candidate.accountStatus !== 'active') continue;
+          if (candidate.paused === true) continue;
+
+          // Excluir bloqueados por moderación o IA
+          if (candidate.blocked === true) continue;
+
+          // Excluir visibilidad reducida (usuarios reportados)
+          if (candidate.visibilityReduced === true) continue;
+
+          // Filtrar por género del candidato según orientación del usuario
+          const candidateMale = candidate.male === true;
+          if (currentUserOrientation === 'men' && !candidateMale) continue;
+          if (currentUserOrientation === 'women' && candidateMale) continue;
+
+          // Filtrar por orientación del candidato (orientación inversa):
+          // Un candidato con orientation="women" no debe aparecer a un hombre
+          // Un candidato con orientation="men" no debe aparecer a una mujer
+          const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
+          if (currentUserMale && candidateOrientation === 'women') continue;
+          if (!currentUserMale && candidateOrientation === 'men') continue;
+
+          // Filtrar por rango de edad
+          const candidateAge = calcAge(candidate.birthDate);
+          if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+
+          // Verificar distancia exacta con Haversine (geohash es aproximado)
+          const candidateLat = candidate.latitude;
+          const candidateLon = candidate.longitude;
+          if (candidateLat != null && candidateLon != null) {
+            const distKm = haversineDistanceKm(userLat, userLon, candidateLat, candidateLon);
+            if (distKm > maxDistanceKm) continue;
+          }
+
+          compatibleIds.push(doc.id);
+        }
+      }
+    } else {
+      // Fallback sin ubicación: query sin geohash (comportamiento legacy)
+      logger.warn(`[getCompatibleProfileIds] User ${currentUserId} has no coordinates, using fallback query`);
+
+      let query = db.collection('users')
+        .where('accountStatus', '==', 'active')
+        .where('paused', '==', false);
+
+      if (currentUserOrientation === 'men') {
+        query = query.where('male', '==', true);
+      } else if (currentUserOrientation === 'women') {
+        query = query.where('male', '==', false);
       }
 
-      compatibleIds.push(doc.id);
-      if (compatibleIds.length >= limit) break;
+      query = query.limit(200);
+      const candidatesSnap = await query.get();
+
+      for (const doc of candidatesSnap.docs) {
+        if (compatibleIds.length >= limit) break;
+        if (excludedIds.has(doc.id)) continue;
+
+        const candidate = doc.data();
+        if (candidate.blocked === true) continue;
+        if (candidate.visibilityReduced === true) continue;
+
+        const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
+        if (currentUserMale && candidateOrientation === 'women') continue;
+        if (!currentUserMale && candidateOrientation === 'men') continue;
+
+        const candidateAge = calcAge(candidate.birthDate);
+        if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+
+        compatibleIds.push(doc.id);
+      }
     }
 
-    logger.info(`[getCompatibleProfileIds] Returning ${compatibleIds.length} compatible profiles`);
+    logger.info(`[getCompatibleProfileIds] Returning ${compatibleIds.length} compatible profiles (geo: ${useGeoQuery}, seen: ${seenUserIds.size})`);
 
     return {
       success: true,
