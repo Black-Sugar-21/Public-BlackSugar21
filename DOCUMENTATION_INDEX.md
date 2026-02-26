@@ -1,24 +1,97 @@
-# BlackSugar21 Web - Documentation Index
+# BlackSugar21 - Unified Documentation Index
+
+> **📢 IMPORTANTE**: La documentación ha sido consolidada en GitHub Skills (15 de enero de 2026)  
+> **Ver**: [DOCUMENTATION_CONSOLIDATION_SUMMARY.md](DOCUMENTATION_CONSOLIDATION_SUMMARY.md) para detalles completos
+
+---
+
+## 🎯 GitHub Skills - Única Fuente de Verdad
+
+Toda la documentación principal está consolidada en los archivos **SKILL.md**:
+
+### 1. 🤖 Android Development
+**Location**: `BlackSugar212/.github/skills/blacksugar-android/SKILL.md`
+- **Framework**: Kotlin, Jetpack Compose, MVVM
+- **Topics**: 
+  - Architecture & Project Structure
+  - AI Features (Gemini 2.0 Flash)
+  - Analytics & Tracking System ✨ **NUEVO**
+  - Deployment Guide (Firebase App Distribution) ✨ **NUEVO**
+  - Firebase Integration & Remote Config ✨ **NUEVO**
+  - Testing, Build & Release
+  
+### 2. 🍎 iOS Development
+**Location**: `iOS/.github/skills/blacksugar-ios/SKILL.md`
+- **Framework**: Swift, SwiftUI, MVVM
+- **Topics**: 
+  - Architecture & Project Structure
+  - AI Features (Gemini 2.0 Flash)
+  - SwiftUI Patterns
+  - TestFlight Deployment
+  - Firebase Integration
+  - Testing & Build
+
+### 3. 🌐 Web Development
+**Location**: `Public-BlackSugar21/.github/skills/blacksugar-web/SKILL.md`
+- **Framework**: Angular 21, TypeScript
+- **Topics**: 
+  - Standalone Components
+  - Firebase Hosting & Firestore
+  - RxJS Patterns
+  - Admin Scripts
+  - Test Data System
+  - Deployment Workflows
+
+### 4. 🧪 Testing System (Unified)
+**Location**: `Public-BlackSugar21/.github/skills/blacksugar-testing/SKILL.md`
+- **Sistema Maestro Consolidado**
+- **Topics**: 
+  - Match Management
+  - Discovery Profiles Generation
+  - Verification & Diagnostics
+  - Selective Cleanup
+  - Multi-User Support (Daniel/Rosita)
+  - Real-time Testing
+
+### 5. 🌍 Public Repository
+**Location**: `Public-BlackSugar21/.github/skills/blacksugar-public/SKILL.md`
+- **Sitio Web Público**
+- **Topics**: 
+  - Landing Pages (Multi-idioma: es/en/pt)
+  - Legal Policies (Terms, Privacy, Data Deletion)
+  - Corporate Documentation
+  - Firebase Hosting
+  - Multi-language Support
+
+---
+
+## 📊 Documentation Consolidation
+
+**Fecha**: 15 de enero de 2026  
+**Archivos eliminados**: ~60 archivos (25% reducción)  
+**Beneficios**: 
+- ✅ Única fuente de verdad
+- ✅ Sin duplicados
+- ✅ Mantenimiento simplificado
+- ✅ Mejor descubribilidad
+
+**Ver detalles completos**: [DOCUMENTATION_CONSOLIDATION_SUMMARY.md](DOCUMENTATION_CONSOLIDATION_SUMMARY.md)
+
+---
 
 ## 📚 Main Documentation
 
-### GitHub Skill
-**Location**: [.github/skills/blacksugar-web/SKILL.md](.github/skills/blacksugar-web/SKILL.md)
-- **Lines**: 1,025
-- **Content**: Complete Web development guide
-- **Topics**: 
-  - Angular 21 standalone components
-  - Firebase Hosting & Firestore
-  - RxJS patterns
-  - Admin scripts for data management
-  - Test data system
-  - Deployment workflows
+### GitHub Skills (Primary Documentation)
+- [Android Development SKILL](../../../AndroidStudioProjects/BlackSugar212/.github/skills/blacksugar-android/SKILL.md) - Kotlin/Compose/Firebase
+- [iOS Development SKILL](../../../AndroidStudioProjects/iOS/.github/skills/blacksugar-ios/SKILL.md) - Swift/SwiftUI/Firebase
+- [Web Development SKILL](.github/skills/blacksugar-web/SKILL.md) - Angular 21/Firebase Hosting
+- [Testing System SKILL](.github/skills/blacksugar-testing/SKILL.md) - Unified Test Data Management
+- [Public Repository SKILL](.github/skills/blacksugar-public/SKILL.md) - Landing & Legal Pages
 
-### Complete Multi-Platform Guide
-**Location**: [SKILLS_COMPLETE_GUIDE.md](SKILLS_COMPLETE_GUIDE.md)
-- **Lines**: 413
-- **Content**: Comprehensive guide covering iOS, Android, and Web platforms
-- **Topics**: Shared infrastructure, test data, cross-platform workflows
+### Project READMEs
+- [Android README](../../../AndroidStudioProjects/BlackSugar212/README.md) - Overview & Quick Start
+- [iOS README](../../../AndroidStudioProjects/iOS/README.md) - Overview & Quick Start
+- [Web/Public README](README.md) - Overview & Quick Start
 
 ## 🚀 Quick Start
 

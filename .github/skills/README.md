@@ -22,8 +22,12 @@ Los **Agent Skills** son un estándar abierto creado por Anthropic que permite a
 │   ├── incident-runbook.md             # Manual de respuesta a incidentes
 │   └── examples/
 │       └── firebase-service-example.ts # Patrones de Firebase en Angular
-└── blacksugar-testing/
-    └── SKILL.md                        # Sistema unificado de testing
+├── blacksugar-testing/
+│   └── SKILL.md                        # Sistema unificado de testing
+├── blacksugar-ios/
+│   └── SKILL.md                        # App iOS Swift/SwiftUI – Firebase, Analytics, CF
+└── blacksugar-android/
+    └── SKILL.md                        # App Android Kotlin/Compose – Firebase, Analytics, CF
 ```
 
 ## 🎯 Skills Disponibles
@@ -55,6 +59,35 @@ Los **Agent Skills** son un estándar abierto creado por Anthropic que permite a
 - Gestión de matches y discovery profiles
 - Verificación y diagnóstico
 - Limpieza selectiva y soporte multi-usuario
+
+### blacksugar-ios
+**Descripción**: App iOS de BlackSugar21 (Swift/SwiftUI)  
+**Usar cuando**: Código Swift, Firestore iOS, Analytics iOS, Cloud Functions desde iOS, SwipeView, PhoneAuth Swift, Remote Config iOS o auditoría iOS ↔ Android  
+**Incluye**:
+- Bundle ID `com.blacksugar21.app`, archivos clave Swift
+- Todos los campos escritos en `createUserProfile()` y `updateProfile()`
+- Estructura de mensajes text/place/ephemeral (FirestoreRemoteDataSource)
+- 23 eventos Analytics con código Swift
+- 10 claves Remote Config con defaults
+- 33 Cloud Functions con payloads
+- Reglas críticas de alineación iOS ↔ Android
+- Comandos de búsqueda rápida para Swift
+
+### blacksugar-android
+**Descripción**: App Android de BlackSugar21 (Kotlin/Jetpack Compose)  
+**Usar cuando**: Código Kotlin, Firestore Android, Analytics Android, Cloud Functions desde Android, HomeViewModel, PhoneAuthViewModel, SwipeUploadWorker, ActiveChatManager o auditoría iOS ↔ Android  
+**Incluye**:
+- Package `com.black.sugar21`, archivos clave Kotlin
+- Todos los campos escritos en `createUser()` y `updateProfile()`
+- `toData()` y `toPlaceData()` de FirestoreMessage
+- `pendingNotifications` en PushNotificationService
+- `activeChat` via ActiveChatManager
+- WorkManager retry (SwipeUploadWorker)
+- 23 eventos Analytics con métodos AnalyticsService
+- 10 claves Remote Config con defaults
+- 33 Cloud Functions
+- Reglas críticas de alineación iOS ↔ Android
+- Comandos de búsqueda rápida para Kotlin
 
 ## 🔄 Cómo funciona
 

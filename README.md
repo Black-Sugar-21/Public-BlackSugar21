@@ -2,6 +2,27 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.0.
 
+## 🎯 Testing System
+
+BlackSugar21 includes a **comprehensive testing system** centralized in a single interactive script.
+
+### Quick Start
+```bash
+cd scripts
+node test-master.js
+```
+
+### Features
+- 📱 **Matches**: Create matches with automatic notifications
+- 💬 **Messaging**: Send test messages and simulate conversations
+- 🎯 **Discovery**: Create and fix discovery profiles for HomeView/Swipe
+- 🔍 **Diagnostics**: Complete system verification
+- 🧹 **Cleanup**: Selective cleanup with 5 levels
+
+📚 **Full Documentation**: [scripts/README_TESTING.md](scripts/README_TESTING.md)
+
+---
+
 ## Development server
 
 To start a local development server, run:

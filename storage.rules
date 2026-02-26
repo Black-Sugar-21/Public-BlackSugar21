@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules — Black Sugar 21
+// Paths usados por Android y iOS:
+//   - users/{userId}/{fileName}          → fotos de perfil (full + thumb)
+//   - stories/{matchId}/{storyId}.jpg    → stories de chat (efímeras de match)
+//   - stories/personal_stories/{uid}/... → stories personales
+//   - ephemeral_photos/{matchId}/{id}.jpg→ fotos efímeras de chat
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ──────────────────────────────────────────────────────────────────
+    // 1. Fotos de perfil: users/{userId}/{fileName}
+    //    • Lectura: cualquier usuario autenticado (para ver fotos en la app)
+    //    • Escritura: solo el propietario autenticado
+    //    • Tamaño máximo: 10 MB (lo que comprime la app de 20 MB max)
+    // ──────────────────────────────────────────────────────────────────
+    match /users/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 2. Stories de chat: stories/{matchId}/{storyId}.jpg
+    //    • Lectura: cualquier usuario autenticado
+    //      (el acceso real se controla con Firestore, que valida usersMatched)
+    //    • Escritura: cualquier usuario autenticado
+    //      (Firestore valida que el usuario pertenezca al match)
+    //    • Tamaño máximo: 5 MB (límite de la app)
+    // ──────────────────────────────────────────────────────────────────
+    match /stories/{matchId}/{storyId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 3. Stories personales: stories/personal_stories/{senderId}/{fileName}
+    //    • Lectura: cualquier usuario autenticado
+    //    • Escritura: solo el propietario
+    //    • Tamaño máximo: 5 MB
+    // ──────────────────────────────────────────────────────────────────
+    match /stories/personal_stories/{senderId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == senderId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+                    && request.auth.uid == senderId;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 4. Fotos efímeras: ephemeral_photos/{matchId}/{photoId}.jpg
+    //    • Lectura: cualquier usuario autenticado
+    //      (el acceso real se controla con Firestore: viewedBy + expiresAt)
+    //    • Escritura: cualquier usuario autenticado (max 10 MB)
+    //    • Eliminación: cualquier usuario autenticado (la app limpia tras expiración)
+    // ──────────────────────────────────────────────────────────────────
+    match /ephemeral_photos/{matchId}/{photoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 5. Temporales de validación: temp_validations/{uuid}.jpg
+    //    Usadas por ImageValidationService (Android + iOS) antes de llamar
+    //    a la Cloud Function validateProfileImage. Se eliminan tras el análisis.
+    // ──────────────────────────────────────────────────────────────────
+    match /temp_validations/{fileName} {
+      allow read, write: if request.auth != null
+                          && request.resource.size < 10 * 1024 * 1024
+                          && request.resource.contentType.matches('image/.*');
+      allow read, delete: if request.auth != null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 6. Temporales de moderación: temp_moderation/{uuid}.jpg
+    //    Usadas por ImageModerationService (Android + iOS) antes de llamar
+    //    a la Cloud Function moderateProfileImage. Se eliminan tras el análisis.
+    // ──────────────────────────────────────────────────────────────────
+    match /temp_moderation/{fileName} {
+      allow read, write: if request.auth != null
+                          && request.resource.size < 10 * 1024 * 1024
+                          && request.resource.contentType.matches('image/.*');
+      allow read, delete: if request.auth != null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // 8. Denegar todo lo demás
+    // ──────────────────────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

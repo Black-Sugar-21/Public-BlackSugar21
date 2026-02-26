@@ -67,12 +67,20 @@ service cloud.firestore {
                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_MOMMY'))
               );
         
-        // Permitir actualizar solo campos de carga de fotos efímeras (por el remitente)
+        // Permitir actualizar campos específicos según el rol del usuario:
+        // - El remitente actualiza campos de carga de fotos efímeras (uploadProgress, photoUrl, isUploading)
+        // - Cualquier participante del match puede marcar foto efímera como vista (viewedBy)
         allow update: if request.auth != null &&
-              request.auth.uid == resource.data.senderId &&
               request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched &&
-              // Solo permitir actualizar uploadProgress, photoUrl, isUploading
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading']);
+              (
+                // El remitente puede actualizar campos de carga de fotos efímeras
+                (request.auth.uid == resource.data.senderId &&
+                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading'])) ||
+                // ✅ CRÍTICO: Cualquier participante puede marcar foto efímera como vista
+                // sin esto, el destinatario recibe PERMISSION_DENIED al actualizar viewedBy
+                (resource.data.get('isEphemeral', false) == true &&
+                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']))
+              );
         
         // No permitir eliminar mensajes
         allow delete: if false;
@@ -122,8 +130,8 @@ service cloud.firestore {
       // Subcolección COMPATIBILITY_SCORES: solo propietario puede leer
       match /compatibility_scores/{scoreId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        // Solo Cloud Functions pueden escribir scores
-        allow write: if request.auth == null;
+        // Solo Cloud Functions (admin SDK) pueden escribir — bypass automático de reglas.
+        allow write: if false;
       }
     }
 
@@ -142,11 +150,12 @@ service cloud.firestore {
     // --- PENDING NOTIFICATIONS ---
     match /pendingNotifications/{notificationId} {
       // Los usuarios autenticados pueden crear notificaciones pendientes
+      // (iOS/Android escriben directamente a esta colección para notificaciones)
       allow create: if request.auth != null;
       
-      // Solo Cloud Functions pueden leer/actualizar/eliminar
-      // (request.auth == null significa que es una solicitud del servidor)
-      allow read, update, delete: if request.auth == null;
+      // Solo Cloud Functions (admin SDK) pueden leer/actualizar/eliminar — bypass automático.
+      // Ningún cliente debe leer ni modificar notificaciones ajenas.
+      allow read, update, delete: if false;
     }
 
     // --- USER INTERACTIONS (Analytics) ---
@@ -155,8 +164,9 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.auth.uid == request.resource.data.userId;
       
-      // Solo Cloud Functions pueden leer (para agregación)
-      allow read: if request.auth == null;
+      // Solo Cloud Functions (admin SDK) pueden leer para agregación — bypass automático.
+      // Ningún cliente debe leer interacciones de otros usuarios.
+      allow read: if false;
       
       // No permitir actualizar o eliminar
       allow update, delete: if false;
@@ -164,8 +174,9 @@ service cloud.firestore {
 
     // --- USER ANALYTICS (Aggregated) ---
     match /user_analytics/{userId} {
-      // Solo Cloud Functions pueden leer/escribir estadísticas agregadas
-      allow read, write: if request.auth == null;
+      // Solo Cloud Functions (admin SDK) pueden leer/escribir — bypass automático de reglas.
+      // Ningún cliente debe acceder directamente a user_analytics.
+      allow read, write: if false;
     }
 
     // --- STORIES ---
@@ -174,22 +185,40 @@ service cloud.firestore {
       // La lógica de filtrado se maneja en el cliente
       allow read: if request.auth != null;
       
-      // Crear story: usuario autenticado
+      // Crear story: usuario autenticado (aunque normalmente via Cloud Function)
       allow create: if request.auth != null &&
         request.auth.uid == request.resource.data.senderId;
       
-      // Actualizar (marcar como visto): usuario autenticado puede actualizar
-      allow update: if request.auth != null;
+      // Actualizar: solo el propietario puede actualizar su story,
+      // o cualquier usuario puede agregar su id a viewedBy (fallback si el CF falla)
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.senderId ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']));
       
       // Eliminar: solo el creador
       allow delete: if request.auth != null &&
         request.auth.uid == resource.data.senderId;
     }
 
+    // --- INTEREST ITEMS (catálogo público de intereses) ---
+    // Cualquier usuario autenticado puede leer el catálogo de intereses
+    // Solo administradores (admin SDK / Cloud Functions) pueden escribir
+    match /interestItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Solo admin SDK puede escribir
+    }
+
+    // --- INTEREST CATEGORIES (categorías del catálogo de intereses) ---
+    match /interestCategories/{categoryId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Solo admin SDK puede escribir
+    }
+
     // --- SYSTEM STATS (for Cloud Functions) ---
     match /system_stats/{docId} {
-      // Solo Cloud Functions pueden leer/escribir estadísticas del sistema
-      allow read, write: if request.auth == null;
+      // Solo Cloud Functions (admin SDK) pueden leer/escribir: bypass de reglas automático.
+      // Ningún cliente debe acceder directamente a system_stats.
+      allow read, write: if false;
     }
 
     // --- DEFAULT ---
