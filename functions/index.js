@@ -3,6 +3,9 @@ const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {onCall} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const {logger} = require('firebase-functions/v2');
+const {defineSecret} = require('firebase-functions/params');
+
+const placesApiKey = defineSecret('GOOGLE_PLACES_API_KEY');
 const sharp = require('sharp');
 const path = require('path');
 const os = require('os');
@@ -2062,47 +2065,323 @@ exports.getDatingAdvice = onCall(
   },
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PLACES HELPERS — Midpoint, Haversine, Google Places API (New)
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Callable: Obtener sugerencias de citas para dos usuarios.
- * Payload: { userId1, userId2, location? }
- * Response: { suggestions }
- * Homologado: iOS ChatView.getDateSuggestions
+ * Calcula el punto medio geográfico entre dos coordenadas (fórmula esférica).
+ */
+function calculateMidpoint(lat1, lng1, lat2, lng2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const toDeg = (r) => (r * 180) / Math.PI;
+  const dLng = toRad(lng2 - lng1);
+  const lat1R = toRad(lat1);
+  const lat2R = toRad(lat2);
+  const lng1R = toRad(lng1);
+  const bx = Math.cos(lat2R) * Math.cos(dLng);
+  const by = Math.cos(lat2R) * Math.sin(dLng);
+  const midLat = toDeg(
+    Math.atan2(
+      Math.sin(lat1R) + Math.sin(lat2R),
+      Math.sqrt((Math.cos(lat1R) + bx) ** 2 + by ** 2),
+    ),
+  );
+  const midLng = toDeg(lng1R + Math.atan2(by, Math.cos(lat1R) + bx));
+  return {latitude: midLat, longitude: midLng};
+}
+
+/** Haversine: distancia en km entre dos puntos. */
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Estimación simple de tiempo de viaje en minutos (40 km/h ciudad). */
+function estimateTravelMin(km) {
+  return Math.max(1, Math.round((km / 40) * 60));
+}
+
+/**
+ * Lee las ubicaciones de los 2 usuarios de un match desde Firestore.
+ * Devuelve { user1: {lat,lng}, user2: {lat,lng}, midpoint: {latitude,longitude} }
+ */
+async function getMatchUsersLocations(matchId, currentUserId) {
+  const matchDoc = await db.collection('matches').doc(matchId).get();
+  if (!matchDoc.exists) throw new Error('Match not found');
+  const usersMatched = matchDoc.data().usersMatched || [];
+  if (usersMatched.length < 2) throw new Error('Invalid match');
+
+  const [u1Snap, u2Snap] = await Promise.all(
+    usersMatched.map((uid) => db.collection('users').doc(uid).get()),
+  );
+  const u1 = u1Snap.data() || {};
+  const u2 = u2Snap.data() || {};
+
+  const user1 = {lat: u1.latitude || 0, lng: u1.longitude || 0, id: usersMatched[0]};
+  const user2 = {lat: u2.latitude || 0, lng: u2.longitude || 0, id: usersMatched[1]};
+
+  // Determinar cuál es current y cuál es other
+  let currentUser, otherUser;
+  if (currentUserId === user1.id) {
+    currentUser = user1;
+    otherUser = user2;
+  } else {
+    currentUser = user2;
+    otherUser = user1;
+  }
+
+  const midpoint = calculateMidpoint(currentUser.lat, currentUser.lng, otherUser.lat, otherUser.lng);
+  return {currentUser, otherUser, midpoint};
+}
+
+/** Mapa de categorías a tipos Google Places API (New) */
+const CATEGORY_TO_PLACES_TYPE = {
+  cafe: 'cafe',
+  restaurant: 'restaurant',
+  bar: 'bar',
+  night_club: 'night_club',
+  movie_theater: 'movie_theater',
+  park: 'park',
+  museum: 'museum',
+  bowling_alley: 'bowling_alley',
+  art_gallery: 'art_gallery',
+  bakery: 'bakery',
+  shopping_mall: 'shopping_mall',
+  spa: 'spa',
+  aquarium: 'aquarium',
+  zoo: 'zoo',
+};
+
+const CATEGORY_QUERY_MAP = {
+  cafe: 'café coffee',
+  restaurant: 'restaurant',
+  bar: 'bar pub',
+  night_club: 'nightclub discoteca',
+  movie_theater: 'movie theater cinema',
+  park: 'park parque',
+  museum: 'museum museo',
+  bowling_alley: 'bowling',
+  art_gallery: 'art gallery galería',
+  bakery: 'bakery panadería',
+  shopping_mall: 'shopping mall centro comercial',
+  spa: 'spa wellness',
+  aquarium: 'aquarium acuario',
+  zoo: 'zoo zoológico',
+};
+
+const PLACES_FIELD_MASK = [
+  'places.displayName',
+  'places.formattedAddress',
+  'places.rating',
+  'places.location',
+  'places.id',
+  'places.websiteUri',
+  'places.nationalPhoneNumber',
+  'places.googleMapsUri',
+  'places.currentOpeningHours',
+  'places.photos',
+  'places.primaryType',
+  'places.editorialSummary',
+  'nextPageToken',
+].join(',');
+
+/**
+ * Llama a Google Places API (New) Text Search.
+ * @param {string} textQuery
+ * @param {{latitude:number,longitude:number}} center
+ * @param {number} radiusMeters
+ * @param {string} languageCode
+ * @param {string|null} pageToken
+ * @param {number} maxResults
+ * @returns {Promise<{places:Array, nextPageToken:string|null}>}
+ */
+async function placesTextSearch(textQuery, center, radiusMeters, languageCode, pageToken, maxResults = 20) {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY not configured');
+
+  const body = {
+    textQuery,
+    locationBias: {
+      circle: {
+        center: {latitude: center.latitude, longitude: center.longitude},
+        radius: radiusMeters,
+      },
+    },
+    languageCode: languageCode || 'es',
+    maxResultCount: maxResults,
+  };
+  if (pageToken) body.pageToken = pageToken;
+
+  const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': PLACES_FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    logger.error(`[placesTextSearch] API error ${resp.status}: ${errText}`);
+    throw new Error(`Places API error: ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  return {
+    places: data.places || [],
+    nextPageToken: data.nextPageToken || null,
+  };
+}
+
+/**
+ * Transforma un lugar de la API de Google Places (New) a nuestro formato PlaceSuggestion.
+ */
+function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey) {
+  const lat = place.location?.latitude || 0;
+  const lng = place.location?.longitude || 0;
+  const distUser1 = haversineKm(currentUser.lat, currentUser.lng, lat, lng);
+  const distUser2 = haversineKm(otherUser.lat, otherUser.lng, lat, lng);
+
+  // Photos: construir URLs con la Place Photos API
+  let photos = null;
+  if (place.photos && place.photos.length > 0) {
+    photos = place.photos.slice(0, 5).map((p) => ({
+      url: `https://places.googleapis.com/v1/${p.name}/media?maxHeightPx=400&key=${apiKey}`,
+      width: p.widthPx || 400,
+      height: p.heightPx || 300,
+    }));
+  }
+
+  return {
+    name: place.displayName?.text || '',
+    address: place.formattedAddress || '',
+    rating: place.rating || 0,
+    distanceUser1: Math.round(distUser1 * 10) / 10,
+    distanceUser2: Math.round(distUser2 * 10) / 10,
+    travelTimeUser1: estimateTravelMin(distUser1),
+    travelTimeUser2: estimateTravelMin(distUser2),
+    latitude: lat,
+    longitude: lng,
+    placeId: place.id || '',
+    score: Math.round((1 / (1 + (distUser1 + distUser2) / 2)) * 100) / 100,
+    website: place.websiteUri || null,
+    phoneNumber: place.nationalPhoneNumber || null,
+    googleMapsUrl: place.googleMapsUri || null,
+    isOpenNow: place.currentOpeningHours?.openNow ?? null,
+    tiktok: null,
+    instagram: null,
+    instagramHandle: null,
+    category: place.primaryType || null,
+    photos: photos,
+    description: place.editorialSummary?.text || null,
+  };
+}
+
+/**
+ * Callable: Obtener sugerencias de lugares para una cita.
+ * Payload: { matchId, userLanguage, category?, pageToken? }
+ * Response: { success, suggestions: [PlaceSuggestion], nextPageToken? }
+ * Homologado: iOS ChatView.getDateSuggestions + Android ChatViewModel.requestDateSuggestions
+ *
+ * Calcula el punto medio entre los 2 usuarios del match y busca lugares cercanos.
+ * Si no hay historial de chat, muestra los lugares más cercanos al punto medio.
  */
 exports.getDateSuggestions = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const suggestions = [
-      {name: 'Café tranquilo', type: 'cafe', description: 'Perfecto para una conversación sin distracciones', emoji: '☕'},
-      {name: 'Paseo por el parque', type: 'outdoor', description: 'Relajado y natural, ideal para conocerse', emoji: '🌳'},
-      {name: 'Museo o galería', type: 'culture', description: 'Temático y con muchos puntos de conversación', emoji: '🎨'},
-      {name: 'Restaurante de cocina fusión', type: 'dinner', description: 'Cena especial para una noche memorable', emoji: '🍽️'},
-      {name: 'Clases de cocina juntos', type: 'activity', description: 'Divertido y diferente, crean recuerdos', emoji: '👨‍🍳'},
-    ];
-    logger.info(`[getDateSuggestions] Returning ${suggestions.length} suggestions`);
-    return {success: true, suggestions};
+    const {matchId, userLanguage, category, pageToken} = request.data || {};
+    if (!matchId) throw new Error('matchId is required');
+
+    const currentUserId = request.auth.uid;
+    logger.info(`[getDateSuggestions] matchId=${matchId} category=${category || 'all'} page=${!!pageToken}`);
+
+    try {
+      const {currentUser, otherUser, midpoint} = await getMatchUsersLocations(matchId, currentUserId);
+
+      // Radio basado en la distancia entre usuarios (mínimo 2km, máximo 30km)
+      const userDistance = haversineKm(currentUser.lat, currentUser.lng, otherUser.lat, otherUser.lng);
+      const radiusMeters = Math.min(30000, Math.max(2000, (userDistance / 2) * 1000 + 2000));
+
+      // Construir query: si hay categoría usarla, si no buscar lugares de cita genéricos
+      let textQuery;
+      if (category && CATEGORY_QUERY_MAP[category]) {
+        textQuery = CATEGORY_QUERY_MAP[category];
+      } else {
+        textQuery = 'restaurant café bar date spot';
+      }
+
+      const {places, nextPageToken} = await placesTextSearch(
+        textQuery, midpoint, radiusMeters, userLanguage || 'es', pageToken || null, 20,
+      );
+
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey));
+
+      // Ordenar por score (equidistancia) descendente
+      suggestions.sort((a, b) => b.score - a.score);
+
+      logger.info(`[getDateSuggestions] Found ${suggestions.length} places, hasMore=${!!nextPageToken}`);
+      const result = {success: true, suggestions};
+      if (nextPageToken) result.nextPageToken = nextPageToken;
+      return result;
+    } catch (err) {
+      logger.error(`[getDateSuggestions] Error: ${err.message}`);
+      return {success: false, error: err.message, suggestions: []};
+    }
   },
 );
 
 /**
- * Callable: Buscar lugares cercanos para una cita.
- * Payload: { query, location? }
- * Response: { places }
- * Homologado: iOS ChatView.searchPlaces
+ * Callable: Buscar lugares por texto para una cita.
+ * Payload: { matchId, query, userLanguage, pageToken? }
+ * Response: { success, places: [PlaceSuggestion], nextPageToken? }
+ * Homologado: iOS ChatView.searchPlaces + Android ChatViewModel.searchPlaces
+ *
+ * Busca lugares usando Google Places API Text Search con bias al punto medio de los usuarios.
  */
 exports.searchPlaces = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {query} = request.data || {};
-    // En producción conectar Google Places API
-    logger.info(`[searchPlaces] Search for: ${query}`);
-    return {
-      success: true,
-      places: [
-        {name: query || 'Lugar sugerido', address: 'Dirección disponible en la app', lat: 0, lng: 0, placeId: 'placeholder'},
-      ],
-    };
+    const {matchId, query, userLanguage, pageToken} = request.data || {};
+    if (!matchId) throw new Error('matchId is required');
+    if (!query && !pageToken) throw new Error('query is required');
+
+    const currentUserId = request.auth.uid;
+    logger.info(`[searchPlaces] matchId=${matchId} query="${query}" page=${!!pageToken}`);
+
+    try {
+      const {currentUser, otherUser, midpoint} = await getMatchUsersLocations(matchId, currentUserId);
+
+      const userDistance = haversineKm(currentUser.lat, currentUser.lng, otherUser.lat, otherUser.lng);
+      const radiusMeters = Math.min(50000, Math.max(5000, (userDistance / 2) * 1000 + 5000));
+
+      const {places, nextPageToken} = await placesTextSearch(
+        query || '', midpoint, radiusMeters, userLanguage || 'es', pageToken || null, 20,
+      );
+
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey));
+      suggestions.sort((a, b) => b.score - a.score);
+
+      logger.info(`[searchPlaces] Found ${suggestions.length} places for "${query}", hasMore=${!!nextPageToken}`);
+      const result = {success: true, places: suggestions};
+      if (nextPageToken) result.nextPageToken = nextPageToken;
+      return result;
+    } catch (err) {
+      logger.error(`[searchPlaces] Error: ${err.message}`);
+      return {success: false, error: err.message, places: []};
+    }
   },
 );
 
