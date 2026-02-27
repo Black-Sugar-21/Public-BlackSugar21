@@ -2767,7 +2767,7 @@ const {onDocumentUpdated} = require('firebase-functions/v2/firestore');
 /**
  * Scheduled: Reset diario de likes a medianoche UTC.
  * Homologado con resetDailyLikesIfNeeded() en iOS/Android (calendar day comparison).
- * Nuevo límite: random(50..100) — idéntico a ambas plataformas.
+ * Siempre 100 — alineado con Remote Config daily_likes_limit.
  */
 exports.resetDailyLikes = onSchedule(
   {schedule: '0 0 * * *', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
@@ -2805,7 +2805,7 @@ exports.resetDailyLikes = onSchedule(
         }
 
         if (needsReset) {
-          const newLimit = Math.floor(Math.random() * 51) + 50; // 50..100
+          const newLimit = 100; // Siempre 100 (alineado con Remote Config daily_likes_limit)
           batch.update(doc.ref, {
             dailyLikesRemaining: newLimit,
             dailyLikesLimit: newLimit,
