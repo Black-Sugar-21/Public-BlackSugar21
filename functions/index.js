@@ -2768,6 +2768,7 @@ const {onDocumentUpdated} = require('firebase-functions/v2/firestore');
  * Scheduled: Reset diario de likes a medianoche UTC.
  * Homologado con resetDailyLikesIfNeeded() en iOS/Android (calendar day comparison).
  * Siempre 100 — alineado con Remote Config daily_likes_limit.
+ * Envía notificación push a cada usuario reseteado.
  */
 exports.resetDailyLikes = onSchedule(
   {schedule: '0 0 * * *', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
@@ -2778,8 +2779,10 @@ exports.resetDailyLikes = onSchedule(
     todayStart.setUTCHours(0, 0, 0, 0);
 
     let resetCount = 0;
+    let notifCount = 0;
     let lastDoc = null;
     const BATCH_LIMIT = 450;
+    const tokensToNotify = [];
 
     while (resetCount < BATCH_LIMIT) {
       let query = db.collection('users')
@@ -2813,6 +2816,10 @@ exports.resetDailyLikes = onSchedule(
           });
           batchCount++;
           resetCount++;
+          // Recolectar token FCM para notificación
+          if (data.fcmToken && !data.paused) {
+            tokensToNotify.push(data.fcmToken);
+          }
           if (resetCount >= BATCH_LIMIT) break;
         }
       }
@@ -2821,7 +2828,28 @@ exports.resetDailyLikes = onSchedule(
       if (usersSnap.docs.length < 500) break;
     }
 
-    logger.info(`[resetDailyLikes] Reset ${resetCount} users`);
+    // Enviar notificaciones push en batches de 500 (límite FCM)
+    for (let i = 0; i < tokensToNotify.length; i += 500) {
+      const tokenBatch = tokensToNotify.slice(i, i + 500);
+      try {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens: tokenBatch,
+          data: {type: 'daily_likes_reset', timestamp: Date.now().toString()},
+          apns: {payload: {aps: {sound: 'default', badge: 1,
+            alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body'}}}},
+          android: {notification: {
+            titleLocKey: 'notification_daily_likes_reset_title',
+            bodyLocKey: 'notification_daily_likes_reset_body',
+            sound: 'default', channelId: 'default', priority: 'high',
+          }},
+        });
+        notifCount += response.successCount;
+      } catch (err) {
+        logger.error(`[resetDailyLikes] Notification batch error:`, err);
+      }
+    }
+
+    logger.info(`[resetDailyLikes] Reset ${resetCount} users, sent ${notifCount} notifications`);
   },
 );
 
@@ -2829,6 +2857,7 @@ exports.resetDailyLikes = onSchedule(
  * Scheduled: Reset diario de super likes a medianoche UTC.
  * Homologado con resetSuperLikesIfNeeded() en iOS/Android (calendar day comparison).
  * Siempre restaura a 5 super likes.
+ * Envía notificación push a cada usuario reseteado.
  */
 exports.resetSuperLikes = onSchedule(
   {schedule: '0 0 * * *', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
@@ -2839,8 +2868,10 @@ exports.resetSuperLikes = onSchedule(
     todayStart.setUTCHours(0, 0, 0, 0);
 
     let resetCount = 0;
+    let notifCount = 0;
     let lastDoc = null;
     const BATCH_LIMIT = 450;
+    const tokensToNotify = [];
 
     while (resetCount < BATCH_LIMIT) {
       let query = db.collection('users')
@@ -2873,6 +2904,10 @@ exports.resetSuperLikes = onSchedule(
           });
           batchCount++;
           resetCount++;
+          // Recolectar token FCM para notificación
+          if (data.fcmToken && !data.paused) {
+            tokensToNotify.push(data.fcmToken);
+          }
           if (resetCount >= BATCH_LIMIT) break;
         }
       }
@@ -2881,7 +2916,28 @@ exports.resetSuperLikes = onSchedule(
       if (usersSnap.docs.length < 500) break;
     }
 
-    logger.info(`[resetSuperLikes] Reset ${resetCount} users`);
+    // Enviar notificaciones push en batches de 500 (límite FCM)
+    for (let i = 0; i < tokensToNotify.length; i += 500) {
+      const tokenBatch = tokensToNotify.slice(i, i + 500);
+      try {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens: tokenBatch,
+          data: {type: 'super_likes_reset', timestamp: Date.now().toString()},
+          apns: {payload: {aps: {sound: 'default', badge: 1,
+            alert: {'title-loc-key': 'notification-super-likes-reset-title', 'loc-key': 'notification-super-likes-reset-body'}}}},
+          android: {notification: {
+            titleLocKey: 'notification_super_likes_reset_title',
+            bodyLocKey: 'notification_super_likes_reset_body',
+            sound: 'default', channelId: 'default', priority: 'high',
+          }},
+        });
+        notifCount += response.successCount;
+      } catch (err) {
+        logger.error(`[resetSuperLikes] Notification batch error:`, err);
+      }
+    }
+
+    logger.info(`[resetSuperLikes] Reset ${resetCount} users, sent ${notifCount} notifications`);
   },
 );
 
