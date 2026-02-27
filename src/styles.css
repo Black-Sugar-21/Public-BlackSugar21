@@ -1,28 +1,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
 :root {
-  /* Palette */
-  --bg-dark: #0A0A0A;
-  --bg-card: #1A1A1A;
-  --bg-overlay: #2D2D2D;
+  /* Palette — aligned with iOS ColorTheme.swift + AppColor.swift */
+  --bg-dark: #0A0A0A;           /* iOS: primaryDark */
+  --bg-card: #1A1A1A;           /* iOS: surfaceDark */
+  --bg-overlay: #2D2D2D;        /* iOS: textSecondaryLight */
+  --card-bg: #1E1E1E;           /* iOS: cardBgDark */
 
-  --gold-dark: #B8860B;
-  --gold: #D4AF37;
-  --purple: #4A004F;
+  --gold-dark: #B8860B;         /* iOS: accentDark / darkGoldenrod */
+  --gold: #D4AF37;              /* iOS: accentVariantDark / metallicGold */
+  --gold-variant: #C5A028;      /* iOS: goldVariant */
+  --gold-star: #FFD700;         /* iOS: ratingStarGold */
+  --purple: #4A004F;            /* iOS: secondaryAccentDark */
+  --purple-light-accent: #6A1B9A; /* iOS: secondaryAccentLight */
 
-  /* New Vivid Purples */
+  /* iOS AppColor.purpleColors */
   --purple-vivid: #831bfc;
   --purple-light: #9c59ea;
 
+  /* iOS AppColor reaction colors */
+  --dislike-red1: #FF6560;
+  --dislike-red2: #F83770;
+  --like-green1: #6CEAC5;
+  --like-green2: #16DBA1;
+  --app-red: #FF4457;           /* iOS: appRed */
+
+  /* iOS AppColor brand colors */
+  --facebook-blue: #1877F2;
+  --instagram-pink: #E4405F;
+
+  /* iOS AppColor grays */
+  --lighter-gray: #F0F2F4;
+  --light-gray: #E9EBEE;
+  --darker-gray: #D2D4D6;
+  --darkest-gray: #D5D7DF;
+  --blue-gray: #505966;
+
+  /* Text — iOS: textPrimaryDark / textSecondaryDark */
   --text-primary: #FFFFFF;
-  --text-secondary: #E0D0E0;
-  --text-muted: #D0C0D0;
+  --text-secondary: #E0E0E0;
+  --text-muted: #B0B0B0;
 
   /* Gradients */
   --gradient-gold: linear-gradient(135deg, var(--gold-dark), var(--gold));
   --gradient-purple: linear-gradient(135deg, #2a002e, var(--purple));
   --gradient-luxury: linear-gradient(135deg, var(--bg-card), #252525);
-  --gradient-main: linear-gradient(to bottom, var(--purple-vivid), var(--purple-light));
+  --gradient-main: linear-gradient(to bottom, #0A0A14, #140B28, #1C0E38);
 
   /* Spacing */
   --spacing-xs: 0.5rem;
