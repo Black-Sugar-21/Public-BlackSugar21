@@ -2660,10 +2660,11 @@ exports.testDailyLikesResetNotification = onCall(
       data: {type: 'daily_likes_reset', timestamp: Date.now().toString()},
       token: userDoc.data().fcmToken,
       apns: {payload: {aps: {sound: 'default', badge: 1,
-        alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body'}}}},
+        alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body', 'loc-args': ['100']}}}},
       android: {notification: {
         titleLocKey: 'notification_daily_likes_reset_title',
         bodyLocKey: 'notification_daily_likes_reset_body',
+        bodyLocArgs: ['100'],
         sound: 'default', channelId: 'default', priority: 'high',
       }},
     };
@@ -2855,10 +2856,11 @@ exports.resetDailyLikes = onSchedule(
           tokens: tokenBatch,
           data: {type: 'daily_likes_reset', timestamp: Date.now().toString()},
           apns: {payload: {aps: {sound: 'default', badge: 1,
-            alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body'}}}},
+            alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body', 'loc-args': ['100']}}}},
           android: {notification: {
             titleLocKey: 'notification_daily_likes_reset_title',
             bodyLocKey: 'notification_daily_likes_reset_body',
+            bodyLocArgs: ['100'],
             sound: 'default', channelId: 'default', priority: 'high',
           }},
         });
