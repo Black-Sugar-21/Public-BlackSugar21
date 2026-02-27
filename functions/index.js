@@ -2765,21 +2765,21 @@ const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {onDocumentUpdated} = require('firebase-functions/v2/firestore');
 
 /**
- * Scheduled: Reset diario de likes a medianoche UTC.
- * Homologado con resetDailyLikesIfNeeded() en iOS/Android (calendar day comparison).
+ * Scheduled: Reset de likes diarios.
+ * Corre cada hora. Resetea solo usuarios cuya medianoche local ya pasó (usa timezoneOffset).
  * Siempre 100 — alineado con Remote Config daily_likes_limit.
- * Envía notificación push a cada usuario reseteado.
+ * Solo notifica si el usuario usó likes (dailyLikesRemaining < 100).
  */
 exports.resetDailyLikes = onSchedule(
-  {schedule: '0 0 * * *', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
+  {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
   async () => {
     const db = admin.firestore();
-    const now = admin.firestore.Timestamp.now();
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
+    const nowUTC = new Date();
+    const currentUTCHour = nowUTC.getUTCHours();
 
     let resetCount = 0;
     let notifCount = 0;
+    let skippedFull = 0;
     let lastDoc = null;
     const BATCH_LIMIT = 450;
     const tokensToNotify = [];
@@ -2799,27 +2799,46 @@ exports.resetDailyLikes = onSchedule(
 
       for (const doc of usersSnap.docs) {
         const data = doc.data();
+
+        // Calcular medianoche local del usuario
+        const userOffset = typeof data.timezoneOffset === 'number' ? data.timezoneOffset : 0;
+        // La hora local del usuario es: currentUTCHour + userOffset
+        // Verificar si la hora actual UTC corresponde a medianoche (0:00) en la zona del usuario
+        // Es decir: (currentUTCHour + userOffset) mod 24 === 0
+        let userLocalHour = (currentUTCHour + userOffset) % 24;
+        if (userLocalHour < 0) userLocalHour += 24;
+        if (userLocalHour !== 0) continue; // No es medianoche para este usuario
+
         const lastReset = data.lastLikeResetDate;
         let needsReset = !lastReset;
 
         if (lastReset) {
           const lastResetDate = lastReset.toDate ? lastReset.toDate() : new Date(lastReset);
-          needsReset = lastResetDate < todayStart;
+          // Calcular inicio del día actual en la zona del usuario
+          const userNow = new Date(nowUTC.getTime() + userOffset * 3600000);
+          const userTodayStart = new Date(userNow);
+          userTodayStart.setUTCHours(0, 0, 0, 0);
+          needsReset = lastResetDate < userTodayStart;
         }
 
         if (needsReset) {
-          const newLimit = 100; // Siempre 100 (alineado con Remote Config daily_likes_limit)
+          const newLimit = 100;
           batch.update(doc.ref, {
             dailyLikesRemaining: newLimit,
             dailyLikesLimit: newLimit,
-            lastLikeResetDate: now,
+            lastLikeResetDate: admin.firestore.Timestamp.now(),
           });
           batchCount++;
           resetCount++;
-          // Recolectar token FCM para notificación
-          if (data.fcmToken && !data.paused) {
+
+          // Solo notificar si el usuario realmente usó likes (remaining < 100)
+          const remaining = typeof data.dailyLikesRemaining === 'number' ? data.dailyLikesRemaining : 0;
+          if (remaining < 100 && data.fcmToken && !data.paused) {
             tokensToNotify.push(data.fcmToken);
+          } else if (remaining >= 100) {
+            skippedFull++;
           }
+
           if (resetCount >= BATCH_LIMIT) break;
         }
       }
@@ -2849,26 +2868,26 @@ exports.resetDailyLikes = onSchedule(
       }
     }
 
-    logger.info(`[resetDailyLikes] Reset ${resetCount} users, sent ${notifCount} notifications`);
+    logger.info(`[resetDailyLikes] UTC hour=${currentUTCHour}, reset=${resetCount}, notified=${notifCount}, skippedFull=${skippedFull}`);
   },
 );
 
 /**
- * Scheduled: Reset diario de super likes a medianoche UTC.
- * Homologado con resetSuperLikesIfNeeded() en iOS/Android (calendar day comparison).
+ * Scheduled: Reset de super likes diarios.
+ * Corre cada hora. Resetea solo usuarios cuya medianoche local ya pasó (usa timezoneOffset).
  * Siempre restaura a 5 super likes.
- * Envía notificación push a cada usuario reseteado.
+ * Solo notifica si el usuario usó super likes (superLikesRemaining < 5).
  */
 exports.resetSuperLikes = onSchedule(
-  {schedule: '0 0 * * *', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
+  {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
   async () => {
     const db = admin.firestore();
-    const now = admin.firestore.Timestamp.now();
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
+    const nowUTC = new Date();
+    const currentUTCHour = nowUTC.getUTCHours();
 
     let resetCount = 0;
     let notifCount = 0;
+    let skippedFull = 0;
     let lastDoc = null;
     const BATCH_LIMIT = 450;
     const tokensToNotify = [];
@@ -2888,26 +2907,41 @@ exports.resetSuperLikes = onSchedule(
 
       for (const doc of usersSnap.docs) {
         const data = doc.data();
+
+        // Calcular medianoche local del usuario
+        const userOffset = typeof data.timezoneOffset === 'number' ? data.timezoneOffset : 0;
+        let userLocalHour = (currentUTCHour + userOffset) % 24;
+        if (userLocalHour < 0) userLocalHour += 24;
+        if (userLocalHour !== 0) continue; // No es medianoche para este usuario
+
         const lastReset = data.lastSuperLikeResetDate;
         let needsReset = !lastReset;
 
         if (lastReset) {
           const lastResetDate = lastReset.toDate ? lastReset.toDate() : new Date(lastReset);
-          needsReset = lastResetDate < todayStart;
+          const userNow = new Date(nowUTC.getTime() + userOffset * 3600000);
+          const userTodayStart = new Date(userNow);
+          userTodayStart.setUTCHours(0, 0, 0, 0);
+          needsReset = lastResetDate < userTodayStart;
         }
 
         if (needsReset) {
           batch.update(doc.ref, {
             superLikesRemaining: 5,
             superLikesUsedToday: 0,
-            lastSuperLikeResetDate: now,
+            lastSuperLikeResetDate: admin.firestore.Timestamp.now(),
           });
           batchCount++;
           resetCount++;
-          // Recolectar token FCM para notificación
-          if (data.fcmToken && !data.paused) {
+
+          // Solo notificar si el usuario realmente usó super likes (remaining < 5)
+          const remaining = typeof data.superLikesRemaining === 'number' ? data.superLikesRemaining : 0;
+          if (remaining < 5 && data.fcmToken && !data.paused) {
             tokensToNotify.push(data.fcmToken);
+          } else if (remaining >= 5) {
+            skippedFull++;
           }
+
           if (resetCount >= BATCH_LIMIT) break;
         }
       }
@@ -2937,7 +2971,7 @@ exports.resetSuperLikes = onSchedule(
       }
     }
 
-    logger.info(`[resetSuperLikes] Reset ${resetCount} users, sent ${notifCount} notifications`);
+    logger.info(`[resetSuperLikes] UTC hour=${currentUTCHour}, reset=${resetCount}, notified=${notifCount}, skippedFull=${skippedFull}`);
   },
 );
 
