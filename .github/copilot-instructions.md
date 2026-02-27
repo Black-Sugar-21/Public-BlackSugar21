@@ -358,7 +358,7 @@ phone_verification_failed: reason
 18. **fcmBuildType:** solo Android escribe `fcmBuildType` ("debug"|"release") junto al `fcmToken`. iOS solo escribe `fcmToken`. No afecta funcionalidad (no se usa en CFs)
 19. **apnsToken:** solo iOS escribe `apnsToken` en dispositivos reales. No tiene equivalente Android. No afecta funcionalidad
 20. **Swipe regular:** batch atómico `{liked/passed: arrayUnion, dailyLikesRemaining: increment(-1)}` + swipe subcolección `{timestamp, isLike, isSuperLike:false}` + liked subcolección `{exists:true, superLike:false}` — idéntico iOS/Android
-21. **Daily likes reset:** comparación por día calendario (midnight), NO ventana de 24h. Random `50..100`. Escribe `{dailyLikesRemaining, dailyLikesLimit, lastLikeResetDate}` — idéntico iOS/Android
+21. **Daily likes reset:** comparación por día calendario (midnight), NO ventana de 24h. Siempre `100` (alineado con Remote Config `daily_likes_limit`). Escribe `{dailyLikesRemaining, dailyLikesLimit, lastLikeResetDate}` — idéntico iOS/Android
 22. **Super likes reset:** comparación por día calendario. Escribe `{superLikesRemaining:5, superLikesUsedToday:0, lastSuperLikeResetDate}` — idéntico iOS/Android
 23. **Match detection:** `hasUserLikedBack()` lee `otherUser.liked` y verifica si contiene `currentUserId`. 100ms delay antes de verificar — idéntico iOS/Android
 24. **Match notification:** enviada por CF trigger `onMatchCreated` (NO por cliente). `sendMatchNotification` en Android es código muerto
@@ -456,7 +456,7 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 13. **Firestore Security Rules** — verificar que todas las colecciones usadas tengan reglas
 14. **Block/Unblock** — blockUser via CF, unblockUser local con arrayRemove
 15. **Swipe regular/pass** — batch atómico + swipe/liked subcollecciones
-16. **Daily/Super likes reset** — calendar day comparison, random(50..100)
+16. **Daily/Super likes reset** — calendar day comparison, always 100
 17. **Match detection** — hasUserLikedBack() + 100ms delay
 18. **Photo upload/delete** — UUID.jpg + _thumb.jpg (400px), Storage path `users/{userId}/`
 19. **AI CFs (15)** — payloads y nombres idénticos
@@ -491,7 +491,7 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 | Firestore Rules | ✅ | Todas las colecciones cubiertas |
 | FCM token | ✅ | Aceptable (Android +fcmBuildType extra) |
 | Swipe regular + pass | ✅ | Batch atómico idéntico |
-| Daily/Super likes reset | ✅ | Calendar day comparison, random(50..100) |
+| Daily/Super likes reset | ✅ | Calendar day comparison, always 100 |
 | Match detection | ✅ | hasUserLikedBack() lee otherUser.liked |
 | Unmatch/Report/Delete CFs | ✅ | Payloads idénticos |
 | Stories CRUD (5 CFs) | ✅ | create/delete/markViewed/batchStatus/batchStories |
