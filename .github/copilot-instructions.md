@@ -189,13 +189,33 @@ Lectura pública. Sin escritura desde cliente.
 
 ---
 
-## Cloud Functions — 33 funciones callable (us-central1)
+## Cloud Functions — 33 callable + 2 scheduled + triggers (us-central1)
 
 ### Funciones principales (todas homologadas iOS = Android)
 
 > ⚠️ NOTA: swipeUser, superLikeUser y sendPlaceMessage NO son CFs callable — ambas
 > plataformas hacen esas operaciones directamente en Firestore.
 > Los swipes/super likes se escriben en subcolecciones y el array `liked`/`passed` del usuario.
+
+### Funciones Scheduled (Cloud Scheduler)
+
+| CF | Schedule | Propósito |
+|---|---|---|
+| `resetDailyLikes` | `every 1 hours` | Reset de likes diarios a 100 (timezone-aware) |
+| `resetSuperLikes` | `every 1 hours` | Reset de super likes a 5 (timezone-aware) |
+
+**Comportamiento timezone-aware:**
+- Cada hora, lee todos los usuarios activos (`paused != true`)
+- Para cada usuario, calcula `(currentUTCHour + timezoneOffset) % 24`
+- Solo resetea si el resultado es `0` (medianoche local del usuario)
+- `resetDailyLikes`: escribe `{dailyLikesRemaining: 100, dailyLikesLimit: 100, lastLikeResetDate: now}`
+- `resetSuperLikes`: escribe `{superLikesRemaining: 5, superLikesUsedToday: 0, lastSuperLikeResetDate: now}`
+
+**Notificaciones condicionales:**
+- Solo envía push si el usuario usó likes (`dailyLikesRemaining < 100`) o super likes (`superLikesRemaining < 5`)
+- Usa `sendEachForMulticast` en batches de 500 tokens
+- Claves de localización: `notification-daily-likes-reset-title/body` (iOS), `notification_daily_likes_reset_title/body` (Android)
+- Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
 ```
 analyzeConversationChemistry
@@ -275,13 +295,13 @@ validateProfileImage
 
 ---
 
-## Remote Config — 10 claves (VERIFICADAS EN CÓDIGO)
+## Remote Config — 12 claves (VERIFICADAS EN CÓDIGO)
 
 | Clave | Tipo | Default | Descripción |
 |---|---|---|---|
 | `compatibility_weights` | JSON String | `CompatibilityWeights.default` | Pesos para score de compatibilidad |
 | `matching_scoring_weights` | JSON String | `MatchingScoringWeights.default` | Pesos para MatchingScoreCalculator |
-| `daily_likes_limit` | Number | 100 | Límite de likes diarios |
+| `daily_likes_limit` | Number | 100 | Límite de likes diarios (SIEMPRE 100, nunca random) |
 | `daily_super_likes_limit` | Number | 5 | Límite de super likes diarios |
 | `max_search_radius_km` | Number | 200.0 | Radio máximo de búsqueda en km |
 | `ai_moderation_confidence_threshold` | Number | 0.80 | Umbral de confianza moderación IA |
@@ -291,6 +311,8 @@ validateProfileImage
 | `enable_bio_ai_suggestions` | Boolean | false | Habilitar sugerencias de bio con IA |
 | `reviewer_test_phone` | String | `"+16505550123"` | Teléfono de prueba para revisores Apple/Google |
 | `reviewer_test_code` | String | `"123456"` | Código de verificación para el test phone del reviewer |
+| `terms_url` | String | `"https://www.blacksugar21.com/terms"` | URL de términos de uso (leída en LoginView) |
+| `privacy_url` | String | `"https://www.blacksugar21.com/privacy"` | URL de política de privacidad (leída en LoginView) |
 
 **Intervalo de actualización:** 3600 segundos (idéntico iOS `services/RemoteConfigService.swift` y Android `core/firebase/RemoteConfigManager.kt`)
 
@@ -345,7 +367,7 @@ phone_verification_failed: reason
 5. **superLiked:** iOS y Android escriben al array `"superLiked"` del usuario Y en subcolección
 6. **activeChat:** se elimina con `FieldValue.delete()` al salir del chat
 7. **orientation en root:** iOS escribe `"orientation"` en root del user doc + en `discoveryPreferences.interestedIn`
-8. **timezoneOffset:** se escribe en `createUser`, `updateDeviceSettings` Y `updateUserLocation` (iOS: `ProfileRepository.swift` fix aplicado)
+8. **timezoneOffset:** se escribe en `createUser`, `updateDeviceSettings` Y `updateUserLocation`. Ambas apps llaman `updateDeviceSettings()` en `HomeViewModel.fetchProfiles()` cada vez que el usuario entra a HomeView — esto garantiza que las CFs de reset (`resetDailyLikes`/`resetSuperLikes`) tengan el offset correcto
 9. **visible:** solo se escribe al pausar/despausar (no en createUser)
 10. **pendingNotifications:** siempre incluye `createdAt: serverTimestamp()`
 11. **Crashlytics setUserId:** Android debe llamar `FirebaseCrashlytics.getInstance().setUserId(userId)` al login (homologado con iOS `Crashlytics.crashlytics().setUserID(userId)`)
@@ -358,8 +380,8 @@ phone_verification_failed: reason
 18. **fcmBuildType:** solo Android escribe `fcmBuildType` ("debug"|"release") junto al `fcmToken`. iOS solo escribe `fcmToken`. No afecta funcionalidad (no se usa en CFs)
 19. **apnsToken:** solo iOS escribe `apnsToken` en dispositivos reales. No tiene equivalente Android. No afecta funcionalidad
 20. **Swipe regular:** batch atómico `{liked/passed: arrayUnion, dailyLikesRemaining: increment(-1)}` + swipe subcolección `{timestamp, isLike, isSuperLike:false}` + liked subcolección `{exists:true, superLike:false}` — idéntico iOS/Android
-21. **Daily likes reset:** comparación por día calendario (midnight), NO ventana de 24h. Siempre `100` (alineado con Remote Config `daily_likes_limit`). Escribe `{dailyLikesRemaining, dailyLikesLimit, lastLikeResetDate}` — idéntico iOS/Android
-22. **Super likes reset:** comparación por día calendario. Escribe `{superLikesRemaining:5, superLikesUsedToday:0, lastSuperLikeResetDate}` — idéntico iOS/Android
+21. **Daily likes reset:** SIEMPRE 100 (nunca random). Client-side: comparación por día calendario. Server-side: CF `resetDailyLikes` corre `every 1 hours`, verifica `(UTCHour + timezoneOffset) % 24 === 0` para detectar medianoche local. Escribe `{dailyLikesRemaining:100, dailyLikesLimit:100, lastLikeResetDate}`. Solo notifica si `dailyLikesRemaining < 100` (usuario usó likes) — idéntico iOS/Android
+22. **Super likes reset:** SIEMPRE 5. Server-side: CF `resetSuperLikes` corre `every 1 hours`, misma lógica timezone. Escribe `{superLikesRemaining:5, superLikesUsedToday:0, lastSuperLikeResetDate}`. Solo notifica si `superLikesRemaining < 5` — idéntico iOS/Android
 23. **Match detection:** `hasUserLikedBack()` lee `otherUser.liked` y verifica si contiene `currentUserId`. 100ms delay antes de verificar — idéntico iOS/Android
 24. **Match notification:** enviada por CF trigger `onMatchCreated` (NO por cliente). `sendMatchNotification` en Android es código muerto
 25. **Photo upload:** `users/{userId}/{uuid}.jpg` + thumbnail `users/{userId}/{uuid}_thumb.jpg` (400px). Max dimension 1920px, target 500KB — idéntico iOS/Android
@@ -491,7 +513,7 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 | Firestore Rules | ✅ | Todas las colecciones cubiertas |
 | FCM token | ✅ | Aceptable (Android +fcmBuildType extra) |
 | Swipe regular + pass | ✅ | Batch atómico idéntico |
-| Daily/Super likes reset | ✅ | Calendar day comparison, always 100 |
+| Daily/Super likes reset | ✅ | Always 100/5, CF timezone-aware `every 1 hours`, conditional push |
 | Match detection | ✅ | hasUserLikedBack() lee otherUser.liked |
 | Unmatch/Report/Delete CFs | ✅ | Payloads idénticos |
 | Stories CRUD (5 CFs) | ✅ | create/delete/markViewed/batchStatus/batchStories |
@@ -501,12 +523,15 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 | Orientation enforcement | ✅ | Enum lowercase + decoder normaliza |
 | Photo upload/delete | ✅ | users/{uuid}.jpg + _thumb.jpg 400px |
 | Scheduled deletion | ✅ | Aceptable (Android +scheduledDeletionDate extra) |
-| Push notifications | ✅ | pendingNotifications + CF trigger onMatchCreated |
+| Push notifications | ✅ | pendingNotifications + CF trigger onMatchCreated + reset CFs conditional push |
 | 15 AI CFs payloads | ✅ | Todos idénticos iOS = Android |
 | Photo/Message moderation | ✅ | 4 CFs moderación idénticas |
 | searchPlaces CF | ✅ | {matchId, query, userLanguage} idéntico |
 | Ephemeral photo upload | ✅ | 3-step flow + Storage path idéntico |
 | Compatibility scoring | ✅ | getBatchCompatibilityScores idéntico |
+| updateDeviceSettings on HomeView | ✅ | timezoneOffset + deviceLanguage en fetchProfiles() |
+| Remote Config URLs | ✅ | terms_url + privacy_url leídas en LoginView |
+| Reset CFs timezone-aware | ✅ | resetDailyLikes + resetSuperLikes `every 1 hours` con push condicional |
 
 ### Comandos de auditoría rápida
 
