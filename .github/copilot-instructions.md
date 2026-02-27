@@ -215,6 +215,7 @@ Lectura pública. Sin escritura desde cliente.
 - Solo envía push si el usuario usó likes (`dailyLikesRemaining < 100`) o super likes (`superLikesRemaining < 5`)
 - Usa `sendEachForMulticast` en batches de 500 tokens
 - Claves de localización: `notification-daily-likes-reset-title/body` (iOS), `notification_daily_likes_reset_title/body` (Android)
+- `loc-args`/`bodyLocArgs`: daily likes envía `['100']` para reemplazar `%@` (iOS) / `%1$d` (Android). Super likes no usa args (número "5" hardcodeado en strings)
 - Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
 ```
