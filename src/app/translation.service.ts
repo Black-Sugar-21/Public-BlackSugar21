@@ -121,8 +121,8 @@ export class TranslationService {
       en: 'Data Collection'
     },
     'privacy.collectionText': {
-      es: 'Solo recopilamos los datos necesarios para el funcionamiento de la app (email, edad verificada 18+, preferencias).',
-      en: 'We only collect data necessary for app functionality (email, verified age 18+, preferences).'
+      es: 'Solo recopilamos los datos necesarios para el funcionamiento de la app: número de teléfono (para autenticación), edad verificada 18+, fotos de perfil, ubicación aproximada y preferencias de búsqueda (rango de edad, distancia, orientación).',
+      en: 'We only collect data necessary for app functionality: phone number (for authentication), verified age 18+, profile photos, approximate location, and search preferences (age range, distance, orientation).'
     },
     'privacy.usage': {
       es: 'Uso de Datos',
