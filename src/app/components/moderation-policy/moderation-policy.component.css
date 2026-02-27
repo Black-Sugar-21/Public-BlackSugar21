@@ -1,8 +1,8 @@
 .policy-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #831bfc, #9c59ea);
+  background: var(--gradient-main);
   background-attachment: fixed;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .policy-header {
@@ -27,7 +27,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+  background: var(--gradient-gold);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -98,14 +98,14 @@
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  color: #D4AF37;
+  color: var(--gold);
 }
 
 .policy-section h3 {
   font-size: 1.4rem;
   font-weight: 600;
   margin: 1.5rem 0 1rem;
-  color: #B8860B;
+  color: var(--gold-dark);
 }
 
 .policy-section p {
@@ -125,11 +125,11 @@
   padding: 1rem 1.5rem;
   margin: 0.8rem 0;
   background: rgba(255, 255, 255, 0.1);
-  border-left: 4px solid #D4AF37;
+  border-left: 4px solid var(--gold);
   border-radius: 8px;
   font-size: 1.05rem;
   line-height: 1.6;
-  color: #ffffff;
+  color: var(--text-primary);
   transition: all 0.3s ease;
 }
 
@@ -167,7 +167,7 @@
   border-radius: 12px;
   margin: 1.5rem 0;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .info-box {
@@ -177,7 +177,7 @@
   border-radius: 12px;
   margin: 1.5rem 0;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .cta-section {
@@ -191,7 +191,7 @@
   font-size: 1.1rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #B8860B 0%, #D4AF37 100%);
+  background: var(--gradient-gold);
   border: none;
   border-radius: 50px;
   cursor: pointer;
@@ -225,14 +225,14 @@
 }
 
 .footer-links a {
-  color: #D4AF37;
+  color: var(--gold);
   text-decoration: none;
   transition: color 0.3s ease;
   font-size: 0.85rem;
 }
 
 .footer-links a:hover {
-  color: #B8860B;
+  color: var(--gold-dark);
 }
 
 @keyframes pulse {

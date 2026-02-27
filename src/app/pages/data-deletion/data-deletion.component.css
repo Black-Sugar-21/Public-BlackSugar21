@@ -2,9 +2,9 @@
 .legal-page-container {
   min-height: 100vh;
   padding: 2rem;
-  background: linear-gradient(to bottom, #831bfc, #9c59ea);
+  background: var(--gradient-main);
   background-attachment: fixed;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: 'Outfit', sans-serif;
 }
 
@@ -23,14 +23,14 @@
 }
 
 .back-link {
-  color: #D4AF37;
+  color: var(--gold);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .back-link:hover {
-  color: #B8860B;
+  color: var(--gold-dark);
 }
 
 .legal-content {
@@ -47,7 +47,7 @@
 h1 {
   font-size: 2.5rem;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+  background: var(--gradient-gold);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   text-align: center;
@@ -57,7 +57,7 @@ h1 {
   font-size: 1.1rem;
   line-height: 1.7;
   margin-bottom: 3rem;
-  color: #e0e0e0;
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -70,14 +70,14 @@ h1 {
   padding: 2rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  border-left: 4px solid #D4AF37;
+  border-left: 4px solid var(--gold);
 }
 
 .policy-block h3 {
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  color: #D4AF37;
+  color: var(--gold);
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
   font-weight: 700;
@@ -86,7 +86,7 @@ h1 {
 
 .policy-block p {
   line-height: 1.8;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.05rem;
   opacity: 0.95;
 }
@@ -100,7 +100,7 @@ h1 {
   margin-top: 3rem;
   text-align: center;
   font-size: 0.9rem;
-  color: #999;
+  color: var(--text-muted);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 1.5rem;
 }
@@ -124,7 +124,7 @@ h1 {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 1.05rem;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .steps-list li:hover {
@@ -141,13 +141,13 @@ h1 {
   transform: translateY(-50%);
   width: 42px;
   height: 42px;
-  background: linear-gradient(135deg, #D4AF37, #B8860B);
+  background: var(--gradient-gold);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #831bfc;
+  color: var(--purple-vivid);
   font-size: 1.1rem;
   box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
@@ -168,7 +168,7 @@ h1 {
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 1.05rem;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .data-list li:hover {
@@ -198,11 +198,11 @@ h1 {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   line-height: 1.8;
-  border-left: 4px solid #D4AF37;
+  border-left: 4px solid var(--gold);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 215, 0, 0.2);
-  color: #ffffff;
-  border-left: 4px solid #D4AF37;
+  color: var(--text-primary);
+  border-left: 4px solid var(--gold);
 }
 
 .retention-list li:hover {
@@ -213,7 +213,7 @@ h1 {
 }
 
 .retention-list li strong {
-  color: #D4AF37;
+  color: var(--gold);
   display: block;
   margin-bottom: 0.75rem;
   font-size: 1.15rem;
