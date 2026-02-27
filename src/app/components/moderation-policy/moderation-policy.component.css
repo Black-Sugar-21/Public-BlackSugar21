@@ -27,7 +27,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -98,14 +98,14 @@
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  color: #FFD700;
+  color: #D4AF37;
 }
 
 .policy-section h3 {
   font-size: 1.4rem;
   font-weight: 600;
   margin: 1.5rem 0 1rem;
-  color: #FFA500;
+  color: #B8860B;
 }
 
 .policy-section p {
@@ -125,7 +125,7 @@
   padding: 1rem 1.5rem;
   margin: 0.8rem 0;
   background: rgba(255, 255, 255, 0.1);
-  border-left: 4px solid #FFD700;
+  border-left: 4px solid #D4AF37;
   border-radius: 8px;
   font-size: 1.05rem;
   line-height: 1.6;
@@ -225,14 +225,14 @@
 }
 
 .footer-links a {
-  color: #FFD700;
+  color: #D4AF37;
   text-decoration: none;
   transition: color 0.3s ease;
   font-size: 0.85rem;
 }
 
 .footer-links a:hover {
-  color: #FFA500;
+  color: #B8860B;
 }
 
 @keyframes pulse {
