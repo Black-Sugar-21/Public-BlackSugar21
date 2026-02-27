@@ -631,3 +631,186 @@ node scripts/seed-reviewer.js --delete
 1. Ir a Firebase Console → Authentication → Sign-in method → Phone
 2. En "Phone numbers for testing" agregar: `+16505550123` con código `123456`
 3. Sin este paso, el teléfono no funcionará (Firebase enviará SMS real al número inexistente)
+
+---
+
+## Angular Web App — Estructura y Configuración
+
+### Identidad
+
+- **Framework:** Angular 21 (standalone components)
+- **TypeScript:** 5.9.2
+- **Firebase SDK:** 12.6.0 (web)
+- **Firebase Hosting site:** `black-sugar21`
+- **URL:** https://black-sugar21.web.app
+- **Dominio custom:** https://blacksugar21.com
+
+### Build & Deploy
+
+```bash
+# Build producción
+npm run build:prod
+
+# Deploy a Firebase Hosting
+npm run deploy                    # build + deploy
+npm run deploy:hosting            # build + deploy solo hosting
+
+# Desplegar funciones
+firebase deploy --only functions --force
+
+# Desplegar reglas Firestore
+firebase deploy --only firestore:rules
+
+# Desplegar reglas Storage
+firebase deploy --only storage
+```
+
+**Output dir:** `dist/Public-BlackSugar21/browser`
+**SPA rewrite:** todas las rutas → `index.html`
+
+### Dependencias
+
+| Paquete | Versión | Propósito |
+|---|---|---|
+| `@angular/core` | `^21.0.0` | Framework |
+| `@angular/router` | `^21.0.0` | Routing |
+| `@angular/forms` | `^21.0.0` | Formularios |
+| `firebase` | `^12.6.0` | SDK Firebase web |
+| `firebase-admin` | `^13.6.0` | Admin SDK (scripts server-side) |
+| `typescript` | `~5.9.2` | Compilador |
+
+### Archivos del proyecto web
+
+| Archivo | Propósito |
+|---|---|
+| `src/app/app.ts` | Componente raíz (standalone) |
+| `src/app/app.routes.ts` | Definición de rutas (6 rutas) |
+| `src/app/app.config.ts` | Configuración de providers |
+| `src/app/firebase.config.ts` | Config Firebase + reCAPTCHA App Check |
+| `src/app/firebase.service.ts` | Servicio Firebase (inicialización) |
+| `src/app/translation.service.ts` | i18n ES/EN (~689 líneas, todas las traducciones) |
+| `src/styles.css` | Estilos globales + CSS variables |
+| `src/app/app.css` | Estilos del componente raíz |
+
+### Rutas
+
+| Path | Componente | Descripción |
+|---|---|---|
+| `/moderation-policy` | `ModerationPolicyComponent` | Políticas de moderación |
+| `/politicas-moderacion` | `ModerationPolicyComponent` | Alias español |
+| `/terms` | `TermsComponent` | Términos de uso |
+| `/privacy` | `PrivacyComponent` | Política de privacidad |
+| `/data-deletion` | `DataDeletionComponent` | Eliminación de datos |
+| `/safety-standards` | `SafetyStandardsComponent` | Estándares de seguridad infantil |
+
+### Páginas (standalone components)
+
+| Componente | Directorio | Archivos |
+|---|---|---|
+| `PrivacyComponent` | `src/app/pages/privacy/` | `.ts`, `.html`, `.css` |
+| `TermsComponent` | `src/app/pages/terms/` | `.ts`, `.html`, `.css` |
+| `DataDeletionComponent` | `src/app/pages/data-deletion/` | `.ts`, `.html`, `.css` |
+| `SafetyStandardsComponent` | `src/app/pages/safety-standards/` | `.ts`, `.html`, `.css` |
+| `ModerationPolicyComponent` | `src/app/components/moderation-policy/` | `.ts`, `.html`, `.css` |
+
+### Sistema de Colores (CSS Variables — alineado con iOS)
+
+```css
+:root {
+  --bg-dark: #0A0A0A;        /* iOS background dark */
+  --bg-card: #1A1A1A;        /* iOS surface dark */
+  --bg-overlay: #2D2D2D;
+  --gold-dark: #B8860B;      /* iOS accent (darkGoldenrod) */
+  --gold: #D4AF37;           /* iOS accentVariant (metallicGold) */
+  --purple: #4A004F;         /* iOS secondaryAccent dark */
+  --purple-vivid: #831bfc;   /* iOS AppColor.purpleColors[0] */
+  --purple-light: #9c59ea;   /* iOS AppColor.purpleColors[1] */
+}
+```
+
+**Gradientes:**
+- `--gradient-gold:` `linear-gradient(135deg, var(--gold-dark), var(--gold))`
+- `--gradient-purple:` `linear-gradient(135deg, #2a002e, var(--purple))`
+- `--gradient-luxury:` `linear-gradient(135deg, var(--bg-card), #252525)`
+- `--gradient-main:` `linear-gradient(to bottom, var(--purple-vivid), var(--purple-light))`
+
+**Tipografía:**
+- Body: `'Outfit', sans-serif`
+- Headers: `'Playfair Display', serif`
+
+### Internacionalización (i18n)
+
+- **Servicio:** `TranslationService` (inyectable, standalone)
+- **Idiomas:** `es` (default), `en`
+- **Detección:** automática por `navigator.language`
+- **Archivo:** `src/app/translation.service.ts` (~689 líneas)
+- **Uso en templates:** `{{ t.translate('key') }}`
+
+### Firebase Hosting Config (`firebase.json`)
+
+```json
+{
+  "hosting": {
+    "site": "black-sugar21",
+    "public": "dist/Public-BlackSugar21/browser",
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      { "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+      { "source": "**/*.@(js|css)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
+    ]
+  }
+}
+```
+
+### Scripts de administración
+
+| Script | Propósito |
+|---|---|
+| `scripts/seed-reviewer.js` | Crear/eliminar data del reviewer de App Store/Play |
+| `scripts/seed-profiles.js` | Crear perfiles de prueba en Firestore |
+| `scripts/seed-run.js` | Runner para seed scripts |
+| `scripts/test-master.js` | Test de integración |
+
+### MCP Server (`mcp-blacksugar/`)
+
+Servidor MCP registrado en `.vscode/mcp.json` para herramientas de auditoría:
+
+| Herramienta | Descripción |
+|---|---|
+| `full_audit` | Auditoría completa iOS ↔ Android |
+| `audit_cf_alignment` | Compara Cloud Functions entre plataformas |
+| `audit_analytics_alignment` | Compara eventos Analytics |
+| `search_code` | Busca patrón en Swift/Kotlin |
+| `check_firestore_field` | Verifica campo Firestore en ambas plataformas |
+| `read_cloud_function` | Lee código fuente de una CF |
+| `deploy_firebase` | Despliega functions/rules |
+| `read_firestore_rules` | Lee firestore.rules |
+| `check_orientation_values` | Verifica orientación lowercase |
+| `list_project_info` | Estadísticas del proyecto |
+
+### Cloud Functions (`functions/index.js`)
+
+- **Runtime:** Node.js 20
+- **SDK:** Firebase Functions v2 (Gen 2)
+- **Región:** `us-central1`
+- **33 funciones callable** + triggers (ver sección "Cloud Functions" arriba)
+
+### Patrones de Código Angular
+
+```typescript
+// Standalone component
+@Component({
+  selector: 'app-privacy',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './privacy.component.html',
+  styleUrl: './privacy.component.css'
+})
+export class PrivacyComponent {
+  t = inject(TranslationService);
+}
+```
+
+### Regla CRÍTICA para estilos web
+
+**NUNCA usar colores hardcodeados en CSS de componentes.** Siempre usar las CSS variables definidas en `src/styles.css`. Los colores están alineados con la paleta iOS de `ColorTheme.swift` y `AppColor.swift`.
