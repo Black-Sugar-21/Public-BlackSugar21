@@ -713,26 +713,92 @@ firebase deploy --only storage
 | `SafetyStandardsComponent` | `src/app/pages/safety-standards/` | `.ts`, `.html`, `.css` |
 | `ModerationPolicyComponent` | `src/app/components/moderation-policy/` | `.ts`, `.html`, `.css` |
 
-### Sistema de Colores (CSS Variables — alineado con iOS)
+### Sistema de Colores (CSS Variables — alineado 1:1 con iOS)
+
+**Archivos centrales:** `src/styles.css` + `src/app/app.css` (variables duplicadas en ambos)
+
+**Fuente de verdad:** iOS (`ColorTheme.swift` + `AppColor.swift`). Todos los hex deben coincidir 1:1.
+
+#### Regla CRÍTICA
+
+> **NUNCA usar colores hardcodeados en CSS de componentes.** Siempre usar las CSS variables definidas en `src/styles.css`. Los colores están alineados con la paleta iOS.
+
+#### Paleta completa (`:root`)
 
 ```css
 :root {
-  --bg-dark: #0A0A0A;        /* iOS background dark */
-  --bg-card: #1A1A1A;        /* iOS surface dark */
-  --bg-overlay: #2D2D2D;
-  --gold-dark: #B8860B;      /* iOS accent (darkGoldenrod) */
-  --gold: #D4AF37;           /* iOS accentVariant (metallicGold) */
-  --purple: #4A004F;         /* iOS secondaryAccent dark */
-  --purple-vivid: #831bfc;   /* iOS AppColor.purpleColors[0] */
-  --purple-light: #9c59ea;   /* iOS AppColor.purpleColors[1] */
+  /* Backgrounds — iOS ColorTheme.swift */
+  --bg-dark: #0A0A0A;             /* iOS: primaryDark */
+  --bg-card: #1A1A1A;             /* iOS: surfaceDark */
+  --bg-overlay: #2D2D2D;          /* iOS: textSecondaryLight */
+  --card-bg: #1E1E1E;             /* iOS: cardBgDark */
+
+  /* Gold — iOS AppColor.swift */
+  --gold-dark: #B8860B;           /* iOS: accentDark / darkGoldenrod */
+  --gold: #D4AF37;                /* iOS: accentVariantDark / metallicGold */
+  --gold-variant: #C5A028;        /* iOS: goldVariant */
+  --gold-star: #FFD700;           /* iOS: ratingStarGold */
+
+  /* Purple */
+  --purple: #4A004F;              /* iOS: secondaryAccentDark */
+  --purple-light-accent: #6A1B9A; /* iOS: secondaryAccentLight */
+  --purple-vivid: #831bfc;        /* iOS: purpleColors[0] */
+  --purple-light: #9c59ea;        /* iOS: purpleColors[1] */
+
+  /* Reactions — iOS AppColor arrays */
+  --dislike-red1: #FF6560;        /* iOS: dislikeColors[0] */
+  --dislike-red2: #F83770;        /* iOS: dislikeColors[1] */
+  --like-green1: #6CEAC5;         /* iOS: likeColors[0] */
+  --like-green2: #16DBA1;         /* iOS: likeColors[1] */
+  --app-red: #FF4457;             /* iOS: appRed */
+
+  /* Brand */
+  --facebook-blue: #1877F2;       /* iOS: facebookBlue */
+  --instagram-pink: #E4405F;      /* iOS: instagramPink */
+
+  /* iOS Grays */
+  --lighter-gray: #F0F2F4;        /* iOS: lighterGray */
+  --light-gray: #E9EBEE;          /* iOS: lightGray */
+  --darker-gray: #D2D4D6;         /* iOS: darkerGray */
+  --darkest-gray: #D5D7DF;        /* iOS: darkestGray */
+  --blue-gray: #505966;           /* iOS: blueGray */
+
+  /* Text — iOS ColorTheme.swift dark mode */
+  --text-primary: #FFFFFF;         /* iOS: textPrimaryDark */
+  --text-secondary: #E0E0E0;      /* iOS: textSecondaryDark */
+  --text-muted: #B0B0B0;          /* gris neutro para hints */
+
+  /* Gradients */
+  --gradient-gold: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  --gradient-purple: linear-gradient(135deg, #2a002e, var(--purple));
+  --gradient-luxury: linear-gradient(135deg, var(--bg-card), #252525);
+  --gradient-main: linear-gradient(to bottom, #0A0A14, #140B28, #1C0E38);
 }
 ```
 
-**Gradientes:**
-- `--gradient-gold:` `linear-gradient(135deg, var(--gold-dark), var(--gold))`
-- `--gradient-purple:` `linear-gradient(135deg, #2a002e, var(--purple))`
-- `--gradient-luxury:` `linear-gradient(135deg, var(--bg-card), #252525)`
-- `--gradient-main:` `linear-gradient(to bottom, var(--purple-vivid), var(--purple-light))`
+#### Mapeo CSS → iOS → Android
+
+| CSS Variable | Hex | iOS Token | Android Token |
+|---|---|---|---|
+| `--bg-dark` | `#0A0A0A` | `primaryDark` | `AlmostBlack` |
+| `--bg-card` | `#1A1A1A` | `surfaceDark` | `SurfaceDark` |
+| `--card-bg` | `#1E1E1E` | `cardBgDark` | `CardBgDark` |
+| `--gold-dark` | `#B8860B` | `accentDark` / `darkGoldenrod` | `DarkGoldenrod` |
+| `--gold` | `#D4AF37` | `accentVariantDark` / `metallicGold` | `MetallicGold` |
+| `--gold-variant` | `#C5A028` | `goldVariant` | `GoldVariant` |
+| `--gold-star` | `#FFD700` | `ratingStarGold` | `RatingStarGold` |
+| `--purple` | `#4A004F` | `secondaryAccentDark` | `DarkMagenta` |
+| `--purple-vivid` | `#831BFC` | `purpleColors[0]` | `Purple1` |
+| `--purple-light` | `#9C59EA` | `purpleColors[1]` | `Purple2` |
+| `--dislike-red1` | `#FF6560` | `dislikeColors[0]` | `DislikeRed1` |
+| `--dislike-red2` | `#F83770` | `dislikeColors[1]` | `DislikeRed2` |
+| `--like-green1` | `#6CEAC5` | `likeColors[0]` | `LikeGreen1` |
+| `--like-green2` | `#16DBA1` | `likeColors[1]` | `LikeGreen2` |
+| `--app-red` | `#FF4457` | `appRed` | `AppRed` |
+| `--facebook-blue` | `#1877F2` | `facebookBlue` | `FacebookBlue` |
+| `--instagram-pink` | `#E4405F` | `instagramPink` | `InstagramPink` |
+| `--text-primary` | `#FFFFFF` | `textPrimaryDark` | `TextPrimaryDark` |
+| `--text-secondary` | `#E0E0E0` | `textSecondaryDark` | `TextSecondaryDark` |
 
 **Tipografía:**
 - Body: `'Outfit', sans-serif`
