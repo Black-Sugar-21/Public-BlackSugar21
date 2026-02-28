@@ -30,6 +30,9 @@
 | `data/repository/ProfileCardRepository.swift` | Discovery queries + geohash |
 | `ui/edit-profile/EditProfileView.swift` | `getModifiedProfileFields()` — update profile |
 | `ui/login/PhoneAuth/PhoneAuthViewModel.swift` | Autenticación teléfono |
+| `ui/login/PhoneAuth/PhoneAuthView.swift` | UI phone auth con country picker + OTP |
+| `ui/onboarding/OnboardingBirthdayView.swift` | Birthday input con validación edad dinámica |
+| `ui/onboarding/OnboardingCoordinator.swift` | Coordinator onboarding — validateCurrentStep() |
 | `services/AnalyticsService.swift` | Todos los eventos Analytics |
 | `services/RemoteConfigService.swift` | Remote Config |
 
@@ -45,7 +48,9 @@
 | `core/chat/ActiveChatManager.kt` | activeChat + activeChatTimestamp |
 | `core/notification/PushNotificationService.kt` | pendingNotifications |
 | `feature/home/ui/HomeViewModel.kt` | Swipes + retry WorkManager |
-| `auth/create/Phone/viewmodel/PhoneAuthViewModel.kt` | Auth por teléfono |
+| `auth/create/Phone/viewmodel/PhoneAuthViewModel.kt` | Auth por teléfono (~606 líneas) — cooldown 30s, 6 tipos error |
+| `auth/create/screen/Phone/util/PhoneAuthState.kt` | Data class estado Phone Auth |
+| `feature/onboarding/steps/BirthdayStepScreen.kt` | Birthday input con hint card dorado |
 | `core/config/RemoteConfigManager.kt` | Remote Config |
 
 ---
@@ -71,9 +76,7 @@ minAge: Int
 maxAge: Int
 maxDistance: Double
 paused: Bool
-accountStatus: String        ← "active" | "suspended" | "deleted"
 interests: [String]
-visibilityReduced: Bool
 superLikesRemaining: Int
 superLikesUsedToday: Int
 lastSuperLikeResetDate: Timestamp
@@ -221,7 +224,7 @@ Lectura pública. Sin escritura desde cliente.
 
 ---
 
-## Cloud Functions — 33 callable + 2 scheduled + triggers (us-central1)
+## Cloud Functions — 39 callable + 6 scheduled + 6 triggers (us-central1)
 
 ### Funciones principales (todas homologadas iOS = Android)
 
@@ -235,6 +238,10 @@ Lectura pública. Sin escritura desde cliente.
 |---|---|---|
 | `resetDailyLikes` | `every 1 hours` | Reset de likes diarios a 100 (timezone-aware) |
 | `resetSuperLikes` | `every 1 hours` | Reset de super likes a 5 (timezone-aware) |
+| `checkMutualLikesAndCreateMatch` | scheduled | Detección de matches mutuos |
+| `processScheduledDeletions` | scheduled | Procesar eliminaciones programadas |
+| `updategeohashesscheduled` | scheduled | Actualizar geohashes |
+| `monitorGeohashHealth` | scheduled | Monitoreo de salud de geohashes |
 
 **Comportamiento timezone-aware:**
 - Cada hora, lee todos los usuarios activos (`paused != true`)
@@ -250,6 +257,9 @@ Lectura pública. Sin escritura desde cliente.
 - `loc-args`/`bodyLocArgs`: daily likes envía `['100']` para reemplazar `%@` (iOS) / `%1$d` (Android). Super likes no usa args (número "5" hardcodeado en strings)
 - Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
+### Callable Functions (33 de producción + 6 utilidades)
+
+**Producción (homologadas iOS = Android):**
 ```
 analyzeConversationChemistry
 analyzePersonalityCompatibility
@@ -286,7 +296,26 @@ unmatchUser
 validateProfileImage
 ```
 
-**Solo Android (utilidades de test):** `testDailyLikesResetNotification`, `testSuperLikesResetNotification`
+**Utilidades admin/test (no llamadas por clientes en producción):**
+```
+sendTestNotification
+sendTestNotificationToUser
+testDailyLikesResetNotification
+testSuperLikesResetNotification
+updateFCMToken
+generateMissingThumbnails
+```
+
+### Triggers (6)
+
+| Trigger | Evento | Propósito |
+|---|---|---|
+| `onMatchCreated` | DocumentCreated en `matches/` | Envía push de nuevo match |
+| `onMessageCreated` | DocumentCreated en `messages/` | Procesa nuevo mensaje |
+| `generateProfileThumbnail` | ObjectFinalized en Storage | Genera thumbnail automático |
+| `handlePendingNotification` | DocumentCreated en `pendingNotifications/` | Envía push notification |
+| `autoModerateMessage` | DocumentCreated en `messages/` | Moderación automática de mensajes |
+| `validateGeohashOnUpdate` | DocumentUpdated en `users/` | Valida geohash al actualizar ubicación |
 
 ### Payloads CF críticos (verificados en código — iOS = Android ✅)
 
@@ -328,7 +357,9 @@ validateProfileImage
 
 ---
 
-## Remote Config — 12 claves (VERIFICADAS EN CÓDIGO)
+## Remote Config — 14 claves
+
+### Claves leídas por RemoteConfigManager (10 — verificadas en código iOS y Android)
 
 | Clave | Tipo | Default | Descripción |
 |---|---|---|---|
@@ -342,10 +373,20 @@ validateProfileImage
 | `bulk_query_batch_size` | Number | 50 | Tamaño de batch para queries múltiples |
 | `minimum_age_by_country` | JSON String | `{"default": 18}` | Edad mínima por país |
 | `enable_bio_ai_suggestions` | Boolean | false | Habilitar sugerencias de bio con IA |
-| `reviewer_test_phone` | String | `"+16505550123"` | Teléfono de prueba para revisores Apple/Google |
-| `reviewer_test_code` | String | `"123456"` | Código de verificación para el test phone del reviewer |
+
+### Claves leídas directamente por UI (no via RemoteConfigManager)
+
+| Clave | Tipo | Default | Descripción |
+|---|---|---|---|
 | `terms_url` | String | `"https://www.blacksugar21.com/terms"` | URL de términos de uso (leída en LoginView) |
 | `privacy_url` | String | `"https://www.blacksugar21.com/privacy"` | URL de política de privacidad (leída en LoginView) |
+
+### Claves de referencia (solo en Firebase Console, no leídas por apps)
+
+| Clave | Tipo | Default | Descripción |
+|---|---|---|---|
+| `reviewer_test_phone` | String | `"+16505550123"` | Documentación del teléfono de prueba del reviewer |
+| `reviewer_test_code` | String | `"123456"` | Documentación del código OTP del reviewer |
 
 **Intervalo de actualización:** 3600 segundos (idéntico iOS `services/RemoteConfigService.swift` y Android `core/firebase/RemoteConfigManager.kt`)
 
@@ -441,8 +482,7 @@ phone_verification_failed: reason
 | `stories/{storyId}` | auth | owner + viewedBy update | Cualquier auth puede agregar a viewedBy |
 | `interestItems/{id}` | auth | false | Solo admin SDK |
 | `interestCategories/{id}` | auth | false | Solo admin SDK |
-| `likes/{id}` | legacy | legacy | NO se usa — regla legacy |
-| `messages/{id}` | legacy | legacy | NO se usa — regla legacy |
+
 
 ---
 
@@ -523,53 +563,10 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
 24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
 25. **searchPlaces** — CF con {matchId, query, userLanguage}
-
-### Áreas Verificadas ✅ (última auditoría profunda)
-
-| Área | Estado | Resultado |
-|---|---|---|
-| 33 CF Payloads | ✅ | Todas idénticas iOS = Android |
-| createUser fields | ✅ | 22+ campos idénticos |
-| updateProfile fields | ✅ | Delta-update, orientation lowercase |
-| sendMessage fields | ✅ | text + match update idénticos |
-| sendPlaceMessage | ✅ | placeData + 16 campos opcionales |
-| Ephemeral photos | ✅ | Estructura completa idéntica |
-| pendingNotifications | ✅ | Estructura + localization keys |
-| Match creation | ✅ | 7 campos incluyendo userTypesAtMatch |
-| Super Like batch | ✅ | Batch atómico + post-batch subcollección |
-| activeChat lifecycle | ✅ | set/clear con FieldValue.delete() |
-| updateDeviceSettings | ✅ | timezoneOffset + deviceLanguage |
-| updateUserLocation | ✅ | lat/lng/g/timezone/timezoneOffset |
-| Geohash field "g" | ✅ | PropertyName, queries, constants |
-| Pause/Reactivate | ✅ | paused/visible/pausedAt |
-| Block/Unblock | ✅ | CF + arrayRemove |
-| Storage paths | ✅ | users/, ephemeral_photos/, stories/ |
-| Analytics events | ✅ | 24 eventos idénticos |
-| Remote Config | ✅ | 10/10 claves + defaults |
-| Firestore Rules | ✅ | Todas las colecciones cubiertas |
-| FCM token | ✅ | Aceptable (Android +fcmBuildType extra) |
-| Swipe regular + pass | ✅ | Batch atómico idéntico |
-| Daily/Super likes reset | ✅ | Always 100/5, CF timezone-aware `every 1 hours`, conditional push |
-| Match detection | ✅ | hasUserLikedBack() lee otherUser.liked |
-| Unmatch/Report/Delete CFs | ✅ | Payloads idénticos |
-| reportUser progressive moderation | ✅ | Personal block + unique reporters + AI (Gemini 2.0 Flash) + escalamiento 5 niveles |
-| blocked/blockedBy bidireccional | ✅ | blockUser + reportUser CFs escriben ambos arrays |
-| Stories CRUD (5 CFs) | ✅ | create/delete/markViewed/batchStatus/batchStories |
-| Discovery queries | ✅ | CF primary + geohash fallback |
-| lastSeenTimestamps | ✅ | Creación, update, read para unread |
-| Crashlytics + App Check | ✅ | setUserId + providers correctos |
-| Orientation enforcement | ✅ | Enum lowercase + decoder normaliza |
-| Photo upload/delete | ✅ | users/{uuid}.jpg + _thumb.jpg 400px |
-| Scheduled deletion | ✅ | Aceptable (Android +scheduledDeletionDate extra) |
-| Push notifications | ✅ | pendingNotifications + CF trigger onMatchCreated + reset CFs conditional push |
-| 15 AI CFs payloads | ✅ | Todos idénticos iOS = Android |
-| Photo/Message moderation | ✅ | 4 CFs moderación idénticas |
-| searchPlaces CF | ✅ | {matchId, query, userLanguage} idéntico |
-| Ephemeral photo upload | ✅ | 3-step flow + Storage path idéntico |
-| Compatibility scoring | ✅ | getBatchCompatibilityScores idéntico |
-| updateDeviceSettings on HomeView | ✅ | timezoneOffset + deviceLanguage en fetchProfiles() |
-| Remote Config URLs | ✅ | terms_url + privacy_url leídas en LoginView |
-| Reset CFs timezone-aware | ✅ | resetDailyLikes + resetSuperLikes `every 1 hours` con push condicional |
+26. **Phone Auth** — cooldown 30s ambas plataformas, timeout iOS 30s vs Android SDK 60s, strings localizadas
+27. **Birthday validation** — edad mínima dinámica por país, coordinator iOS vs hint card Android, strings localizadas
+26. **Phone Auth** — cooldown 30s (ambas), timeout iOS 30s (`verificationTimeoutTask`) vs Android SDK `onCodeAutoRetrievalTimeOut` 60s. iOS: `@MainActor`, `canSendCode` computed, `Timer.scheduledTimer`. Android: requiere `Activity`, guarda `ForceResendingToken`, 6 tipos de error inline. Strings localizadas en 10 idiomas (iOS kebab-case: `resend-code`, Android snake_case: `resend_code`)
+27. **Birthday validation** — edad mínima dinámica por país via Remote Config `minimum_age_by_country`. iOS usa `OnboardingCoordinator.validateCurrentStep()` centralizado (sin hint card). Android usa `showBirthdateHint` hint card dorado + `showUnderageDialog`. Strings: `underage-alert-title`/`underage_alert_title` y `enter-birthdate-required`/`enter_birthdate_required` en 10 idiomas
 
 ### Comandos de auditoría rápida
 
@@ -672,7 +669,6 @@ Cuenta de prueba pre-cargada para validadores de tiendas.
 | Nombre | Ricardo |
 | Tipo | SUGAR_DADDY, 35 años, hombre |
 | Ubicación | Santiago, Chile (-33.4489, -70.6693) |
-| Remote Config | `reviewer_test_phone`, `reviewer_test_code` |
 
 **Datos pre-cargados:**
 - 3 fotos de perfil con thumbnails (Storage: `users/{uid}/{uuid}.jpg` + `_thumb.jpg`)
@@ -922,7 +918,7 @@ Servidor MCP registrado en `.vscode/mcp.json` para herramientas de auditoría:
 - **Runtime:** Node.js 20
 - **SDK:** Firebase Functions v2 (Gen 2)
 - **Región:** `us-central1`
-- **33 funciones callable** + triggers (ver sección "Cloud Functions" arriba)
+- **Total:** 39 callable + 6 scheduled + 6 triggers (ver sección "Cloud Functions" arriba)
 
 ### Patrones de Código Angular
 

@@ -1,7 +1,7 @@
 // Firebase Configuration
 export const firebaseConfig = {
   apiKey: "AIzaSyAczpQQmPhIPygDJEVqw406h_ibn3hRey0",
-  authDomain: "black-sugar21.firebaseapp.com",
+  authDomain: "blacksugar21.com",
   databaseURL: "https://black-sugar21-default-rtdb.firebaseio.com",
   projectId: "black-sugar21",
   storageBucket: "black-sugar21.firebasestorage.app",
@@ -12,5 +12,5 @@ export const firebaseConfig = {
 
 // reCAPTCHA v3 Site Key para App Check
 // Generada desde: https://www.google.com/recaptcha/admin
-// Configurada para: black-sugar21.web.app, black-sugar21.firebaseapp.com, localhost
+// Configurada para: black-sugar21.web.app, black-sugar21.firebaseapp.com, blacksugar21.com, localhost
 export const recaptchaSiteKey = "6Lez-AYqAAAAAMhK6hFLG6w10M6pM-ZJk-d-c3-k";

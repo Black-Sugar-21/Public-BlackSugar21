@@ -71,7 +71,8 @@ export class FirebaseService {
     // Configurar valores por defecto para Remote Config
     this.remoteConfig.defaultConfig = {
       store_url_ios: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
-      store_url_android: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2'
+      store_url_android: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
+      minimum_age_by_country: JSON.stringify({ "default": 18 })
     };
 
     // Inicializar App Check con reCAPTCHA v3
@@ -241,6 +242,20 @@ export class FirebaseService {
   async getLanguagePreference(uid: string): Promise<string | null> {
     const profile = this.userProfile();
     return profile?.preferences?.language || null;
+  }
+
+  // Minimum Age by Country (from Remote Config)
+  async getMinimumAgeByCountry(): Promise<Record<string, number>> {
+    try {
+      await fetchAndActivate(this.remoteConfig);
+      const raw = getString(this.remoteConfig, 'minimum_age_by_country');
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (error) {
+      console.error('Error fetching minimum_age_by_country:', error);
+    }
+    return { default: 18 };
   }
 
   // Store Links

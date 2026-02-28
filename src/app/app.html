@@ -8,10 +8,10 @@
         <img src="logo-21.png" alt="Black Sugar 21" width="140" height="140" />
       </div>
       <h2>{{ t('age.title') }}</h2>
-      <p class="warning-text">{{ t('age.exclusive') }}</p>
-      <p class="subtext">{{ t('age.restricted') }}</p>
+      <p class="warning-text">{{ translateWithParams('age.exclusive', { age: legalAge() }) }}</p>
+      <p class="subtext">{{ translateWithParams('age.restricted', { age: legalAge() }) }}</p>
 
-      <button class="btn-primary" (click)="verifyAge()">{{ t('age.button') }}</button>
+      <button class="btn-primary" (click)="verifyAge()">{{ translateWithParams('age.button', { age: legalAge() }) }}</button>
       <p class="subtext-xs">{{ t('age.terms') }}</p>
 
       <!-- Language Switcher -->

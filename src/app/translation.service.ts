@@ -25,16 +25,16 @@ export class TranslationService {
       en: 'Black Sugar 21'
     },
     'age.exclusive': {
-      es: 'Contenido Exclusivo +18',
-      en: 'Exclusive Content +18'
+      es: 'Contenido Exclusivo +{age}',
+      en: 'Exclusive Content +{age}'
     },
     'age.restricted': {
-      es: 'Debes tener 18 años o más para acceder.',
-      en: 'You must be 18 or older to access.'
+      es: 'Debes tener {age} años o más para acceder.',
+      en: 'You must be {age} or older to access.'
     },
     'age.button': {
-      es: 'Tengo 18 años o más',
-      en: "I'm 18 or older"
+      es: 'Tengo {age} años o más',
+      en: "I'm {age} or older"
     },
     'age.terms': {
       es: 'Al entrar, aceptas nuestros términos.',
@@ -665,13 +665,26 @@ export class TranslationService {
     }
   }
 
-  translate(key: string): string {
+  translate(key: string, params?: Record<string, string | number>): string {
     const translation = this.translations[key];
     if (!translation) {
       console.warn(`Translation missing for key: ${key}`);
       return key;
     }
-    return translation[this.currentLanguage()];
+    let result = translation[this.currentLanguage()];
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @deprecated Use translate() instead for parameterized translations
+   */
+  t(key: string): string {
+    return this.translate(key);
   }
 
   setLanguage(lang: Language): void {
