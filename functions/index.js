@@ -1003,16 +1003,27 @@ exports.unmatchUser = onCall(
  * Homologado: iOS FirestoreRemoteDataSource.reportUser / Android UserServiceImpl
  */
 exports.reportUser = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {reportedUserId, reason, matchId, description} = request.data || {};
     const reporterId = request.auth.uid;
     if (!reportedUserId || !reason) throw new Error('reportedUserId and reason are required');
+    if (reportedUserId === reporterId) throw new Error('Cannot report yourself');
 
     const db = admin.firestore();
 
-    // Crear documento de reporte
+    // ── Rate limiting: máximo 5 reportes por día por reporter ──
+    const oneDayAgo = new Date(Date.now() - 86400000);
+    const recentReports = await db.collection('reports')
+      .where('reporterId', '==', reporterId)
+      .where('createdAt', '>', oneDayAgo)
+      .get();
+    if (recentReports.size >= 5) {
+      throw new Error('Rate limit exceeded — max 5 reports per day');
+    }
+
+    // ── 1. Crear documento de reporte ──
     const reportRef = await db.collection('reports').add({
       reporterId,
       reportedUserId,
@@ -1023,36 +1034,170 @@ exports.reportUser = onCall(
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Contar reportes totales contra este usuario (para auto-moderación)
+    // ── 2. BLOQUEO PERSONAL: el reportador bloquea al reportado (solo para él) ──
+    // Bidireccional: blocked (reporter) + blockedBy (reported)
+    try {
+      await Promise.all([
+        db.collection('users').doc(reporterId).update({
+          blocked: admin.firestore.FieldValue.arrayUnion(reportedUserId),
+        }),
+        db.collection('users').doc(reportedUserId).update({
+          blockedBy: admin.firestore.FieldValue.arrayUnion(reporterId),
+        }),
+      ]);
+      logger.info(`[reportUser] Personal block: ${reporterId} → ${reportedUserId}`);
+    } catch (blockErr) {
+      logger.warn(`[reportUser] Personal block error: ${blockErr.message}`);
+    }
+
+    // ── 3. Limpiar likes mutuos ──
+    try {
+      await Promise.all([
+        db.collection('users').doc(reporterId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(reportedUserId),
+        }),
+        db.collection('users').doc(reportedUserId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(reporterId),
+        }),
+        db.collection('users').doc(reporterId).collection('liked').doc(reportedUserId).delete(),
+        db.collection('users').doc(reportedUserId).collection('liked').doc(reporterId).delete(),
+      ]);
+    } catch (cleanupErr) {
+      logger.warn(`[reportUser] Likes cleanup error: ${cleanupErr.message}`);
+    }
+
+    // ── 4. Eliminar match si existe ──
+    if (matchId) {
+      try {
+        const matchRef = db.collection('matches').doc(matchId);
+        const matchDoc = await matchRef.get();
+        if (matchDoc.exists) {
+          const msgs = await matchRef.collection('messages').limit(500).get();
+          if (!msgs.empty) {
+            const batch = db.batch();
+            msgs.docs.forEach((m) => batch.delete(m.ref));
+            await batch.commit();
+          }
+          await matchRef.delete();
+          logger.info(`[reportUser] Match ${matchId} deleted`);
+        }
+      } catch (matchErr) {
+        logger.warn(`[reportUser] Match cleanup error: ${matchErr.message}`);
+      }
+    }
+
+    // ── 5. MODERACIÓN PROGRESIVA con IA ──
+    // Contar reportes ÚNICOS (de usuarios distintos) contra este usuario
     const reportsSnap = await db.collection('reports')
       .where('reportedUserId', '==', reportedUserId)
       .where('status', 'in', ['pending', 'reviewed'])
       .get();
 
-    const reportCount = reportsSnap.docs.length;
-    let action = 'PENDING_REVIEW';
+    // Contar reportadores únicos (evita que un solo usuario infle el conteo)
+    const uniqueReporters = new Set(reportsSnap.docs.map((d) => d.data().reporterId));
+    const uniqueReportCount = uniqueReporters.size;
+    const totalReportCount = reportsSnap.docs.length;
 
-    // Auto-moderación progresiva
-    if (reportCount >= 10) {
+    // Categorizar razones de los reportes para el análisis
+    const reasonCounts = {};
+    reportsSnap.docs.forEach((d) => {
+      const r = d.data().reason || 'OTHER';
+      reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+    });
+
+    let action = 'PERSONAL_BLOCK';
+    let aiAnalysis = null;
+
+    // ── Escalamiento progresivo basado en reportadores ÚNICOS ──
+    if (uniqueReportCount >= 10) {
+      // 10+ reportadores únicos → BAN PERMANENTE
       await db.collection('users').doc(reportedUserId).update({
         accountStatus: 'banned',
         bannedAt: admin.firestore.FieldValue.serverTimestamp(),
-        bannedReason: 'multiple_reports',
+        bannedReason: `Banned by progressive moderation: ${uniqueReportCount} unique reporters`,
+        reportSummary: {uniqueReporters: uniqueReportCount, totalReports: totalReportCount, reasons: reasonCounts},
       });
       action = 'BANNED';
-    } else if (reportCount >= 5) {
+      logger.info(`🚫 [reportUser] BANNED ${reportedUserId} — ${uniqueReportCount} unique reporters`);
+
+    } else if (uniqueReportCount >= 7) {
+      // 7-9 reportadores únicos → SUSPENSIÓN TEMPORAL
+      await db.collection('users').doc(reportedUserId).update({
+        accountStatus: 'suspended',
+        suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+        suspendedReason: `Suspended by progressive moderation: ${uniqueReportCount} unique reporters`,
+        reportSummary: {uniqueReporters: uniqueReportCount, totalReports: totalReportCount, reasons: reasonCounts},
+      });
+      action = 'SUSPENDED';
+      logger.info(`⛔ [reportUser] SUSPENDED ${reportedUserId} — ${uniqueReportCount} unique reporters`);
+
+    } else if (uniqueReportCount >= 5) {
+      // 5-6 reportadores únicos → Análisis IA + visibilidad reducida
       await db.collection('users').doc(reportedUserId).update({
         visibilityReduced: true,
         shadowBannedAt: admin.firestore.FieldValue.serverTimestamp(),
+        shadowBanReason: `AI review triggered: ${uniqueReportCount} unique reporters`,
+        reportSummary: {uniqueReporters: uniqueReportCount, totalReports: totalReportCount, reasons: reasonCounts},
       });
-      action = 'SHADOWBANNED';
+      action = 'VISIBILITY_REDUCED_AI_REVIEW';
+
+      // Análisis IA asíncrono del perfil reportado
+      try {
+        const reportedUserDoc = await db.collection('users').doc(reportedUserId).get();
+        const reportedUser = reportedUserDoc.data() || {};
+        const aiPrompt = `Analyze this dating profile for policy violations. User has ${uniqueReportCount} unique reporters with reasons: ${JSON.stringify(reasonCounts)}. ` +
+          `Profile: name="${reportedUser.name || ''}", bio="${reportedUser.bio || ''}", userType="${reportedUser.userType || ''}". ` +
+          `Should this user be suspended? Respond with JSON: {"shouldSuspend": bool, "confidence": 0-1, "reasoning": "string"}`;
+
+        const {GoogleGenerativeAI} = require('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || defineSecret('GEMINI_API_KEY').value());
+        const model = genAI.getGenerativeModel({model: 'gemini-2.0-flash'});
+        const result = await model.generateContent(aiPrompt);
+        const responseText = result.response.text();
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiAnalysis = JSON.parse(jsonMatch[0]);
+          // Si la IA recomienda suspensión con alta confianza, escalar
+          if (aiAnalysis.shouldSuspend && aiAnalysis.confidence >= 0.8) {
+            await db.collection('users').doc(reportedUserId).update({
+              accountStatus: 'suspended',
+              suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+              suspendedReason: `AI-recommended suspension: ${aiAnalysis.reasoning}`,
+              aiModerationResult: aiAnalysis,
+            });
+            action = 'AI_SUSPENDED';
+            logger.info(`🤖 [reportUser] AI SUSPENDED ${reportedUserId} — confidence: ${aiAnalysis.confidence}`);
+          }
+        }
+      } catch (aiErr) {
+        logger.warn(`[reportUser] AI analysis error (non-blocking): ${aiErr.message}`);
+      }
+      logger.info(`⚠️ [reportUser] VISIBILITY_REDUCED ${reportedUserId} — ${uniqueReportCount} unique reporters`);
+
+    } else if (uniqueReportCount >= 3) {
+      // 3-4 reportadores únicos → Visibilidad reducida (shadowban suave)
+      await db.collection('users').doc(reportedUserId).update({
+        visibilityReduced: true,
+        shadowBannedAt: admin.firestore.FieldValue.serverTimestamp(),
+        shadowBanReason: `Multiple reports: ${uniqueReportCount} unique reporters`,
+      });
+      action = 'VISIBILITY_REDUCED';
+      logger.info(`⚠️ [reportUser] Visibility reduced for ${reportedUserId} — ${uniqueReportCount} unique reporters`);
     }
+    // 1-2 reportadores únicos → Solo bloqueo personal, no acción global
 
-    // Actualizar el reporte con la acción tomada
-    await reportRef.update({action, processedAt: admin.firestore.FieldValue.serverTimestamp()});
+    // ── 6. Actualizar reporte con acción tomada ──
+    await reportRef.update({
+      action,
+      uniqueReportCount,
+      totalReportCount,
+      reasonCounts,
+      aiAnalysis: aiAnalysis || null,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-    logger.info(`[reportUser] ${reporterId} reported ${reportedUserId} — action: ${action} (${reportCount} total reports)`);
-    return {success: true, action, reportId: reportRef.id, reportCount};
+    logger.info(`[reportUser] ${reporterId} reported ${reportedUserId} — action: ${action} (${uniqueReportCount} unique reporters, ${totalReportCount} total)`);
+    return {success: true, action, reportId: reportRef.id, uniqueReportCount, totalReportCount};
   },
 );
 
