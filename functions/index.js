@@ -313,11 +313,7 @@ exports.getCompatibleProfileIds = onCall(
           if (candidate.accountStatus !== 'active') continue;
           if (candidate.paused === true) continue;
 
-          // Excluir bloqueados por moderación o IA
-          if (candidate.blocked === true) continue;
-
           // Excluir si el candidato ha bloqueado al usuario actual (bloqueo bidireccional)
-          // El campo "blocked" es un array de IDs cuando el usuario bloquea a otros
           const candidateBlockedArray = candidate.blocked;
           if (Array.isArray(candidateBlockedArray) && candidateBlockedArray.includes(currentUserId)) continue;
 
@@ -381,7 +377,6 @@ exports.getCompatibleProfileIds = onCall(
         if (excludedIds.has(doc.id)) continue;
 
         const candidate = doc.data();
-        if (candidate.blocked === true) continue;
         if (candidate.visibilityReduced === true) continue;
 
         // Excluir si el candidato ha bloqueado al usuario actual (bloqueo bidireccional)
@@ -2246,9 +2241,9 @@ exports.findSimilarProfiles = onCall(
       .filter((d) => {
         if (d.id === uid) return false;
         const data = d.data();
-        // ✅ FIX: Excluir usuarios bloqueados por moderación (legacy blocked: true)
-        if (data.blocked === true) return false;
-        // ✅ FIX: Excluir usuarios que el usuario actual ha bloqueado
+        // ✅ Excluir usuarios con accountStatus inactivo
+        if ((data.accountStatus || 'active') !== 'active') return false;
+        // ✅ Excluir usuarios que el usuario actual ha bloqueado
         if (userBlockedArray.includes(d.id)) return false;
         // ✅ FIX: Bloqueo bidireccional — excluir si el candidato bloqueó al usuario actual
         const candidateBlocked = Array.isArray(data.blocked) ? data.blocked : [];
