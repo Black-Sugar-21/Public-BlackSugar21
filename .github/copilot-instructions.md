@@ -84,7 +84,7 @@ fcmToken: String             ← campo EXACTO: "fcmToken" (camelCase)
 timezone: String             ← identificador "America/Mexico_City"
 timezoneOffset: Int          ← offset numérico en horas (-6, +1, etc.)
 deviceLanguage: String       ← "es", "en", etc.
-blocked: [String]            ← IDs bloqueados por este usuario (⚠️ legacy: puede existir como Bool en docs antiguos — clientes tienen decoder resiliente)
+blocked: [String]            ← IDs bloqueados por este usuario
 blockedBy: [String]          ← IDs de usuarios que bloquearon a este usuario
 accountStatus: String        ← "active" | "suspended" | "banned" | "deleted"
 visibilityReduced: Bool      ← true si shadowban por reportes
