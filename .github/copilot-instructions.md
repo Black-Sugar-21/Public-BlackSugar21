@@ -84,8 +84,22 @@ fcmToken: String             ← campo EXACTO: "fcmToken" (camelCase)
 timezone: String             ← identificador "America/Mexico_City"
 timezoneOffset: Int          ← offset numérico en horas (-6, +1, etc.)
 deviceLanguage: String       ← "es", "en", etc.
-blocked: [String]            ← IDs bloqueados
-accountStatus: String
+blocked: [String]            ← IDs bloqueados por este usuario
+blockedBy: [String]          ← IDs de usuarios que bloquearon a este usuario
+accountStatus: String        ← "active" | "suspended" | "banned" | "deleted"
+visibilityReduced: Bool      ← true si shadowban por reportes
+shadowBannedAt: Timestamp?
+shadowBanReason: String?
+suspendedAt: Timestamp?
+suspendedReason: String?
+bannedAt: Timestamp?
+bannedReason: String?
+reportSummary: {             ← resumen acumulado de reportes
+  uniqueReporters: Int,
+  totalReports: Int,
+  reasons: Map<String, Int>
+}
+aiModerationResult: Map?     ← resultado de análisis IA (Gemini)
 activeChat: String?          ← matchId del chat abierto (nil si no hay)
 activeChatTimestamp: Timestamp?
 visible: Bool                ← false si cuenta pausada
@@ -162,6 +176,24 @@ data: {
 }
 processed: false
 createdAt: Timestamp
+```
+
+### `reports/{reportId}` — Documento de reporte (Moderación Progresiva)
+
+```
+reporterId: String           ← userId del que reporta
+reportedUserId: String       ← userId del reportado
+reason: String               ← "FAKE_PROFILE" | "INAPPROPRIATE" | "SPAM" | "HARASSMENT" | "UNDERAGE" | "OTHER"
+description: String          ← texto libre opcional
+matchId: String?             ← match donde ocurrió el incidente
+status: String               ← "pending" | "reviewed"
+action: String               ← "PERSONAL_BLOCK" | "VISIBILITY_REDUCED" | "VISIBILITY_REDUCED_AI_REVIEW" | "AI_SUSPENDED" | "SUSPENDED" | "BANNED"
+uniqueReportCount: Int       ← reportadores únicos al momento del reporte
+totalReportCount: Int        ← total de reportes (incluye repetidos)
+reasonCounts: Map<String, Int> ← frecuencia de razones: {"FAKE_PROFILE": 3, "SPAM": 1}
+aiAnalysis: Map?             ← resultado del análisis IA (shouldSuspend, confidence, reasoning)
+createdAt: Timestamp
+processedAt: Timestamp
 ```
 
 ### `swipes/{userId}/swipes/{swipedUserId}` — Swipe
@@ -277,7 +309,7 @@ validateProfileImage
 | `predictOptimalMessageTime` | `{targetUserId, userLanguage}` | `{optimalTime, ...}` |
 | `getDateSuggestions` | — | — |
 | `getDatingAdvice` | `{situation, context, userLanguage}` | — |
-| `reportUser` | `{reportedUserId, reason, matchId}` | — |
+| `reportUser` | `{reportedUserId, reason, matchId, description?}` | `{success, action, reportId, uniqueReportCount, totalReportCount}` |
 | `blockUser` | `{blockedUserId}` | — |
 | `unmatchUser` | `{matchId, otherUserId, language}` | — |
 | `deleteUserData` | `{userId}` | — |
@@ -377,7 +409,7 @@ phone_verification_failed: reason
 14. **Ephemeral photo:** estructura `{message:"", senderId, timestamp, type:"ephemeral_photo", photoUrl, isEphemeral:true, expiresAt, viewedBy:[], isUploading:false}` — idéntica iOS/Android
 15. **activeChat lifecycle:** `setActiveChat` → `{activeChat: matchId, activeChatTimestamp: serverTimestamp()}`, `clearActiveChat` → ambos campos con `FieldValue.delete()` — idéntico iOS/Android
 16. **pauseAccount:** escribe `{paused:true, visible:false, pausedAt:serverTimestamp()}` — reactivate escribe `{paused:false, visible:true}`
-17. **blockUser:** ambas plataformas llaman CF `blockUser({blockedUserId})`. `unblockUser` es local: `FieldValue.arrayRemove(blockedUserId)` del array `blocked`
+17. **blockUser:** ambas plataformas llaman CF `blockUser({blockedUserId})`. `unblockUser` es local: `FieldValue.arrayRemove(blockedUserId)` del array `blocked`. Bloqueo bidireccional: `blocked` (usuario que bloquea) + `blockedBy` (usuario bloqueado)
 18. **fcmBuildType:** solo Android escribe `fcmBuildType` ("debug"|"release") junto al `fcmToken`. iOS solo escribe `fcmToken`. No afecta funcionalidad (no se usa en CFs)
 19. **apnsToken:** solo iOS escribe `apnsToken` en dispositivos reales. No tiene equivalente Android. No afecta funcionalidad
 20. **Swipe regular:** batch atómico `{liked/passed: arrayUnion, dailyLikesRemaining: increment(-1)}` + swipe subcolección `{timestamp, isLike, isSuperLike:false}` + liked subcolección `{exists:true, superLike:false}` — idéntico iOS/Android
@@ -389,6 +421,8 @@ phone_verification_failed: reason
 26. **Scheduled deletion:** Android escribe 4 campos (`scheduledDeletionDate`, `scheduledForDeletion`, `deletionDate`, `deletionScheduledAt`), iOS escribe 3 (sin `scheduledDeletionDate`). Aceptable — ninguna CF depende de `scheduledDeletionDate`
 27. **AI CFs:** 15 CFs de IA idénticas en ambas plataformas. Todas usan `us-central1`. Payloads verificados: `generateSmartReply`, `calculateSafetyScore`, `analyzeConversationChemistry`, `predictOptimalMessageTime`, `getDatingAdvice`, `analyzePhotoBeforeUpload`, `moderateProfileImage`, `validateProfileImage`, `moderateMessage`
 28. **searchPlaces CF:** `{matchId, query, userLanguage}` — idéntico iOS/Android (Android también tiene PlacesSDK para edit-profile, pero chat usa CF)
+29. **reportUser — Moderación Progresiva:** `reportUser` incluye bloqueo personal (solo el reporter deja de ver al reported) + escalamiento progresivo basado en reportadores ÚNICOS (no raw count). Umbrales: 1-2 → solo bloqueo personal, 3-4 → `visibilityReduced:true`, 5-6 → visibilidad reducida + análisis IA (Gemini 2.0 Flash, auto-suspende si confianza ≥ 0.8), 7-9 → `accountStatus:'suspended'`, 10+ → `accountStatus:'banned'`. Rate limit: máx 5 reportes/día por reporter. Genera `reportSummary` en user doc con `uniqueReporters`, `totalReports`, `reasonCounts`. Elimina match + mensajes + likes mutuos entre reporter y reported. Bloqueo bidireccional: `blocked`/`blockedBy` arrays — idéntico iOS/Android
+30. **blocked/blockedBy bidireccional:** `blockUser` y `reportUser` CFs escriben `blocked` (array del que bloquea) + `blockedBy` (array del bloqueado). Discovery filtra ambos arrays. `unblockUser` es local con `arrayRemove` — idéntico iOS/Android
 
 ---
 
@@ -477,17 +511,18 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 11. **Ephemeral photos** — campos del mensaje + viewedBy + photoUrl + 3-step upload flow
 12. **Pause/Reactivate** — campos paused, visible, pausedAt
 13. **Firestore Security Rules** — verificar que todas las colecciones usadas tengan reglas
-14. **Block/Unblock** — blockUser via CF, unblockUser local con arrayRemove
-15. **Swipe regular/pass** — batch atómico + swipe/liked subcollecciones
-16. **Daily/Super likes reset** — calendar day comparison, always 100
-17. **Match detection** — hasUserLikedBack() + 100ms delay
-18. **Photo upload/delete** — UUID.jpg + _thumb.jpg (400px), Storage path `users/{userId}/`
-19. **AI CFs (15)** — payloads y nombres idénticos
-20. **Photo/Message moderation** — 4 CFs (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload)
-21. **Scheduled deletion** — scheduleAccountDeletion/cancelScheduledDeletion campos
-22. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
-23. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
-24. **searchPlaces** — CF con {matchId, query, userLanguage}
+14. **Block/Unblock** — blockUser via CF, unblockUser local con arrayRemove. Bloqueo bidireccional: `blocked`/`blockedBy`
+15. **reportUser — Moderación Progresiva** — personal block + escalamiento por unique reporters + IA
+16. **Swipe regular/pass** — batch atómico + swipe/liked subcollecciones
+17. **Daily/Super likes reset** — calendar day comparison, always 100
+18. **Match detection** — hasUserLikedBack() + 100ms delay
+19. **Photo upload/delete** — UUID.jpg + _thumb.jpg (400px), Storage path `users/{userId}/`
+20. **AI CFs (15)** — payloads y nombres idénticos
+21. **Photo/Message moderation** — 4 CFs (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload)
+22. **Scheduled deletion** — scheduleAccountDeletion/cancelScheduledDeletion campos
+23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
+24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
+25. **searchPlaces** — CF con {matchId, query, userLanguage}
 
 ### Áreas Verificadas ✅ (última auditoría profunda)
 
@@ -517,6 +552,8 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 | Daily/Super likes reset | ✅ | Always 100/5, CF timezone-aware `every 1 hours`, conditional push |
 | Match detection | ✅ | hasUserLikedBack() lee otherUser.liked |
 | Unmatch/Report/Delete CFs | ✅ | Payloads idénticos |
+| reportUser progressive moderation | ✅ | Personal block + unique reporters + AI (Gemini 2.0 Flash) + escalamiento 5 niveles |
+| blocked/blockedBy bidireccional | ✅ | blockUser + reportUser CFs escriben ambos arrays |
 | Stories CRUD (5 CFs) | ✅ | create/delete/markViewed/batchStatus/batchStories |
 | Discovery queries | ✅ | CF primary + geohash fallback |
 | lastSeenTimestamps | ✅ | Creación, update, read para unread |
