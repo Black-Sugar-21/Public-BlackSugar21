@@ -1075,10 +1075,17 @@ exports.blockUser = onCall(
 
     const db = admin.firestore();
 
-    // Añadir al array 'blocked' en el doc del bloqueador
-    await db.collection('users').doc(blockerId).update({
-      blocked: admin.firestore.FieldValue.arrayUnion(blockedUserId),
-    });
+    // ✅ FIX: Bloqueo bidireccional — homologado con iOS blockUser CF
+    // 1. Añadir al array 'blocked' en el doc del bloqueador
+    // 2. Añadir al array 'blockedBy' en el doc del usuario bloqueado
+    await Promise.all([
+      db.collection('users').doc(blockerId).update({
+        blocked: admin.firestore.FieldValue.arrayUnion(blockedUserId),
+      }),
+      db.collection('users').doc(blockedUserId).update({
+        blockedBy: admin.firestore.FieldValue.arrayUnion(blockerId),
+      }),
+    ]);
 
     // Buscar y eliminar match existente entre ambos
     const matchesSnap = await db.collection('matches')
@@ -1101,6 +1108,22 @@ exports.blockUser = onCall(
         matchDeleted = true;
         break;
       }
+    }
+
+    // ✅ FIX: Limpiar likes mutuos — homologado con iOS blockUser CF
+    try {
+      await Promise.all([
+        db.collection('users').doc(blockerId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(blockedUserId),
+        }),
+        db.collection('users').doc(blockedUserId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(blockerId),
+        }),
+        db.collection('users').doc(blockerId).collection('liked').doc(blockedUserId).delete(),
+        db.collection('users').doc(blockedUserId).collection('liked').doc(blockerId).delete(),
+      ]);
+    } catch (cleanupErr) {
+      logger.warn(`[blockUser] Likes cleanup partial error: ${cleanupErr.message}`);
     }
 
     logger.info(`[blockUser] ${blockerId} blocked ${blockedUserId}, matchDeleted=${matchDeleted}`);
@@ -2059,6 +2082,8 @@ exports.findSimilarProfiles = onCall(
 
     const user = userDoc.data();
     const interests = user.interests || [];
+    // ✅ FIX: Obtener lista de bloqueados del usuario actual para excluirlos
+    const userBlockedArray = Array.isArray(user.blocked) ? user.blocked : [];
 
     // Buscar perfiles con intereses similares
     let snap = {docs: []};
@@ -2073,7 +2098,20 @@ exports.findSimilarProfiles = onCall(
     const interestSet = new Set((interests || []).map(String));
     // ✅ Respuesta homologada: iOS/Android leen resultData["matches"] como [{userId, similarity}]
     const matches = snap.docs
-      .filter((d) => d.id !== uid)
+      .filter((d) => {
+        if (d.id === uid) return false;
+        const data = d.data();
+        // ✅ FIX: Excluir usuarios bloqueados por moderación (legacy blocked: true)
+        if (data.blocked === true) return false;
+        // ✅ FIX: Excluir usuarios que el usuario actual ha bloqueado
+        if (userBlockedArray.includes(d.id)) return false;
+        // ✅ FIX: Bloqueo bidireccional — excluir si el candidato bloqueó al usuario actual
+        const candidateBlocked = Array.isArray(data.blocked) ? data.blocked : [];
+        if (candidateBlocked.includes(uid)) return false;
+        // ✅ FIX: Excluir usuarios con visibilidad reducida
+        if (data.visibilityReduced === true) return false;
+        return true;
+      })
       .slice(0, 10)
       .map((d) => {
         const data = d.data();
