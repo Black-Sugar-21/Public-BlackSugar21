@@ -1631,7 +1631,7 @@ exports.createStory = onCall(
 
     const docRef = await db.collection('stories').add(storyData);
     logger.info(`[createStory] Story created: ${docRef.id} by ${senderId}`);
-    return {id: docRef.id, success: true};
+    return {id: docRef.id, storyId: docRef.id, success: true};
   },
 );
 
