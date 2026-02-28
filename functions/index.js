@@ -1615,6 +1615,7 @@ exports.createStory = onCall(
     const now = admin.firestore.Timestamp.now();
     const expiresAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000);
 
+    const isPersonal = !matchId;
     const storyData = {
       senderId,
       imageUrl,
@@ -1622,6 +1623,7 @@ exports.createStory = onCall(
       expiresAt,
       viewedBy: [],
       isExpired: false,
+      isPersonal,
     };
 
     if (matchId) storyData.matchId = matchId;
