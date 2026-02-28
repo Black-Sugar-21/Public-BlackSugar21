@@ -84,7 +84,7 @@ fcmToken: String             ← campo EXACTO: "fcmToken" (camelCase)
 timezone: String             ← identificador "America/Mexico_City"
 timezoneOffset: Int          ← offset numérico en horas (-6, +1, etc.)
 deviceLanguage: String       ← "es", "en", etc.
-blocked: [String]            ← IDs bloqueados por este usuario
+blocked: [String]            ← IDs bloqueados por este usuario (⚠️ legacy: puede existir como Bool en docs antiguos — clientes tienen decoder resiliente)
 blockedBy: [String]          ← IDs de usuarios que bloquearon a este usuario
 accountStatus: String        ← "active" | "suspended" | "banned" | "deleted"
 visibilityReduced: Bool      ← true si shadowban por reportes
@@ -413,7 +413,7 @@ phone_verification_failed: reason
 18. **fcmBuildType:** solo Android escribe `fcmBuildType` ("debug"|"release") junto al `fcmToken`. iOS solo escribe `fcmToken`. No afecta funcionalidad (no se usa en CFs)
 19. **apnsToken:** solo iOS escribe `apnsToken` en dispositivos reales. No tiene equivalente Android. No afecta funcionalidad
 20. **Swipe regular:** batch atómico `{liked/passed: arrayUnion, dailyLikesRemaining: increment(-1)}` + swipe subcolección `{timestamp, isLike, isSuperLike:false}` + liked subcolección `{exists:true, superLike:false}` — idéntico iOS/Android
-21. **Daily likes reset:** SIEMPRE 100 (nunca random). Client-side: comparación por día calendario. Server-side: CF `resetDailyLikes` corre `every 1 hours`, verifica `(UTCHour + timezoneOffset) % 24 === 0` para detectar medianoche local. Escribe `{dailyLikesRemaining:100, dailyLikesLimit:100, lastLikeResetDate}`. Solo notifica si `dailyLikesRemaining < 100` (usuario usó likes) — idéntico iOS/Android
+21. **Daily likes reset:** SIEMPRE 100 (nunca random). `createUser` debe inicializar `{dailyLikesRemaining:100, dailyLikesLimit:100}`. Client-side: comparación por día calendario. Server-side: CF `resetDailyLikes` corre `every 1 hours`, verifica `(UTCHour + timezoneOffset) % 24 === 0` para detectar medianoche local. Escribe `{dailyLikesRemaining:100, dailyLikesLimit:100, lastLikeResetDate}`. Solo notifica si `dailyLikesRemaining < 100` (usuario usó likes) — idéntico iOS/Android. ⚠️ NUNCA decrementar `dailyLikesLimit` — solo decrementar `dailyLikesRemaining`
 22. **Super likes reset:** SIEMPRE 5. Server-side: CF `resetSuperLikes` corre `every 1 hours`, misma lógica timezone. Escribe `{superLikesRemaining:5, superLikesUsedToday:0, lastSuperLikeResetDate}`. Solo notifica si `superLikesRemaining < 5` — idéntico iOS/Android
 23. **Match detection:** `hasUserLikedBack()` lee `otherUser.liked` y verifica si contiene `currentUserId`. 100ms delay antes de verificar — idéntico iOS/Android
 24. **Match notification:** enviada por CF trigger `onMatchCreated` (NO por cliente). `sendMatchNotification` en Android es código muerto
