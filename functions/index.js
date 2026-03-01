@@ -631,15 +631,30 @@ exports.onMessageCreated = onDocumentCreated(
 
     // ✅ Verificar activeChat — no enviar push si el receptor ya tiene el chat abierto
     // Homologado con iOS/Android: ambos escriben activeChat = matchId al entrar al chat
+    // ⚠️ STALE CHECK: Si activeChatTimestamp tiene más de 5 minutos, ignorar activeChat
+    // porque la app pudo haber sido killed sin limpiar el campo
     const receiverData = receiverDoc.data();
     if (receiverData.activeChat === matchId) {
-      logger.info(`Skipping notification: receiver ${receiverId} has activeChat=${matchId}`);
-      await snapshot.ref.update({
-        notificationSent: false,
-        notificationAttemptedAt: admin.firestore.FieldValue.serverTimestamp(),
-        notificationSkipReason: 'receiver_in_chat'
-      });
-      return;
+      const activeChatTs = receiverData.activeChatTimestamp;
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      const isStale = !activeChatTs || (activeChatTs.toMillis && activeChatTs.toMillis() < fiveMinutesAgo);
+
+      if (isStale) {
+        logger.warn(`Stale activeChat detected for ${receiverId} — activeChat=${matchId} but timestamp is old. Sending notification anyway.`);
+        // Limpiar el activeChat stale
+        await admin.firestore().collection('users').doc(receiverId).update({
+          activeChat: admin.firestore.FieldValue.delete(),
+          activeChatTimestamp: admin.firestore.FieldValue.delete(),
+        });
+      } else {
+        logger.info(`Skipping notification: receiver ${receiverId} has activeChat=${matchId}`);
+        await snapshot.ref.update({
+          notificationSent: false,
+          notificationAttemptedAt: admin.firestore.FieldValue.serverTimestamp(),
+          notificationSkipReason: 'receiver_in_chat'
+        });
+        return;
+      }
     }
 
     const senderName = senderDoc.exists ? senderDoc.data().name : 'Usuario';
