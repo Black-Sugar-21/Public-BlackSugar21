@@ -225,12 +225,12 @@ Lectura pública. Sin escritura desde cliente.
 | `users/{userId}/{filename}.jpg` | Fotos de perfil (upload desde cliente) |
 | `users/{userId}/{filename}_thumb.jpg` | Thumbnails de fotos de perfil (400px) |
 | `ephemeral_photos/{matchId}/{photoId}.jpg` | Fotos efímeras en chat |
-| `stories/personal_stories/{userId}/{storyId}.jpg` | Stories/historias |
+| `stories/personal_stories/{userId}/{storyId}.jpg` | Stories/historias (expiran a las 24h, cleanup por `cleanupExpiredStories` CF) |
 | `temp_uploads/{userId}/{filename}` | Uploads temporales (moderación IA) |
 
 ---
 
-## Cloud Functions — 39 callable + 6 scheduled + 6 triggers (us-central1)
+## Cloud Functions — 39 callable + 7 scheduled + 6 triggers (us-central1)
 
 ### Funciones principales (todas homologadas iOS = Android)
 
@@ -244,6 +244,7 @@ Lectura pública. Sin escritura desde cliente.
 |---|---|---|
 | `resetDailyLikes` | `every 1 hours` | Reset de likes diarios a 100 (timezone-aware) |
 | `resetSuperLikes` | `every 1 hours` | Reset de super likes a 5 (timezone-aware) |
+| `cleanupExpiredStories` | `every 1 hours` | Elimina stories expiradas (>24h) de Firestore + Storage |
 | `checkMutualLikesAndCreateMatch` | scheduled | Detección de matches mutuos |
 | `processScheduledDeletions` | scheduled | Procesar eliminaciones programadas |
 | `updategeohashesscheduled` | scheduled | Actualizar geohashes |
@@ -470,6 +471,9 @@ phone_verification_failed: reason
 28. **searchPlaces CF:** `{matchId, query, userLanguage}` — idéntico iOS/Android (Android también tiene PlacesSDK para edit-profile, pero chat usa CF)
 29. **reportUser — Moderación Progresiva:** `reportUser` incluye bloqueo personal (solo el reporter deja de ver al reported) + escalamiento progresivo basado en reportadores ÚNICOS (no raw count). Umbrales: 1-2 → solo bloqueo personal, 3-4 → `visibilityReduced:true`, 5-6 → visibilidad reducida + análisis IA (Gemini 2.0 Flash, auto-suspende si confianza ≥ 0.8), 7-9 → `accountStatus:'suspended'`, 10+ → `accountStatus:'banned'`. Rate limit: máx 5 reportes/día por reporter. Genera `reportSummary` en user doc con `uniqueReporters`, `totalReports`, `reasonCounts`. Elimina match + mensajes + likes mutuos entre reporter y reported. Bloqueo bidireccional: `blocked`/`blockedBy` arrays — idéntico iOS/Android
 30. **blocked/blockedBy bidireccional:** `blockUser` y `reportUser` CFs escriben `blocked` (array del que bloquea) + `blockedBy` (array del bloqueado). Discovery filtra ambos arrays. `unblockUser` es local con `arrayRemove` — idéntico iOS/Android
+31. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
+32. **Story lifecycle (24h):** `createStory` CF escribe `expiresAt = now + 24h`. Queries (`getBatchStoryStatus`, `getBatchPersonalStories`) filtran `expiresAt > now`. `cleanupExpiredStories` (scheduled `every 1 hours`) elimina stories expiradas de Firestore + imágenes de Storage (`stories/personal_stories/{userId}/{storyId}.jpg`). Proceso: query `expiresAt <= now`, batch delete docs + Storage files, en batches de 500
+33. **storyModels en profile models:** `ProfileCardModel` (iOS) y `Profile` (Android) llevan `storyModels: [StoryModel]` con timestamps reales de Firestore. Esto permite que el visor de stories desde swipe card muestre tiempo relativo correcto ("17h", "2h") en vez de "now". `ProfileCardRepository` (iOS) y `ProfileRepositoryImp` (Android) propagan los `StoryModel` completos al construir los profile models. **⚠️ NUNCA crear `StoryModel` dummy con `Date()`/`Timestamp.now()` para stories en swipe card — siempre usar los modelos reales del repository**
 
 ---
 
@@ -569,12 +573,15 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
 24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
 25. **searchPlaces** — CF con {matchId, query, userLanguage}
-26. **Phone Auth** — cooldown 30s (ambas), timeout iOS 30s (`verificationTimeoutTask`) vs Android SDK `onCodeAutoRetrievalTimeOut` 60s. iOS: `@MainActor`, `canSendCode` computed, `Timer.scheduledTimer`. Android: requiere `Activity`, guarda `ForceResendingToken`, 6 tipos de error inline. Strings localizadas en 10 idiomas (iOS kebab-case: `resend-code`, Android snake_case: `resend_code`)
-27. **Birthday validation** — edad mínima dinámica por país via Remote Config `minimum_age_by_country`. iOS usa `OnboardingCoordinator.validateCurrentStep()` centralizado (sin hint card). Android usa `showBirthdateHint` hint card dorado + `showUnderageDialog`. Strings: `underage-alert-title`/`underage_alert_title` y `enter-birthdate-required`/`enter_birthdate_required` en 10 idiomas
-28. **StoryRingButton** — botón premium animado en swipe cards. Android: componente inline en `ProfileCardView.kt` (Canvas, sweepGradient, Path). iOS: `StoryRingButton` struct + `PlayTriangle: Shape` en `SwipeView.swift` (AngularGradient). Ambos: anillo rotatorio 360°/3s, glow breathing 0.3→0.7/1.8s, pulse 1.0→1.08/1.8s, play triangle dorado, badge de story count
-29. **AutoPlayStory avatar** — Android recibe `userPhotoUrl: String?` (URL completa de Firebase Storage), iOS recibe `userPhoto: UIImage?` (pre-cargado). Ambos muestran círculo gris 40dp/pt si null. **⚠️ Android:** NUNCA pasar `profile.pictureNames` (son filenames), siempre extraer URL de `ProfilePictureState` (Remote > Thumb)
-30. **StoryRepository parseTimestampField** — maneja 3 formatos de CFs: (1) ISO 8601 String, (2) Timestamp/Date nativo, (3) HashMap/Dictionary `{_seconds, _nanoseconds}` legacy — homologado iOS/Android
-31. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
+26. **Story lifecycle** — `createStory` escribe `expiresAt = now + 24h`, queries filtran `expiresAt > now`, `cleanupExpiredStories` (hourly) elimina expiradas de Firestore + Storage. storyModels con timestamps reales propagados a profile models para tiempo relativo correcto en swipe cards
+27. **Phone Auth** — cooldown 30s (ambas), timeout iOS 30s (`verificationTimeoutTask`) vs Android SDK `onCodeAutoRetrievalTimeOut` 60s. iOS: `@MainActor`, `canSendCode` computed, `Timer.scheduledTimer`. Android: requiere `Activity`, guarda `ForceResendingToken`, 6 tipos de error inline. Strings localizadas en 10 idiomas (iOS kebab-case: `resend-code`, Android snake_case: `resend_code`)
+28. **Birthday validation** — edad mínima dinámica por país via Remote Config `minimum_age_by_country`. iOS usa `OnboardingCoordinator.validateCurrentStep()` centralizado (sin hint card). Android usa `showBirthdateHint` hint card dorado + `showUnderageDialog`. Strings: `underage-alert-title`/`underage_alert_title` y `enter-birthdate-required`/`enter_birthdate_required` en 10 idiomas
+29. **StoryRingButton** — botón premium animado en swipe cards. Android: componente inline en `ProfileCardView.kt` (Canvas, sweepGradient, Path). iOS: `StoryRingButton` struct + `PlayTriangle: Shape` en `SwipeView.swift` (AngularGradient). Ambos: anillo rotatorio 360°/3s, glow breathing 0.3→0.7/1.8s, pulse 1.0→1.08/1.8s, play triangle dorado, badge de story count
+30. **AutoPlayStory avatar** — Android recibe `userPhotoUrl: String?` (URL completa de Firebase Storage), iOS recibe `userPhoto: UIImage?` (pre-cargado). Ambos muestran círculo gris 40dp/pt si null. **⚠️ Android:** NUNCA pasar `profile.pictureNames` (son filenames), siempre extraer URL de `ProfilePictureState` (Remote > Thumb)
+31. **StoryRepository parseTimestampField** — maneja 3 formatos de CFs: (1) ISO 8601 String, (2) Timestamp/Date nativo, (3) HashMap/Dictionary `{_seconds, _nanoseconds}` legacy — homologado iOS/Android
+32. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
+33. **Story lifecycle (24h)** — `createStory` escribe `expiresAt = now + 24h`. `cleanupExpiredStories` CF (hourly) elimina expiradas. Profile models (`ProfileCardModel`/`Profile`) propagan `storyModels: [StoryModel]` con timestamps reales. **⚠️ NUNCA crear StoryModel dummy con Date()/Timestamp.now() para swipe cards**
+34. **storyModels en swipe cards** — `ProfileCardRepository` (iOS) y `ProfileRepositoryImp` (Android) pasan `storyModels` al construir profile models. SwipeView/ProfileCardView usa `model.storyModels` si disponible, con fallback a dummy solo como safety net
 
 ### Comandos de auditoría rápida
 
@@ -926,7 +933,7 @@ Servidor MCP registrado en `.vscode/mcp.json` para herramientas de auditoría:
 - **Runtime:** Node.js 20
 - **SDK:** Firebase Functions v2 (Gen 2)
 - **Región:** `us-central1`
-- **Total:** 39 callable + 6 scheduled + 6 triggers (ver sección "Cloud Functions" arriba)
+- **Total:** 39 callable + 7 scheduled + 6 triggers (ver sección "Cloud Functions" arriba)
 
 ### Patrones de Código Angular
 

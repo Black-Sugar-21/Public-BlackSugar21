@@ -3591,3 +3591,77 @@ exports.monitorGeohashHealth = onSchedule(
     logger.info(`[monitorGeohashHealth] Health: ${health.healthPercentage}%`, health);
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULED: Limpieza automática de stories expiradas (24h)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Scheduled: cleanupExpiredStories
+ * Se ejecuta cada hora para eliminar stories con expiresAt <= now.
+ * Elimina tanto el documento de Firestore como la imagen en Storage.
+ * Las stories duran 24 horas (expiresAt = timestamp + 24h, definido en createStory).
+ * Homologado: iOS StoryModel.isExpired / Android StoryModel.isExpired()
+ */
+exports.cleanupExpiredStories = onSchedule(
+  {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
+  async () => {
+    const db = admin.firestore();
+    const now = new Date();
+
+    logger.info('[cleanupExpiredStories] Starting cleanup of expired stories');
+
+    // Obtener todas las stories con expiresAt <= ahora
+    const expiredSnap = await db.collection('stories')
+      .where('expiresAt', '<=', now)
+      .get();
+
+    logger.info(`[cleanupExpiredStories] Found ${expiredSnap.size} expired stories`);
+
+    if (expiredSnap.empty) {
+      logger.info('[cleanupExpiredStories] No expired stories to clean up');
+      return;
+    }
+
+    const bucket = admin.storage().bucket();
+    let deletedCount = 0;
+    let errorCount = 0;
+
+    for (const doc of expiredSnap.docs) {
+      try {
+        const story = doc.data();
+
+        // 1. Eliminar imagen de Storage si existe
+        if (story.imageUrl) {
+          try {
+            // Extraer ruta de Storage desde la URL de descarga de Firebase
+            // URL format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=...
+            const url = new URL(story.imageUrl);
+            const pathMatch = url.pathname.match(/\/o\/(.+?)(\?|$)/);
+            if (pathMatch) {
+              const storagePath = decodeURIComponent(pathMatch[1]);
+              const file = bucket.file(storagePath);
+              const [exists] = await file.exists();
+              if (exists) {
+                await file.delete();
+                logger.info(`[cleanupExpiredStories] Deleted storage file: ${storagePath}`);
+              }
+            }
+          } catch (storageErr) {
+            // No bloquear eliminación de Firestore por error en Storage
+            logger.warn(`[cleanupExpiredStories] Storage delete error for story ${doc.id}: ${storageErr.message}`);
+          }
+        }
+
+        // 2. Eliminar documento de Firestore
+        await doc.ref.delete();
+        deletedCount++;
+      } catch (storyErr) {
+        logger.error(`[cleanupExpiredStories] Error processing story ${doc.id}: ${storyErr.message}`);
+        errorCount++;
+      }
+    }
+
+    logger.info(`[cleanupExpiredStories] Completed: ${deletedCount} deleted, ${errorCount} errors`);
+  },
+);
