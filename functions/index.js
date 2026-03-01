@@ -516,6 +516,7 @@ exports.onMatchCreated = onDocumentCreated(
           },
         },
         android: {
+          priority: 'high',
           notification: {
             // Android usa underscores en las keys
             titleLocKey: 'notification_new_match_title',
@@ -681,6 +682,7 @@ exports.onMessageCreated = onDocumentCreated(
         },
       },
       android: {
+        priority: 'high',
         notification: {
           // Android: título localizado con nombre del remitente  
           titleLocKey: 'notification_new_message_title',
@@ -2828,10 +2830,10 @@ exports.testSuperLikesResetNotification = onCall(
       token: userDoc.data().fcmToken,
       apns: {payload: {aps: {sound: 'default', badge: 1,
         alert: {'title-loc-key': 'notification-super-likes-reset-title', 'loc-key': 'notification-super-likes-reset-body'}}}},
-      android: {notification: {
+      android: {priority: 'high', notification: {
         titleLocKey: 'notification_super_likes_reset_title',
         bodyLocKey: 'notification_super_likes_reset_body',
-        sound: 'default', channelId: 'default', priority: 'high',
+        sound: 'default', channelId: 'super_likes_channel', priority: 'high',
       }},
     };
 
@@ -2863,11 +2865,11 @@ exports.testDailyLikesResetNotification = onCall(
       token: userDoc.data().fcmToken,
       apns: {payload: {aps: {sound: 'default', badge: 1,
         alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body', 'loc-args': ['100']}}}},
-      android: {notification: {
+      android: {priority: 'high', notification: {
         titleLocKey: 'notification_daily_likes_reset_title',
         bodyLocKey: 'notification_daily_likes_reset_body',
         bodyLocArgs: ['100'],
-        sound: 'default', channelId: 'default', priority: 'high',
+        sound: 'default', channelId: 'daily_likes_channel', priority: 'high',
       }},
     };
 
@@ -3059,11 +3061,11 @@ exports.resetDailyLikes = onSchedule(
           data: {type: 'daily_likes_reset', timestamp: Date.now().toString()},
           apns: {payload: {aps: {sound: 'default', badge: 1,
             alert: {'title-loc-key': 'notification-daily-likes-reset-title', 'loc-key': 'notification-daily-likes-reset-body', 'loc-args': ['100']}}}},
-          android: {notification: {
+          android: {priority: 'high', notification: {
             titleLocKey: 'notification_daily_likes_reset_title',
             bodyLocKey: 'notification_daily_likes_reset_body',
             bodyLocArgs: ['100'],
-            sound: 'default', channelId: 'default', priority: 'high',
+            sound: 'default', channelId: 'daily_likes_channel', priority: 'high',
           }},
         });
         notifCount += response.successCount;
@@ -3163,10 +3165,10 @@ exports.resetSuperLikes = onSchedule(
           data: {type: 'super_likes_reset', timestamp: Date.now().toString()},
           apns: {payload: {aps: {sound: 'default', badge: 1,
             alert: {'title-loc-key': 'notification-super-likes-reset-title', 'loc-key': 'notification-super-likes-reset-body'}}}},
-          android: {notification: {
+          android: {priority: 'high', notification: {
             titleLocKey: 'notification_super_likes_reset_title',
             bodyLocKey: 'notification_super_likes_reset_body',
-            sound: 'default', channelId: 'default', priority: 'high',
+            sound: 'default', channelId: 'super_likes_channel', priority: 'high',
           }},
         });
         notifCount += response.successCount;
@@ -3395,6 +3397,7 @@ exports.handlePendingNotification = onDocumentCreated(
           },
         },
         android: {
+          priority: 'high',
           notification: {
             titleLocKey: notification.title_loc_key || '',
             titleLocArgs: notification.title_loc_args || [],
