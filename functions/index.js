@@ -1769,14 +1769,20 @@ exports.getBatchPersonalStories = onCall(
           const data = doc.data();
           const uid = data.senderId;
           if (stories[uid]) {
+            // Convertir Firestore Timestamps a ISO strings para parseo correcto en Android/iOS
+            const ts = data.timestamp;
+            const exp = data.expiresAt;
+            const timestampISO = ts && ts.toDate ? ts.toDate().toISOString() : null;
+            const expiresAtISO = exp && exp.toDate ? exp.toDate().toISOString() : null;
             stories[uid].push({
               id: doc.id,
               senderId: data.senderId,
               imageUrl: data.imageUrl,
               matchId: data.matchId || null,
-              timestamp: data.timestamp || null,
-              expiresAt: data.expiresAt || null,
+              timestamp: timestampISO,
+              expiresAt: expiresAtISO,
               viewedBy: data.viewedBy || [],
+              isPersonal: data.isPersonal !== false,
             });
           }
         });
@@ -1785,8 +1791,18 @@ exports.getBatchPersonalStories = onCall(
       }
     }
 
-    logger.info(`[getBatchPersonalStories] Fetched stories for ${userIds.length} users`);
-    return {stories};
+    // Calcular stats (requerido por iOS guard y Android logging)
+    let totalStories = 0;
+    let usersWithStories = 0;
+    for (const uid of Object.keys(stories)) {
+      if (stories[uid].length > 0) {
+        usersWithStories++;
+        totalStories += stories[uid].length;
+      }
+    }
+
+    logger.info(`[getBatchPersonalStories] Fetched ${totalStories} stories for ${usersWithStories}/${userIds.length} users`);
+    return {stories, stats: {totalStories, usersWithStories}};
   },
 );
 
