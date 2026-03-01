@@ -1760,10 +1760,16 @@ exports.getBatchPersonalStories = onCall(
     for (let i = 0; i < userIds.length; i += chunkSize) {
       const chunk = userIds.slice(i, i + chunkSize);
       try {
+        // Query homologada con iOS getPersonalStories():
+        // - isPersonal == true (solo historias personales)
+        // - senderId IN chunk (batch de usuarios)
+        // - expiresAt > now (solo activas)
+        // - orderBy expiresAt ASC (usa índice existente: isPersonal ASC, senderId ASC, expiresAt ASC)
         const snap = await db.collection('stories')
+          .where('isPersonal', '==', true)
           .where('senderId', 'in', chunk)
           .where('expiresAt', '>', now)
-          .orderBy('expiresAt', 'desc')
+          .orderBy('expiresAt', 'asc')
           .get();
         snap.docs.forEach((doc) => {
           const data = doc.data();
@@ -1782,12 +1788,12 @@ exports.getBatchPersonalStories = onCall(
               timestamp: timestampISO,
               expiresAt: expiresAtISO,
               viewedBy: data.viewedBy || [],
-              isPersonal: data.isPersonal !== false,
+              isPersonal: true,
             });
           }
         });
       } catch (e) {
-        logger.warn(`[getBatchPersonalStories] Error for chunk: ${e.message}`);
+        logger.error(`[getBatchPersonalStories] Error for chunk [${chunk.join(',')}]: ${e.message}`);
       }
     }
 
