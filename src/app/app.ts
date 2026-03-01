@@ -1,6 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
@@ -46,6 +47,9 @@ export class App implements OnInit {
     if (this.firebase.currentUser()) {
       this.syncLanguageFromFirebase();
     }
+
+    // Track page views with Firebase Analytics
+    this.trackPageViews();
   }
 
   async verifyAge() {
@@ -121,6 +125,38 @@ export class App implements OnInit {
 
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
+  }
+
+  private trackPageViews(): void {
+    // Log initial page view (landing page)
+    const initialPage = this.router.url || '/';
+    this.firebase.logEvent('screen_view', {
+      page_path: initialPage,
+      page_title: this.getPageName(initialPage)
+    });
+
+    // Log subsequent navigations
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        this.firebase.logEvent('screen_view', {
+          page_path: event.urlAfterRedirects,
+          page_title: this.getPageName(event.urlAfterRedirects)
+        });
+      });
+  }
+
+  private getPageName(url: string): string {
+    const pageNames: Record<string, string> = {
+      '/': 'Home',
+      '/terms': 'Terms',
+      '/privacy': 'Privacy',
+      '/data-deletion': 'Data Deletion',
+      '/moderation-policy': 'Moderation Policy',
+      '/politicas-moderacion': 'Moderation Policy',
+      '/safety-standards': 'Safety Standards'
+    };
+    return pageNames[url] ?? url;
   }
 
   /**

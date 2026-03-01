@@ -31,6 +31,11 @@ import {
   initializeAppCheck,
   ReCaptchaV3Provider
 } from 'firebase/app-check';
+import {
+  getAnalytics,
+  logEvent as firebaseLogEvent,
+  Analytics
+} from 'firebase/analytics';
 import { firebaseConfig, recaptchaSiteKey } from './firebase.config';
 import { signal } from '@angular/core';
 
@@ -55,6 +60,7 @@ export class FirebaseService {
   private auth: Auth;
   private db: Firestore;
   private remoteConfig: RemoteConfig;
+  private analytics: Analytics;
 
   currentUser = signal<User | null>(null);
   userProfile = signal<UserProfile | null>(null);
@@ -64,6 +70,7 @@ export class FirebaseService {
     this.auth = getAuth(this.app);
     this.db = getFirestore(this.app);
     this.remoteConfig = getRemoteConfig(this.app);
+    this.analytics = getAnalytics(this.app);
 
     // Configurar intervalo de actualización (en desarrollo puede ser bajo)
     this.remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hora
@@ -272,6 +279,15 @@ export class FirebaseService {
     } catch (error) {
       console.error('Error fetching store links from Remote Config:', error);
       return { ios: '#', android: '#' };
+    }
+  }
+
+  // Analytics
+  logEvent(eventName: string, params?: Record<string, unknown>): void {
+    try {
+      firebaseLogEvent(this.analytics, eventName, params);
+    } catch (error) {
+      console.warn('Error logging analytics event:', error);
     }
   }
 }
