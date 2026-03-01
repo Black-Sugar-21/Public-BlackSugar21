@@ -35,6 +35,9 @@
 | `ui/onboarding/OnboardingCoordinator.swift` | Coordinator onboarding — validateCurrentStep() |
 | `services/AnalyticsService.swift` | Todos los eventos Analytics |
 | `services/RemoteConfigService.swift` | Remote Config |
+| `ui/home/SwipeView.swift` | Tarjeta de perfil en swipe stack (~918 líneas) — StoryRingButton premium, info button |
+| `ui/story/AutoPlayStoryView.swift` | Auto-reproducción de stories con avatar+nombre en header |
+| `domain/story/StoryRepository.swift` | Stories CRUD + `parseTimestampField()` (3 formatos: ISO 8601, Date, HashMap) |
 
 ### Archivos Android críticos
 
@@ -48,6 +51,9 @@
 | `core/chat/ActiveChatManager.kt` | activeChat + activeChatTimestamp |
 | `core/notification/PushNotificationService.kt` | pendingNotifications |
 | `feature/home/ui/HomeViewModel.kt` | Swipes + retry WorkManager |
+| `feature/home/ui/components/ProfileCardView.kt` | Profile card en swipe stack (~678 líneas) — StoryRingButton premium, info button, ProfileDetailsSheet |
+| `ui/story/AutoPlayStoryDialog.kt` | Diálogo autoplay de historias con timer 10s, avatar+nombre en header (~366 líneas) |
+| `core/firebase/StoryRepository.kt` | Stories CRUD + `parseTimestampField()` (3 formatos: ISO 8601, Timestamp, HashMap) |
 | `auth/create/Phone/viewmodel/PhoneAuthViewModel.kt` | Auth por teléfono (~606 líneas) — cooldown 30s, 6 tipos error |
 | `auth/create/screen/Phone/util/PhoneAuthState.kt` | Data class estado Phone Auth |
 | `feature/onboarding/steps/BirthdayStepScreen.kt` | Birthday input con hint card dorado |
@@ -563,10 +569,12 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
 24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
 25. **searchPlaces** — CF con {matchId, query, userLanguage}
-26. **Phone Auth** — cooldown 30s ambas plataformas, timeout iOS 30s vs Android SDK 60s, strings localizadas
-27. **Birthday validation** — edad mínima dinámica por país, coordinator iOS vs hint card Android, strings localizadas
 26. **Phone Auth** — cooldown 30s (ambas), timeout iOS 30s (`verificationTimeoutTask`) vs Android SDK `onCodeAutoRetrievalTimeOut` 60s. iOS: `@MainActor`, `canSendCode` computed, `Timer.scheduledTimer`. Android: requiere `Activity`, guarda `ForceResendingToken`, 6 tipos de error inline. Strings localizadas en 10 idiomas (iOS kebab-case: `resend-code`, Android snake_case: `resend_code`)
 27. **Birthday validation** — edad mínima dinámica por país via Remote Config `minimum_age_by_country`. iOS usa `OnboardingCoordinator.validateCurrentStep()` centralizado (sin hint card). Android usa `showBirthdateHint` hint card dorado + `showUnderageDialog`. Strings: `underage-alert-title`/`underage_alert_title` y `enter-birthdate-required`/`enter_birthdate_required` en 10 idiomas
+28. **StoryRingButton** — botón premium animado en swipe cards. Android: componente inline en `ProfileCardView.kt` (Canvas, sweepGradient, Path). iOS: `StoryRingButton` struct + `PlayTriangle: Shape` en `SwipeView.swift` (AngularGradient). Ambos: anillo rotatorio 360°/3s, glow breathing 0.3→0.7/1.8s, pulse 1.0→1.08/1.8s, play triangle dorado, badge de story count
+29. **AutoPlayStory avatar** — Android recibe `userPhotoUrl: String?` (URL completa de Firebase Storage), iOS recibe `userPhoto: UIImage?` (pre-cargado). Ambos muestran círculo gris 40dp/pt si null. **⚠️ Android:** NUNCA pasar `profile.pictureNames` (son filenames), siempre extraer URL de `ProfilePictureState` (Remote > Thumb)
+30. **StoryRepository parseTimestampField** — maneja 3 formatos de CFs: (1) ISO 8601 String, (2) Timestamp/Date nativo, (3) HashMap/Dictionary `{_seconds, _nanoseconds}` legacy — homologado iOS/Android
+31. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
 
 ### Comandos de auditoría rápida
 
