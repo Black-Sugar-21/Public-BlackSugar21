@@ -37,7 +37,7 @@
 | `services/RemoteConfigService.swift` | Remote Config |
 | `ui/home/SwipeView.swift` | Tarjeta de perfil en swipe stack (~918 líneas) — StoryRingButton premium, info button |
 | `ui/story/AutoPlayStoryView.swift` | Auto-reproducción de stories con avatar+nombre en header |
-| `domain/story/StoryRepository.swift` | Stories CRUD + `parseTimestampField()` (3 formatos: ISO 8601, Date, HashMap) |
+| `domain/story/StoryRepository.swift` | Stories CRUD — timestamp parsing inline (ISO 8601 via `ISO8601DateFormatter`) |
 
 ### Archivos Android críticos
 
@@ -227,10 +227,12 @@ Lectura pública. Sin escritura desde cliente.
 | `ephemeral_photos/{matchId}/{photoId}.jpg` | Fotos efímeras en chat |
 | `stories/personal_stories/{userId}/{storyId}.jpg` | Stories/historias (expiran a las 24h, cleanup por `cleanupExpiredStories` CF) |
 | `temp_uploads/{userId}/{filename}` | Uploads temporales (moderación IA) |
+| `temp_validations/{fileName}` | Validaciones temporales IA |
+| `temp_moderation/{fileName}` | Moderación temporal IA |
 
 ---
 
-## Cloud Functions — 39 callable + 7 scheduled + 6 triggers (us-central1)
+## Cloud Functions — 35 callable + 7 scheduled + 6 triggers + 1 alias (us-central1)
 
 ### Funciones principales (todas homologadas iOS = Android)
 
@@ -250,6 +252,8 @@ Lectura pública. Sin escritura desde cliente.
 | `updategeohashesscheduled` | scheduled | Actualizar geohashes |
 | `monitorGeohashHealth` | scheduled | Monitoreo de salud de geohashes |
 
+**Alias:** `scheduledCheckMutualLikes` → alias de `checkMutualLikesAndCreateMatch`
+
 **Comportamiento timezone-aware:**
 - Cada hora, lee todos los usuarios activos (`paused != true`)
 - Para cada usuario, calcula `(currentUTCHour + timezoneOffset) % 24`
@@ -264,7 +268,7 @@ Lectura pública. Sin escritura desde cliente.
 - `loc-args`/`bodyLocArgs`: daily likes envía `['100']` para reemplazar `%@` (iOS) / `%1$d` (Android). Super likes no usa args (número "5" hardcodeado en strings)
 - Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
-### Callable Functions (34 de producción + 6 utilidades)
+### Callable Functions (35 de producción + 6 utilidades)
 
 **Producción (homologadas iOS = Android):**
 ```
@@ -379,10 +383,11 @@ generateMissingThumbnails
 | `max_search_radius_km` | Number | 200.0 | Radio máximo de búsqueda en km |
 | `ai_moderation_confidence_threshold` | Number | 0.80 | Umbral de confianza moderación IA |
 | `profile_reappear_cooldown_days` | Number | 14 | Días antes de reaparecer un perfil descartado |
-| `bulk_query_batch_size` | Number | 50 | Tamaño de batch para queries múltiples |
+| `bulk_query_batch_size` | Number | 30 | Tamaño de batch para queries múltiples (límite Firestore whereIn) |
 | `minimum_age_by_country` | JSON String | `{"default": 18}` | Edad mínima por país |
 | `enable_bio_ai_suggestions` | Boolean | false | Habilitar sugerencias de bio con IA |
 | `moderation_image_max_dimension` | Number | 512 | Dimensión máx (px) para compresión de imagen en moderación IA (rango 256–1024) |
+| `gemini_tokens` | Number | 1024 | Max tokens para respuestas Gemini |
 | `moderation_image_jpeg_quality` | Number | 50 | Calidad JPEG (%) para compresión de imagen en moderación IA (rango 20–100). iOS convierte a 0.0–1.0 |
 | `enable_screen_protection` | Boolean | true | Habilitar/deshabilitar protección contra capturas de pantalla y grabación de pantalla |
 
@@ -586,12 +591,12 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 31. **Birthday validation** — edad mínima dinámica por país via Remote Config `minimum_age_by_country`. iOS usa `OnboardingCoordinator.validateCurrentStep()` centralizado (sin hint card). Android usa `showBirthdateHint` hint card dorado + `showUnderageDialog`. Strings: `underage-alert-title`/`underage_alert_title` y `enter-birthdate-required`/`enter_birthdate_required` en 10 idiomas
 32. **StoryRingButton** — botón premium animado en swipe cards. Android: componente inline en `ProfileCardView.kt` (Canvas, sweepGradient, Path). iOS: `StoryRingButton` struct + `PlayTriangle: Shape` en `SwipeView.swift` (AngularGradient). Ambos: anillo rotatorio 360°/3s, glow breathing 0.3→0.7/1.8s, pulse 1.0→1.08/1.8s, play triangle dorado, badge de story count
 33. **AutoPlayStory avatar** — Android recibe `userPhotoUrl: String?` (URL completa de Firebase Storage), iOS recibe `userPhoto: UIImage?` (pre-cargado). Ambos muestran círculo gris 40dp/pt si null. **⚠️ Android:** NUNCA pasar `profile.pictureNames` (son filenames), siempre extraer URL de `ProfilePictureState` (Remote > Thumb)
-34. **StoryRepository parseTimestampField** — maneja 3 formatos de CFs: (1) ISO 8601 String, (2) Timestamp/Date nativo, (3) HashMap/Dictionary `{_seconds, _nanoseconds}` legacy — homologado iOS/Android
+34. **StoryRepository parseTimestampField** — Android tiene `parseTimestampField()` dedicada que maneja 3 formatos: (1) ISO 8601 String, (2) Timestamp nativo, (3) HashMap `{_seconds, _nanoseconds}` legacy. iOS parsea timestamps inline usando `ISO8601DateFormatter` (sin función dedicada). Ambas plataformas manejan los mismos datos pero con implementación diferente
 35. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
 36. **Story lifecycle (24h)** — `createStory` escribe `expiresAt = now + 24h`. `cleanupExpiredStories` CF (hourly) elimina expiradas. Profile models (`ProfileCardModel`/`Profile`) propagan `storyModels: [StoryModel]` con timestamps reales. **⚠️ NUNCA crear StoryModel dummy con Date()/Timestamp.now() para swipe cards**
 37. **storyModels en swipe cards** — `ProfileCardRepository` (iOS) y `ProfileRepositoryImp` (Android) pasan `storyModels` al construir profile models. SwipeView/ProfileCardView usa `model.storyModels` si disponible, con fallback a dummy solo como safety net
 38. **Match list listener resilience** — ambas plataformas usan Firestore snapshot listener real-time (NO CF one-shot). iOS: `AsyncThrowingStream` pipeline (`FirestoreRemoteDataSource` → `MatchRepository` → `MatchListViewModel`). Android: `Flow<Result<List<Match>>>` pipeline (`MatchFirebaseDataSource` → `MatchRepository` → `GetMatchesUseCase` → `MatchListViewModel`). Auto-start en `init`, auto-retry 3s tras error. Patrón lightweight: NO descargar fotos/stories dentro del stream — `loadMissingPictures()` async post-emisión. iOS usa `ensureListenerActive()` en `MatchListView.onAppear` como safety net (SwiftfulRouting puede matar el listener). Android no necesita safety net (ViewModel vive en Hilt scope). **⚠️ NUNCA llamar `stopListeningToMatches()` en `.onDisappear` de MainTabView (iOS)** — SwiftfulRouting `.push` triggerea `onDisappear` en el padre
-39. **activeChat stale cleanup** — 3 capas de protección: (1) iOS `ContentViewModel` limpia `activeChat` al detectar usuario autenticado al inicio, (2) Android `MainActivity.onCreate()` llama `clearActiveChat()`, (3) CF `onMessageCreated` detecta activeChat stale (>5 min sin `activeChatTimestamp` actualizado) y lo limpia antes de decidir enviar push. Esto evita que un usuario no reciba notificaciones por un `activeChat` huérfano
+39. **activeChat stale cleanup** — 3 capas de protección: (1) iOS `black_sugar_21App.swift` limpia `activeChat` al detectar usuario autenticado al inicio (via `FirestoreRemoteDataSource.shared.clearActiveChat()`), (2) Android `MainActivity.onCreate()` llama `clearActiveChat()`, (3) CF `onMessageCreated` detecta activeChat stale (>5 min sin `activeChatTimestamp` actualizado) y lo limpia antes de decidir enviar push. Esto evita que un usuario no reciba notificaciones por un `activeChat` huérfano
 40. **FCM notification delivery** — Android: `handlePendingNotification` CF envía `android.priority: "high"` + `android.notification.channelId` = `"Messages"` | `"Matches"` | `"Likes"` | `"General"`. Los channel IDs del CF DEBEN coincidir con los `NotificationChannel` registrados en `MyFirebaseMessagingService.kt`. Si no coinciden, Android puede no mostrar la notificación. iOS: solo usa APNs headers (`apns-priority: "10"`, `apns-push-type: "alert"`)
 41. **Caché optimista de lectura** — `MatchListViewModel` en ambas plataformas mantiene `recentlyReadMatches` con TTL 30s. Evita flash de "unread" cuando Firestore emite snapshot antes de que `lastSeenTimestamps` se actualice en el servidor. Keyed por `lastMessageSeq` (iOS) / `lastMessage` (Android) — idéntico comportamiento
 42. **Story Carousel en Match List** — ambas plataformas muestran un carrusel horizontal estilo Instagram en la parte superior de la lista de matches. Solo muestra matches con `hasActiveStories == true`. Flujo: `MatchListViewModel` llama CF `getBatchStoryStatus` dentro de `startObservingMatches()`/`observeMatches()` para poblar `storyStatusCache: [String: Bool]`. El listener de stories solo **upgradea** estado (`false→true`, nunca `true→false`) para evitar flickering — las degradaciones las maneja `refreshStoriesIfNeeded()`. iOS: `StoryCarouselView` con `ScrollView(.horizontal)`. Android: `StoryCarousel` composable con `LazyRow`
@@ -954,7 +959,18 @@ Servidor MCP registrado en `.vscode/mcp.json` para herramientas de auditoría:
 - **Runtime:** Node.js 20
 - **SDK:** Firebase Functions v2 (Gen 2)
 - **Región:** `us-central1`
-- **Total:** 39 callable + 7 scheduled + 6 triggers (ver sección "Cloud Functions" arriba)
+- **AI Model:** `gemini-2.5-flash` (secret `GEMINI_API_KEY`)
+- **Total:** 35 callable + 7 scheduled + 6 triggers + 1 alias (ver sección "Cloud Functions" arriba)
+
+**Dependencias functions (`functions/package.json`):**
+
+| Paquete | Versión |
+|---|---|
+| `firebase-admin` | `^12.0.0` |
+| `firebase-functions` | `^5.1.1` |
+| `@google/generative-ai` | `^0.24.1` |
+| `sharp` | `^0.33.5` |
+| `geofire-common` | `^6.0.0` (root only) |
 
 ### Patrones de Código Angular
 
