@@ -4,8 +4,11 @@ const {onCall} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const {logger} = require('firebase-functions/v2');
 const {defineSecret} = require('firebase-functions/params');
+const {GoogleGenerativeAI} = require('@google/generative-ai');
 
 const placesApiKey = defineSecret('GOOGLE_PLACES_API_KEY');
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
+const AI_MODEL_NAME = 'gemini-2.5-flash';
 const sharp = require('sharp');
 const path = require('path');
 const os = require('os');
@@ -203,6 +206,7 @@ exports.getCompatibleProfileIds = onCall(
     const currentUser = userDoc.data();
     const currentUserMale = currentUser.male === true;
     const currentUserOrientation = (currentUser.orientation || 'both').toLowerCase();
+    const currentUserType = (currentUser.userType || '').toUpperCase();
     const currentUserAge = calcAge(currentUser.birthDate);
     const userMinAge = currentUser.minAge || 18;
     const userMaxAge = currentUser.maxAge || 99;
@@ -284,19 +288,24 @@ exports.getCompatibleProfileIds = onCall(
       const bounds = queryBoundsForRadius(userLat, userLon, maxDistanceKm);
       logger.info(`[getCompatibleProfileIds] Geohash query: ${bounds.length} ranges, radius: ${maxDistanceKm}km`);
 
-      for (const bound of bounds) {
-        if (compatibleIds.length >= limit) break;
+      // ⚡ OPTIMIZACIÓN: Ejecutar TODAS las queries de geohash en paralelo
+      // En lugar de for..of secuencial (~9 queries × 100-200ms = 900-1800ms)
+      // Promise.all ejecuta las 9 queries simultáneamente (~200-400ms total)
+      const snapshots = await Promise.all(
+        bounds.map((bound) =>
+          db.collection('users')
+            .where('g', '>=', bound.start)
+            .where('g', '<=', bound.end)
+            .get()
+            .catch((err) => {
+              logger.warn(`[getCompatibleProfileIds] Geohash range query failed: ${err.message}`);
+              return {docs: []};
+            }),
+        ),
+      );
 
-        // Query con geohash range + filtros de estado
-        let query = db.collection('users')
-          .where('g', '>=', bound.start)
-          .where('g', '<=', bound.end);
-
-        // Nota: Firestore no permite inequality en 2 campos distintos (g + male),
-        // así que male se filtra en memoria junto a los demás filtros.
-
-        const snap = await query.get();
-
+      // Procesar todos los resultados y aplicar filtros in-memory
+      for (const snap of snapshots) {
         for (const doc of snap.docs) {
           if (compatibleIds.length >= limit) break;
 
@@ -320,17 +329,35 @@ exports.getCompatibleProfileIds = onCall(
           // Excluir visibilidad reducida (usuarios reportados)
           if (candidate.visibilityReduced === true) continue;
 
-          // Filtrar por género del candidato según orientación del usuario
-          const candidateMale = candidate.male === true;
-          if (currentUserOrientation === 'men' && !candidateMale) continue;
-          if (currentUserOrientation === 'women' && candidateMale) continue;
+          // ═══ FILTRO userType ═══
+          // Sugar Daddy y Sugar Mommy no ven su mismo tipo.
+          // Sugar Baby puede ver cualquier tipo (incluyendo otro Sugar Baby).
+          const candidateUserType = (candidate.userType || '').toUpperCase();
+          if (
+            (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
+            candidateUserType === currentUserType
+          ) continue;
 
-          // Filtrar por orientación del candidato (orientación inversa):
-          // Un candidato con orientation="women" no debe aparecer a un hombre
-          // Un candidato con orientation="men" no debe aparecer a una mujer
+          // ═══ FILTRO gender + orientation ═══
+          const candidateMale = candidate.male === true;
           const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
-          if (currentUserMale && candidateOrientation === 'women') continue;
-          if (!currentUserMale && candidateOrientation === 'men') continue;
+
+          if (currentUserOrientation === 'both') {
+            // orientation="both" solo ve candidatos que también quieren "both"
+            if (candidateOrientation !== 'both') continue;
+          } else if (currentUserOrientation === 'men') {
+            // Solo ver hombres
+            if (!candidateMale) continue;
+            // Cross-check: el candidato debe querer mi género
+            if (currentUserMale && candidateOrientation === 'women') continue;
+            if (!currentUserMale && candidateOrientation === 'men') continue;
+          } else if (currentUserOrientation === 'women') {
+            // Solo ver mujeres
+            if (candidateMale) continue;
+            // Cross-check: el candidato debe querer mi género
+            if (currentUserMale && candidateOrientation === 'women') continue;
+            if (!currentUserMale && candidateOrientation === 'men') continue;
+          }
 
           // Filtrar por rango de edad del usuario actual → edad del candidato
           const candidateAge = calcAge(candidate.birthDate);
@@ -354,6 +381,7 @@ exports.getCompatibleProfileIds = onCall(
 
           compatibleIds.push(doc.id);
         }
+        if (compatibleIds.length >= limit) break;
       }
     } else {
       // Fallback sin ubicación: query sin geohash (comportamiento legacy)
@@ -383,9 +411,28 @@ exports.getCompatibleProfileIds = onCall(
         const candidateBlockedArray = candidate.blocked;
         if (Array.isArray(candidateBlockedArray) && candidateBlockedArray.includes(currentUserId)) continue;
 
+        // ═══ FILTRO userType (fallback) ═══
+        const candidateUserType = (candidate.userType || '').toUpperCase();
+        if (
+          (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
+          candidateUserType === currentUserType
+        ) continue;
+
+        // ═══ FILTRO gender + orientation (fallback) ═══
+        const candidateMale = candidate.male === true;
         const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
-        if (currentUserMale && candidateOrientation === 'women') continue;
-        if (!currentUserMale && candidateOrientation === 'men') continue;
+
+        if (currentUserOrientation === 'both') {
+          if (candidateOrientation !== 'both') continue;
+        } else if (currentUserOrientation === 'men') {
+          if (!candidateMale) continue;
+          if (currentUserMale && candidateOrientation === 'women') continue;
+          if (!currentUserMale && candidateOrientation === 'men') continue;
+        } else if (currentUserOrientation === 'women') {
+          if (candidateMale) continue;
+          if (currentUserMale && candidateOrientation === 'women') continue;
+          if (!currentUserMale && candidateOrientation === 'men') continue;
+        }
 
         const candidateAge = calcAge(candidate.birthDate);
         if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
@@ -1163,7 +1210,7 @@ exports.reportUser = onCall(
 
         const {GoogleGenerativeAI} = require('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || defineSecret('GEMINI_API_KEY').value());
-        const model = genAI.getGenerativeModel({model: 'gemini-2.0-flash'});
+        const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
         const result = await model.generateContent(aiPrompt);
         const responseText = result.response.text();
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -1729,13 +1776,15 @@ exports.getBatchStoryStatus = onCall(
     // Inicializar todos como false
     userIds.forEach((uid) => { storiesStatus[uid] = false; });
 
-    // Consultar historias activas (no expiradas) para estos usuarios
+    // Consultar historias personales activas (no expiradas) para estos usuarios
+    // Usa índice compuesto: (isPersonal ASC, senderId ASC, expiresAt ASC)
     // Procesamos en lotes de 10 (límite de 'in' en Firestore)
     const chunkSize = 10;
     for (let i = 0; i < userIds.length; i += chunkSize) {
       const chunk = userIds.slice(i, i + chunkSize);
       try {
         const snap = await db.collection('stories')
+          .where('isPersonal', '==', true)
           .where('senderId', 'in', chunk)
           .where('expiresAt', '>', now)
           .get();
@@ -1865,57 +1914,532 @@ exports.validateProfileImage = onCall(
 );
 
 /**
- * Callable: Moderar imagen de perfil con IA.
- * Payload: { imageUrl, userId? }
- * Response: { approved, reason, confidence }
- * Homologado: iOS ImageModerationService / Android ImageModerationService
+ * Callable: Moderar imagen de perfil o story con Gemini AI.
+ * Payload: { imageBase64, expectedGender?, userLanguage?, isStory? }
+ * Response: { approved, reason, confidence, categories, category }
+ * Homologado: iOS ContentModerationService / Android ContentModerationService
  */
 exports.moderateProfileImage = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {imageUrl} = request.data || {};
-    if (!imageUrl) throw new Error('imageUrl is required');
+    const {imageBase64, expectedGender, userLanguage, isStory} = request.data || {};
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new Error('imageBase64 is required');
+    }
 
-    // Placeholder: En producción conectar Cloud Vision SafeSearch API
-    // Para mantener el flujo funcional, aprobamos imágenes de Firebase Storage
-    const isFirebaseImage = imageUrl.includes('firebasestorage.googleapis.com') ||
-                             imageUrl.includes('storage.googleapis.com');
+    const language = (userLanguage || 'en').toLowerCase();
+    const isSpanish = language.startsWith('es');
 
-    logger.info(`[moderateProfileImage] Moderated: ${imageUrl}`);
-    return {
-      approved: true,
-      reason: isFirebaseImage ? 'firebase_storage_approved' : 'external_image_approved',
-      confidence: 0.95,
-    };
+    logger.info(`[moderateProfileImage] isStory=${!!isStory}, lang=${language}, gender=${expectedGender}`);
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        logger.error('[moderateProfileImage] GEMINI_API_KEY not configured');
+        // Fail-open for profile, fail-closed for story
+        return isStory
+          ? {approved: false, reason: 'AI moderation unavailable', confidence: 0, categories: [], category: 'error'}
+          : {approved: true, reason: 'AI moderation unavailable', confidence: 0, categories: [], category: 'error'};
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
+
+      const prompt = isStory
+        ? buildStoryImagePrompt(language, isSpanish)
+        : buildProfileImagePrompt(language, isSpanish, expectedGender);
+
+      const result = await model.generateContent([
+        prompt,
+        {inlineData: {data: imageBase64, mimeType: 'image/jpeg'}},
+      ]);
+
+      const responseText = result.response.text();
+      logger.info(`[moderateProfileImage] Gemini response: ${responseText.substring(0, 200)}`);
+
+      const parsed = parseGeminiJsonResponse(responseText);
+      const approved = !!parsed.approved;
+      const reason = parsed.reason || '';
+      const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (approved ? 1.0 : 0.9);
+      const categories = Array.isArray(parsed.categories) ? parsed.categories : [];
+      const category = parsed.category || (categories.length > 0 ? categories[0] : (approved ? 'approved' : 'other'));
+
+      return {approved, reason, confidence, categories, category};
+    } catch (error) {
+      logger.error('[moderateProfileImage] Error:', error);
+      // Fail-open for profile photos, fail-closed for stories
+      if (isStory) {
+        return {approved: false, reason: 'moderation_error', confidence: 0, categories: [], category: 'error'};
+      }
+      return {approved: true, reason: 'moderation_error', confidence: 0, categories: [], category: 'error'};
+    }
   },
 );
 
 /**
- * Callable: Moderar contenido de un mensaje antes de enviarlo.
- * Payload: { message, senderId?, matchId? }
- * Response: { approved, reason }
- * Homologado: iOS ChatViewModel.moderateMessage
+ * Callable: Moderar texto (mensaje de chat o biografía) con Gemini AI.
+ * Payload: { message, language?, type?, matchId? }
+ *   type: "biography" | "message" (default: "message" for backward compat)
+ * Response: { approved, reason, category, confidence }
+ * Homologado: iOS ContentModerationService / Android ContentModerationService / ChatViewModel
  */
 exports.moderateMessage = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {message} = request.data || {};
+    const {message, language, type, matchId} = request.data || {};
     if (!message || typeof message !== 'string') {
-      return {approved: true, reason: 'empty_message'};
+      return {approved: true, reason: 'empty_message', category: 'approved', confidence: 1.0};
     }
 
-    // Lista básica de términos prohibidos (en producción usar Cloud NLP / Vertex AI)
-    const prohibited = ['spam', 'onlyfans.com', 'venmo.me'];
-    const lowerMsg = message.toLowerCase();
-    const flagged = prohibited.some((term) => lowerMsg.includes(term));
+    const lang = (language || 'en').toLowerCase();
+    const isSpanish = lang.startsWith('es');
+    const moderationType = (type || 'message').toLowerCase();
 
-    logger.info(`[moderateMessage] Message moderated, flagged=${flagged}`);
-    return {
-      approved: !flagged,
-      reason: flagged ? 'prohibited_content' : 'approved',
-    };
+    logger.info(`[moderateMessage] type=${moderationType}, lang=${lang}, len=${message.length}`);
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        logger.error('[moderateMessage] GEMINI_API_KEY not configured');
+        return {approved: true, reason: 'AI moderation unavailable', category: 'error', confidence: 0};
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
+
+      const prompt = moderationType === 'biography'
+        ? buildBioModerationPrompt(message, lang, isSpanish)
+        : buildMessageModerationPrompt(message, lang, isSpanish);
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      logger.info(`[moderateMessage] Gemini response: ${responseText.substring(0, 200)}`);
+
+      const parsed = parseGeminiJsonResponse(responseText);
+      const approved = !!parsed.approved;
+      // Support both "allowed" (iOS CF compat) and "approved" fields
+      const isAllowed = parsed.allowed !== undefined ? !!parsed.allowed : approved;
+      const reason = parsed.reason || '';
+      const category = (parsed.category || (isAllowed ? 'approved' : 'other')).toLowerCase();
+      const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (isAllowed ? 1.0 : 0.9);
+
+      return {approved: isAllowed, reason, category, confidence};
+    } catch (error) {
+      logger.error('[moderateMessage] Error:', error);
+      // Fail-open: approve on error (aligned with client behavior)
+      return {approved: true, reason: 'moderation_error', category: 'error', confidence: 0};
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODERATION HELPERS — Prompts y parsing para moderación con Gemini
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Obtiene la instrucción de idioma para el prompt de Gemini.
+ */
+function getLanguageInstruction(lang) {
+  if (lang.startsWith('zh')) return '重要提示：请用中文回答所有内容。';
+  if (lang.startsWith('ar')) return 'مهم: أجب على كل شيء بالعربية.';
+  if (lang.startsWith('id') || lang.startsWith('ms')) return 'PENTING: Jawab SEMUA dalam Bahasa Indonesia.';
+  if (lang.startsWith('pt')) return 'IMPORTANTE: Responda TUDO em português.';
+  if (lang.startsWith('fr')) return 'IMPORTANT: Répondez à TOUT en français.';
+  if (lang.startsWith('ja')) return '重要：すべて日本語で回答してください。';
+  if (lang.startsWith('ru')) return 'ВАЖНО: Отвечайте на ВСЁ на русском языке.';
+  if (lang.startsWith('de')) return 'WICHTIG: Antworten Sie auf ALLES auf Deutsch.';
+  if (lang.startsWith('es')) return 'IMPORTANTE: Responde TODO en ESPAÑOL.';
+  return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';
+}
+
+/**
+ * Construye prompt estricto para fotos de perfil.
+ * Homologado con ContentModerationService.kt moderateImage() y ContentModerationService.swift
+ */
+function buildProfileImagePrompt(lang, isSpanish, expectedGender) {
+  const languageInstruction = getLanguageInstruction(lang);
+
+  let genderInstruction = '';
+  if (expectedGender !== null && expectedGender !== undefined) {
+    if (isSpanish) {
+      genderInstruction = expectedGender
+        ? '\n- El género de la persona NO corresponde al esperado (se esperaba MASCULINO)'
+        : '\n- El género de la persona NO corresponde al esperado (se esperaba FEMENINO)';
+    } else {
+      genderInstruction = expectedGender
+        ? '\n- The person\'s gender does NOT match the expected one (expected MALE)'
+        : '\n- The person\'s gender does NOT match the expected one (expected FEMALE)';
+    }
+  }
+
+  let genderApproval = '';
+  if (expectedGender !== null && expectedGender !== undefined) {
+    genderApproval = isSpanish
+      ? '\n- El género de la persona corresponde al esperado'
+      : '\n- The person\'s gender matches the expected one';
+  }
+
+  if (isSpanish) {
+    return `Analiza esta imagen para una app de citas (estilo Tinder) y determina si es apropiada.
+
+RECHAZAR si contiene:
+- Desnudez o contenido sexual explícito
+- Violencia o contenido gráfico
+- Símbolos de odio o discriminación
+- Menores de edad
+- Rostros poco claros (la persona principal debe ser claramente visible)
+- Contenido ofensivo o inapropiado${genderInstruction}
+
+APROBAR si:
+- Muestra claramente el rostro de una persona adulta
+- Es una foto apropiada para perfil de citas
+- Los LENTES/GAFAS están permitidos
+- Accesorios (sombreros, gorras, bufandas ligeras) están permitidos siempre que el rostro sea visible
+- MÚLTIPLES PERSONAS están permitidas (fotos con amigos, familia, etc. son aceptables)
+- No contiene contenido inapropiado${genderApproval}
+
+${languageInstruction}
+
+Responde SOLO en formato JSON:
+{
+    "approved": true/false,
+    "reason": "explicación breve en español si se rechaza",
+    "confidence": 0.0-1.0,
+    "categories": ["lista", "de", "problemas", "en", "español"],
+    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|approved"
+}`;
+  }
+
+  return `Analyze this image for a dating app (Tinder style) and determine if it's appropriate.
+
+REJECT if it contains:
+- Nudity or explicit sexual content
+- Violence or graphic content
+- Hate symbols or discrimination
+- Minors
+- Unclear faces (the main person's face must be clearly visible)
+- Offensive or inappropriate content${genderInstruction}
+
+APPROVE if:
+- Clearly shows the face of an adult person
+- Is an appropriate photo for a dating profile
+- GLASSES/EYEWEAR are allowed
+- Accessories (hats, caps, light scarves) are allowed as long as the face is visible
+- MULTIPLE PEOPLE are allowed (photos with friends, family, etc. are acceptable)
+- Does not contain inappropriate content${genderApproval}
+
+${languageInstruction}
+
+Respond ONLY in JSON format:
+{
+    "approved": true/false,
+    "reason": "brief explanation if rejected",
+    "confidence": 0.0-1.0,
+    "categories": ["list", "of", "issues"],
+    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|approved"
+}`;
+}
+
+/**
+ * Construye prompt permisivo para stories/historias.
+ * Homologado con ContentModerationService.kt moderateStoryImage()
+ */
+function buildStoryImagePrompt(lang, isSpanish) {
+  const languageInstruction = getLanguageInstruction(lang);
+
+  if (isSpanish) {
+    return `Analiza esta imagen para una HISTORIA/STORY de app de citas y determina si es apropiada.
+
+RECHAZAR SOLO si contiene:
+- Desnudez o contenido sexual explícito
+- Violencia gráfica o contenido perturbador
+- Símbolos de odio, racismo o discriminación
+- Propaganda política o contenido divisivo
+- Spam o publicidad comercial excesiva
+- Drogas ilegales o consumo de sustancias
+- Armas de fuego (armas blancas decorativas están permitidas)
+- Contenido ofensivo o lenguaje de odio visible
+
+APROBAR TODO lo demás, incluyendo:
+- Paisajes, naturaleza, lugares
+- Comida, bebidas, restaurantes
+- Objetos, productos (sin publicidad excesiva)
+- Animales, mascotas
+- Arte, pinturas, esculturas
+- Selfies, fotos con amigos/familia
+- Fotos SIN personas o SIN rostros visibles
+- Pantallas de computadora, escritorios
+- Vehículos, autos, motos
+- Actividades deportivas, gym, ejercicio
+- Eventos sociales, fiestas (sin contenido inapropiado)
+- Viajes, turismo, aventuras
+
+IMPORTANTE: Las historias son contenido temporal y casual.
+NO se requiere que muestre rostros o personas.
+Se permite TODO contenido apropiado y seguro.
+
+${languageInstruction}
+
+Responde SOLO en formato JSON:
+{
+    "approved": true/false,
+    "reason": "explicación breve si se rechaza",
+    "confidence": 0.0-1.0,
+    "categories": ["lista", "de", "problemas"],
+    "category": "nudity|violence|hate|drugs|spam|offensive|approved"
+}`;
+  }
+
+  return `Analyze this image for a dating app STORY/HISTORIA and determine if it's appropriate.
+
+REJECT ONLY if it contains:
+- Nudity or explicit sexual content
+- Graphic violence or disturbing content
+- Hate symbols, racism, or discrimination
+- Political propaganda or divisive content
+- Spam or excessive commercial advertising
+- Illegal drugs or substance abuse
+- Firearms (decorative bladed weapons are allowed)
+- Offensive content or visible hate speech
+
+APPROVE everything else, including:
+- Landscapes, nature, places
+- Food, drinks, restaurants
+- Objects, products (without excessive advertising)
+- Animals, pets
+- Art, paintings, sculptures
+- Selfies, photos with friends/family
+- Photos WITHOUT people or WITHOUT visible faces
+- Computer screens, desks
+- Vehicles, cars, motorcycles
+- Sports activities, gym, exercise
+- Social events, parties (without inappropriate content)
+- Travel, tourism, adventures
+
+IMPORTANT: Stories are temporary and casual content.
+Faces or people are NOT required.
+ALL appropriate and safe content is allowed.
+
+${languageInstruction}
+
+Respond ONLY in JSON format:
+{
+    "approved": true/false,
+    "reason": "brief explanation if rejected",
+    "confidence": 0.0-1.0,
+    "categories": ["list", "of", "issues"],
+    "category": "nudity|violence|hate|drugs|spam|offensive|approved"
+}`;
+}
+
+/**
+ * Construye prompt para moderación de biografías.
+ * Homologado con ContentModerationService.kt moderateText(BIOGRAPHY)
+ */
+function buildBioModerationPrompt(text, lang, isSpanish) {
+  const languageInstruction = getLanguageInstruction(lang);
+
+  if (isSpanish) {
+    return `Analiza esta biografía de perfil de aplicación de citas y determina si es apropiada.
+
+Texto: "${text}"
+
+RECHAZA si contiene:
+- Contenido sexual explícito o lenguaje vulgar
+- Información de contacto (teléfono, email, redes sociales)
+- Spam o publicidad
+- Lenguaje de odio o discriminación
+- Solicitudes de dinero o estafas
+- Amenazas o intimidación
+- Información personal sensible (dirección, DNI, etc.)
+
+APRUEBA si:
+- Es una descripción personal apropiada
+- No contiene nada de lo anterior
+
+${languageInstruction}
+
+Responde SOLO con JSON:
+{
+  "approved": true/false,
+  "reason": "Motivo del rechazo en español o 'approved'",
+  "category": "sexual|contact_info|spam|hate_speech|scam|threats|personal_info|approved"
+}`;
+  }
+
+  return `Analyze this dating app profile biography and determine if it's appropriate.
+
+Text: "${text}"
+
+REJECT if it contains:
+- Explicit sexual content or vulgar language
+- Contact information (phone, email, social media)
+- Spam or advertising
+- Hate speech or discrimination
+- Money requests or scams
+- Threats or intimidation
+- Sensitive personal information (address, ID, etc.)
+
+APPROVE if:
+- It's an appropriate personal description
+- Doesn't contain any of the above
+
+${languageInstruction}
+
+Respond ONLY with JSON:
+{
+  "approved": true/false,
+  "reason": "Rejection reason or 'approved'",
+  "category": "sexual|contact_info|spam|hate_speech|scam|threats|personal_info|approved"
+}`;
+}
+
+/**
+ * Construye prompt para moderación de mensajes de chat.
+ * Homologado con ContentModerationService.kt moderateText(MESSAGE)
+ */
+function buildMessageModerationPrompt(text, lang, isSpanish) {
+  const languageInstruction = getLanguageInstruction(lang);
+
+  if (isSpanish) {
+    return `Analiza este mensaje de chat y determina si es apropiado.
+
+Mensaje: "${text}"
+
+RECHAZA si contiene:
+- Acoso o lenguaje abusivo
+- Contenido sexual no solicitado
+- Spam o enlaces sospechosos
+- Amenazas o intimidación
+- Lenguaje de odio
+- Solicitudes de dinero
+
+APRUEBA si es un mensaje normal de conversación.
+
+${languageInstruction}
+
+Responde SOLO con JSON:
+{
+  "approved": true/false,
+  "reason": "Motivo del rechazo en español o 'approved'",
+  "category": "harassment|sexual|spam|threats|hate_speech|scam|approved"
+}`;
+  }
+
+  return `Analyze this chat message and determine if it's appropriate.
+
+Message: "${text}"
+
+REJECT if it contains:
+- Harassment or abusive language
+- Unsolicited sexual content
+- Spam or suspicious links
+- Threats or intimidation
+- Hate speech
+- Money requests
+
+APPROVE if it's a normal conversation message.
+
+${languageInstruction}
+
+Respond ONLY with JSON:
+{
+  "approved": true/false,
+  "reason": "Rejection reason or 'approved'",
+  "category": "harassment|sexual|spam|threats|hate_speech|scam|approved"
+}`;
+}
+
+/**
+ * Parsea respuesta JSON de Gemini, extrayendo el JSON de posible markdown.
+ */
+function parseGeminiJsonResponse(responseText) {
+  let cleanText = responseText.trim();
+  // Extract from ```json ``` blocks
+  const jsonBlockMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonBlockMatch) {
+    cleanText = jsonBlockMatch[1];
+  } else {
+    // Try to find raw JSON object
+    const startIdx = cleanText.indexOf('{');
+    const endIdx = cleanText.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      cleanText = cleanText.substring(startIdx, endIdx + 1);
+    }
+  }
+  return JSON.parse(cleanText);
+}
+
+/**
+ * Callable: Generar sugerencias de intereses con Gemini AI.
+ * Payload: { bio?, userType? }
+ * Response: { success, suggestions: [string] }
+ * Android-only por ahora (editprofile legacy VM)
+ */
+exports.generateInterestSuggestions = onCall(
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {bio, userType} = request.data || {};
+
+    const validInterests = [
+      'interest_travel_adventures', 'interest_shopping_fashion', 'interest_fine_dining',
+      'interest_art_culture', 'interest_fitness_wellness', 'interest_education_growth',
+      'interest_exclusive_events', 'interest_spa_relaxation', 'interest_music_concerts',
+      'interest_beach_vacation', 'interest_dancing_nightlife', 'interest_mentorship_business',
+      'interest_luxury_experiences', 'interest_international_travel', 'interest_gourmet_cuisine',
+      'interest_art_collecting', 'interest_golf_premium_sports', 'interest_vip_events',
+      'interest_vip_clubs', 'interest_philanthropy', 'interest_wine_spirits',
+      'interest_sailing_yachting', 'interest_business_networking', 'interest_real_estate_investments',
+      'interest_movies_theater', 'interest_photography', 'interest_books_reading',
+      'interest_cooking', 'interest_yoga_meditation', 'interest_nature_outdoors',
+    ];
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        logger.error('[generateInterestSuggestions] GEMINI_API_KEY not configured');
+        return {success: false, suggestions: []};
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
+
+      const userBio = (bio || '').substring(0, 200);
+      const prompt = `Suggest 5 interest IDs for a ${userType || 'user'} on a premium dating app.
+User bio: "${userBio}"
+Return ONLY a JSON array of strings from this list (exact keys):
+${JSON.stringify(validInterests)}
+Return only the JSON array, no explanation.`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      logger.info(`[generateInterestSuggestions] Gemini response: ${responseText.substring(0, 200)}`);
+
+      // Parse JSON array from response
+      let suggested = [];
+      try {
+        const parsed = JSON.parse(responseText.replace(/```json\s*|\s*```/g, '').trim());
+        if (Array.isArray(parsed)) {
+          suggested = parsed.filter((s) => validInterests.includes(s)).slice(0, 5);
+        }
+      } catch (_e) {
+        // Fallback: regex extraction
+        const regex = /"(interest_[^"]+)"/g;
+        let match;
+        while ((match = regex.exec(responseText)) !== null) {
+          if (validInterests.includes(match[1])) suggested.push(match[1]);
+        }
+        suggested = suggested.slice(0, 5);
+      }
+
+      return {success: true, suggestions: suggested};
+    } catch (error) {
+      logger.error('[generateInterestSuggestions] Error:', error);
+      return {success: false, suggestions: []};
+    }
   },
 );
 

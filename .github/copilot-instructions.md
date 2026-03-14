@@ -264,7 +264,7 @@ Lectura pública. Sin escritura desde cliente.
 - `loc-args`/`bodyLocArgs`: daily likes envía `['100']` para reemplazar `%@` (iOS) / `%1$d` (Android). Super likes no usa args (número "5" hardcodeado en strings)
 - Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
-### Callable Functions (33 de producción + 6 utilidades)
+### Callable Functions (34 de producción + 6 utilidades)
 
 **Producción (homologadas iOS = Android):**
 ```
@@ -281,6 +281,7 @@ detectProfileRedFlags
 findSimilarProfiles
 generateConversationStarter
 generateIcebreakers
+generateInterestSuggestions
 generateSmartReply
 getBatchCompatibilityScores
 getBatchPersonalStories
@@ -356,17 +357,18 @@ generateMissingThumbnails
 | `markStoryAsViewed` | `{storyId}` | — |
 | `deleteStory` | `{storyId}` | — |
 | `createStory` | `{imageUrl, matchId, matchParticipants}` | — |
-| `moderateMessage` | `{matchId, message, language}` | — |
+| `moderateMessage` | `{message, language?, type?, matchId?}` | `{approved, reason, category, confidence}` |
 | `validateProfileImage` | `{imageUrl, expectedIsMale, expectedAge}` | `{isValid, detectedGender, detectedAge, confidence, issues, hasFace}` |
-| `moderateProfileImage` | `{imageUrl, expectedGender, userLanguage}` | `{verdict, confidence, violations, explanation}` |
+| `moderateProfileImage` | `{imageBase64, expectedGender?, userLanguage?, isStory?}` | `{approved, reason, confidence, categories, category}` |
 | `analyzePhotoBeforeUpload` | `{photoBase64, userLanguage}` | `{success, score, overallQuality, shouldReplace, strengths, improvements}` |
+| `generateInterestSuggestions` | `{bio?, userType?}` | `{success, suggestions: [string]}` ← Android only |
 | `getMatchesWithMetadata` | `{}` (sin parámetros — usa auth) | `{matches: [{id, userId, name, age, ...}]}` ← Android only |
 
 ---
 
-## Remote Config — 14 claves
+## Remote Config — 16 claves
 
-### Claves leídas por RemoteConfigManager (10 — verificadas en código iOS y Android)
+### Claves leídas por RemoteConfigManager (12 — verificadas en código iOS y Android)
 
 | Clave | Tipo | Default | Descripción |
 |---|---|---|---|
@@ -380,6 +382,9 @@ generateMissingThumbnails
 | `bulk_query_batch_size` | Number | 50 | Tamaño de batch para queries múltiples |
 | `minimum_age_by_country` | JSON String | `{"default": 18}` | Edad mínima por país |
 | `enable_bio_ai_suggestions` | Boolean | false | Habilitar sugerencias de bio con IA |
+| `moderation_image_max_dimension` | Number | 512 | Dimensión máx (px) para compresión de imagen en moderación IA (rango 256–1024) |
+| `moderation_image_jpeg_quality` | Number | 50 | Calidad JPEG (%) para compresión de imagen en moderación IA (rango 20–100). iOS convierte a 0.0–1.0 |
+| `enable_screen_protection` | Boolean | true | Habilitar/deshabilitar protección contra capturas de pantalla y grabación de pantalla |
 
 ### Claves leídas directamente por UI (no via RemoteConfigManager)
 
@@ -454,7 +459,7 @@ phone_verification_failed: reason
 11. **Crashlytics setUserId:** Android debe llamar `FirebaseCrashlytics.getInstance().setUserId(userId)` al login (homologado con iOS `Crashlytics.crashlytics().setUserID(userId)`)
 12. **Storage paths:** rutas correctas: `users/{userId}/{filename}` (fotos perfil), `ephemeral_photos/{matchId}/{photoId}.jpg`, `stories/personal_stories/{userId}/{storyId}.jpg`. NUNCA `profile_images/` — fix aplicado en `MatchFirebaseDataSourceImpl.kt`
 13. **Super Like batch:** ambas plataformas usan batch atómico: `{superLikesRemaining: increment(-1), superLikesUsedToday: increment(1), superLiked: arrayUnion()}` + swipe subcolección `{timestamp, isLike:true, isSuperLike:true}` + liked subcolección `{exists:true, superLike:true}` + post-batch `superLiked/{userId}` con `{timestamp}`
-14. **Ephemeral photo:** estructura `{message:"", senderId, timestamp, type:"ephemeral_photo", photoUrl, isEphemeral:true, expiresAt, viewedBy:[], isUploading:false}` — idéntica iOS/Android
+14. **Ephemeral photo:** estructura `{message:"", senderId, timestamp, type:"ephemeral_photo", photoUrl, isEphemeral:true, expiresAt, viewedBy:[], isUploading:false}` — idéntica iOS/Android. **Compresión optimizada:** maxDimension=800px, JPEG quality=65% (iOS: `ephemeralMaxDimension=800`, `imageCompressionQuality=0.65`; Android: `ephemeralMaxDimension=800`, `imageCompressionQuality=65`). Fotos efímeras se ven solo 10s — no necesitan alta resolución
 15. **activeChat lifecycle:** `setActiveChat` → `{activeChat: matchId, activeChatTimestamp: serverTimestamp()}`, `clearActiveChat` → ambos campos con `FieldValue.delete()` — idéntico iOS/Android
 16. **pauseAccount:** escribe `{paused:true, visible:false, pausedAt:serverTimestamp()}` — reactivate escribe `{paused:false, visible:true}`
 17. **blockUser:** ambas plataformas llaman CF `blockUser({blockedUserId})`. `unblockUser` es local: `FieldValue.arrayRemove(blockedUserId)` del array `blocked`. Bloqueo bidireccional: `blocked` (usuario que bloquea) + `blockedBy` (usuario bloqueado)
@@ -465,14 +470,14 @@ phone_verification_failed: reason
 22. **Super likes reset:** SIEMPRE 5. Server-side: CF `resetSuperLikes` corre `every 1 hours`, misma lógica timezone. Escribe `{superLikesRemaining:5, superLikesUsedToday:0, lastSuperLikeResetDate}`. Solo notifica si `superLikesRemaining < 5` — idéntico iOS/Android
 23. **Match detection:** `hasUserLikedBack()` lee `otherUser.liked` y verifica si contiene `currentUserId`. 100ms delay antes de verificar — idéntico iOS/Android
 24. **Match notification:** enviada por CF trigger `onMatchCreated` (NO por cliente). `sendMatchNotification` en Android es código muerto
-25. **Photo upload:** `users/{userId}/{uuid}.jpg` + thumbnail `users/{userId}/{uuid}_thumb.jpg` (400px). Max dimension 1920px, target 500KB. **⚠️ Storage Rules requieren `contentType.matches('image/.*')`:** iOS DEBE pasar `StorageMetadata()` con `contentType = "image/jpeg"` en todo `putData()` — con `metadata: nil` el SDK iOS NO infiere content type → permission denied. Android SDK infiere `image/jpeg` de la extensión `.jpg` automáticamente en `putBytes()` — no requiere metadata explícita
+25. **Photo upload:** `users/{userId}/{uuid}.jpg` + thumbnail `users/{userId}/{uuid}_thumb.jpg` (400px). Max dimension 1920px, target 500KB. **Ephemeral photos:** max 800px, JPEG 65% (optimizado — se ven solo 10s). **⚠️ Storage Rules requieren `contentType.matches('image/.*')`:** iOS DEBE pasar `StorageMetadata()` con `contentType = "image/jpeg"` en todo `putData()` — con `metadata: nil` el SDK iOS NO infiere content type → permission denied. Android SDK infiere `image/jpeg` de la extensión `.jpg` automáticamente en `putBytes()` — no requiere metadata explícita
 26. **Scheduled deletion:** Android escribe 4 campos (`scheduledDeletionDate`, `scheduledForDeletion`, `deletionDate`, `deletionScheduledAt`), iOS escribe 3 (sin `scheduledDeletionDate`). Aceptable — ninguna CF depende de `scheduledDeletionDate`
-27. **AI CFs:** 15 CFs de IA idénticas en ambas plataformas. Todas usan `us-central1`. Payloads verificados: `generateSmartReply`, `calculateSafetyScore`, `analyzeConversationChemistry`, `predictOptimalMessageTime`, `getDatingAdvice`, `analyzePhotoBeforeUpload`, `moderateProfileImage`, `validateProfileImage`, `moderateMessage`
-28. **searchPlaces CF:** `{matchId, query, userLanguage}` — idéntico iOS/Android (Android también tiene PlacesSDK para edit-profile, pero chat usa CF)
+27. **AI CFs:** 16 CFs de IA. Todas usan `us-central1`. 15 idénticas en ambas plataformas + `generateInterestSuggestions` (Android only). Payloads verificados: `generateSmartReply`, `calculateSafetyScore`, `analyzeConversationChemistry`, `predictOptimalMessageTime`, `getDatingAdvice`, `analyzePhotoBeforeUpload`, `moderateProfileImage`, `validateProfileImage`, `moderateMessage`, `generateInterestSuggestions`. **⚠️ TODA la IA se ejecuta server-side en CFs** — modelo `gemini-2.5-flash`, secret `GEMINI_API_KEY`. Los clientes iOS y Android ya NO ejecutan Gemini localmente ni dependen del SDK `FirebaseAI`/`firebase-ai`. `ContentModerationService` en ambas plataformas es un wrapper delgado que envía base64/texto al CF y parsea la respuesta. Imagen: comprime según Remote Config (`moderation_image_max_dimension` default 512px, `moderation_image_jpeg_quality` default 50%), envía base64. Texto: envía string + type (`"message"` | `"biography"`). `generateInterestSuggestions`: envía `{bio, userType}`, recibe `{suggestions: [string]}` (solo Android, `EditProfileViewModel.kt`). Error handling: fotos de perfil → aprobar en error, stories → rechazar en error, texto → aprobar en error
+28. **searchPlaces CF + Place Photos:** `{matchId, query, userLanguage}` — idéntico iOS/Android (Android también tiene PlacesSDK para edit-profile, pero chat usa CF). La CF retorna hasta 20 campos por lugar incluyendo `photos: [{url, width, height}]` y `description`. **⚠️ `parsePlaceSuggestions()` en Android (`ChatViewModel.kt`) y `parsePlaceSuggestions()` en iOS (`ChatViewModel.swift`) DEBEN parsear `photos` y `description`** — si se omiten, el carrusel de fotos en `PlaceSuggestionsSheet`/`PlaceSuggestionsView` no muestra imágenes. iOS: `PlacePhotoCarousel` con `TabView` + `AsyncImage`. Android: `PlacePhotoCarousel` con `HorizontalPager` + `AsyncImage`
 29. **reportUser — Moderación Progresiva:** `reportUser` incluye bloqueo personal (solo el reporter deja de ver al reported) + escalamiento progresivo basado en reportadores ÚNICOS (no raw count). Umbrales: 1-2 → solo bloqueo personal, 3-4 → `visibilityReduced:true`, 5-6 → visibilidad reducida + análisis IA (Gemini 2.0 Flash, auto-suspende si confianza ≥ 0.8), 7-9 → `accountStatus:'suspended'`, 10+ → `accountStatus:'banned'`. Rate limit: máx 5 reportes/día por reporter. Genera `reportSummary` en user doc con `uniqueReporters`, `totalReports`, `reasonCounts`. Elimina match + mensajes + likes mutuos entre reporter y reported. Bloqueo bidireccional: `blocked`/`blockedBy` arrays — idéntico iOS/Android
 30. **blocked/blockedBy bidireccional:** `blockUser` y `reportUser` CFs escriben `blocked` (array del que bloquea) + `blockedBy` (array del bloqueado). Discovery filtra ambos arrays. `unblockUser` es local con `arrayRemove` — idéntico iOS/Android
 31. **ProfileDetailsSheet** — Android usa `ModalBottomSheet(skipPartiallyExpanded = true)`. NO usar `fillMaxHeight(0.95f)`, `contentWindowInsets`, `fillMaxHeight()` hacks. Botón de cierre requiere `.zIndex(10f)` para ser clickable
-32. **Story lifecycle (24h):** `createStory` CF escribe `expiresAt = now + 24h`. Queries (`getBatchStoryStatus`, `getBatchPersonalStories`) filtran `expiresAt > now`. `cleanupExpiredStories` (scheduled `every 1 hours`) elimina stories expiradas de Firestore + imágenes de Storage (`stories/personal_stories/{userId}/{storyId}.jpg`). Proceso: query `expiresAt <= now`, batch delete docs + Storage files, en batches de 500
+32. **Story lifecycle (24h):** `createStory` CF escribe `expiresAt = now + 24h`. Queries (`getBatchStoryStatus`, `getBatchPersonalStories`) filtran `expiresAt > now`. `cleanupExpiredStories` (scheduled `every 1 hours`) elimina stories expiradas de Firestore + imágenes de Storage (`stories/personal_stories/{userId}/{storyId}.jpg`). Proceso: query `expiresAt <= now`, batch delete docs + Storage files, en batches de 500. **⚠️ CRÍTICO: `getBatchStoryStatus` DEBE incluir `.where('isPersonal', '==', true)` en su query** — sin este filtro la query falla silenciosamente porque no existe un índice compuesto `(senderId, expiresAt)` solo, todos los índices existentes incluyen `isPersonal`. La CF retorna `{allFalse}` como respuesta válida, el cliente no activa fallback, y el carrusel de stories no aparece
 33. **storyModels en profile models:** `ProfileCardModel` (iOS) y `Profile` (Android) llevan `storyModels: [StoryModel]` con timestamps reales de Firestore. Esto permite que el visor de stories desde swipe card muestre tiempo relativo correcto ("17h", "2h") en vez de "now". `ProfileCardRepository` (iOS) y `ProfileRepositoryImp` (Android) propagan los `StoryModel` completos al construir los profile models. **⚠️ NUNCA crear `StoryModel` dummy con `Date()`/`Timestamp.now()` para stories en swipe card — siempre usar los modelos reales del repository**
 
 ---
@@ -558,7 +563,7 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 8. **pendingNotifications** — estructura del documento
 9. **activeChat lifecycle** — setActiveChat/clearActiveChat con FieldValue.delete()
 10. **Super Like batch** — operación atómica con subcollecciones
-11. **Ephemeral photos** — campos del mensaje + viewedBy + photoUrl + 3-step upload flow
+11. **Ephemeral photos** — campos del mensaje + viewedBy + photoUrl + 3-step upload flow. Compresión: 800px max, JPEG 65%
 12. **Pause/Reactivate** — campos paused, visible, pausedAt
 13. **Firestore Security Rules** — verificar que todas las colecciones usadas tengan reglas
 14. **Block/Unblock** — blockUser via CF, unblockUser local con arrayRemove. Bloqueo bidireccional: `blocked`/`blockedBy`
@@ -567,12 +572,12 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 17. **Daily/Super likes reset** — calendar day comparison, always 100
 18. **Match detection** — hasUserLikedBack() + 100ms delay
 19. **Photo upload/delete** — UUID.jpg + _thumb.jpg (400px), Storage path `users/{userId}/`
-20. **AI CFs (15)** — payloads y nombres idénticos
-21. **Photo/Message moderation** — 4 CFs (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload)
+20. **AI CFs (16)** — 15 idénticas + `generateInterestSuggestions` (Android only). TODA la IA es server-side (`gemini-2.5-flash`, `GEMINI_API_KEY`). Clientes NO usan SDK `FirebaseAI`/`firebase-ai`
+21. **Photo/Message moderation** — 4 CFs (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload). `moderateProfileImage` y `moderateMessage` implementan Gemini AI server-side (`gemini-2.5-flash`). `ContentModerationService` en iOS/Android son wrappers delgados de CF (no ejecutan Gemini localmente). Compresión de imagen configurable via Remote Config: `moderation_image_max_dimension` (512px default), `moderation_image_jpeg_quality` (50% default)
 22. **Scheduled deletion** — scheduleAccountDeletion/cancelScheduledDeletion campos
 23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
 24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
-25. **searchPlaces** — CF con {matchId, query, userLanguage}
+25. **searchPlaces + PlaceSuggestions** — CF `searchPlaces` con `{matchId, query, userLanguage}` retorna `{places: [{name, address, rating, latitude, longitude, placeId, googleMapsUrl, website, phoneNumber, isOpenNow, instagram, instagramHandle, tiktok, category, description, photos: [{url, width, height}], distanceUser1, distanceUser2, travelTimeUser1, travelTimeUser2, score}]}`. Ambas plataformas deben parsear TODOS los campos incluyendo `photos` y `description`
 26. **Story lifecycle** — `createStory` escribe `expiresAt = now + 24h`, queries filtran `expiresAt > now`, `cleanupExpiredStories` (hourly) elimina expiradas de Firestore + Storage. storyModels con timestamps reales propagados a profile models para tiempo relativo correcto en swipe cards
 27. **Match list listener** — ambas plataformas usan Firestore snapshot listener real-time (no CF one-shot). Lightweight stream: no descargar fotos/stories dentro del stream. Auto-start, auto-retry 3s. iOS: `ensureListenerActive()` en onAppear como safety net. **⚠️ NUNCA stopListeningToMatches en onDisappear de MainTabView (iOS)**
 28. **activeChat stale cleanup** — iOS/Android limpian activeChat al iniciar app. CF `onMessageCreated` detecta stale >5min y limpia antes de enviar push
@@ -589,6 +594,15 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 39. **activeChat stale cleanup** — 3 capas de protección: (1) iOS `ContentViewModel` limpia `activeChat` al detectar usuario autenticado al inicio, (2) Android `MainActivity.onCreate()` llama `clearActiveChat()`, (3) CF `onMessageCreated` detecta activeChat stale (>5 min sin `activeChatTimestamp` actualizado) y lo limpia antes de decidir enviar push. Esto evita que un usuario no reciba notificaciones por un `activeChat` huérfano
 40. **FCM notification delivery** — Android: `handlePendingNotification` CF envía `android.priority: "high"` + `android.notification.channelId` = `"Messages"` | `"Matches"` | `"Likes"` | `"General"`. Los channel IDs del CF DEBEN coincidir con los `NotificationChannel` registrados en `MyFirebaseMessagingService.kt`. Si no coinciden, Android puede no mostrar la notificación. iOS: solo usa APNs headers (`apns-priority: "10"`, `apns-push-type: "alert"`)
 41. **Caché optimista de lectura** — `MatchListViewModel` en ambas plataformas mantiene `recentlyReadMatches` con TTL 30s. Evita flash de "unread" cuando Firestore emite snapshot antes de que `lastSeenTimestamps` se actualice en el servidor. Keyed por `lastMessageSeq` (iOS) / `lastMessage` (Android) — idéntico comportamiento
+42. **Story Carousel en Match List** — ambas plataformas muestran un carrusel horizontal estilo Instagram en la parte superior de la lista de matches. Solo muestra matches con `hasActiveStories == true`. Flujo: `MatchListViewModel` llama CF `getBatchStoryStatus` dentro de `startObservingMatches()`/`observeMatches()` para poblar `storyStatusCache: [String: Bool]`. El listener de stories solo **upgradea** estado (`false→true`, nunca `true→false`) para evitar flickering — las degradaciones las maneja `refreshStoriesIfNeeded()`. iOS: `StoryCarouselView` con `ScrollView(.horizontal)`. Android: `StoryCarousel` composable con `LazyRow`
+43. **`refreshStoriesIfNeeded()` — throttled story refresh** — ambas plataformas implementan `refreshStoriesIfNeeded()` con throttle de 3 segundos. Se llama cada vez que el usuario vuelve a la lista de matches (iOS: `ensureListenerActive()` → `refreshStoriesIfNeeded()`, Android: `ON_RESUME` lifecycle → `refreshStoriesIfNeeded()`). Consulta CF `getBatchStoryStatus` con los userIds de los matches actuales y actualiza `storyStatusCache`, permitiendo que stories expiradas desaparezcan del carrusel sin reiniciar el listener completo. **⚠️ El throttle de 3s evita llamadas excesivas a la CF al navegar frecuentemente entre tabs**
+44. **⚠️ `isPersonal` filter en queries de stories** — TODAS las queries Firestore a la colección `stories` que usen índices compuestos DEBEN incluir `isPersonal == true`. Los índices existentes son: `(isPersonal ASC, senderId ASC, expiresAt ASC)`, `(isPersonal ASC, expiresAt ASC)`. Sin `isPersonal`, la query falla silenciosamente (Firestore requiere índice compuesto exacto). Esto aplica a: CF `getBatchStoryStatus`, CF `getBatchPersonalStories`, `fallbackGetActiveStories()` (iOS/Android), `listenToPersonalStories()` (iOS/Android). Patrón de fallo silencioso: la CF catch-ea el error, retorna `{storiesStatus: {todosEnFalse}}`, y el cliente acepta la respuesta "válida" sin activar fallback local
+45. **Story Carousel avatar layout** — El nombre del match debe ser hijo directo del contenedor vertical (`Column`/`VStack`), NUNCA hijo del contenedor del avatar (`Box`/`ZStack`). Estructura correcta: `Column/VStack { Box/ZStack(avatar+ring) → Spacer → Text(name) }`. Si el `Text` está dentro del `Box`/`ZStack`, se renderiza centrado sobre el avatar en vez de debajo. iOS usa `VStack(spacing: 6) { ZStack {...} Text(name) }`. Android usa `Column { Box(totalSize) {...} Spacer(6.dp) Text(name) }` — homologado
+47. **Ephemeral photo compression** — ambas plataformas comprimen fotos efímeras a maxDimension=800px y JPEG quality=65% (reducción ~60-70% vs perfil). Android: constantes `ephemeralMaxDimension=800`, `imageCompressionQuality=65` en `ChatViewModel.kt`, ambos upload methods (`uploadEphemeralPhotoWithProgress` + `uploadEphemeralPhoto`) aplican resize. iOS: `ephemeralMaxDimension=800`, `imageCompressionQuality=0.65` en `ChatViewModel.swift`, usa `resizeForUpload(maxDimension:)` de `UIImage+Resize.swift`. Fotos de perfil mantienen 1920px/500KB target — NO afectadas por este cambio
+48. **Match cache sync** — Android `MatchDao.replaceAllMatches()` hace `DELETE NOT IN` + `INSERT(REPLACE)` para eliminar entries huérfanas del Room cache. iOS `CoreDataManager.saveMatches()` hace delete-all + insert-all. **⚠️ NUNCA usar solo `insertMatches(REPLACE)` en Android** — no elimina matches que ya no existen en Firestore, causando duplicados en la UI
+49. **Screen protection** — `enable_screen_protection` (Boolean, default `true`) controla protección contra capturas/grabación via Remote Config. **Android:** `Constants.ENABLE_SCREEN_PROTECTION` lee dinámicamente de `FirebaseRemoteConfig`. Activities separadas (Chat, Settings, EditProfile, etc.) aplican `FLAG_SECURE` en `onCreate()`. `NavigationGraph` aplica/quita `FLAG_SECURE` via `LaunchedEffect` según ruta actual. Rutas exentas: Splash, Login, SignUp, Phone, otp, OnboardingSteps, reactivate_account. `OnboardingActivity` exenta completamente. **iOS:** `.secureScreen()` aplicado solo en estado `.logged` (`MainTabView`) via `RemoteConfigService.shared.isScreenProtectionEnabled()`. `SecureScreenModifier` (DRM-level: `UITextField.isSecureTextEntry` + CALayer) con lifecycle automático via `dismantleUIView`. Vistas exentas: SplashLoadingView, LoginView, OnboardingContainerView. **⚠️ iOS `Constants.swift` ya NO contiene `ENABLE_SCREEN_PROTECTION`** — fue eliminado (código muerto). Toda la lógica pasa por `RemoteConfigService` — idéntico iOS/Android
+50. **Discovery filtering (`getCompatibleProfileIds`)** — CF server-side aplica 2 filtros en ambos paths (geo query + fallback). **Filtro userType:** Daddy no ve Daddy, Mommy no ve Mommy, Baby ve todos (3 tipos). **Filtro gender+orientation:** `men`/`women` filtra por género del candidato + cross-check bidireccional (candidato debe "querer" el género del usuario). `both` solo ve otros `both` (cualquier género). Tabla verificada: (1) Mujer+Hombres+Mommy→Baby(H)+Daddy(H), (2) Hombre+Mujeres+Daddy→Baby(M)+Mommy(M), (3) Hombre+Mujeres+Baby→Baby(M)+Daddy(M)+Mommy(M), (4) Mujer+Hombres+Baby→Baby(H)+Daddy(H)+Mommy(H), (5) Mujer+Mujeres+Mommy→Baby(M)+Daddy(M), (6) Hombre+Hombres+Daddy→Baby(H)+Mommy(H), (7) Hombre+Hombres+Baby→Baby(H)+Daddy(H)+Mommy(H), (8) Mujer+Mujeres+Baby→Baby(M)+Daddy(M)+Mommy(M), (9) Hombre+Ambos+Cualquiera→Solo `both` sin mismo tipo, (10) Mujer+Ambos+Cualquiera→Solo `both` sin mismo tipo. H=Hombre(male=true), M=Mujer(male=false). Candidatos deben tener orientación compatible (cross-check). **⚠️ Asimetría `both`:** usuario `men`/`women` puede ver candidatos `both`, pero usuario `both` NO ve candidatos `men`/`women`**
+51. **Place Suggestions — Photo Carousel parity** — CF `searchPlaces` retorna `photos: [{url, width, height}]` y `description` por lugar. iOS: `PlaceSuggestionsView.swift` con `PlacePhotoCarousel` (`TabView` + `AsyncImage` + dot indicators). Android: `PlaceSuggestionsSheet.kt` con `PlacePhotoCarousel` (`HorizontalPager` + `AsyncImage` + dot indicators). **⚠️ `parsePlaceSuggestions()` en ambos `ChatViewModel` DEBE parsear `photos` y `description`** — sin estos campos el carrusel de fotos existe en la UI pero recibe `photos = null` y no muestra imágenes. Campos obligatorios del CF response: `name`, `address`, `rating`, `latitude`/`lat`, `longitude`/`lng`, `placeId`, `score`, `website`, `phoneNumber`, `googleMapsUrl`, `isOpenNow`, `tiktok`, `instagram`, `instagramHandle`, `category`, `description`, `photos`, `distanceUser1`, `distanceUser2`, `travelTimeUser1`, `travelTimeUser2`
 
 ### Comandos de auditoría rápida
 
