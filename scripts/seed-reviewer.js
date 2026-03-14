@@ -56,7 +56,7 @@ const REVIEWER_PHONE = '+16505550123';
 const REVIEWER_NAME  = 'Ricardo';
 const REVIEWER_BIO   = 'Emprendedor apasionado por la tecnología y los viajes 🌎';
 const REVIEWER_MALE  = true;
-const REVIEWER_ORIENTATION = 'women';  // lowercase, homologado
+const REVIEWER_ORIENTATION = 'both';   // lowercase, homologado — muestra hombres y mujeres para store screenshots
 const REVIEWER_USER_TYPE   = 'SUGAR_DADDY';
 const REVIEWER_AGE   = 35;
 const REVIEWER_INTERESTS = ['viajes', 'tecnología', 'gastronomía', 'música', 'deportes'];
@@ -65,26 +65,47 @@ const REVIEWER_INTERESTS = ['viajes', 'tecnología', 'gastronomía', 'música', 
 const BASE_LAT = -33.4489;
 const BASE_LON = -70.6693;
 
-// Perfiles de discovery (mujeres para un reviewer masculino que busca mujeres)
+// Perfiles de discovery (hombres y mujeres — diversidad de tipos para store screenshots)
+// Distribución realista: 10 mujeres (7 SB + 3 SM) + 10 hombres (4 SD + 3 SB + 3 SM-equivalente)
 const DISCOVERY_PROFILES = [
-  { name: 'Valentina Torres',   age: 24, userType: 'SUGAR_BABY',  bio: 'Aventurera y apasionada por los viajes ✈️',              interests: ['viajes', 'fotografía', 'yoga'] },
-  { name: 'Isabella Martínez',  age: 28, userType: 'SUGAR_BABY',  bio: 'Amante del arte y la música 🎵',                         interests: ['arte', 'música', 'moda'] },
-  { name: 'Camila López',       age: 22, userType: 'SUGAR_BABY',  bio: 'Estudiante de diseño, creativa y espontánea 🎨',          interests: ['diseño', 'moda', 'baile'] },
-  { name: 'Sofía Rodríguez',    age: 26, userType: 'SUGAR_BABY',  bio: 'Apasionada del fitness y vida saludable 💪',              interests: ['fitness', 'nutrición', 'hiking'] },
-  { name: 'Martina García',     age: 30, userType: 'SUGAR_MOMMY', bio: 'Empresaria exitosa que disfruta la buena vida 🥂',        interests: ['negocios', 'viajes', 'gastronomía'] },
-  { name: 'Paula Sánchez',      age: 23, userType: 'SUGAR_BABY',  bio: 'Bailarina profesional, vivo la vida con ritmo 💃',        interests: ['baile', 'música', 'teatro'] },
-  { name: 'Lucía Fernández',    age: 27, userType: 'SUGAR_BABY',  bio: 'Fotógrafa freelance, capturo momentos únicos 📸',         interests: ['fotografía', 'arte', 'naturaleza'] },
-  { name: 'Emma Pérez',         age: 25, userType: 'SUGAR_BABY',  bio: 'Chef en formación, la cocina es mi pasión 🍳',            interests: ['gastronomía', 'viajes', 'deportes'] },
+  // ──── Mujeres — Sugar Baby (7) ────
+  { name: 'Valentina Torres',     age: 24, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Aventurera y apasionada por los viajes ✈️',                      interests: ['viajes', 'fotografía', 'yoga'],         photoIds: [1, 80, 160] },
+  { name: 'Isabella Martínez',    age: 28, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Amante del arte y la buena gastronomía 🎵',                      interests: ['arte', 'música', 'gastronomía'],        photoIds: [2, 81, 161] },
+  { name: 'Camila López',         age: 22, male: false, orientation: 'both', userType: 'SUGAR_BABY',  bio: 'Estudiante de diseño, creativa y espontánea 🎨',                 interests: ['diseño', 'moda', 'baile'],              photoIds: [3, 82, 162] },
+  { name: 'Paula Sánchez',        age: 23, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Bailarina profesional, vivo la vida con ritmo 💃',               interests: ['baile', 'música', 'teatro'],            photoIds: [4, 83, 163] },
+  { name: 'Renata Flores',        age: 25, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Nutricionista y amante del fitness 🏋️‍♀️',                          interests: ['fitness', 'nutrición', 'yoga'],         photoIds: [5, 84, 164] },
+  { name: 'Antonella Moreno',     age: 21, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Estudiante de psicología, me encanta conocer personas nuevas 🌸', interests: ['psicología', 'lectura', 'café'],        photoIds: [6, 85, 165] },
+  { name: 'Luciana Castro',       age: 26, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Periodista freelance, curiosa por naturaleza 📝',                interests: ['escritura', 'viajes', 'cine'],          photoIds: [7, 86, 166] },
+  // ──── Mujeres — Sugar Mommy (3) ────
+  { name: 'Martina García',       age: 34, male: false, orientation: 'both', userType: 'SUGAR_MOMMY', bio: 'Empresaria exitosa que disfruta la buena vida 🥂',               interests: ['negocios', 'viajes', 'gastronomía'],   photoIds: [8, 87, 168] },
+  { name: 'Sofía Rodríguez',      age: 36, male: false, orientation: 'men',  userType: 'SUGAR_MOMMY', bio: 'CEO y filántropa, apasionada por el arte contemporáneo 💎',      interests: ['arte', 'negocios', 'vinos'],            photoIds: [9, 88, 169] },
+  { name: 'Andrea Fuentes',       age: 38, male: false, orientation: 'both', userType: 'SUGAR_MOMMY', bio: 'Inversionista inmobiliaria, amo los viajes de lujo 🏖️',          interests: ['inversiones', 'viajes', 'arquitectura'], photoIds: [10, 89, 170] },
+  // ──── Hombres — Sugar Daddy (4) ────
+  { name: 'Alejandro Vega',       age: 38, male: true,  orientation: 'both', userType: 'SUGAR_DADDY', bio: 'Inversionista y amante de la aventura 🏔️',                       interests: ['finanzas', 'viajes', 'deportes'],       photoIds: [11, 90, 171] },
+  { name: 'Sebastián Morales',    age: 34, male: true,  orientation: 'both', userType: 'SUGAR_DADDY', bio: 'Emprendedor tech, apasionado por la innovación 🚀',              interests: ['tecnología', 'música', 'gastronomía'],  photoIds: [12, 91, 172] },
+  { name: 'Diego Contreras',      age: 40, male: true,  orientation: 'both', userType: 'SUGAR_DADDY', bio: 'Abogado corporativo con gusto por los buenos vinos 🍷',          interests: ['derecho', 'vinos', 'golf'],             photoIds: [13, 92, 173] },
+  { name: 'Fernando Ríos',        age: 36, male: true,  orientation: 'men',  userType: 'SUGAR_DADDY', bio: 'Médico cirujano, apasionado por la vida sana y el mar ⛵',       interests: ['medicina', 'surf', 'cocina'],           photoIds: [14, 93, 174] },
+  // ──── Hombres — Sugar Baby (3) ────
+  { name: 'Mateo Herrera',        age: 25, male: true,  orientation: 'both', userType: 'SUGAR_BABY',  bio: 'Modelo y estudiante de artes escénicas 🎭',                      interests: ['arte', 'moda', 'fitness'],              photoIds: [15, 94, 175] },
+  { name: 'Lucas Rivera',         age: 27, male: true,  orientation: 'both', userType: 'SUGAR_BABY',  bio: 'Fotógrafo y surfista, vivo el momento 🌊',                       interests: ['fotografía', 'surf', 'viajes'],         photoIds: [16, 95, 176] },
+  { name: 'Nicolás Guzmán',       age: 23, male: true,  orientation: 'both', userType: 'SUGAR_BABY',  bio: 'Músico y compositor, el arte es mi pasión 🎸',                   interests: ['música', 'composición', 'conciertos'],  photoIds: [17, 96, 177] },
+  // ──── Hombres — Sugar Mommy (3) ────
+  { name: 'Tomás Espinoza',       age: 35, male: true,  orientation: 'both', userType: 'SUGAR_MOMMY', bio: 'Chef ejecutivo, la cocina es mi lenguaje universal 👨‍🍳',         interests: ['gastronomía', 'viajes', 'vinos'],       photoIds: [18, 97, 178] },
+  { name: 'Joaquín Mendoza',      age: 37, male: true,  orientation: 'both', userType: 'SUGAR_MOMMY', bio: 'Piloto comercial, conozco el mundo desde las alturas ✈️',        interests: ['aviación', 'fotografía', 'deportes'],   photoIds: [19, 98, 179] },
+  { name: 'Cristóbal Navarro',    age: 33, male: true,  orientation: 'both', userType: 'SUGAR_MOMMY', bio: 'Diseñador de interiores, creo espacios que inspiran 🏡',         interests: ['diseño', 'arquitectura', 'arte'],       photoIds: [20, 99, 180] },
 ];
 
-// Perfiles para matches con chat
+// Perfiles para matches con chat (mix de géneros y tipos — 3 mujeres + 3 hombres)
 const MATCH_PROFILES = [
-  { name: 'Daniela Núñez',    age: 29, userType: 'SUGAR_BABY',  bio: 'Directora de marketing, amante del jet set ✨',   interests: ['negocios', 'moda', 'viajes'] },
-  { name: 'Fernanda Vargas',  age: 21, userType: 'SUGAR_BABY',  bio: 'Universitaria curiosa y llena de energía 🌟',     interests: ['música', 'deportes', 'lectura'] },
-  { name: 'Catalina Reyes',   age: 26, userType: 'SUGAR_BABY',  bio: 'Modelo y emprendedora digital 🌸',                interests: ['moda', 'fotografía', 'fitness'] },
+  { name: 'Daniela Núñez',    age: 29, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Directora de marketing, amante del jet set ✨',       interests: ['negocios', 'moda', 'viajes'],       photoIds: [100, 130, 190] },
+  { name: 'Fernanda Vargas',  age: 21, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Universitaria curiosa y llena de energía 🌟',         interests: ['música', 'deportes', 'lectura'],    photoIds: [101, 131, 191] },
+  { name: 'Catalina Reyes',   age: 30, male: false, orientation: 'men',  userType: 'SUGAR_MOMMY', bio: 'Fundadora de startup, apasionada por la moda 🌸',      interests: ['moda', 'fotografía', 'fitness'],    photoIds: [103, 133, 193] },
+  { name: 'Andrés Castillo',  age: 32, male: true,  orientation: 'both', userType: 'SUGAR_DADDY', bio: 'Arquitecto y viajero incansable 🏛️',                  interests: ['arquitectura', 'viajes', 'arte'],   photoIds: [104, 134, 194] },
+  { name: 'Javiera Muñoz',    age: 25, male: false, orientation: 'men',  userType: 'SUGAR_BABY',  bio: 'Ingeniera de software, geek con estilo 💻',           interests: ['tecnología', 'gaming', 'café'],     photoIds: [105, 135, 195] },
+  { name: 'Felipe Araya',     age: 28, male: true,  orientation: 'both', userType: 'SUGAR_BABY',  bio: 'Actor de teatro, cada día es una nueva escena 🎬',    interests: ['teatro', 'cine', 'literatura'],     photoIds: [106, 136, 196] },
 ];
 
-// Conversaciones de ejemplo (realistas y apropiadas)
+// Conversaciones de ejemplo (realistas y apropiadas — 6 para 6 matches)
 const CHAT_CONVERSATIONS = [
   [
     { from: 'match', text: '¡Hola Ricardo! Me alegra mucho que hayamos hecho match 😊' },
@@ -106,6 +127,28 @@ const CHAT_CONVERSATIONS = [
     { from: 'reviewer', text: '¡Me encantaría ir! Yo amo Japón, la cultura es fascinante 🇯🇵' },
     { from: 'match', text: '¿Vamos juntos en el próximo viaje? 😉' },
     { from: 'reviewer', text: '¡Me parece un excelente plan! 🎉' },
+  ],
+  [
+    { from: 'match', text: '¡Hey Ricardo! Me llamó la atención tu perfil 💫' },
+    { from: 'reviewer', text: '¡Hola! Gracias, el tuyo también me pareció muy interesante' },
+    { from: 'match', text: '¿Qué tal si nos tomamos algo este fin de semana? 🍷' },
+    { from: 'reviewer', text: 'Me encantaría, conozco un lugar con vista increíble 🌆' },
+    { from: 'match', text: '¡Suena perfecto! Cuenta conmigo 😊' },
+  ],
+  [
+    { from: 'match', text: '¡Hola! Me gustó mucho tu perfil, se ve que eres una persona muy interesante 🌟' },
+    { from: 'reviewer', text: '¡Gracias! Tu bio me llamó mucho la atención también' },
+    { from: 'match', text: '¿Eres de Santiago? Yo llegué hace poco, estoy descubriendo la ciudad 🏙️' },
+    { from: 'reviewer', text: 'Sí, nací aquí. Te puedo mostrar los mejores lugares si quieres' },
+    { from: 'match', text: '¡Me encantaría! Conozco un café increíble en Lastarria ☕' },
+    { from: 'reviewer', text: '¡Lastarria es mi barrio favorito! Dime cuándo 😊' },
+  ],
+  [
+    { from: 'match', text: 'Hola Ricardo, qué buena onda tu perfil 🙌' },
+    { from: 'reviewer', text: '¡Hey! Gracias, el tuyo también me pareció genial' },
+    { from: 'match', text: 'Vi que te gusta la gastronomía, ¿has probado el nuevo restaurante peruano del centro?' },
+    { from: 'reviewer', text: 'No todavía, pero me han hablado muy bien de él. ¿Vamos?' },
+    { from: 'match', text: '¡Dale! Este sábado tengo libre. Te aviso la dirección 📍' },
   ],
 ];
 
@@ -166,16 +209,18 @@ async function uploadPictureWithThumb(userId, imageBuffer) {
   const thumbName = `${uuid}_thumb.jpg`;
   const basePath  = `users/${userId}`;
 
-  // Full: normalizar a JPEG, max 1920px de ancho
+  // Full: upscale a 1024x1536 (portrait) con lanczos3 + sharpen para nitidez
   const fullBuffer = await sharp(imageBuffer)
-    .resize(1920, null, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 90 })
+    .resize(1024, 1536, { fit: 'cover', position: 'attention', kernel: 'lanczos3' })
+    .sharpen({ sigma: 1.2 })
+    .jpeg({ quality: 95, mozjpeg: true })
     .toBuffer();
 
-  // Thumb: 400x400 cover crop
+  // Thumb: 400x400 cover crop con sharpen
   const thumbBuffer = await sharp(imageBuffer)
-    .resize(400, 400, { fit: 'cover', position: 'centre' })
-    .jpeg({ quality: 75 })
+    .resize(400, 400, { fit: 'cover', position: 'attention', kernel: 'lanczos3' })
+    .sharpen({ sigma: 0.8 })
+    .jpeg({ quality: 88, mozjpeg: true })
     .toBuffer();
 
   await Promise.all([
@@ -333,10 +378,10 @@ async function createReviewerAccount() {
   // 2. Subir fotos del reviewer (3 fotos de hombre profesional)
   info('Subiendo fotos del reviewer...');
   const reviewerPictures = [];
-  const photoIndices = [32, 55, 78]; // Índices para randomuser.me/portraits/men/
+  const photoIndices = [45, 102, 167]; // Índices para uifaces.co/human
   for (let i = 0; i < photoIndices.length; i++) {
     try {
-      const url = `https://randomuser.me/api/portraits/men/${photoIndices[i]}.jpg`;
+      const url = `https://mockmind-api.uifaces.co/content/human/${photoIndices[i]}.jpg`;
       const buf = await downloadImage(url);
       const fn  = await uploadPictureWithThumb(reviewerUid, buf);
       reviewerPictures.push(fn);
@@ -397,11 +442,11 @@ async function createDiscoveryProfiles(reviewerUid) {
       const rec    = await auth.createUser({ email, password: 'ReviewSeed2026!', displayName: p.name });
       const userId = rec.uid;
 
-      // 3 fotos por perfil con thumbs
+      // 3 fotos por perfil con thumbs — uifaces.co AI avatars
       const pictures = [];
       for (let j = 0; j < 3; j++) {
-        const idx = (i * 7 + j * 3 + 1) % 99;
-        const url = `https://randomuser.me/api/portraits/women/${idx}.jpg`;
+        const idx = p.photoIds ? p.photoIds[j] : ((i * 7 + j * 3 + 1) % 222 + 1);
+        const url = `https://mockmind-api.uifaces.co/content/human/${idx}.jpg`;
         try {
           const buf = await downloadImage(url);
           const fn  = await uploadPictureWithThumb(userId, buf);
@@ -419,8 +464,8 @@ async function createDiscoveryProfiles(reviewerUid) {
         name:        p.name,
         birthDate,
         bio:         p.bio,
-        male:        false,           // mujeres
-        orientation: 'men',           // buscan hombres → compatible con reviewer
+        male:        p.male,
+        orientation: p.orientation,
         userType:    p.userType,
         pictures,
         lat, lon, geohash,
@@ -466,12 +511,12 @@ async function createMatchesWithChat(reviewerUid) {
       const rec    = await auth.createUser({ email, password: 'ReviewSeed2026!', displayName: p.name });
       const userId = rec.uid;
 
-      // 2-3 fotos con thumbs
-      const numPhotos = 2 + (i % 2);
+      // 2-3 fotos con thumbs — uifaces.co AI avatars
+      const numPhotos = p.photoIds ? p.photoIds.length : (2 + (i % 2));
       const pictures  = [];
       for (let j = 0; j < numPhotos; j++) {
-        const idx = (i * 13 + j * 7 + 40) % 99;
-        const url = `https://randomuser.me/api/portraits/women/${idx}.jpg`;
+        const idx = p.photoIds ? p.photoIds[j] : ((i * 13 + j * 7 + 40) % 222 + 1);
+        const url = `https://mockmind-api.uifaces.co/content/human/${idx}.jpg`;
         try {
           const buf = await downloadImage(url);
           const fn  = await uploadPictureWithThumb(userId, buf);
@@ -489,8 +534,8 @@ async function createMatchesWithChat(reviewerUid) {
         name:        p.name,
         birthDate,
         bio:         p.bio,
-        male:        false,
-        orientation: 'men',
+        male:        p.male,
+        orientation: p.orientation,
         userType:    p.userType,
         pictures,
         lat, lon, geohash,

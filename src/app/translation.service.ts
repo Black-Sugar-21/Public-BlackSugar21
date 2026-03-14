@@ -77,6 +77,24 @@ export class TranslationService {
       en: 'Get it on Android'
     },
 
+    // Features Section
+    'features.stories.title': {
+      es: 'Más que una foto',
+      en: 'More than a photo'
+    },
+    'features.stories.desc': {
+      es: 'Crea historias para mostrar que eres mucho más que una foto.',
+      en: 'Create stories to show you\'re so much more than a photo.'
+    },
+    'features.connections.title': {
+      es: 'Conexiones reales',
+      en: 'Real connections'
+    },
+    'features.connections.desc': {
+      es: 'Conecta con personas que saben lo que quieren.',
+      en: 'Connect with people who know what they want.'
+    },
+
     // Terms Section
     'terms.title': {
       es: 'Términos de Uso',

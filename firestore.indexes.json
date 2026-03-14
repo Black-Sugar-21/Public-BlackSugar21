@@ -361,6 +361,20 @@
             "queryScope": "COLLECTION",
             "fields": [
                 {
+                    "fieldPath": "senderId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "expiresAt",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "stories",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
                     "fieldPath": "matchId",
                     "order": "ASCENDING"
                 },
