@@ -1,0 +1,176 @@
+{
+  "parameters": {
+    "enable_screen_protection": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": " security screen",
+      "valueType": "STRING"
+    },
+    "reviewer_uid": {
+      "defaultValue": {
+        "value": "g4Zbr8tEguMcpZonw72xM5MGse32"
+      },
+      "description": "UID del reviewer exento de protección de pantalla. Configurable sin redeploy.",
+      "valueType": "STRING"
+    },
+    "moderation_image_jpeg_quality": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Calidad JPEG para moderacion con IA (rango valido: 20-100). Controla compresion de imagen enviada a Cloud Functions.",
+      "valueType": "NUMBER"
+    },
+    "date_suggestions_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Habilitar o deshabilitar el sistema de sugerencias de lugares para citas",
+      "valueType": "BOOLEAN"
+    },
+    "store_url_android": {
+      "defaultValue": {
+        "value": "https://play.google.com/apps/internaltest/4701541622558266346"
+      },
+      "description": "store url android",
+      "valueType": "STRING"
+    },
+    "ai_moderation_confidence_threshold": {
+      "defaultValue": {
+        "value": "0.80"
+      },
+      "valueType": "NUMBER"
+    },
+    "daily_super_likes_limit": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "valueType": "NUMBER"
+    },
+    "ai_model_config": {
+      "defaultValue": {
+        "value": "{\"HIGH_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.3,\"maxTokens\":2048,\"functions\":[\"moderateMessage\",\"analyzeReport\",\"autoDetectFakeProfile\",\"calculateSafetyScore\",\"detectProfileRedFlags\"]},\"MEDIUM_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.7,\"maxTokens\":1024,\"functions\":[\"generateSmartReply\",\"getDateSuggestions\",\"analyzeConversationChemistry\",\"getDatingAdvice\",\"predictOptimalMessageTime\"]},\"LOW_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.9,\"maxTokens\":512,\"functions\":[\"generateIcebreakers\",\"optimizeProfilePhotos\",\"analyzeProfileWithAI\"]}}"
+      },
+      "valueType": "JSON"
+    },
+    "matching_scoring_weights": {
+      "defaultValue": {
+        "value": "{\"distance\":0.30,\"age\":0.20,\"profileQuality\":0.20,\"activity\":0.15,\"superLike\":0.10,\"freshness\":0.05}"
+      },
+      "valueType": "JSON"
+    },
+    "compatibility_weights": {
+      "defaultValue": {
+        "value": "{   \"age\": 0.20,   \"engagement\": 0.20,   \"responseRate\": 0.15,   \"selectivity\": 0.15,   \"matchQuality\": 0.15,   \"safety\": 0.10,   \"premium\": 0.05 }"
+      },
+      "description": " Pesos para el algoritmo de compatibilidad. La suma debe ser 1.0",
+      "valueType": "JSON"
+    },
+    "enable_bio_ai_suggestions": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "sugerencia bio IA",
+      "valueType": "BOOLEAN"
+    },
+    "date_suggestions_max_distance_km": {
+      "defaultValue": {
+        "value": "80"
+      },
+      "description": "Distancia máxima en kilómetros para buscar lugares para citas (80 km = 49.7 millas)",
+      "valueType": "NUMBER"
+    },
+    "profile_reappear_cooldown_days": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "valueType": "NUMBER"
+    },
+    "max_search_radius_km": {
+      "defaultValue": {
+        "value": "200"
+      },
+      "valueType": "NUMBER"
+    },
+    "image_moderation_config": {
+      "defaultValue": {
+        "value": "{   \"confidenceThreshold\": 80,   \"autoRejectThreshold\": 90,   \"enabledChecks\": {     \"nudity\": true,     \"violence\": true,     \"fakeProfiles\": true,     \"underage\": true,     \"multiplePeople\": true,     \"lowQuality\": false,     \"helmet\": false,     \"faceMask\": false,     \"sunglasses\": false,     \"backToCamera\": false,     \"distantFullBody\": false   },   \"genderVerification\": {     \"enabled\": true,     \"confidenceThreshold\": 70   } }"
+      },
+      "valueType": "JSON"
+    },
+    "moderation_image_max_dimension": {
+      "defaultValue": {
+        "value": "512"
+      },
+      "description": "Dimension maxima de imagen para moderacion con IA (rango valido: 256-1024). Reduce payload enviado a Cloud Functions.",
+      "valueType": "NUMBER"
+    },
+    "bulk_query_batch_size": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "valueType": "NUMBER"
+    },
+    "terms_url": {
+      "defaultValue": {
+        "value": "https://www.blacksugar21.com/terms"
+      },
+      "description": "URL for Terms and Conditions page",
+      "valueType": "STRING"
+    },
+    "offense_system_config": {
+      "defaultValue": {
+        "value": "{\"offenseWeightLow\":1,\"offenseWeightMedium\":3,\"offenseWeightHigh\":5,\"penaltyDivisor\":50,\"penaltyMax\":0.95,\"decayDays\":14,\"decayRate\":0.2}"
+      },
+      "description": "Configuración completa del sistema de penalización por comportamiento ofensivo",
+      "valueType": "JSON"
+    },
+    "store_url_ios": {
+      "defaultValue": {
+        "value": "https://testflight.apple.com/join/gSquX4CT"
+      },
+      "description": "store url ios",
+      "valueType": "STRING"
+    },
+    "reviewer_test_phone": {
+      "defaultValue": {
+        "value": "+16505550123"
+      },
+      "description": "Número de teléfono de prueba para revisores Apple/Google. Rango 555-01XX reservado para ficción.",
+      "valueType": "STRING"
+    },
+    "debug_allowed_emails": {
+      "defaultValue": {
+        "value": "[\"ro.es4075@gmail.com\",\"dverdugo85@gmail.com\"]"
+      },
+      "description": "white list user email receive notificacion debug mode android",
+      "valueType": "JSON"
+    },
+    "reviewer_test_code": {
+      "defaultValue": {
+        "value": "123456"
+      },
+      "description": "Código de verificación para el test phone del reviewer Apple/Google",
+      "valueType": "STRING"
+    },
+    "privacy_url": {
+      "defaultValue": {
+        "value": "https://www.blacksugar21.com/privacy"
+      },
+      "description": "URL for Privacy Policy page",
+      "valueType": "STRING"
+    },
+    "daily_likes_limit": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "valueType": "NUMBER"
+    },
+    "minimum_age_by_country": {
+      "defaultValue": {
+        "value": "{   \"US\": 18,   \"GB\": 18,   \"CA\": 18,   \"AU\": 18,   \"JP\": 18,   \"KR\": 19,   \"TH\": 20,   \"DE\": 18,   \"FR\": 18,   \"ES\": 18,   \"IT\": 18,   \"PT\": 18,   \"BR\": 18,   \"MX\": 18,   \"AR\": 18,   \"CL\": 18,   \"CO\": 18,   \"PE\": 18,   \"SA\": 21,   \"AE\": 21,   \"IN\": 18,   \"CN\": 18,   \"RU\": 18,   \"default\": 18 }"
+      },
+      "valueType": "JSON"
+    }
+  }
+}
