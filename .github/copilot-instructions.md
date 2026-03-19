@@ -115,6 +115,8 @@ visible: Bool                ← false si cuenta pausada
 pausedAt: Timestamp?
 scheduledForDeletion: Bool
 deletionScheduledAt: Timestamp?
+coachMessagesRemaining: Int  ← créditos restantes del coach (reset por `resetCoachMessages`)
+lastCoachResetDate: Timestamp? ← última fecha de reset de créditos del coach
 ```
 
 ### `matches/{matchId}` — Documento de match
@@ -216,6 +218,106 @@ timestamp: Timestamp
 
 Lectura pública. Sin escritura desde cliente.
 
+### `coachChats/{userId}/messages/{msgId}` — AI Date Coach
+
+```
+message: String              ← texto del mensaje
+sender: String               ← "user" | "coach"
+timestamp: Timestamp         ← Timestamp.now() para user, +1ms para coach (orden determinista)
+matchId: String?             ← match seleccionado para contexto
+suggestions: [String]?       ← sugerencias rápidas del coach
+activitySuggestions: [{      ← actividades sugeridas (solo mensajes del coach)
+  emoji: String,
+  title: String,
+  description: String,
+  category: String,          ← "cafe" | "restaurant" | "bar" | "night_club" | "movie_theater" | "park" | "museum" | "bowling_alley" | "art_gallery" | "bakery" | "shopping_mall" | "spa" | "aquarium" | "zoo"
+  bestFor: String,           ← "fun" | "romantic" | "first-date" | "adventurous" | "relaxed" | "special"
+  priceLevel: String,        ← "$" | "$$" | "$$$" | "$$$$"
+  rating: Double?,
+  website: String?,
+  instagram: String?,
+  googleMapsUrl: String?,    ← URL directa a Google Maps (desde Google Places API)
+  address: String?,          ← dirección formateada del lugar real
+  latitude: Double?,         ← coordenadas del lugar
+  longitude: Double?,
+  placeId: String?,          ← Google Places ID
+  photos: [{url, width, height}]?  ← fotos del lugar desde Google Places
+}]?
+```
+
+### `coachChats/{userId}` — Coach Learning Profile (documento padre)
+
+```
+learningProfile: {             ← perfil de aprendizaje del usuario (server-side only)
+  totalInteractions: Int       ← contador total de interacciones
+  lastInteraction: Timestamp   ← última interacción
+  recentTopics: [String]       ← últimos 5 temas (e.g. "first_date", "conversation_tips")
+  topicFrequency: Map<String, Int>  ← frecuencia por tema: {"first_date": 12, "confidence": 5}
+  styleCount: Map<String, Int> ← frecuencia por estilo: {"brief": 5, "detailed": 20, "moderate": 17}
+  positiveSignals: Int         ← contador de mensajes con feedback positivo
+  lastMessageLength: Int       ← largo del último mensaje del usuario
+}
+```
+
+**19 categorías de temas rastreados:** `first_date`, `conversation_tips`, `profile_help`, `match_analysis`, `confidence`, `icebreakers`, `date_ideas`, `activity_places`, `texting`, `rejection`, `red_flags`, `relationship`, `appearance`, `emotional`, `safety`, `gift_ideas`, `love_languages`, `communication`, `dating_strategy`, `general`
+
+### `coachInsights/global` — Insights Globales del Coach
+
+```
+totalInteractions: Int         ← total de interacciones de todos los usuarios
+topicCounts: Map<String, Int>  ← frecuencia global por tema: {"first_date": 450, ...}
+lastUpdated: Timestamp
+```
+
+**⚠️ `deleteUserData` CF también elimina `coachChats/{userId}` (incluye `learningProfile`) + toda la subcolección `messages`**
+
+### `moderationKnowledge/{chunkId}` — RAG Knowledge Base para Moderación
+
+```
+id: String                   ← identificador único del chunk
+category: String             ← "harassment" | "sexual" | "spam" | "threats" | "hate_speech" | "scam" | "contact_info" | "personal_info" | "evasion_tactics" | "payment_solicitation" | "context_guidelines" | "bio_moderation" | "classification_guide"
+language: String             ← "en" | "es" | "fr" | "de" | "pt" | "ar" | "id" | "ja" | "ru" | "zh"
+text: String                 ← contenido del chunk de conocimiento
+embedding: Vector(768)       ← embedding generado con gemini-embedding-001
+createdAt: Timestamp
+```
+
+**73 chunks** multilingües: EN:31, ES:17, FR:4, DE:3, PT:3, AR:3, JA:3, RU:3, ZH:3, ID:3. 13 categorías de moderación. **Índice Firestore:** Vector index en `moderationKnowledge.embedding` (768 dims, flat, COSINE) — READY.
+
+### `moderationCache/{hash}` — Caché de Resultados de Moderación
+
+```
+approved: Boolean            ← resultado de moderación
+reason: String?              ← razón del rechazo
+category: String?            ← categoría de violación detectada
+confidence: Number?          ← confianza del resultado (0.0–1.0)
+source: String               ← "quick_filter" | "ai_moderation"
+version: Number              ← CACHE_VERSION (actualmente 3)
+createdAt: Timestamp         ← para TTL (1 hora)
+```
+
+**Key:** SHA-256 hash del mensaje + `CACHE_VERSION`. TTL: 1 hora. Evita re-analizar mensajes duplicados.
+
+### `moderatedMessages/{docId}` — Audit Trail de Moderación Automática
+
+```
+matchId: String
+messageId: String
+senderId: String
+message: String              ← texto moderado (truncado a 500 chars)
+result: {                    ← resultado completo de la IA
+  approved: Boolean,
+  category: String?,
+  confidence: Number?,
+  reason: String?,
+  severity: String?          ← "low" | "medium" | "high"
+}
+source: String               ← "quick_filter" | "ai_moderation"
+processedAt: Timestamp
+```
+
+**⚠️ Solo se escriben entradas para mensajes flaggeados** (no aprobados). Si severity es `"high"`, se genera auto-reporte en `reports` collection.
+
 ---
 
 ## Storage — Rutas de Archivos (VERIFICADAS EN CÓDIGO)
@@ -232,7 +334,7 @@ Lectura pública. Sin escritura desde cliente.
 
 ---
 
-## Cloud Functions — 35 callable + 7 scheduled + 6 triggers + 1 alias (us-central1)
+## Cloud Functions — 38 callable + 8 scheduled + 6 triggers + 1 alias (us-central1)
 
 ### Funciones principales (todas homologadas iOS = Android)
 
@@ -251,6 +353,7 @@ Lectura pública. Sin escritura desde cliente.
 | `processScheduledDeletions` | scheduled | Procesar eliminaciones programadas |
 | `updategeohashesscheduled` | scheduled | Actualizar geohashes |
 | `monitorGeohashHealth` | scheduled | Monitoreo de salud de geohashes |
+| `resetCoachMessages` | `every 1 hours` | Reset de créditos del coach a medianoche local (timezone-aware). Lee `dailyCredits` de `coach_config`. Escribe `{coachMessagesRemaining: N, lastCoachResetDate: now}`. Solo notifica si `coachMessagesRemaining < N`. FCM type `coach_messages_reset`, canal Android `coach_channel` |
 
 **Alias:** `scheduledCheckMutualLikes` → alias de `checkMutualLikesAndCreateMatch`
 
@@ -268,7 +371,7 @@ Lectura pública. Sin escritura desde cliente.
 - `loc-args`/`bodyLocArgs`: daily likes envía `['100']` para reemplazar `%@` (iOS) / `%1$d` (Android). Super likes no usa args (número "5" hardcodeado en strings)
 - Requiere campo `timezoneOffset` actualizado en Firestore (ambas apps lo actualizan en HomeView via `updateDeviceSettings()`)
 
-### Callable Functions (35 de producción + 6 utilidades)
+### Callable Functions (38 de producción + 6 utilidades)
 
 **Producción (homologadas iOS = Android):**
 ```
@@ -279,6 +382,8 @@ analyzeProfileWithAI
 blockUser
 calculateSafetyScore
 createStory
+dateCoachChat
+deleteCoachMessage
 deleteStory
 deleteUserData
 detectProfileRedFlags
@@ -291,11 +396,13 @@ getBatchCompatibilityScores
 getBatchPersonalStories
 getBatchPhotoUrls
 getBatchStoryStatus
+getCoachHistory
 getCompatibleProfileIds
 getDateSuggestions
 getDatingAdvice
 getEnhancedCompatibilityScore
 getMatchesWithMetadata
+getRealtimeCoachTips
 markStoryAsViewed
 moderateMessage
 moderateProfileImage
@@ -326,7 +433,7 @@ generateMissingThumbnails
 | `onMessageCreated` | DocumentCreated en `messages/` | Procesa nuevo mensaje |
 | `generateProfileThumbnail` | ObjectFinalized en Storage | Genera thumbnail automático |
 | `handlePendingNotification` | DocumentCreated en `pendingNotifications/` | Envía push notification |
-| `autoModerateMessage` | DocumentCreated en `messages/` | Moderación automática de mensajes |
+| `autoModerateMessage` | DocumentCreated en `messages/` | Moderación automática: BLACKLIST (~100+ terms multilang) → SHA-256 cache (1h TTL) → quick filters (URLs, phones, emails, repetitive) → RAG context (`moderationKnowledge`) → Gemini `gemini-2.5-flash-lite` → auto-report HIGH severity → audit trail (`moderatedMessages`) |
 | `validateGeohashOnUpdate` | DocumentUpdated en `users/` | Valida geohash al actualizar ubicación |
 
 ### Payloads CF críticos (verificados en código — iOS = Android ✅)
@@ -348,13 +455,13 @@ generateMissingThumbnails
 | `detectProfileRedFlags` | `{userId}` | `{hasRedFlags, confidence, details}` |
 | `calculateSafetyScore` | `{targetUserId, userLanguage}` | `{score, details}` |
 | `predictOptimalMessageTime` | `{targetUserId, userLanguage}` | `{optimalTime, ...}` |
-| `getDateSuggestions` | — | — |
+| `getDateSuggestions` | `{matchId, userLanguage?, category?, pageToken?, loadCount?, excludePlaceIds?}` | `{success, suggestions: [PlaceSuggestion], hasMore, nextPageToken?}` |
 | `getDatingAdvice` | `{situation, context, userLanguage}` | — |
 | `reportUser` | `{reportedUserId, reason, matchId, description?}` | `{success, action, reportId, uniqueReportCount, totalReportCount}` |
 | `blockUser` | `{blockedUserId}` | — |
 | `unmatchUser` | `{matchId, otherUserId, language}` | — |
 | `deleteUserData` | `{userId}` | — |
-| `searchPlaces` | `{matchId, query, userLanguage}` | `{places: [...]}` |
+| `searchPlaces` | `{matchId, query, userLanguage?, pageToken?, loadCount?, excludePlaceIds?}` | `{success, suggestions: [PlaceSuggestion], hasMore, nextPageToken?}` |
 | `getBatchPhotoUrls` | `{photoRequests: [{userId, pictureNames, includeThumb?}]}` | `{success, urls: {userId: [{url, thumbUrl}]}, totalPhotos}` |
 | `getBatchStoryStatus` | `{userIds: [...]}` | `{storiesStatus: {userId: bool}}` |
 | `getBatchPersonalStories` | `{userIds: [...]}` | `{stories: {userId: [...]}, stats}` |
@@ -367,10 +474,14 @@ generateMissingThumbnails
 | `analyzePhotoBeforeUpload` | `{photoBase64, userLanguage}` | `{success, score, overallQuality, shouldReplace, strengths, improvements}` |
 | `generateInterestSuggestions` | `{bio?, userType?}` | `{success, suggestions: [string]}` ← Android only |
 | `getMatchesWithMetadata` | `{}` (sin parámetros — usa auth) | `{matches: [{id, userId, name, age, ...}]}` ← Android only |
+| `dateCoachChat` | `{message, matchId?, userLanguage?, loadMoreActivities?, category?, excludePlaceIds?, loadCount?}` | `{success, reply, suggestions?, activitySuggestions?, userMessageId?, coachMessageId?, coachMessagesRemaining?, dominantCategory?}` — activitySuggestions incluye datos reales de Google Places API (googleMapsUrl, address, placeId, photos, lat/lng). Ubicación leída server-side desde Firestore (actualizada por HomeView). `excludePlaceIds` (array de strings) permite filtrar venues ya mostrados al usuario en loadMore. `userMessageId` y `coachMessageId` son los IDs reales de los documentos Firestore escritos por el batch — solo presentes cuando `!loadMoreActivities` (cuando `loadMoreActivities=true` no se escribe Firestore → retornan `undefined`). Los clientes los usan para reemplazar IDs temporales locales y habilitar delete funcional. Si no vienen (rate limit o loadMore), el cliente elimina el mensaje optimista local |
+| `getCoachHistory` | `{limit?, beforeTimestamp?}` | `{success, messages: [{id, message, sender, timestamp, matchId?, suggestions?, activitySuggestions?}], hasMore, coachMessagesRemaining}` |
+| `deleteCoachMessage` | `{messageId}` | `{success: true}` — idempotente (devuelve success si el mensaje no existe) |
+| `getRealtimeCoachTips` | `{matchId, userLanguage?}` | `{success, chemistryScore: 0-100, chemistryTrend: "rising"\|"falling"\|"stable", engagementLevel: "high"\|"medium"\|"low", tips: [{text, type, icon}], preDateDetected, suggestedAction?: {type, text}}` — analiza últimos 20 mensajes del chat via Gemini (`gemini-2.5-flash-lite`), requiere mínimo 3 mensajes |
 
 ---
 
-## Remote Config — 20 claves
+## Remote Config — 21 claves
 
 ### Claves leídas por RemoteConfigManager (12 — verificadas en código iOS y Android)
 
@@ -391,6 +502,8 @@ generateMissingThumbnails
 | `moderation_image_jpeg_quality` | Number | 50 | Calidad JPEG (%) para compresión de imagen en moderación IA (rango 20–100). iOS convierte a 0.0–1.0 |
 | `enable_screen_protection` | Boolean | true | Habilitar/deshabilitar protección contra capturas de pantalla y grabación de pantalla |
 | `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` | UID del reviewer exento de protección de pantalla (configurable sin redeploy) |
+| `coach_max_input_length` | Number | 2000 | Largo máximo del input del Coach Chat (rango 100–10000). Homologado iOS/Android |
+| `coach_daily_credits` | Number | 5 | Créditos diarios del Coach Chat (rango 1–100). CF `resetCoachMessages` lee de `coach_config.dailyCredits` |
 
 ### Claves leídas directamente por UI (no via RemoteConfigManager)
 
@@ -407,6 +520,67 @@ generateMissingThumbnails
 |---|---|---|---|
 | `reviewer_test_phone` | String | `"+16505550123"` | Documentación del teléfono de prueba del reviewer |
 | `reviewer_test_code` | String | `"123456"` | Documentación del código OTP del reviewer |
+
+### Claves leídas por Cloud Functions (server-side only — no leídas por apps)
+
+| Clave | Tipo | Default | Descripción |
+|---|---|---|---|
+| `coach_config` | JSON String | `{enabled:true, dailyCredits:5, maxMessageLength:2000, ...}` | Configuración dinámica del AI Date Coach: límites, guardrails, personalidad, temas bloqueados. Cambiar sin redeploy |
+| `places_search_config` | JSON String | `{enabled:true, radiusSteps:[100000,130000,180000,250000,300000], ...}` | Configuración dinámica de búsqueda de lugares para ChatView (`getDateSuggestions` + `searchPlaces`). Leído via `getPlacesSearchConfig()` con caché 5min. Cambiar sin redeploy |
+| `moderation_config` | JSON String | `{rag:{enabled:true, topK:4, minScore:0.25, fetchMultiplier:3, collection:'moderationKnowledge'}}` | Configuración dinámica de Moderation RAG para `moderateMessage` y `autoModerateMessage`. Leído via `getModerationConfig()` con caché 5min. Cambiar sin redeploy |
+
+**`coach_config` campos (19 campos configurables):**
+- `enabled` (Boolean, default `true`): Kill switch del coach
+- `dailyCredits` (Number, default `5`): Créditos diarios del coach. Leído por `resetCoachMessages` CF + clientes via `coach_daily_credits` RC key
+- `maxMessageLength` (Number, default `2000`): Largo máximo del mensaje del usuario. Clientes leen via `coach_max_input_length` RC key
+- `historyLimit` (Number, default `10`): Mensajes de historial a leer para contexto
+- `maxActivities` (Number, default `10`): Máximo de activity suggestions por respuesta
+- `maxSuggestions` (Number, default `3`): Máximo de quick-reply suggestions
+- `maxReplyLength` (Number, default `5000`): Largo máximo de la respuesta del coach
+- `rateLimitPerHour` (Number, default `30`): Máximo de mensajes de usuario por hora
+- `temperature` (Number, default `0.9`): Temperatura de Gemini para el coach
+- `maxTokens` (Number, default `2048`): Max tokens de salida de Gemini
+- `personalityTone` (String, default `"warm, supportive, encouraging but honest. Like a best friend who is also a dating expert"`): Tono de personalidad
+- `responseStyle` (Object, default `{maxParagraphs: 4, useEmojis: true, formalityLevel: "casual_professional", encouragementLevel: "high"}`): Control de formato y estilo de respuestas
+- `allowedTopics` (Array<String>, ~70 temas): Lista expandida de temas permitidos (dating, profile, places, gifts, love_languages, attachment_styles, dating_strategy, couple_dynamics, relationship_maintenance, etc.)
+- `coachingSpecializations` (Object): Guía específica por `userType` — claves: `SUGAR_BABY`, `SUGAR_DADDY`, `SUGAR_MOMMY`. Cada una con instrucciones de coaching personalizadas inyectadas en el system prompt — cada userType incluye subsecciones WHEN SINGLE y WHEN IN A RELATIONSHIP con guía contextualizada para solteros vs parejas
+- `stagePrompts` (Object): Prompts específicos por etapa de relación — claves: `no_conversation_yet`, `just_started_talking`, `getting_to_know`, `building_connection`, `active_conversation` — `active_conversation` masivamente expandido con guía para parejas: DTR, jealousy, long-distance, passion, shared goals, conflict resolution, milestones. Se inyectan cuando el usuario tiene un match seleccionado
+- `blockedTopics` (Array<String>): Lista de temas bloqueados (off-topic detection)
+- `offTopicMessages` (Object): Mensajes de redirección localizados por idioma (10 idiomas) — redactados para ser invitadores y mencionar dominios específicos (date planning, profile optimization, romantic gestures)
+- `safetyMessages` (Object): Mensajes de seguridad localizados (10 idiomas: en, es, fr, de, pt, ja, zh, ru, ar, id)
+- `additionalGuidelines` (String): Guidelines adicionales inyectados en el system prompt
+- `edgeCaseExtensions` (String, default `''`): Extensiones de edge cases inyectables via Remote Config sin redeploy — se inyectan directamente en el system prompt después de los edge cases hardcodeados
+- `placeSearch` (Object): Configuración de búsqueda de lugares en el coach — `enableWithoutLocation` (Boolean, default `true`): permite búsquedas sin ubicación del usuario; `minActivitiesForPlaceSearch` (Number, default `6`): mínimo de actividades cuando el usuario busca explícitamente; `defaultRadius` (Number, default `100000`): radio por defecto en metros; `minRadius`/`maxRadius` (Number, default `3000`/`300000`): límites de radio dinámico entre 2 usuarios; `radiusSteps` (Array<Number>, default `[100000, 130000, 180000, 250000, 300000]`): radios progresivos para loadMore legacy; `progressiveRadiusSteps` (Array<Number>, default `[15000, 30000, 60000, 120000, 200000, 300000]`): pasos de radio progresivo para búsqueda inicial — empieza por el más pequeño, expande si hay menos de `minPlacesTarget` resultados; `minPlacesTarget` (Number, default `30`): mínimo de lugares antes de expandir radio progresivo; `loadMoreDefaultBaseRadius` (Number, default `60000`): radio base fallback para loadMore cuando no hay caché del radio inicial; `loadMoreExpansionBase` (Number, default `2`): base del multiplicador exponencial para loadMore (radio = base^(loadCount+1) × baseRadius); `loadMoreMaxExpansionStep` (Number, default `4`): cap del exponente en la expansión de loadMore; `perQueryResults` (Number, default `20`): resultados por query de Google Places API; `maxPlacesIntermediate` (Number, default `60`): cap intermedio de places antes de procesamiento Gemini; `maxOutputTokensBudget` (Number, default `8192`): budget de tokens Gemini para respuestas con places; `purchaseExtraTerms` (String, default `''`): términos extra pipe-separated para detección de intención de compra/regalo — se agregan al `purchaseGiftPattern` regex sin redeploy (ej: `"dim sum|tacos al pastor|bubble waffle|pho"`)
+
+**`places_search_config` campos (21 campos configurables):**
+- `enabled` (Boolean, default `true`): Kill switch de búsqueda de lugares en ChatView
+- `radiusSteps` (Array<Number>, default `[100000, 130000, 180000, 250000, 300000]`): Radios para path de pageToken (backward compatible). La búsqueda principal ahora usa `progressiveRadiusSteps`
+- `progressiveRadiusSteps` (Array<Number>, default `[15000, 30000, 60000, 120000, 200000, 300000]`): Pasos de radio progresivo para búsqueda inicial (step=0) — empieza por el menor que cubra ambos usuarios (`computedMinR`), expande si hay menos de `minPlacesTarget` resultados. Misma estrategia que Coach IA (`fetchCoachPlaces`)
+- `minPlacesTarget` (Number, default `30`): Mínimo de lugares antes de expandir radio en el loop progresivo
+- `minRadius` (Number, default `3000`): Buffer mínimo en metros sumado a la mitad de la distancia entre usuarios para calcular `computedMinR`
+- `maxRadius` (Number, default `300000`): Radio máximo (300km). `hasMore = lastRadiusUsed < maxRadius`
+- `loadMoreDefaultBaseRadius` (Number, default `60000`): Radio base (60km) para expansión exponencial en loadMore (step>0)
+- `loadMoreExpansionBase` (Number, default `2`): Base del multiplicador exponencial para loadMore (`radio = max(computedMinR, base) × expansionBase^(min(step, maxStep)+1)`)
+- `loadMoreMaxExpansionStep` (Number, default `4`): Cap del exponente en la expansión de loadMore. Ej: con base=60km y expansionBase=2 → step 1: 120km, 2: 240km, 3: 300km (capped)
+- `perQueryResults` (Number, default `20`): Resultados por query de Google Places API
+- `maxPlacesIntermediate` (Number, default `60`): Cap de places únicos antes de scoring/ranking
+- `queriesWithCategory` (Number, default `3`): Queries paralelas cuando hay categoría seleccionada
+- `queriesWithoutCategory` (Number, default `5`): Queries paralelas random cuando no hay categoría
+- `useRestriction` (Boolean, default `true`): `true` = hard geo filter (restriction), `false` = soft (locationBias)
+- `photoMaxHeightPx` (Number, default `400`): Altura máxima en píxeles para fotos de Google Places API
+- `photosPerPlace` (Number, default `5`): Máximo de fotos por lugar en `transformPlaceToSuggestion`
+- `travelSpeedKmH` (Number, default `40`): Velocidad estimada (km/h) para calcular tiempo de viaje
+- `maxLoadCount` (Number, default `20`): Clamp máximo para `loadCount` en paginación
+- `defaultLanguage` (String, default `'es'`): Idioma fallback cuando el cliente no envía `userLanguage`
+- `defaultCategoryQueryCount` (Number, default `4`): Queries paralelas por defecto con categoría
+- `categoryQueryMap` (Object, default `null`): Mapeo opcional `{category: queryTerms}` para override dinámico de los términos de búsqueda por categoría. Si `null` o ausente, usa fallback hardcodeado `DEFAULT_CATEGORY_QUERY_MAP` con 14 categorías bilingües. Helper: `getCategoryQueryMap(config)`
+
+**`moderation_config` campos (5 campos configurables):**
+- `rag.enabled` (Boolean, default `true`): Kill switch del Moderation RAG. Si `false`, `retrieveModerationKnowledge()` retorna string vacío
+- `rag.topK` (Number, default `4`, range 1-10): Número de chunks a seleccionar tras filtrado
+- `rag.minScore` (Number, default `0.25`, range 0-1): Umbral mínimo de similaridad COSINE (1-distance)
+- `rag.fetchMultiplier` (Number, default `3`, range 1-5): Multiplica topK para la búsqueda inicial en Firestore
+- `rag.collection` (String, default `'moderationKnowledge'`): Nombre de la colección Firestore con los chunks
 
 **Intervalo de actualización:** 3600 segundos (idéntico iOS `services/RemoteConfigService.swift` y Android `core/firebase/RemoteConfigManager.kt`)
 
@@ -480,7 +654,7 @@ phone_verification_failed: reason
 24. **Match notification:** enviada por CF trigger `onMatchCreated` (NO por cliente). `sendMatchNotification` en Android es código muerto
 25. **Photo upload:** `users/{userId}/{uuid}.jpg` + thumbnail `users/{userId}/{uuid}_thumb.jpg` (400px). Max dimension 1920px, target 500KB. **Ephemeral photos:** max 800px, JPEG 65% (optimizado — se ven solo 10s). **⚠️ Storage Rules requieren `contentType.matches('image/.*')`:** iOS DEBE pasar `StorageMetadata()` con `contentType = "image/jpeg"` en todo `putData()` — con `metadata: nil` el SDK iOS NO infiere content type → permission denied. Android SDK infiere `image/jpeg` de la extensión `.jpg` automáticamente en `putBytes()` — no requiere metadata explícita
 26. **Scheduled deletion:** Android escribe 4 campos (`scheduledDeletionDate`, `scheduledForDeletion`, `deletionDate`, `deletionScheduledAt`), iOS escribe 3 (sin `scheduledDeletionDate`). Aceptable — ninguna CF depende de `scheduledDeletionDate`
-27. **AI CFs:** 16 CFs de IA. Todas usan `us-central1`. 15 idénticas en ambas plataformas + `generateInterestSuggestions` (Android only). Payloads verificados: `generateSmartReply`, `calculateSafetyScore`, `analyzeConversationChemistry`, `predictOptimalMessageTime`, `getDatingAdvice`, `analyzePhotoBeforeUpload`, `moderateProfileImage`, `validateProfileImage`, `moderateMessage`, `generateInterestSuggestions`. **⚠️ TODA la IA se ejecuta server-side en CFs** — modelo `gemini-2.5-flash`, secret `GEMINI_API_KEY`. Los clientes iOS y Android ya NO ejecutan Gemini localmente ni dependen del SDK `FirebaseAI`/`firebase-ai`. `ContentModerationService` en ambas plataformas es un wrapper delgado que envía base64/texto al CF y parsea la respuesta. Imagen: comprime según Remote Config (`moderation_image_max_dimension` default 512px, `moderation_image_jpeg_quality` default 50%), envía base64. Texto: envía string + type (`"message"` | `"biography"`). `generateInterestSuggestions`: envía `{bio, userType}`, recibe `{suggestions: [string]}` (solo Android, `EditProfileViewModel.kt`). Error handling: fotos de perfil → aprobar en error, stories → rechazar en error, texto → aprobar en error
+27. **AI CFs:** 19 CFs de IA. Todas usan `us-central1`. 15 idénticas en ambas plataformas + `generateInterestSuggestions` (Android only) + `dateCoachChat` + `getCoachHistory` + `getRealtimeCoachTips` (homologadas ambas plataformas). Payloads verificados: `generateSmartReply`, `calculateSafetyScore`, `analyzeConversationChemistry`, `predictOptimalMessageTime`, `getDatingAdvice`, `analyzePhotoBeforeUpload`, `moderateProfileImage`, `validateProfileImage`, `moderateMessage`, `generateInterestSuggestions`, `dateCoachChat`, `getCoachHistory`, `getRealtimeCoachTips`. **⚠️ TODA la IA se ejecuta server-side en CFs** — modelos `gemini-2.5-flash` (CFs pesadas: dateCoachChat, analyzeProfileWithAI, etc.) y `gemini-2.5-flash-lite` (CFs ligeras: autoModerateMessage, moderateMessage, moderateProfileImage, reportUser, generateInterestSuggestions, getRealtimeCoachTips), secrets `GEMINI_API_KEY` + `GOOGLE_PLACES_API_KEY`. Los clientes iOS y Android ya NO ejecutan Gemini localmente ni dependen del SDK `FirebaseAI`/`firebase-ai`. `ContentModerationService` en ambas plataformas es un wrapper delgado que envía base64/texto al CF y parsea la respuesta. Imagen: comprime según Remote Config (`moderation_image_max_dimension` default 512px, `moderation_image_jpeg_quality` default 50%), envía base64. Texto: envía string + type (`"message"` | `"biography"`). `generateInterestSuggestions`: envía `{bio, userType}`, recibe `{suggestions: [string]}` (solo Android, `EditProfileViewModel.kt`). Error handling: fotos de perfil → aprobar en error, stories → rechazar en error, texto → aprobar en error
 28. **searchPlaces CF + Place Photos:** `{matchId, query, userLanguage}` — idéntico iOS/Android (Android también tiene PlacesSDK para edit-profile, pero chat usa CF). La CF retorna hasta 20 campos por lugar incluyendo `photos: [{url, width, height}]` y `description`. **⚠️ `parsePlaceSuggestions()` en Android (`ChatViewModel.kt`) y `parsePlaceSuggestions()` en iOS (`ChatViewModel.swift`) DEBEN parsear `photos` y `description`** — si se omiten, el carrusel de fotos en `PlaceSuggestionsSheet`/`PlaceSuggestionsView` no muestra imágenes. iOS: `PlacePhotoCarousel` con `TabView` + `AsyncImage`. Android: `PlacePhotoCarousel` con `HorizontalPager` + `AsyncImage`
 29. **reportUser — Moderación Progresiva:** `reportUser` incluye bloqueo personal (solo el reporter deja de ver al reported) + escalamiento progresivo basado en reportadores ÚNICOS (no raw count). Umbrales: 1-2 → solo bloqueo personal, 3-4 → `visibilityReduced:true`, 5-6 → visibilidad reducida + análisis IA (Gemini 2.0 Flash, auto-suspende si confianza ≥ 0.8), 7-9 → `accountStatus:'suspended'`, 10+ → `accountStatus:'banned'`. Rate limit: máx 5 reportes/día por reporter. Genera `reportSummary` en user doc con `uniqueReporters`, `totalReports`, `reasonCounts`. Elimina match + mensajes + likes mutuos entre reporter y reported. Bloqueo bidireccional: `blocked`/`blockedBy` arrays — idéntico iOS/Android
 30. **blocked/blockedBy bidireccional:** `blockUser` y `reportUser` CFs escriben `blocked` (array del que bloquea) + `blockedBy` (array del bloqueado). Discovery filtra ambos arrays. `unblockUser` es local con `arrayRemove` — idéntico iOS/Android
@@ -580,8 +754,8 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 17. **Daily/Super likes reset** — calendar day comparison, always 100
 18. **Match detection** — hasUserLikedBack() + 100ms delay
 19. **Photo upload/delete** — UUID.jpg + _thumb.jpg (400px), Storage path `users/{userId}/`
-20. **AI CFs (16)** — 15 idénticas + `generateInterestSuggestions` (Android only). TODA la IA es server-side (`gemini-2.5-flash`, `GEMINI_API_KEY`). Clientes NO usan SDK `FirebaseAI`/`firebase-ai`
-21. **Photo/Message moderation** — 4 CFs (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload). `moderateProfileImage` y `moderateMessage` implementan Gemini AI server-side (`gemini-2.5-flash`). `ContentModerationService` en iOS/Android son wrappers delgados de CF (no ejecutan Gemini localmente). Compresión de imagen configurable via Remote Config: `moderation_image_max_dimension` (512px default), `moderation_image_jpeg_quality` (50% default)
+20. **AI CFs (19)** — 15 idénticas + `generateInterestSuggestions` (Android only) + `dateCoachChat` + `getCoachHistory` + `getRealtimeCoachTips` (homologadas ambas plataformas). TODA la IA es server-side — modelos `gemini-2.5-flash` (CFs pesadas) y `gemini-2.5-flash-lite` (CFs ligeras), secrets `GEMINI_API_KEY` + `GOOGLE_PLACES_API_KEY`. Clientes NO usan SDK `FirebaseAI`/`firebase-ai`
+21. **Photo/Message moderation** — 4 CFs callable (moderateMessage, moderateProfileImage, validateProfileImage, analyzePhotoBeforeUpload) + 1 trigger (`autoModerateMessage`). `moderateProfileImage` y `moderateMessage` implementan Gemini AI server-side (`gemini-2.5-flash`). `moderateMessage` enriquecido con **Moderation RAG** — `retrieveModerationKnowledge()` inyecta contexto curado de reglas de moderación en el prompt vía vector search en `moderationKnowledge` (73 chunks, 13 categorías, 10 idiomas). `autoModerateMessage` (trigger en `matches/{matchId}/messages/{messageId}`) ejecuta pipeline completo: BLACKLIST (~100+ terms EN/ES/PT/FR/DE + variantes con símbolos) → SHA-256 cache (`moderationCache`, TTL 1h, VERSION=3) → quick filters (URLs incl t.me/wa.me, phones, emails, caracteres repetitivos) → RAG context → Gemini `gemini-2.5-flash-lite` → marca mensaje si flaggeado → auto-reporte a `reports` para severity HIGH → audit trail en `moderatedMessages`. `ContentModerationService` en iOS/Android son wrappers delgados de CF (no ejecutan Gemini localmente). Compresión de imagen configurable via Remote Config: `moderation_image_max_dimension` (512px default), `moderation_image_jpeg_quality` (50% default). **⚠️ Los clientes iOS/Android NO necesitan cambios para autoModerateMessage** — es un trigger server-side que opera de forma transparente sobre todos los mensajes nuevos
 22. **Scheduled deletion** — scheduleAccountDeletion/cancelScheduledDeletion campos
 23. **Push notifications** — pendingNotifications para mensajes, CF trigger para matches
 24. **Compatibility scoring** — getBatchCompatibilityScores + getEnhancedCompatibilityScore
@@ -613,6 +787,20 @@ Cuando audites alineación iOS ↔ Android, siempre verifica:
 51. **Place Suggestions — Photo Carousel parity** — CF `searchPlaces` retorna `photos: [{url, width, height}]` y `description` por lugar. iOS: `PlaceSuggestionsView.swift` con `PlacePhotoCarousel` (`TabView` + `AsyncImage` + dot indicators). Android: `PlaceSuggestionsSheet.kt` con `PlacePhotoCarousel` (`HorizontalPager` + `AsyncImage` + dot indicators). **⚠️ `parsePlaceSuggestions()` en ambos `ChatViewModel` DEBE parsear `photos` y `description`** — sin estos campos el carrusel de fotos existe en la UI pero recibe `photos = null` y no muestra imágenes. Campos obligatorios del CF response: `name`, `address`, `rating`, `latitude`/`lat`, `longitude`/`lng`, `placeId`, `score`, `website`, `phoneNumber`, `googleMapsUrl`, `isOpenNow`, `tiktok`, `instagram`, `instagramHandle`, `category`, `description`, `photos`, `distanceUser1`, `distanceUser2`, `travelTimeUser1`, `travelTimeUser2`
 52. **Screen protection estado actual** — Android: `ENABLE_SCREEN_PROTECTION` hardcodeado en `false` en `Constants.kt` (deshabilitado). iOS: aún activo vía `RemoteConfigService.shared.isScreenProtectionEnabled()`. Remote Config key `enable_screen_protection` solo afecta a iOS actualmente. **⚠️ Si se reactiva en Android**, restaurar la lógica de Remote Config en `Constants.kt` (ver Android copilot-instructions.md → sección Screen Protection)
 53. **Google Sign-In — Google Play App Signing SHA-1** — Android necesita **3 SHA-1 fingerprints** en Firebase Console para Google Sign-In: (1) debug (`~/.android/debug.keystore`), (2) upload (`blacksugar-release-key.jks`), (3) Google Play App Signing (Play Console → Integridad → Firma de aplicaciones). Sin el SHA-1 de App Signing, Google Sign-In falla con `Status Code 10 (DEVELOPER_ERROR)` en builds instalados desde Play Store. iOS no requiere fingerprints (usa bundle ID + `GoogleService-Info.plist`). **⚠️ El SHA-1 de Google Play NO está en `google-services.json`** — es una validación server-side en Firebase Console
+54. **AI Date Coach (`dateCoachChat` + `getCoachHistory`)** — Chat conversacional con Gemini para consejos de citas + sugerencias de actividades/venues reales basadas en **Google Places API**. **Firestore:** `coachChats/{userId}/messages/{msgId}` almacena historial. **Timestamps:** batch write usa `Timestamp.now()` para user y `Timestamp.now() + 1ms` para coach — garantiza orden determinista user→coach en `getCoachHistory` (sin offset, `serverTimestamp()` asigna el mismo valor a ambos docs del batch, y Firestore desempata por document ID aleatorio → 50% chance de swap). **ActivitySuggestion `id`:** Android usa `placeId ?: UUID` como key único para `LazyColumn` (iOS: `placeId ?? UUID().uuidString`). Sin `id` único, venues duplicados (ej: dos "Starbucks") causan `IllegalArgumentException` crash. **CFs:** `dateCoachChat` recibe `{message, matchId?, userLanguage?, loadMoreActivities?, category?, excludePlaceIds?, loadCount?}` y retorna `{success, reply, suggestions?, activitySuggestions?, userMessageId?, coachMessageId?}`. `userMessageId` y `coachMessageId` son los IDs reales de los documentos Firestore escritos por el batch — los clientes los usan para reemplazar IDs temporales locales (`temp_xxx`/`coach_xxx`) y habilitar `deleteCoachMessage` funcional. Sin estos IDs, delete buscaba por ID temporal que no existía en Firestore → silently failed. La ubicación se lee siempre del perfil Firestore del usuario (`userData.latitude`/`userData.longitude`, actualizado por HomeView) — los clientes NO envían coordenadas. Cuando hay ubicación, la CF llama `fetchCoachPlaces()` que usa `placesTextSearch()` (Google Places API New) para buscar venues reales cercanos, pasa los resultados a Gemini para selección/personalización, y merge los datos reales (googleMapsUrl, address, placeId, lat/lng, photos) de vuelta en las sugerencias. `excludePlaceIds` (array de strings) permite filtrar venues ya mostrados al usuario en loadMore — la CF excluye estos placeIds del resultado de Google Places antes de pasarlos a Gemini. `getCoachHistory` recibe `{limit?}` y retorna `{success, messages: [{message, sender, timestamp, matchId?, suggestions?, activitySuggestions?}]}`. **Timestamp format:** `getCoachHistory` envía timestamps como ISO 8601 con milisegundos vía `toDate().toISOString()` (e.g. `"2024-03-16T10:30:45.123Z"`). iOS usa `ISO8601DateFormatter` con `.withFractionalSeconds` para parsear correctamente. Android usa `Instant.parse()` que soporta fracciones nativamente. **Cleanup:** `deleteUserData` CF también elimina `coachChats/{userId}` + subcolección `messages`. **Navegación:** Android usa Activity independiente (`CoachChatActivity`), iOS usa `NavigationLink` push + `.sheet()`. **2 puntos de entrada en ambas plataformas:** (1) desde Profile sin matchId, (2) desde Chat con matchId preseleccionado. **Match selector:** fila horizontal de chips para dar contexto al coach. **14 categorías de actividades (Google Places):** cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo. **ActivitySuggestionsSheet** con filtro por categoría + infinite scroll via `loadMoreActivities()`. Cada `SheetActivityCard` muestra: photo carousel (Android: 180dp `HorizontalPager`, iOS: 180pt `TabView(.page)` — mismo patrón que PlaceCard), emoji badge, rating stars, description, address (📍), tags, priceLevel, pill buttons (Android: `CoachSocialButton`, iOS: `coachSocialButton`) para Google Maps/web/instagram. **`accumulatedActivities` es state LOCAL de la Screen/View (no del ViewModel)** — se inicializa con actividades del mensaje, se acumula con load more, **cap 100 items** (Android `.take(100)`, iOS `.prefix(100)`) — i18n: 24 keys Android (`coach_*`), 23 keys iOS (`coach-*`) — idéntico iOS/Android. **Category normalization (triple capa):** `normalizeCategory()` mapea variaciones de categorías a los 14 IDs canónicos de Google Places (cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo) via Regex. Existe en 3 capas: CF `index.js` (autoritativa, aplicada en 6 call sites de `dateCoachChat`), Android `CoachChatViewModel.kt` (safety net en `parseActivitySuggestions`), iOS `CoachChatViewModel.swift` (safety net). `categoryEmojiMap` en CF mapea los 14 IDs canónicos a emojis para fallback paths. Sin normalización, Gemini/Google Places retornan categorías no canónicas → filtro por categoría en `ActivitySuggestionsSheet` muestra vacío. **Error auto-clear:** ambas plataformas limpian el error al empezar a escribir un nuevo mensaje (`clearError()` invocado desde el input text change handler — Android llama `onTextChange()` incondicionalmente en `onValueChange`). **Delete guard:** mensajes con ID temporal (`temp_xxx`) no muestran opción de eliminar (Android: `canDelete = !message.id.startsWith("temp_")` en `onLongClick`, iOS: `if !message.id.hasPrefix("temp_")` en `.contextMenu`). **Rate-limit cleanup:** cuando la CF retorna `success:true` sin `userMessageId` (rate limit), ambos clientes eliminan el mensaje optimista local en vez de dejarlo huérfano con ID `temp_xxx`. **Coach message gate:** el mensaje del coach solo se agrega localmente si `coachMessageId` está presente en el response de la CF. Esto evita ghost messages (burbujas locales sin backing en Firestore) cuando el usuario tiene créditos stale (ej: usados desde otro dispositivo). Antes usaba `previousRemaining > 0` que era vulnerable a valores stale. **CF credit decrement atómico:** la CF `dateCoachChat` usa `FieldValue.increment(-1)` para decrementar `coachMessagesRemaining`, evitando race conditions TOCTOU en uso multi-dispositivo. **Pagination sentinel (CoachChatView iOS):** el trigger de paginación `Color.clear.onAppear` debe estar SIEMPRE presente en el LazyVStack (no swappeado con ProgressView en un if/else). Si se pone en una rama else del loading state, SwiftUI lo remueve e inserta al cambiar el estado → `.onAppear` se retriggerea en loop infinito. ProgressView se muestra como elemento SEPARADO encima del sentinel. El `.onAppear` tiene guard `if !viewModel.isLoadingOlderMessages`. **Input truncation:** ambas plataformas truncan input >2000 chars (Android `.take(maxLength)`, iOS `.prefix(maxLength)`) en vez de rechazar. **iOS retryLastMessage:** `canRetry = false` se setea antes de llamar `sendMessage` para evitar que el botón retry quede visible si `sendMessage` retorna temprano (homologado con Android). **Configuración dinámica (18 campos):** toda la configuración del coach se lee de Remote Config key `coach_config` via `getCoachConfig()` helper con fallback defaults hardcodeados (**caché en memoria con TTL de 5 minutos** para evitar lecturas repetidas). **Defaults críticos de `getCoachConfig()`:** `maxActivities: 30` (máximo de activity suggestions por respuesta), `maxSuggestions: 3`, `maxReplyLength: 5000`, `rateLimitPerHour: 30`, `temperature: 0.9`, `maxTokens: 2048`, `historyLimit: 10`. Incluye: `responseStyle` (formato de respuestas: maxParagraphs, useEmojis, formalityLevel, encouragementLevel), `coachingSpecializations` (guía específica por userType: SUGAR_BABY/DADDY/MOMMY inyectada en system prompt — cada userType incluye subsecciones WHEN SINGLE y WHEN IN A RELATIONSHIP con guía contextualizada para solteros vs parejas), `stagePrompts` (prompts específicos por etapa de relación: no_conversation_yet, just_started_talking, getting_to_know, building_connection, active_conversation — `active_conversation` masivamente expandido con guía para parejas: DTR, jealousy, long-distance, passion, shared goals, conflict resolution, milestones), `allowedTopics` (~70 temas expandidos), `personalityTone` mejorado. **Content Guardrails (8 categorías expandidas):** el system prompt incluye 8 categorías detalladas de temas permitidos (Conversation & Communication, Dating & Dates, Places & Venues, Romantic Gestures & Gifts, Profile & Self-Presentation, Confidence & Self-Improvement, Relationships & Connections, Safety & Well-Being) + temas bloqueados. Búsquedas de lugares declaradas explícitamente como SIEMPRE on-topic. Off-topic solo si CERO conexión con dating/relaciones/lugares/regalos. Preguntas off-topic reciben redirección localizada en 10 idiomas (`{"off_topic": true, "reply": "..."}`). Mensajes off-topic se marcan con `offTopic: true` en Firestore. **PRECISION GUIDELINES (8 directrices):** (1) personalización obligatoria con datos del perfil, (2) guía match-specific con stagePrompts dinámicos, (3) contextualización sin match basada en stats, (4) sugerencias de venues con diversidad, (5) coaching dinámico por userType desde coachingSpecializations, (6) estándares de calidad usando responseStyle, (7) continuidad conversacional, (8) lista de "nunca hacer". **Rate limiting:** máx 30 msgs/hora por usuario (configurable). **Safety protocol:** mensajes sobre seguridad personal → empathy + sugerencia de servicios de emergencia. **Edge cases expandidos:** greetings & short messages (saludos, emojis), match-related (sin match, sin conversación, conversación estancada, sin respuesta, frustración), profile (perfil vacío, 0 matches, muchos matches), emotional (burnout, heartbreak, emoción), behavioral (mensajes repetidos, cumplidos, roleplay, adversarial, idiomas mixtos, mensajes largos, comparaciones), special scenarios (age-gap, primera vez en apps, regreso tras pausa, long-distance, diferencias culturales). **Couple scenarios (16):** maintaining spark, moving in together, meeting family, trust rebuilding, couple communication styles, anniversary planning, jealousy handling, long-distance relationship, love languages in practice, managing expectations, reigniting passion, shared goals alignment, couple travel planning, in-laws dynamics, surprise planning, different life-stage expectations. **Single scenarios (12):** starting over after breakup, social anxiety in dating, online vs offline dating, managing multiple matches, self-improvement while dating, post-toxic relationship recovery, dating app fatigue, first time using dating apps, returning after long break, dating as single parent, dealing with ex, second-chance romance. **Kill switch:** `coach_config.enabled=false` deshabilita el coach sin redeploy.
+55. **Coach Place Search Detection** — `dateCoachChat` usa 5 patrones regex (`proximityPattern`, `placeTypePattern`, `placeSearchPattern`, `purchaseGiftPattern`, `lifestyleIntentPattern`) para detectar si el usuario busca lugares. `lifestyleIntentPattern` detecta intenciones de estilo de vida y relación que implican necesidad de lugares (maintaining spark, relationship rut, meeting family, moving in together, jealousy, trust rebuilding, starting over, dating fatigue — en 10+ idiomas). `placeSearchPattern` cubre: verbos de comida/bebida (comer, cenar, almorzar, eat, manger, essen, 食べる, 吃, makan, поесть, etc.), palabras de proximidad (cerca, aquí cerca, por acá, perto, nearby), sustantivos de lugar (lugar(es), sitio(s), endroit, place, 場所, tempat), frases de intención (recomiéndame, dónde puedo, qué me recomiendas, recommend, suggest, おすすめ, 推荐, порекомендуй) — todo en los 10 idiomas soportados. `purchaseGiftPattern` cubre: verbos de compra/regalo (comprar, regalar, buy, acheter, kaufen, 買う, 买, купить, beli, etc.), productos standalone (pizza, chocolate, ramen, empanadas, brigadeiro, たこ焼き, 火锅, bakso, etc. con items culturales por idioma), regalos románticos (rosas, perfume, vino, joyas, lingerie, velas, peluches en 10 idiomas). **Configurable via Remote Config:** 3 constantes DEFAULT hardcodeadas como fallback + `coach_config.placeSearch.purchaseExtraTerms` (String, pipe-separated) para agregar términos dinámicamente sin redeploy. `isUserPlaceSearch = proximityPattern || placeTypePattern || placeSearchPattern || purchaseGiftPattern || lifestyleIntentPattern`. Cuando `isUserPlaceSearch` es true: (1) `fetchCoachPlaces` se ejecuta incluso sin `hasLocation` (Google Places API sin `locationBias` — busca por texto), (2) `placeSearchInstruction` fuerza a Gemini a incluir `activitySuggestions` (MUST, no opcional), (3) `noLocationInstruction` cambia a modo suave ("limitado" en vez de "pregunta la ciudad"). `placesTextSearch()` acepta `center` opcional — si es `null`, omite `locationBias` del request body. **`loadMoreActivities` path también soporta sin ubicación** — `center` es condicional (`null` sin ubicación). **Progressive radius (búsqueda inicial):** `fetchCoachPlaces` usa `progressiveRadiusSteps` (default `[15000, 30000, 60000, 120000, 200000, 300000]`), filtra pasos menores que `computedMinR` (cobertura del match), ejecuta queries en cada paso y acumula resultados — rompe al alcanzar `minPlacesTarget` (default 30). Guarda el radio final en caché como `lastRadiusUsed`. **Progressive radius (loadMore):** usa la MISMA estrategia de radio progresivo que la búsqueda inicial — loop por `progressiveRadiusSteps`, acumula resultados únicos, rompe al alcanzar `minPlacesTarget` (30). **Para `loadCount=0` (cambio de categoría):** usa todos los `progressiveRadiusSteps` desde 15km→300km, idéntico al path inicial. **Para `loadCount>0` (loadMore subsiguiente):** calcula radio base expandido via `loadMoreDefaultBaseRadius × loadMoreExpansionBase^(loadCount+1)` capped por `maxRadius`, filtra `progressiveRadiusSteps` a pasos ≥ ese radio, agrega un step extra (×2) para categorías sparse. **Sin ubicación:** una sola query sin filtro geográfico. Pre-popula `excludeSet` con placeIds ya vistos para no re-contarlos. `loadCount` (int, clamped 0-20) enviado por clientes, indica cuántas veces se presionó "load more" en la sesión actual del sheet. Clientes mantienen `loadMoreCount` como state local del sheet (reset a 0 al abrir nuevo sheet). **Configurable via Remote Config `coach_config.placeSearch`:** `enableWithoutLocation` (kill switch para búsqueda sin ubicación, default `true`), `minActivitiesForPlaceSearch` (mínimo de actividades en respuesta, default `6`), `defaultRadius` (radio por defecto en metros, default `100000`), `minRadius`/`maxRadius` (límites de radio dinámico entre 2 usuarios, default `3000`/`300000`), `progressiveRadiusSteps` (Array<Number>, default `[15000, 30000, 60000, 120000, 200000, 300000]`): pasos de radio para búsqueda inicial progresiva, `minPlacesTarget` (Number, default `30`): mínimo de lugares antes de expandir radio, `loadMoreDefaultBaseRadius` (Number, default `60000`): radio base fallback para loadMore sin caché, `loadMoreExpansionBase` (Number, default `2`): base de multiplicador exponencial para loadMore, `loadMoreMaxExpansionStep` (Number, default `4`): cap del exponente en expansión de loadMore, `perQueryResults` (Number, default `20`): resultados por query de Google Places API, `maxPlacesIntermediate` (Number, default `60`): cap intermedio de places antes de procesamiento Gemini, `maxOutputTokensBudget` (Number, default `8192`): budget de tokens Gemini para respuestas con places, `purchaseExtraTerms` (String, default `''`): términos extra pipe-separated para detección de intención de compra/regalo en `purchaseGiftPattern`
+56. **Coach Learning System** — Sistema de aprendizaje server-side que personaliza respuestas del coach basándose en interacciones previas. **3 helpers:** `analyzeUserMessage()` extrae temas/sentimiento/estilo via regex (19 categorías de temas con 30-50+ keywords multi-idioma cada una, detección de feedback positivo, clasificación de estilo brief/moderate/detailed), `buildLearningContext()` lee `coachChats/{userId}.learningProfile` y genera contexto personalizado para el system prompt (historial de interacciones, temas frecuentes, preferencia de estilo, calidad de engagement, temas recientes para continuidad), `updateCoachLearning()` actualiza `coachChats/{userId}.learningProfile` + `coachInsights/global` en paralelo via `Promise.all()`. **19 topic categories:** first_date, conversation_tips, profile_help, match_analysis, confidence, icebreakers, date_ideas, activity_places, texting, rejection, red_flags, relationship, appearance, emotional, safety, gift_ideas, love_languages, communication, dating_strategy, general. **Dual topic classification:** keyword-based (gratis, 19 categorías con regex multi-idioma ES/EN/FR/DE/PT) + Gemini classifica en `"topics"` array del JSON response (sin API call extra). **Firestore schema:** per-user en `coachChats/{userId}.learningProfile` (nested object, auto-cleanup por `deleteUserData`), global en `coachInsights/global` (aggregated topic counts). **Configuración:** `coach_config.learningEnabled` (Boolean, default `true`). **Performance:** solo 1 Firestore read extra (parallelizado con user profile via `Promise.all()`), 2 writes extra (parallelizados). **System prompt injection:** `buildLearningContext()` genera texto adaptativo según tier de interacciones (1, <5, <20, 20+), temas top, estilo preferido, ratio de engagement positivo, temas recientes. **⚠️ Los clientes iOS/Android NO necesitan cambios** — todo el aprendizaje es server-side en la CF `dateCoachChat`
+57. **Coach RAG (Retrieval-Augmented Generation)** — Sistema server-side que enriquece las respuestas del coach con conocimiento curado de dating advice. **Arquitectura:** Embedding con `gemini-embedding-001` (768 dimensiones, `outputDimensionality: 768`) + Firestore native vector search (`findNearest()` con distancia COSINE, `distanceResultField: '_distance'` para scores reales). **Colección:** `coachKnowledge` — 256 chunks multilingües (EN:48, ES:37, FR:23, DE:20, PT:23, AR:21, ID:21, JA:21, RU:21, ZH:21) cubriendo 18 categorías (first_date, icebreakers, texting, profile_help, sugar_dynamics, rejection, red_flags, conversation_tips, safety, confidence, relationship, date_ideas, gift_ideas, love_languages, communication, dating_strategy, emotional, match_analysis). **Pipeline:** `retrieveCoachKnowledge(query, apiKey, ragConfig, lang)` se ejecuta en paralelo con history fetch y Google Places fetch. Hardened: validación de query (min 3 chars), truncamiento a `maxQueryLength`, timeout 5s en embedding API, filtrado por `minScore` (similarity = 1 - COSINE distance), deduplicación por categoría (mantiene mayor similitud), truncamiento de chunks a `maxChunkLength`, clamped ranges para todos los parámetros. Embede la query con `taskType: RETRIEVAL_QUERY`, busca top-K*fetchMultiplier docs, filtra por idioma (preferencia: idioma del usuario → inglés → cualquiera), filtra por minScore, selecciona top-K, inyecta con `promptHeader` configurable en el system prompt antes de PRECISION GUIDELINES. **Configuración completa (10 campos):** `coach_config.rag` sub-object con `enabled` (Boolean, default `true`), `topK` (Number, default `3`, range 1-10), `minScore` (Number, default `0.3`, range 0-1), `fetchMultiplier` (Number, default `2`, range 1-5), `maxQueryLength` (Number, default `500`), `maxChunkLength` (Number, default `1500`), `embeddingModel` (String, default `'gemini-embedding-001'`), `dimensions` (Number, default `768`), `collection` (String, default `'coachKnowledge'`), `promptHeader` (String, configurable). Kill switch: `rag.enabled=false`. **Indexing:** Script `scripts/index-coach-knowledge.js` lee JSONs de `scripts/coach-knowledge/`, genera embeddings con `gemini-embedding-001`, almacena con `FieldValue.vector()`. Soporta `--clean` y `--dry-run`. **Índice Firestore:** Vector index en `coachKnowledge.embedding` (768 dims, flat, COSINE). **Performance:** ~100-200ms extra (embedding API call + vector search), ejecutado en paralelo con operaciones existentes. **Fallback:** Si la API de embedding falla, timeout 5s, query inválida, o RAG deshabilitado → retorna string vacío (coach funciona sin knowledge base). **⚠️ Los clientes iOS/Android NO necesitan cambios** — todo el RAG es server-side en la CF `dateCoachChat`
+58. **Coach Intent Extraction Phase (server-side)** — Antes de buscar lugares, la CF ejecuta una llamada ligera a Gemini (`AI_MODEL_NAME`, `maxOutputTokens: 256`, `temperature: 0.1`) que extrae del mensaje del usuario: `placeType` (tipo corto para Google search), `placeQueries` (2-3 queries localizadas para Google Places API), `locationMention` (ciudad/área mencionada), `mood` (vibe deseada), `googleCategory` (categoría canónica más cercana). Solo se ejecuta cuando `isUserPlaceSearch=true`. Las queries extraídas reemplazan búsquedas genéricas en inglés, produciendo resultados mucho más relevantes. Cuando `locationMention` está presente, la ubicación se geocodifica y se usa como centro de búsqueda (`locationOverridden=true`). `searchIncludedType` (Google Places `includedType` filter) usa `googleCategory` extraído del intent siempre — incluso con `locationOverridden=true` (antes se omitía para diversidad, causando que "restaurantes en Temuco" no filtrara por restaurant). Cuando `locationOverridden=true` y existen `extractedIntent.placeQueries`, se usan esas queries (hasta 3) + query canónica de categoría para cobertura — solo si no hay queries específicas se hace fallback a categorías random diversas del `categoryQueryMap`. **CATEGORY_QUERY_MAP (configurable via RC `places_search_config.categoryQueryMap`):** Mapeo de 14 categorías canónicas a queries bilingües para Google Places API. Usado en `fetchCoachPlaces()`, `getDateSuggestions` y `searchPlaces` para category filters y búsquedas diversas. Hardcoded fallback en `DEFAULT_CATEGORY_QUERY_MAP`, overrideable via Remote Config sin redeploy. Helper: `getCategoryQueryMap(config)`. Ejemplo: `bar → 'bar pub gastropub cervecería cocktail lounge taberna'`, `night_club → 'nightclub discoteca club nocturno disco lounge dance club'`
+59. **Coach Reverse Geocoding + City Chip** — Función `reverseGeocode(lat, lng, userId)` con caché en memoria por userId. Cuando el usuario tiene ubicación, no es off-topic, no es loadMore, y la respuesta no incluye actividades, se agrega un suggestion chip localizado `📍 Lugares en {ciudad}` (10 idiomas via `PLACES_CHIP_I18N`). Solo se agrega si no existe ya un chip similar
+60. **Coach Activity Supplementation** — Si Gemini genera menos de `maxActivities` (30) actividades, la CF complementa con venues directos de Google Places (`transformPlaceToSuggestion`). Re-ordena todo junto por popularity score. Esto garantiza que el sheet de actividades tenga contenido rico incluso si Gemini retorna pocas sugerencias
+61. **Coach Popularity Scoring** — `score = rating × 0.4 + log₁₀(1 + reviewCount) × 0.6`. Logarítmica para evitar que outliers dominen. Se aplica tanto a sugerencias de Gemini como a complementos de Google Places. Los venues se ordenan por score descendente antes de retornar al cliente
+62. **Coach dominantCategory Two-Tier** — (1) **Intent-based** (prioridad): usa `extractedIntent.googleCategory` si `isUserPlaceSearch=true` y categoría es específica (no fallback `restaurant`). (2) **Statistical** (fallback): calcula distribución de categorías; solo setea si categoría top ≥30% del total. En loadMore, threshold es ≥40%. Retornado al cliente como `dominantCategory` en response. Los clientes guardan esto en `lastDominantCategory` (`StateFlow` Android / `@Published` iOS) y lo envían como `category` paramétrico en `loadMoreActivities`
+63. **Coach Places Cache** — Subcolección `coachChats/{userId}/placesCache/latest` almacena resultados de Google Places con TTL 15min. Usado por loadMore como fast-path (evita re-queries a Google Places). Non-critical — fallos en cache no afectan la respuesta
+64. **Moderation RAG (Retrieval-Augmented Generation)** — Sistema server-side que enriquece la moderación de contenido con conocimiento curado de reglas y patrones. **Arquitectura:** Embedding con `gemini-embedding-001` (768 dimensiones) + Firestore native vector search (`findNearest()` con distancia COSINE). **Colección:** `moderationKnowledge` — 73 chunks multilingües (EN:31, ES:17, FR:4, DE:3, PT:3, AR:3, JA:3, RU:3, ZH:3, ID:3) cubriendo 13 categorías (harassment, sexual, spam, threats, hate_speech, scam, contact_info, personal_info, evasion_tactics, payment_solicitation, context_guidelines, bio_moderation, classification_guide). **Pipeline:** `retrieveModerationKnowledge(textToModerate, apiKey, lang, moderationType, ragConfig = {})` — valida query (min 3 chars), lee config desde `ragConfig` con fallback a constantes `MOD_RAG_*`, valida bounds (topK 1-10, minScore 0-1, fetchMultiplier 1-5), tiene kill switch `ragConfig.enabled`, embede con `taskType: RETRIEVAL_QUERY`, busca top-K×fetchMultiplier docs en `moderationKnowledge`, convierte distancia COSINE a similaridad (1-distance), filtra por minScore, ranking por idioma (userLang→en→other), smart dedup por categoría (siempre incluye: context_guidelines, classification_guide, bio_moderation, evasion_tactics, payment_solicitation), selecciona top-K. **Configuración:** Leída de Remote Config key `moderation_config` via `getModerationConfig()` (caché en memoria 5 minutos). Defaults: `{rag: {enabled: true, topK: 4, minScore: 0.25, fetchMultiplier: 3, collection: 'moderationKnowledge'}}`. **Constantes fallback:** `MOD_RAG_COLLECTION='moderationKnowledge'`, `MOD_RAG_TOP_K=4`, `MOD_RAG_MIN_SCORE=0.25`, `MOD_RAG_FETCH_MULTIPLIER=3`. Comparte constantes RAG con Coach: `RAG_EMBEDDING_MODEL='gemini-embedding-001'`, `RAG_DIMENSIONS=768`, `RAG_MAX_QUERY_LENGTH=500`, `RAG_MAX_CHUNK_LENGTH=1500`. **Consumidores:** (1) `moderateMessage` CF callable — llama `getModerationConfig()` y pasa `modConfig.rag` a `retrieveModerationKnowledge()`, enriquece prompts de moderación de bio y mensaje con contexto RAG, (2) `autoModerateMessage` trigger — lee `deviceLanguage` del perfil del sender en Firestore (antes pasaba `null`), ejecuta `getModerationConfig()` en paralelo con la lectura del sender, inyecta contexto RAG con idioma y config correctos. **Indexing:** Script `scripts/index-moderation-knowledge.js` lee JSONs de `scripts/moderation-knowledge/` (moderation-rules.json + sugar-moderation-context.json), genera embeddings, almacena con `FieldValue.vector()`. Soporta `--clean` y `--dry-run`. **Índice Firestore:** Vector index en `moderationKnowledge.embedding` (768 dims, flat, COSINE). **Fallback:** Si embedding API falla, timeout 5s, query inválida, o `rag.enabled=false` → retorna string vacío (moderación funciona sin knowledge base). **⚠️ Los clientes iOS/Android NO necesitan cambios** — todo el RAG de moderación es server-side
+65. **autoModerateMessage — Pipeline Completo** — Trigger `onDocumentCreated` en `matches/{matchId}/messages/{messageId}` (256MiB, 30s timeout). **Pipeline multi-capa:** (1) **BLACKLIST** (~100+ terms EN/ES/PT/FR/DE con variantes de símbolos como `$ex`, `p0rn`, `fvck`, `pu+a`) + `SEXUAL_BLACKLIST_TERMS` subset para categorización, (2) **SHA-256 Cache** — `getMessageHash()` genera hash del mensaje normalizado (lowercase, trimmed, stripped diacritics), busca en `moderationCache` (TTL 1h, CACHE_VERSION=3), (3) **Quick Filters** — `applyQuickFilters()`: mensajes cortos (≤5 chars) → auto-approve, blacklist check, URL detection (incluye `t.me/`, `wa.me/`), phone regex, email regex, caracteres repetitivos (>10 del mismo char), (4) **RAG Context** — lee `deviceLanguage` del perfil del sender en Firestore + `getModerationConfig()` en paralelo, pasa idioma y config a `retrieveModerationKnowledge()`, (5) **Gemini AI** — `gemini-2.5-flash-lite` con prompt estructurado (JSON response: approved, category, severity, confidence, reason), (6) **Cache Write** — resultado guardado en `moderationCache`, (7) **Message Marking** — si flaggeado, marca mensaje con `{moderated: true, moderationResult: {...}}`, (8) **Auto-Report** — si severity `"high"`, genera documento en `reports` con `{reporterId: 'system_auto_moderation', status: 'pending', action: 'AUTO_FLAGGED'}`, (9) **Audit Trail** — escribe a `moderatedMessages` para todo mensaje flaggeado. **⚠️ Los mensajes tipo `ephemeral_photo` y `place` se ignoran** — solo modera `type: 'text'` o mensajes sin `type` field
+66. **CoachInsightsBanner + `getRealtimeCoachTips`** — Banner de insights de coaching en tiempo real dentro del chat. **CF:** `getRealtimeCoachTips({matchId, userLanguage?})` — analiza últimos 20 mensajes del chat via Gemini `gemini-2.5-flash-lite`, requiere mínimo 3 mensajes. Retorna `{chemistryScore: 0-100, chemistryTrend: "rising"|"falling"|"stable", engagementLevel: "high"|"medium"|"low", tips: [{text, type, icon}], preDateDetected: boolean, suggestedAction?: {type, text}}`. **Android:** `CoachInsightsBanner.kt` composable en `feature/chat/ui/components/`, invocado desde `ChatView.kt`. `ChatViewModel.kt` expone `coachTips`, `coachChemistryScore`, `isLoadingCoachTips` como StateFlows. `fetchRealtimeCoachTips()` llamado al cargar el chat (después de mensajes). **iOS:** `CoachInsightsBanner.swift` en `ui/chat/`, invocado desde `ChatView.swift`. `ChatViewModel.swift` expone `@Published coachTips`, `coachChemistryScore`, `isLoadingCoachTips`. **UI:** banner colapsable con score de química (gradiente púrpura→dorado), tendencia, nivel de engagement, tips accionables con íconos, y acción sugerida. Se oculta si no hay tips. **⚠️ Solo se muestra cuando hay ≥3 mensajes en el chat** — idéntico iOS/Android
+67. **ChatView Place Suggestions — Progressive Radius (homologado con Coach IA)** — `getDateSuggestions` y `searchPlaces` usan la misma estrategia de radio progresivo que `fetchCoachPlaces` en `dateCoachChat`. **Búsqueda inicial (step=0):** loop progresivo por `progressiveRadiusSteps` (default `[15000, 30000, 60000, 120000, 200000, 300000]`), filtra pasos menores que `computedMinR` (mitad distancia entre usuarios + `minRadius`), ejecuta queries paralelas en cada paso y acumula resultados — rompe al alcanzar `minPlacesTarget` (default 30). **LoadMore (step>0):** expansión exponencial `radio = max(computedMinR, loadMoreDefaultBaseRadius) × loadMoreExpansionBase^(min(step, loadMoreMaxExpansionStep)+1)`, capped por `maxRadius`. Ej: base 60km, step 1→120km, step 2→240km, step 3→300km (capped). **`hasMore`** = `lastRadiusUsed < maxRadius`. **`computedMinR`** = `haversineKm(user1, user2) / 2 * 1000 + minRadius` — garantiza que el radio cubra ambos usuarios desde el punto medio. **Configurable via RC `places_search_config`:** `progressiveRadiusSteps`, `minPlacesTarget`, `minRadius`, `maxRadius`, `loadMoreDefaultBaseRadius`, `loadMoreExpansionBase`, `loadMoreMaxExpansionStep` — todos con defaults y validación. **Diferencia vs Coach loadMore:** ChatView loadMore sigue usando single-shot exponencial (`baseRadius × expansionBase^(step+1)`), mientras que Coach IA `dateCoachChat` loadMore ahora usa progressive radius loop (misma estrategia que búsqueda inicial — loop por `progressiveRadiusSteps` acumulando resultados hasta `minPlacesTarget`). ChatView NO usa caché server-side (`placesCache`) — el radio base para loadMore es configurable via RC (`loadMoreDefaultBaseRadius`), no leído de caché. **⚠️ `radiusSteps` original se mantiene para backward-compatibility del path de pageToken**
 
 ### Comandos de auditoría rápida
 
@@ -941,6 +1129,8 @@ firebase deploy --only storage
 | `scripts/seed-profiles.js` | Crear perfiles de prueba en Firestore |
 | `scripts/seed-run.js` | Runner para seed scripts |
 | `scripts/test-master.js` | Test de integración |
+| `scripts/index-coach-knowledge.js` | Indexar knowledge base del Coach RAG (`coachKnowledge`, 256 chunks). Soporta `--clean` y `--dry-run` |
+| `scripts/index-moderation-knowledge.js` | Indexar knowledge base de Moderation RAG (`moderationKnowledge`, 73 chunks). Soporta `--clean` y `--dry-run` |
 
 ### MCP Server (`mcp-blacksugar/`)
 
@@ -965,7 +1155,7 @@ Servidor MCP registrado en `.vscode/mcp.json` para herramientas de auditoría:
 - **SDK:** Firebase Functions v2 (Gen 2)
 - **Región:** `us-central1`
 - **AI Model:** `gemini-2.5-flash` (secret `GEMINI_API_KEY`)
-- **Total:** 35 callable + 7 scheduled + 6 triggers + 1 alias (ver sección "Cloud Functions" arriba)
+- **Total:** 38 callable + 8 scheduled + 6 triggers + 1 alias (ver sección "Cloud Functions" arriba)
 
 **Dependencias functions (`functions/package.json`):**
 

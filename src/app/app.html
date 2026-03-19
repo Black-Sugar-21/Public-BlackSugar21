@@ -3,9 +3,9 @@
 
   <!-- Age Gate Overlay -->
   <div class="age-gate" *ngIf="!ageVerified() && !isLegalRoute()">
-    <div class="age-gate-content glass-panel">
+    <div class="age-gate-content">
       <div class="logo-large">
-        <img src="logo-21.png" alt="Black Sugar 21" width="140" height="140" />
+        <img src="logo-21.png" alt="Black Sugar 21" width="160" height="160" />
       </div>
       <h2>{{ t('age.title') }}</h2>
       <p class="warning-text">{{ translateWithParams('age.exclusive', { age: legalAge() }) }}</p>
@@ -111,6 +111,11 @@
           <div class="feature-icon">✨</div>
           <h3>{{ t('features.connections.title') }}</h3>
           <p>{{ t('features.connections.desc') }}</p>
+        </div>
+        <div class="feature-card glass-panel animate-in delay-4 feature-card--coach">
+          <div class="feature-icon">🧠</div>
+          <h3>{{ t('features.coach.title') }}</h3>
+          <p>{{ t('features.coach.desc') }}</p>
         </div>
       </div>
     </section>

@@ -94,6 +94,14 @@ export class TranslationService {
       es: 'Conecta con personas que saben lo que quieren.',
       en: 'Connect with people who know what they want.'
     },
+    'features.coach.title': {
+      es: 'Tu coach personal',
+      en: 'Your personal coach'
+    },
+    'features.coach.desc': {
+      es: 'Un coach de IA que te guía con consejos, ideas de citas y sugerencias personalizadas.',
+      en: 'An AI coach that guides you with advice, date ideas, and personalized suggestions.'
+    },
 
     // Terms Section
     'terms.title': {

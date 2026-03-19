@@ -577,9 +577,9 @@ exports.dateCoachChat = onCall(
       if (loadMoreActivities) {
         // Fast path: skip profile, match, learning, history reads — only fetch places + call Gemini
         const lmUserData = creditDoc.exists ? creditDoc.data() : {};
-        const lmLat = lmUserData.latitude;
-        const lmLng = lmUserData.longitude;
-        const lmHasLocation = !!(lmLat && lmLng);
+        let lmLat = lmUserData.latitude;
+        let lmLng = lmUserData.longitude;
+        let lmHasLocation = !!(lmLat && lmLng);
 
         // Temporal context (lightweight)
         const lmOffset = typeof lmUserData.timezoneOffset === 'number' ? lmUserData.timezoneOffset : 0;
@@ -655,25 +655,23 @@ exports.dateCoachChat = onCall(
           logger.warn(`[dateCoachChat] Cache read failed (continuing with fresh fetch): ${cacheReadErr.message}`);
         } // end cache block (skipped when safeLoadCount === 0)
 
-        // Fetch Google Places (works with or without location)
+        // Fetch Google Places with progressive radius expansion
+        // For category searches, progressively expand radius until minTarget results found
         let lmPlaces = [];
         const lmPsConfig = config.placeSearch || {};
         const placesKey = process.env.GOOGLE_PLACES_API_KEY;
         if (placesKey) {
           try {
-            // Progressive radius: double from initial search radius each loadMore step
-            // e.g. if initial found results at 15km → loadMore 0: 30km, 1: 60km, 2: 120km, 3: 240km, 4+: 300km (capped)
             const lmMaxR = lmPsConfig.maxRadius || 300000;
             const lmExpBase = lmPsConfig.loadMoreExpansionBase || 2;
             const lmMaxStep = lmPsConfig.loadMoreMaxExpansionStep || 4;
-            const lmSearchRadius = Math.min(lmMaxR, lmBaseRadius * Math.pow(lmExpBase, Math.min(safeLoadCount, lmMaxStep) + 1));
+            const lmMinTarget = lmPsConfig.minPlacesTarget || 30;
+            const lmMaxIntermediate = lmPsConfig.maxPlacesIntermediate || 60;
             const center = lmHasLocation ? {latitude: lmLat, longitude: lmLng} : null;
             const lmCat = requestCategory && categoryQueryMap[requestCategory] ? requestCategory : null;
-            // Determine includedType for category-specific loadMore searches
             const lmIncludedType = lmCat && CATEGORY_TO_PLACES_TYPE[lmCat] ? [CATEGORY_TO_PLACES_TYPE[lmCat]] : null;
             let lmQueries;
             if (lmCat) {
-              // Run 3 queries for category-specific search for more diverse results
               const canonicalQ = categoryQueryMap[lmCat];
               const terms = canonicalQ.split(' ').filter((t) => t.length > 2);
               const subQ = terms.length > 3
@@ -685,30 +683,68 @@ exports.dateCoachChat = onCall(
             }
             const perQ = lmPsConfig.perQueryResults || 20;
             const lmUseRestriction = lmHasLocation && center && !lmLocationOverridden;
-            logger.info(`[dateCoachChat] loadMore Places: ${lmQueries.length} queries, radius=${lmSearchRadius}m, type=${lmIncludedType ? lmIncludedType[0] : 'any'}, baseRadius=${lmBaseRadius}m`);
-            const res = await Promise.all(
-              lmQueries.map((q) => placesTextSearch(q, center, lmSearchRadius, lang, null, perQ, lmUseRestriction, lmIncludedType).catch(() => ({places: []}))),
-            );
-            logger.info(`[dateCoachChat] loadMore radius: ${lmSearchRadius}m (base=${lmBaseRadius}m, loadCount=${safeLoadCount})`);
-            const seen = new Set();
+
+            // Build progressive radius steps based on context
+            const progressiveSteps = Array.isArray(lmPsConfig.progressiveRadiusSteps) && lmPsConfig.progressiveRadiusSteps.length > 0
+              ? lmPsConfig.progressiveRadiusSteps : [15000, 30000, 60000, 120000, 200000, 300000];
+            let effectiveSteps;
+            if (!lmHasLocation) {
+              // No location: single query without geographic filter
+              effectiveSteps = [null];
+            } else if (safeLoadCount === 0) {
+              // Category switch (loadCount=0): start fresh from smallest radius for best local results
+              effectiveSteps = progressiveSteps.map((s) => Math.min(lmMaxR, s));
+            } else {
+              // Progressive loadMore (loadCount>0): start from expanded base radius
+              const startRadius = Math.min(lmMaxR, lmBaseRadius * Math.pow(lmExpBase, Math.min(safeLoadCount, lmMaxStep) + 1));
+              const stepsFromStart = progressiveSteps.filter((s) => s >= startRadius).map((s) => Math.min(lmMaxR, s));
+              effectiveSteps = stepsFromStart.length > 0 ? stepsFromStart : [Math.min(lmMaxR, startRadius)];
+              // Add one extra expanded step for sparse categories (zoo, aquarium, bowling)
+              const maxStepVal = Math.max(...effectiveSteps);
+              if (maxStepVal < lmMaxR) effectiveSteps.push(Math.min(lmMaxR, maxStepVal * 2));
+            }
+
+            // Pre-populate unique IDs with excluded places to avoid counting them toward target
             const excludeSet = Array.isArray(rawExcludePlaceIds) ? new Set(rawExcludePlaceIds.filter((id) => typeof id === 'string')) : new Set();
-            const lmMaxIntermediate = lmPsConfig.maxPlacesIntermediate || 60;
-            lmPlaces = res.flatMap((r) => r.places).filter((p) => p.id && !seen.has(p.id) && !excludeSet.has(p.id) && seen.add(p.id)).slice(0, lmMaxIntermediate)
-              .map((p) => {
-                const photoArr = p.photos || [];
-                return {
-                  name: p.displayName?.text || '', address: p.formattedAddress || '',
-                  rating: p.rating || 0, reviewCount: p.userRatingCount || 0, photoCount: photoArr.length,
-                  latitude: p.location?.latitude || 0, longitude: p.location?.longitude || 0,
-                  placeId: p.id || '', website: p.websiteUri || null, googleMapsUrl: p.googleMapsUri || null,
-                  category: p.primaryType || null, description: p.editorialSummary?.text || null,
-                  priceLevel: googlePriceLevelToString(p.priceLevel) || null,
-                  photos: photoArr.slice(0, 3).map((ph) => ({
-                    url: `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=${lmPsConfig.photoMaxHeightPx || 400}&key=${placesKey}`,
-                    width: ph.widthPx || 400, height: ph.heightPx || 300,
-                  })),
-                };
+            const allUniqueIds = new Set(excludeSet);
+            let allRawPlaces = [];
+            let stepsUsed = 0;
+
+            logger.info(`[dateCoachChat] loadMore progressive: ${lmQueries.length} queries, ${effectiveSteps.length} steps, type=${lmIncludedType ? lmIncludedType[0] : 'any'}, cat=${lmCat || 'any'}, target=${lmMinTarget}`);
+
+            for (const stepRadius of effectiveSteps) {
+              stepsUsed++;
+              const radiusMeters = stepRadius ? Math.min(lmMaxR, stepRadius) : null;
+              const res = await Promise.all(
+                lmQueries.map((q) => placesTextSearch(q, center, radiusMeters, lang, null, perQ, lmUseRestriction, lmIncludedType).catch(() => ({places: []}))),
+              );
+              const newPlaces = res.flatMap((r) => r.places).filter((p) => {
+                if (!p.id || allUniqueIds.has(p.id)) return false;
+                allUniqueIds.add(p.id);
+                return true;
               });
+              allRawPlaces = [...allRawPlaces, ...newPlaces];
+              logger.info(`[dateCoachChat] loadMore step ${stepsUsed}/${effectiveSteps.length}: ${radiusMeters || 'no-radius'}m → +${newPlaces.length} new (total: ${allRawPlaces.length}/${lmMinTarget})`);
+              if (allRawPlaces.length >= lmMinTarget) break;
+            }
+
+            logger.info(`[dateCoachChat] loadMore progressive done: ${allRawPlaces.length} places in ${stepsUsed}/${effectiveSteps.length} steps, cat=${lmCat || 'any'}`);
+
+            lmPlaces = allRawPlaces.slice(0, lmMaxIntermediate).map((p) => {
+              const photoArr = p.photos || [];
+              return {
+                name: p.displayName?.text || '', address: p.formattedAddress || '',
+                rating: p.rating || 0, reviewCount: p.userRatingCount || 0, photoCount: photoArr.length,
+                latitude: p.location?.latitude || 0, longitude: p.location?.longitude || 0,
+                placeId: p.id || '', website: p.websiteUri || null, googleMapsUrl: p.googleMapsUri || null,
+                category: p.primaryType || null, description: p.editorialSummary?.text || null,
+                priceLevel: googlePriceLevelToString(p.priceLevel) || null,
+                photos: photoArr.slice(0, 3).map((ph) => ({
+                  url: `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=${lmPsConfig.photoMaxHeightPx || 400}&key=${placesKey}`,
+                  width: ph.widthPx || 400, height: ph.heightPx || 300,
+                })),
+              };
+            });
           } catch (err) {
             logger.warn(`[dateCoachChat] loadMore places fetch failed: ${err.message}`);
           }
