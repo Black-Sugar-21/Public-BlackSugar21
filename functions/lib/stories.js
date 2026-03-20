@@ -4,6 +4,8 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
+const REVIEWER_UID = 'g4Zbr8tEguMcpZonw72xM5MGse32';
+
 exports.createStory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
@@ -14,7 +16,10 @@ exports.createStory = onCall(
 
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
-    const expiresAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000);
+    const isReviewerUser = senderId === REVIEWER_UID;
+    const expiresAt = isReviewerUser
+      ? admin.firestore.Timestamp.fromDate(new Date('2099-12-31T23:59:59Z'))
+      : admin.firestore.Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000);
 
     const isPersonal = !matchId;
     const storyData = {
@@ -26,6 +31,11 @@ exports.createStory = onCall(
       isExpired: false,
       isPersonal,
     };
+
+    if (isReviewerUser) {
+      storyData.neverExpires = true;
+      storyData.isReviewer = true;
+    }
 
     if (matchId) storyData.matchId = matchId;
     if (Array.isArray(matchParticipants) && matchParticipants.length > 0) {
