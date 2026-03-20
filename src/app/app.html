@@ -150,6 +150,36 @@
         </div>
 
         <div class="coach-section-visual animate-in delay-2">
+          <div class="dual-phones">
+
+          <!-- Coach IA Phone -->
+          <div class="coach-phone-mockup coach-phone-mockup--secondary">
+            <div class="coach-sparkle-top">✦</div>
+            <div class="coach-phone-screen">
+              <div class="coach-phone-header">
+                <span class="coach-phone-icon">✦</span>
+                <span class="coach-phone-title">{{ t('features.coach.title') }}</span>
+              </div>
+              <div class="coach-chat-bubble coach-chat-user">
+                <span>📍 {{ getCurrentLanguage() === 'es' ? 'Lugares en Concepción' : 'Places in Santiago' }}</span>
+              </div>
+              <div class="coach-chat-bubble coach-chat-coach">
+                <p>{{ getCurrentLanguage() === 'es'
+                  ? '¡Hola! He encontrado 15 lugares perfectos para tu cita — cafeterías, restaurantes y parques con las mejores reseñas cerca de ti.'
+                  : 'Hi! I found 15 perfect spots for your date — cafés, restaurants, and parks with the best reviews near you.' }}</p>
+                <div class="coach-suggestion-chips">
+                  <span class="coach-chip">💡 {{ getCurrentLanguage() === 'es' ? 'Ideas para una primera cita' : 'First date ideas' }}</span>
+                  <span class="coach-chip">💡 {{ getCurrentLanguage() === 'es' ? 'Cómo mantener la conversación' : 'Keep the conversation going' }}</span>
+                  <span class="coach-chip">💡 {{ getCurrentLanguage() === 'es' ? 'Mensaje para invitar a salir' : 'Ask them out message' }}</span>
+                </div>
+              </div>
+              <div class="coach-phone-footer">
+                <span class="coach-credits-badge">{{ getCurrentLanguage() === 'es' ? '5 preguntas restantes hoy' : '5 questions remaining today' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat + Chemistry Phone -->
           <div class="chat-phone">
             <!-- Status Bar -->
             <div class="chat-status-bar">
@@ -220,6 +250,8 @@
               <div class="chat-input-send">↑</div>
             </div>
           </div>
+
+          </div><!-- /dual-phones -->
         </div>
       </div>
     </section>
