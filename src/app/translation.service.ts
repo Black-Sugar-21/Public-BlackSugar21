@@ -57,8 +57,8 @@ export class TranslationService {
 
     // Hero Section
     'hero.title': {
-      es: 'Tu guía personal de citas con IA',
-      en: 'Your Personal AI Dating Guide'
+      es: 'Tu historia de amor tiene un nuevo aliado.',
+      en: 'Your Love Story Just Found Its Ally.'
     },
     'hero.tagline': {
       es: 'Consejos personalizados, ideas de citas y lugares reales — todo desde tu perfil.',
@@ -109,8 +109,8 @@ export class TranslationService {
       en: 'AI DATING COACH'
     },
     'coach.section.title': {
-      es: 'Tu guía personal de citas con IA',
-      en: 'Your Personal AI Dating Guide'
+      es: 'Tu historia de amor tiene un nuevo aliado.',
+      en: 'Your Love Story Just Found Its Ally.'
     },
     'coach.section.subtitle': {
       es: 'Accede instantáneamente desde tu perfil',
