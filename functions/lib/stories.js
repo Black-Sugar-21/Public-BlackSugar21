@@ -119,6 +119,7 @@ exports.getBatchStoryStatus = onCall(
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const storiesStatus = {};
+    const isReviewerUser = request.auth.uid === REVIEWER_UID;
 
     // Inicializar todos como false
     userIds.forEach((uid) => { storiesStatus[uid] = false; });
@@ -136,14 +137,17 @@ exports.getBatchStoryStatus = onCall(
           .where('expiresAt', '>', now)
           .get();
         snap.docs.forEach((doc) => {
-          storiesStatus[doc.data().senderId] = true;
+          const data = doc.data();
+          // Reviewer stories solo visibles para el reviewer
+          if (data.isReviewer === true && !isReviewerUser) return;
+          storiesStatus[data.senderId] = true;
         });
       } catch (e) {
         logger.warn(`[getBatchStoryStatus] Error for chunk: ${e.message}`);
       }
     }
 
-    logger.info(`[getBatchStoryStatus] Checked ${userIds.length} users`);
+    logger.info(`[getBatchStoryStatus] Checked ${userIds.length} users, reviewer=${isReviewerUser}`);
     return {storiesStatus};
   },
 );
@@ -166,6 +170,7 @@ exports.getBatchPersonalStories = onCall(
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const stories = {};
+    const isReviewerUser = request.auth.uid === REVIEWER_UID;
 
     userIds.forEach((uid) => { stories[uid] = []; });
 
@@ -186,6 +191,8 @@ exports.getBatchPersonalStories = onCall(
           .get();
         snap.docs.forEach((doc) => {
           const data = doc.data();
+          // Reviewer stories solo visibles para el reviewer
+          if (data.isReviewer === true && !isReviewerUser) return;
           const uid = data.senderId;
           if (stories[uid]) {
             // Convertir Firestore Timestamps a ISO strings para parseo correcto en Android/iOS

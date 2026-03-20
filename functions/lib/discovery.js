@@ -185,54 +185,66 @@ exports.getCompatibleProfileIds = onCall(
           // Excluir visibilidad reducida (usuarios reportados)
           if (candidate.visibilityReduced === true) continue;
 
+          // Reviewer: test/reviewer profiles bypass ALL content filters
+          // (userType, orientation, age, distance) so they always appear
+          const skipContentFilters = isReviewerUser && isReviewerProfile;
+
           // ═══ FILTRO userType ═══
           // Sugar Daddy y Sugar Mommy no ven su mismo tipo.
           // Sugar Baby puede ver cualquier tipo (incluyendo otro Sugar Baby).
-          const candidateUserType = (candidate.userType || '').toUpperCase();
-          if (
-            (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
-            candidateUserType === currentUserType
-          ) continue;
+          if (!skipContentFilters) {
+            const candidateUserType = (candidate.userType || '').toUpperCase();
+            if (
+              (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
+              candidateUserType === currentUserType
+            ) continue;
+          }
 
           // ═══ FILTRO gender + orientation ═══
-          const candidateMale = candidate.male === true;
-          const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
+          if (!skipContentFilters) {
+            const candidateMale = candidate.male === true;
+            const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
 
-          if (currentUserOrientation === 'both') {
-            // orientation="both" solo ve candidatos que también quieren "both"
-            if (candidateOrientation !== 'both') continue;
-          } else if (currentUserOrientation === 'men') {
-            // Solo ver hombres
-            if (!candidateMale) continue;
-            // Cross-check: el candidato debe querer mi género
-            if (currentUserMale && candidateOrientation === 'women') continue;
-            if (!currentUserMale && candidateOrientation === 'men') continue;
-          } else if (currentUserOrientation === 'women') {
-            // Solo ver mujeres
-            if (candidateMale) continue;
-            // Cross-check: el candidato debe querer mi género
-            if (currentUserMale && candidateOrientation === 'women') continue;
-            if (!currentUserMale && candidateOrientation === 'men') continue;
+            if (currentUserOrientation === 'both') {
+              // orientation="both" solo ve candidatos que también quieren "both"
+              if (candidateOrientation !== 'both') continue;
+            } else if (currentUserOrientation === 'men') {
+              // Solo ver hombres
+              if (!candidateMale) continue;
+              // Cross-check: el candidato debe querer mi género
+              if (currentUserMale && candidateOrientation === 'women') continue;
+              if (!currentUserMale && candidateOrientation === 'men') continue;
+            } else if (currentUserOrientation === 'women') {
+              // Solo ver mujeres
+              if (candidateMale) continue;
+              // Cross-check: el candidato debe querer mi género
+              if (currentUserMale && candidateOrientation === 'women') continue;
+              if (!currentUserMale && candidateOrientation === 'men') continue;
+            }
           }
 
           // Filtrar por rango de edad del usuario actual → edad del candidato
-          const candidateAge = calcAge(candidate.birthDate);
-          if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+          if (!skipContentFilters) {
+            const candidateAge = calcAge(candidate.birthDate);
+            if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
 
-          // Filtro bidireccional de edad: verificar que la edad del usuario actual
-          // esté dentro del rango de búsqueda del candidato
-          if (currentUserAge > 0) {
-            const candidateMinAge = candidate.minAge || 18;
-            const candidateMaxAge = candidate.maxAge || 99;
-            if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+            // Filtro bidireccional de edad: verificar que la edad del usuario actual
+            // esté dentro del rango de búsqueda del candidato
+            if (currentUserAge > 0) {
+              const candidateMinAge = candidate.minAge || 18;
+              const candidateMaxAge = candidate.maxAge || 99;
+              if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+            }
           }
 
           // Verificar distancia exacta con Haversine (geohash es aproximado)
-          const candidateLat = candidate.latitude;
-          const candidateLon = candidate.longitude;
-          if (candidateLat != null && candidateLon != null) {
-            const distKm = haversineDistanceKm(userLat, userLon, candidateLat, candidateLon);
-            if (distKm > maxDistanceKm) continue;
+          if (!skipContentFilters) {
+            const candidateLat = candidate.latitude;
+            const candidateLon = candidate.longitude;
+            if (candidateLat != null && candidateLon != null) {
+              const distKm = haversineDistanceKm(userLat, userLon, candidateLat, candidateLon);
+              if (distKm > maxDistanceKm) continue;
+            }
           }
 
           compatibleIds.push(doc.id);
@@ -277,37 +289,46 @@ exports.getCompatibleProfileIds = onCall(
         const candidateBlockedArray = candidate.blocked;
         if (Array.isArray(candidateBlockedArray) && candidateBlockedArray.includes(currentUserId)) continue;
 
+        // Reviewer: test/reviewer profiles bypass ALL content filters
+        const skipContentFilters = isReviewerUser && isReviewerProfile;
+
         // ═══ FILTRO userType (fallback) ═══
-        const candidateUserType = (candidate.userType || '').toUpperCase();
-        if (
-          (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
-          candidateUserType === currentUserType
-        ) continue;
-
-        // ═══ FILTRO gender + orientation (fallback) ═══
-        const candidateMale = candidate.male === true;
-        const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
-
-        if (currentUserOrientation === 'both') {
-          if (candidateOrientation !== 'both') continue;
-        } else if (currentUserOrientation === 'men') {
-          if (!candidateMale) continue;
-          if (currentUserMale && candidateOrientation === 'women') continue;
-          if (!currentUserMale && candidateOrientation === 'men') continue;
-        } else if (currentUserOrientation === 'women') {
-          if (candidateMale) continue;
-          if (currentUserMale && candidateOrientation === 'women') continue;
-          if (!currentUserMale && candidateOrientation === 'men') continue;
+        if (!skipContentFilters) {
+          const candidateUserType = (candidate.userType || '').toUpperCase();
+          if (
+            (currentUserType === 'SUGAR_DADDY' || currentUserType === 'SUGAR_MOMMY') &&
+            candidateUserType === currentUserType
+          ) continue;
         }
 
-        const candidateAge = calcAge(candidate.birthDate);
-        if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+        // ═══ FILTRO gender + orientation (fallback) ═══
+        if (!skipContentFilters) {
+          const candidateMale = candidate.male === true;
+          const candidateOrientation = (candidate.orientation || 'both').toLowerCase();
 
-        // Filtro bidireccional de edad
-        if (currentUserAge > 0) {
-          const candidateMinAge = candidate.minAge || 18;
-          const candidateMaxAge = candidate.maxAge || 99;
-          if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+          if (currentUserOrientation === 'both') {
+            if (candidateOrientation !== 'both') continue;
+          } else if (currentUserOrientation === 'men') {
+            if (!candidateMale) continue;
+            if (currentUserMale && candidateOrientation === 'women') continue;
+            if (!currentUserMale && candidateOrientation === 'men') continue;
+          } else if (currentUserOrientation === 'women') {
+            if (candidateMale) continue;
+            if (currentUserMale && candidateOrientation === 'women') continue;
+            if (!currentUserMale && candidateOrientation === 'men') continue;
+          }
+        }
+
+        if (!skipContentFilters) {
+          const candidateAge = calcAge(candidate.birthDate);
+          if (candidateAge < userMinAge || candidateAge > userMaxAge) continue;
+
+          // Filtro bidireccional de edad
+          if (currentUserAge > 0) {
+            const candidateMinAge = candidate.minAge || 18;
+            const candidateMaxAge = candidate.maxAge || 99;
+            if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) continue;
+          }
         }
 
         compatibleIds.push(doc.id);
