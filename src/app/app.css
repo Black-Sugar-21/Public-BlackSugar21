@@ -1243,7 +1243,7 @@ a:hover {
 
 .coach-phone-mockup {
     position: relative;
-    width: 300px;
+    width: var(--phone-width, 280px);
 }
 
 .coach-sparkle-top {
@@ -1356,16 +1356,25 @@ a:hover {
     }
 
     .coach-phone-mockup {
-        width: 260px;
+        width: var(--phone-width, 240px);
     }
 }
 
 /* ── Dual Phones Layout ───────────────────────────── */
 .dual-phones {
+  --phone-width: 280px;
   display: flex;
   gap: 20px;
   align-items: flex-start;
   justify-content: center;
+}
+
+.dual-phones .coach-phone-mockup {
+  width: var(--phone-width);
+}
+
+.dual-phones .chat-phone {
+  width: var(--phone-width);
 }
 
 .coach-phone-mockup--secondary {
@@ -1374,6 +1383,7 @@ a:hover {
 
 @media (max-width: 700px) {
   .dual-phones {
+    --phone-width: 260px;
     flex-direction: column;
     align-items: center;
   }
@@ -1382,9 +1392,15 @@ a:hover {
   }
 }
 
+@media (max-width: 420px) {
+  .dual-phones {
+    --phone-width: min(240px, 85vw);
+  }
+}
+
 /* ── Dark Chat Phone Mockup ───────────────────────── */
 .chat-phone {
-  width: 320px;
+  width: var(--phone-width, 280px);
   background: #0d0d14;
   border-radius: 36px;
   border: 2px solid #2a2a3a;
