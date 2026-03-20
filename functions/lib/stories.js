@@ -254,6 +254,12 @@ exports.cleanupExpiredStories = onSchedule(
       try {
         const story = doc.data();
 
+        // Proteger stories del reviewer (nunca expirar)
+        if (story.neverExpires === true || story.isReviewer === true) {
+          logger.info(`[cleanupExpiredStories] Skipping reviewer story ${doc.id}`);
+          continue;
+        }
+
         // 1. Eliminar imagen de Storage si existe
         if (story.imageUrl) {
           try {

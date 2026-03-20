@@ -161,13 +161,18 @@ exports.getCompatibleProfileIds = onCall(
           if (seenUserIds.has(doc.id)) continue;
           seenUserIds.add(doc.id);
 
-          // Excluir IDs ya marcados (swipes, matches, bloqueados, self)
-          if (excludedIds.has(doc.id)) continue;
-
           const candidate = doc.data();
 
-          // Excluir perfiles de test/reviewer: solo visibles para el reviewer
-          if ((candidate.isTest === true || candidate.isReviewer === true) && currentUserId !== 'g4Zbr8tEguMcpZonw72xM5MGse32') continue;
+          // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
+          const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
+          const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+
+          // Excluir perfiles de test/reviewer para usuarios normales
+          if (isReviewerProfile && !isReviewerUser) continue;
+
+          // Excluir IDs ya marcados (swipes, matches, bloqueados, self)
+          // Para el reviewer, los perfiles de test/reviewer siempre pasan
+          if (excludedIds.has(doc.id) && !(isReviewerUser && isReviewerProfile)) continue;
 
           // Excluir cuentas no activas o pausadas
           if (candidate.accountStatus !== 'active') continue;
@@ -253,12 +258,18 @@ exports.getCompatibleProfileIds = onCall(
 
       for (const doc of candidatesSnap.docs) {
         if (compatibleIds.length >= limit) break;
-        if (excludedIds.has(doc.id)) continue;
-
         const candidate = doc.data();
 
-        // Excluir perfiles de test/reviewer: solo visibles para el reviewer
-        if ((candidate.isTest === true || candidate.isReviewer === true) && currentUserId !== 'g4Zbr8tEguMcpZonw72xM5MGse32') continue;
+        // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
+        const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
+        const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+
+        // Excluir perfiles de test/reviewer para usuarios normales
+        if (isReviewerProfile && !isReviewerUser) continue;
+
+        // Excluir IDs ya marcados (swipes, matches, bloqueados, self)
+        // Para el reviewer, los perfiles de test/reviewer siempre pasan
+        if (excludedIds.has(doc.id) && !(isReviewerUser && isReviewerProfile)) continue;
 
         if (candidate.visibilityReduced === true) continue;
 
