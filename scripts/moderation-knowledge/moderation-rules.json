@@ -1,0 +1,296 @@
+[
+  {
+    "id": "harassment-en",
+    "category": "harassment",
+    "language": "en",
+    "text": "HARASSMENT DETECTION — English Patterns: Messages containing insults, name-calling, demeaning language, persistent unwanted contact, or emotional manipulation should be flagged. Examples of harassment: 'you're ugly/fat/stupid', 'no one will ever love you', 'you're worthless', 'I'll make sure everyone knows about you'. Subtle harassment includes backhanded compliments ('you're pretty for a [group]'), negging ('you'd be hot if you lost weight'), guilt-tripping ('after everything I've done for you'), and gaslighting ('you're crazy', 'that never happened'). Passive-aggressive harassment: 'I guess some people just can't handle honesty', 'must be nice being that clueless'. Repeated messaging after being ignored or asked to stop is harassment. Do NOT flag: playful teasing between mutually engaged users, self-deprecating humor, constructive disagreement."
+  },
+  {
+    "id": "harassment-es",
+    "category": "harassment",
+    "language": "es",
+    "text": "DETECCIÓN DE ACOSO — Patrones en Español: Mensajes con insultos, humillaciones, lenguaje denigrante o manipulación emocional. Ejemplos: 'eres fea/gorda/tonta', 'nadie te va a querer', 'no sirves para nada', 'das asco', 'quién te va a hacer caso'. Acoso sutil incluye: negging ('estarías buena si adelgazaras'), chantaje emocional ('después de todo lo que hice por ti'), descalificación ('estás loca/loco'), y control ('con quién hablas', 'por qué no contestas'). Variantes regionales: 'naca/naco' (México), 'ordinaria' (España), 'boluda' (Argentina), 'huevón/a' (Chile). Insultos con diminutivos despectivos: 'gordita' en tono burlón, 'flaquita' despectivo. Evasión común: usar asteriscos (p*ta), espacios (i d i o t a), o alternancia mayúsculas (iDiOtA). NO marcar: bromas entre usuarios activamente conversando, humor autodeprecativo."
+  },
+  {
+    "id": "harassment-fr",
+    "category": "harassment",
+    "language": "fr",
+    "text": "DÉTECTION DU HARCÈLEMENT — Français: Messages contenant des insultes, du dénigrement, du harcèlement persistant ou de la manipulation émotionnelle. Exemples: 'tu es moche/grosse/stupide', 'personne ne voudra de toi', 'tu ne vaux rien', 'pauvre fille/mec'. Harcèlement subtil: negging ('tu serais belle si tu maigrissais'), chantage émotionnel ('après tout ce que j'ai fait pour toi'), gaslighting ('t'es folle/fou', 'ça n'est jamais arrivé'). Insultes typiques: 'connard/connasse', 'pétasse', 'bouffon/ne', 'casse-toi'. Harcèlement passif-agressif: 'c'est pas grave, t'es comme ça'. Verlan utilisé pour contourner: 'teub' (bite), 'meuf' (négatif selon contexte), 'chelou'. NE PAS signaler: taquineries amicales, humour entre utilisateurs engagés."
+  },
+  {
+    "id": "harassment-de",
+    "category": "harassment",
+    "language": "de",
+    "text": "ERKENNUNG VON BELÄSTIGUNG — Deutsch: Nachrichten mit Beleidigungen, Erniedrigungen, beharrlichem unerwünschtem Kontakt oder emotionaler Manipulation. Beispiele: 'du bist hässlich/fett/dumm', 'niemand wird dich jemals lieben', 'du bist nichts wert', 'du bist erbärmlich'. Subtile Belästigung: Negging ('du wärst hübsch, wenn du abnehmen würdest'), emotionale Erpressung ('nach allem was ich für dich getan habe'), Gaslighting ('du spinnst', 'das ist nie passiert'). Typische Beleidigungen: 'Schlampe', 'Hurensohn', 'Vollidiot', 'Missgeburt', 'Wichser'. Ausweichtaktiken: Leerzeichen einfügen (S c h l a m p e), Zahlen ersetzen (H4ss), Umlaute weglassen. NICHT markieren: freundliches Necken, Humor zwischen aktiv Chattenden."
+  },
+  {
+    "id": "harassment-pt",
+    "category": "harassment",
+    "language": "pt",
+    "text": "DETECÇÃO DE ASSÉDIO — Português: Mensagens com insultos, humilhações, linguagem depreciativa ou manipulação emocional. Exemplos: 'você é feia/gorda/burra', 'ninguém vai te querer', 'você não vale nada', 'vai se foder'. Assédio sutil: negging ('você seria bonita se emagrecesse'), chantagem emocional ('depois de tudo que fiz por você'), gaslighting ('você é louca', 'isso nunca aconteceu'). Variantes regionais: 'otário/a' (Brasil), 'cabrão/cabra' (Portugal), 'puto/a' (ambos). Insultos comuns: 'vadia', 'vagabunda', 'corno/a', 'babaca', 'imbecil'. Evasão: usar @ no lugar de a (v@di@), pontos entre letras (v.a.d.i.a). NÃO sinalizar: brincadeiras entre usuários ativamente conversando."
+  },
+  {
+    "id": "harassment-ar",
+    "category": "harassment",
+    "language": "ar",
+    "text": "كشف التحرش — أنماط عربية: رسائل تحتوي على إهانات أو تحقير أو لغة مهينة أو تلاعب عاطفي. أمثلة: 'أنتِ قبيحة/سمينة/غبية'، 'ما حد بيحبك'، 'ما تسوى/تسوين شي'، 'انقلعي'. تحرش خفي: التعليقات السلبية المغلفة بمجاملات ('حلوة بس لو نحفتي')، الابتزاز العاطفي ('بعد كل اللي سويته لك')، التلاعب النفسي ('أنتِ مجنونة'). إهانات شائعة: 'كلب/كلبة'، 'حيوان/ة'، 'تافه/ة'، 'خسيس/ة'. أساليب التحايل: استخدام أرقام بدل حروف، أو فصل الكلمات بنقاط أو مسافات. لا تصنف: المزاح الودي بين مستخدمين متفاعلين."
+  },
+  {
+    "id": "harassment-ja",
+    "category": "harassment",
+    "language": "ja",
+    "text": "ハラスメント検出 — 日本語パターン: 侮辱、見下し、執拗な不要な連絡、感情的操作を含むメッセージ。例: 'ブス'、'デブ'、'バカ'、'死ね'、'きもい'、'消えろ'、'誰もお前なんか相手にしない'。巧妙なハラスメント: ネガティブな褒め言葉（'痩せたらかわいいのに'）、精神的脅迫（'俺がどれだけしてやったか'）、ガスライティング（'お前が狂ってる'）。よくある侮辱: 'クズ'、'ゴミ'、'カス'、'きしょい'、'ウザい'。回避手法: カタカナとひらがなの混合（ばか→バカ→ﾊﾞｶ）、記号挿入（ブ★ス）。フラグ除外: 親しい関係での冗談、自虐的ユーモア。"
+  },
+  {
+    "id": "harassment-ru",
+    "category": "harassment",
+    "language": "ru",
+    "text": "ОБНАРУЖЕНИЕ ДОМОГАТЕЛЬСТВ — Русский язык: Сообщения с оскорблениями, унижениями, навязчивым контактом или эмоциональной манипуляцией. Примеры: 'ты уродина/жирная/тупая', 'никто тебя не полюбит', 'ты ничтожество'. Скрытые домогательства: негативные комплименты ('была бы красивой, если б похудела'), эмоциональный шантаж ('после всего, что я для тебя сделал'), газлайтинг ('ты сумасшедшая', 'этого не было'). Типичные оскорбления: 'шлюха', 'сука', 'тварь', 'урод', 'дебил', 'лох'. Обход фильтров: использование латиницы вместо кириллицы (cyкa → suka), замена букв цифрами (д3бил), транслит. НЕ отмечать: дружеские подколы, самоирония."
+  },
+  {
+    "id": "harassment-zh",
+    "category": "harassment",
+    "language": "zh",
+    "text": "骚扰检测 — 中文模式：包含侮辱、贬低、持续不受欢迎的联系或情感操控的消息。示例：'你好丑/好胖/好蠢'、'没人会喜欢你'、'你一文不值'、'滚开'。微妙骚扰：贬低式夸奖（'你瘦一点就好看了'）、情感勒索（'我为你做了那么多'）、心理操控（'你疯了吧'、'从来没有过'）。常见侮辱：'贱人'、'垃圾'、'废物'、'白痴'、'脑残'、'去死'。规避手法：使用拼音代替汉字（si ni、gun）、谐音字（废→飞，死→四）、符号插入。不标记：相互参与用户之间的友善玩笑。"
+  },
+  {
+    "id": "harassment-id",
+    "category": "harassment",
+    "language": "id",
+    "text": "DETEKSI PELECEHAN — Bahasa Indonesia: Pesan yang berisi hinaan, penghinaan, kontak yang tidak diinginkan, atau manipulasi emosional. Contoh: 'kamu jelek/gendut/bodoh', 'nggak ada yang mau sama kamu', 'kamu nggak berguna'. Pelecehan halus: negging ('cantik sih kalau kurusan'), pemerasan emosional ('setelah semua yang kulakukan untukmu'), gaslighting ('kamu gila', 'itu nggak pernah terjadi'). Hinaan umum: 'anjing', 'bangsat', 'bego', 'tai', 'kampret', 'goblog'. Teknik penghindaran: menggunakan angka (4nj1ng), spasi (b e g o), atau simbol (b*ngsat). JANGAN tandai: candaan antara pengguna yang aktif saling berinteraksi."
+  },
+  {
+    "id": "sexual-en",
+    "category": "sexual",
+    "language": "en",
+    "text": "SEXUAL CONTENT DETECTION — English: Explicit or unsolicited sexual messages, graphic descriptions, non-consensual sexualization. REJECT: explicit body part descriptions in sexual context, graphic sexual acts ('I want to f*** you', 'send nudes'), unsolicited sexual fantasies, sexually degrading language ('slut', 'whore' in sexual context), objectifying statements ('nice tits/ass'). GRAY AREA requiring context: flirting ('you're hot', 'I find you attractive') is ALLOWED in a dating app. Mild innuendo in mutual conversation is ALLOWED. Compliments about appearance are ALLOWED. REJECT ONLY when: content is graphic/explicit, unsolicited sexual requests, involves minors (ALWAYS reject), non-consensual themes. Evasion tactics: '5ex', 'seggs', 'secks', emoji substitution (🍆🍑💦 as explicit content), asterisk censoring of explicit words."
+  },
+  {
+    "id": "sexual-es",
+    "category": "sexual",
+    "language": "es",
+    "text": "DETECCIÓN DE CONTENIDO SEXUAL — Español: Mensajes sexuales explícitos o no solicitados, descripciones gráficas. RECHAZAR: descripciones explícitas de partes del cuerpo en contexto sexual, actos sexuales gráficos ('quiero cogerte/follarte', 'manda nudes/fotos desnuda'), fantasías sexuales no solicitadas, lenguaje sexualmente degradante ('puta/zorra' en contexto sexual), cosificación ('qué tetas/culo'). ZONA GRIS: coqueteo ('estás guapa/o', 'me pareces atractiva/o') PERMITIDO en app de citas. Insinuaciones leves en conversación mutua PERMITIDO. Piropos respetuosos PERMITIDO. RECHAZAR SOLO cuando: contenido gráfico/explícito, solicitudes sexuales no solicitadas, involucra menores (SIEMPRE rechazar). Evasión: 's3xo', 'secs0', emojis (🍆🍑💦), asteriscos (c*ger), ortografía alternativa ('follar→fo11ar')."
+  },
+  {
+    "id": "sexual-fr",
+    "category": "sexual",
+    "language": "fr",
+    "text": "DÉTECTION DE CONTENU SEXUEL — Français: Messages sexuels explicites ou non sollicités. REJETER: descriptions explicites de parties du corps en contexte sexuel, actes sexuels graphiques ('je veux te baiser', 'envoie des nudes'), fantasmes non sollicités, langage sexuellement dégradant ('salope', 'pute' en contexte sexuel). ZONE GRISE: la drague ('tu es canon', 'je te trouve attirant/e') est AUTORISÉE dans une app de rencontres. Les sous-entendus légers en conversation mutuelle sont AUTORISÉS. REJETER UNIQUEMENT quand: contenu graphique/explicite, sollicitations sexuelles non désirées, implique des mineurs. Évasion: 's3xe', 'bais3r', emojis explicites, verlan ('teub' pour 'bite'), argot ('niquer', 'ken')."
+  },
+  {
+    "id": "sexual-de",
+    "category": "sexual",
+    "language": "de",
+    "text": "ERKENNUNG SEXUELLER INHALTE — Deutsch: Explizite oder unaufgeforderte sexuelle Nachrichten. ABLEHNEN: explizite Beschreibungen von Körperteilen in sexuellem Kontext, grafische sexuelle Handlungen ('ich will dich f***en', 'schick Nudes'), unaufgeforderte sexuelle Fantasien, sexuell herabwürdigende Sprache ('Schlampe', 'Hure' in sexuellem Kontext). GRAUBEREICH: Flirten ('du siehst heiß aus', 'ich finde dich attraktiv') ist in einer Dating-App ERLAUBT. Leichte Anspielungen in gegenseitigem Gespräch ERLAUBT. NUR ABLEHNEN wenn: grafisch/explizit, unaufgeforderte sexuelle Anfragen, Minderjährige beteiligt. Umgehung: 'S3x', 'Seks', Emojis, Leerzeichen (f i c k e n), Sternchen."
+  },
+  {
+    "id": "sexual-pt",
+    "category": "sexual",
+    "language": "pt",
+    "text": "DETECÇÃO DE CONTEÚDO SEXUAL — Português: Mensagens sexuais explícitas ou não solicitadas. REJEITAR: descrições explícitas de partes do corpo em contexto sexual, atos sexuais gráficos ('quero te comer/foder', 'manda nudes'), fantasias sexuais não solicitadas, linguagem sexualmente degradante ('puta/vadia' em contexto sexual). ZONA CINZA: paquera ('você é linda/o', 'te achei atraente') PERMITIDO em app de namoro. Insinuações leves em conversa mútua PERMITIDO. REJEITAR APENAS quando: conteúdo gráfico/explícito, solicitações sexuais não desejadas, envolve menores. Evasão: 's3xo', 'f0der', emojis, gírias ('trepar', 'dar'), ortografia alternativa."
+  },
+  {
+    "id": "sexual-ar",
+    "category": "sexual",
+    "language": "ar",
+    "text": "كشف المحتوى الجنسي — العربية: رسائل جنسية صريحة أو غير مرغوب فيها. رفض: وصف صريح لأجزاء الجسد في سياق جنسي، أفعال جنسية رسومية، خيالات جنسية غير مطلوبة، لغة مهينة جنسياً. منطقة رمادية: المغازلة ('أنتِ جميلة'، 'أعجبتني') مسموحة في تطبيق مواعدة. تلميحات خفيفة في محادثة متبادلة مسموحة. رفض فقط عندما: المحتوى صريح/فاضح، طلبات جنسية غير مرغوبة، يتضمن قاصرين (دائماً ارفض). أساليب التحايل: استخدام أرقام بدل حروف، كتابة بالإنجليزية للكلمات الجنسية العربية، فصل الكلمات، رموز تعبيرية."
+  },
+  {
+    "id": "sexual-ja",
+    "category": "sexual",
+    "language": "ja",
+    "text": "性的コンテンツ検出 — 日本語: 露骨または迷惑な性的メッセージ。拒否: 性的文脈での身体部位の露骨な描写、具体的な性行為の描写、求めていない性的空想、性的に侮辱的な言葉。グレーゾーン: フリート（'かわいいね'、'魅力的'）はマッチングアプリでは許可。軽いほのめかしは許可。拒否のみ: グラフィック/露骨、迷惑な性的要求、未成年者が関与（常に拒否）。回避手法: カタカナ英語（セックス→ｾｯｸｽ）、伏字（エ◯チ、セッ◯ス）、隠語（ヤる、パコる、いたす）、絵文字の代用。"
+  },
+  {
+    "id": "sexual-ru",
+    "category": "sexual",
+    "language": "ru",
+    "text": "ОБНАРУЖЕНИЕ СЕКСУАЛЬНОГО КОНТЕНТА — Русский: Откровенные или нежелательные сексуальные сообщения. ОТКЛОНИТЬ: откровенные описания частей тела в сексуальном контексте, графические сексуальные действия, нежелательные сексуальные фантазии, сексуально унижающий язык. СЕРАЯ ЗОНА: флирт ('ты красивая', 'ты привлекательный') РАЗРЕШЕН в приложении для знакомств. Лёгкие намёки в обоюдном разговоре РАЗРЕШЕНЫ. ОТКЛОНЯТЬ ТОЛЬКО когда: контент откровенный/графический, нежелательные сексуальные запросы, вовлечение несовершеннолетних. Обход: замена букв (с3кс), транслит (seks), латиница вместо кириллицы, мат с заменой символами (х*й, п*зда), эвфемизмы."
+  },
+  {
+    "id": "sexual-zh",
+    "category": "sexual",
+    "language": "zh",
+    "text": "性内容检测 — 中文: 露骨或未经请求的性消息。拒绝: 性语境中对身体部位的露骨描述、具体性行为描写、未经请求的性幻想、性侮辱性语言。灰色地带: 调情（'你好漂亮'、'觉得你很有魅力'）在约会应用中允许。轻微暗示在相互对话中允许。仅在以下情况拒绝: 内容露骨/图形化、未经请求的性要求、涉及未成年人（始终拒绝）。规避手法: 谐音字（操→草、日→曰）、拼音代替（cao ni）、符号插入（操→c*o）、字母数字混合。"
+  },
+  {
+    "id": "sexual-id",
+    "category": "sexual",
+    "language": "id",
+    "text": "DETEKSI KONTEN SEKSUAL — Bahasa Indonesia: Pesan seksual eksplisit atau tidak diminta. TOLAK: deskripsi eksplisit bagian tubuh dalam konteks seksual, tindakan seksual grafis, fantasi seksual yang tidak diminta, bahasa yang merendahkan secara seksual. AREA ABU-ABU: godaan ('kamu cantik/ganteng', 'kamu menarik') DIPERBOLEHKAN di aplikasi kencan. Sindiran ringan dalam percakapan bersama DIPERBOLEHKAN. TOLAK HANYA ketika: konten grafis/eksplisit, permintaan seksual tidak diinginkan, melibatkan anak di bawah umur (SELALU tolak). Teknik penghindaran: angka (s3ks), spasi, emoji, singkatan (ML = making love), bahasa daerah yang vulgar."
+  },
+  {
+    "id": "spam-en",
+    "category": "spam",
+    "language": "en",
+    "text": "SPAM DETECTION — English: Promotional messages, suspicious links, mass-sent templates, cryptocurrency/investment schemes. REJECT: URLs to external sites (except Google Maps links shared naturally), promotional language ('limited time offer', 'click here', 'free gift'), MLM/pyramid scheme language ('passive income', 'financial freedom', 'be your own boss'), cryptocurrency promotion ('buy Bitcoin', 'token presale', '10x returns'), repetitive copy-paste messages, messages that look like templates with blanks. APPROVE: natural conversation, sharing personal experiences about work, discussing hobbies. Evasion: shortened URLs (bit.ly, tinyurl), spaces in URLs (w w w . example . com), replacing dots with 'dot' ('example dot com'), using image text to bypass text detection."
+  },
+  {
+    "id": "spam-es",
+    "category": "spam",
+    "language": "es",
+    "text": "DETECCIÓN DE SPAM — Español: Mensajes promocionales, enlaces sospechosos, plantillas enviadas masivamente, esquemas cripto/inversiones. RECHAZAR: URLs a sitios externos (excepto Google Maps compartidos naturalmente), lenguaje promocional ('oferta limitada', 'haz clic', 'regalo gratis'), lenguaje MLM/pirámide ('ingresos pasivos', 'libertad financiera', 'sé tu propio jefe', 'negocio desde casa'), promoción cripto ('compra Bitcoin', 'preventa de tokens', 'rendimientos 10x'), mensajes repetitivos tipo copia-pega. APROBAR: conversación natural, compartir experiencias de trabajo. Evasión: URLs acortadas, espacios en URLs, reemplazar puntos ('ejemplo punto com'), links de Telegram/WhatsApp disfrazados."
+  },
+  {
+    "id": "spam-fr",
+    "category": "spam",
+    "language": "fr",
+    "text": "DÉTECTION DE SPAM — Français: Messages promotionnels, liens suspects, schémas crypto/investissement. REJETER: URLs externes (sauf liens Google Maps), langage promotionnel ('offre limitée', 'cliquez ici', 'cadeau gratuit'), langage MLM ('revenus passifs', 'liberté financière', 'soyez votre propre patron'), promotion crypto, messages copiés-collés. APPROUVER: conversation naturelle. Évasion: URLs raccourcies, espaces dans les URLs, remplacement de points ('exemple point com'), liens Telegram/WhatsApp déguisés, utilisation de majuscules alternées."
+  },
+  {
+    "id": "spam-multilingual",
+    "category": "spam",
+    "language": "en",
+    "text": "SPAM DETECTION — Cross-language patterns: Cryptocurrency/investment spam appears in ALL languages with similar structures: promises of high returns, urgency ('limited time', 'act now'), 'passive income' messaging. Common platforms mentioned in spam: Telegram groups/channels (t.me/...), WhatsApp groups, Discord servers, external websites. MLM keywords across languages: EN 'passive income/financial freedom', ES 'ingresos pasivos/libertad financiera', FR 'revenus passifs', DE 'passives Einkommen', PT 'renda passiva', AR 'دخل سلبي', JA '不労所得', RU 'пассивный доход', ZH '被动收入', ID 'penghasilan pasif'. URL obfuscation patterns: spaces (g o o g l e . c o m), brackets ([dot]), spelled out ('dot' 'com'), using similar characters (gооgle.com with Cyrillic о), zero-width characters between letters."
+  },
+  {
+    "id": "threats-en",
+    "category": "threats",
+    "language": "en",
+    "text": "THREAT DETECTION — English: Messages containing physical threats, intimidation, stalking intent, blackmail, or coercion. REJECT: direct threats ('I'll hurt/kill you', 'I know where you live', 'watch your back'), stalking language ('I'll find you', 'I've been following you', 'I know your routine'), blackmail/extortion ('I'll share your photos', 'I'll tell everyone', 'pay me or else'), doxxing threats ('I'll post your address/phone/workplace'), implied violence ('you'll regret this', 'something bad will happen', 'be careful'). Context matters: 'I could kill for that recipe' is NOT a threat. 'I'll find you a great restaurant' is NOT stalking. Focus on genuine intent to harm, intimidate, or coerce. Evasion: euphemisms ('I'll make you disappear'), indirect threats ('accidents happen'), coded language."
+  },
+  {
+    "id": "threats-es",
+    "category": "threats",
+    "language": "es",
+    "text": "DETECCIÓN DE AMENAZAS — Español: Mensajes con amenazas físicas, intimidación, intención de acoso, chantaje o coerción. RECHAZAR: amenazas directas ('te voy a pegar/matar', 'sé dónde vives', 'cuídate'), lenguaje de acecho ('te voy a encontrar', 'te he estado siguiendo', 'sé tu rutina'), chantaje ('voy a publicar tus fotos', 'le voy a contar a todos', 'págame o verás'), amenazas de doxxing ('voy a publicar tu dirección/teléfono'). El contexto importa: 'mataría por esa receta' NO es amenaza. Variantes: 'te la vas a ver conmigo', 'esto no se va a quedar así', 'me las vas a pagar'. Evasión: eufemismos ('voy a hacer que desaparezcas'), amenazas indirectas ('los accidentes pasan'), lenguaje codificado."
+  },
+  {
+    "id": "threats-multilingual",
+    "category": "threats",
+    "language": "en",
+    "text": "THREAT DETECTION — Cross-language patterns: Threats involving physical violence, stalking, blackmail, and doxxing follow similar structures across all languages. Key patterns: (1) 'I know where you [live/work/study]' — stalking. (2) 'I'll share/post your [photos/address/info]' — doxxing/blackmail. (3) 'You'll regret/pay for this' — implied violence. (4) 'Something bad will happen' — veiled threats. (5) Suicide/self-harm threats used as manipulation ('if you leave me I'll kill myself') — always flag, recommend safety resources. Cultural context: In some cultures, certain expressions may sound threatening but are common expressions of frustration — use confidence scores appropriately. Arabic: 'والله لأقتلك' can be hyperbolic. Japanese: indirect threats via implication are more common than direct ones."
+  },
+  {
+    "id": "hate_speech-en",
+    "category": "hate_speech",
+    "language": "en",
+    "text": "HATE SPEECH DETECTION — English: Messages targeting people based on race, ethnicity, religion, gender, sexual orientation, disability, or national origin. REJECT: racial slurs (n-word, ch*nk, sp*c, etc.), religious hatred ('terrorists' targeting Muslims, antisemitic tropes), homophobia/transphobia ('fag', 'tranny', dehumanizing language about LGBTQ+), sexism/misogyny ('women belong in the kitchen', 'females are all the same'), xenophobia ('go back to your country'), ableism ('retard'). CONTEXT MATTERS: discussing discrimination experienced ('I faced racism at work') is ALLOWED. Quoting for educational context is ALLOWED. Evasion: letter substitution (n1gg3r), spacing (n i g g e r), similar-looking characters, coded language ('13/50', 'despite being'), dog whistles. ALWAYS reject regardless of claimed 'humor' or 'just a joke'."
+  },
+  {
+    "id": "hate_speech-es",
+    "category": "hate_speech",
+    "language": "es",
+    "text": "DETECCIÓN DE DISCURSO DE ODIO — Español: Mensajes dirigidos contra personas por raza, etnia, religión, género, orientación sexual, discapacidad u origen nacional. RECHAZAR: insultos raciales ('negro/a' despectivo, 'indio/a' despectivo según contexto), odio religioso, homofobia/transfobia ('maricón', 'travelo', lenguaje deshumanizante sobre LGBTQ+), sexismo/misoginia ('las mujeres a la cocina', 'todas son iguales'), xenofobia ('vete a tu país', 'sudaca', 'veneco', 'tica', 'pinche gringo'). CONTEXTO IMPORTA: hablar de discriminación sufrida PERMITIDO. Variantes regionales: 'marica' (neutralizado en Colombia vs despectivo en otros países), 'naco/a' (clasista en México). Evasión: sustitución de letras, uso de diminutivos despectivos ('negrito' en contexto racista), humor disfrazado."
+  },
+  {
+    "id": "hate_speech-multilingual",
+    "category": "hate_speech",
+    "language": "en",
+    "text": "HATE SPEECH DETECTION — Cross-language patterns: Hate speech targeting protected characteristics appears in all languages. Common categories: (1) Racial/ethnic slurs — specific to each language/culture but similar patterns of dehumanization. (2) Religious hatred — antisemitism, islamophobia, anti-Christian sentiment. (3) LGBTQ+ hatred — homophobic/transphobic terms exist in ALL 10 supported languages. (4) Sexism / misogyny — universal patterns about gender roles, objectification. (5) Xenophobia — especially common between neighboring countries. (6) Ableism — mocking disabilities. Key principle: hate speech is NEVER acceptable regardless of cultural context or claimed humor. The 'it's just a joke' defense does not apply. However, discussing discrimination experienced BY the user is academic/personal and ALLOWED. Evasion across ALL languages: letter-number substitution, spacing, special characters, code switching between languages to bypass detection."
+  },
+  {
+    "id": "scam-en",
+    "category": "scam",
+    "language": "en",
+    "text": "SCAM DETECTION — English: Messages requesting money, attempting financial fraud, or setting up financial exploitation. REJECT: direct money requests ('can you send me $50', 'I need money for an emergency'), financial sob stories designed to extract money ('my wallet was stolen', 'I can't afford my medicine', 'my car broke down'), investment scam pitches ('guaranteed returns', 'secret trading strategy'), romance scam patterns (professing quick love + financial request), gift card requests ('buy me an iTunes/Amazon gift card'), cryptocurrency transfers ('send to my Bitcoin wallet'), advance fee fraud ('I'll pay you back double'). APPROVE: discussing finances naturally ('I work in banking'), mentioning costs of dates/activities. KEY PATTERN: any request that involves the other person sending money or financial instruments is suspicious, especially early in conversation."
+  },
+  {
+    "id": "scam-es",
+    "category": "scam",
+    "language": "es",
+    "text": "DETECCIÓN DE ESTAFAS — Español: Mensajes solicitando dinero, fraude financiero o explotación financiera. RECHAZAR: solicitudes directas de dinero ('me puedes enviar $50', 'necesito dinero para una emergencia'), historias tristes diseñadas para extraer dinero ('me robaron la cartera', 'no puedo pagar mi medicina', 'se me descompuso el carro'), pitches de inversión ('retornos garantizados'), patrones de romance scam (declarar amor rápido + pedido de dinero), solicitudes de tarjetas regalo, transferencias cripto, fraude de anticipo. APROBAR: hablar de finanzas ('trabajo en un banco'), mencionar costos de citas. Variantes regionales del patrón: Nequi/Daviplata (Colombia), Bizum (España), Pix/PicPay (Brasil), CoDi (México). PATRÓN CLAVE: cualquier solicitud que implique enviar dinero es sospechosa, especialmente temprano en la conversación."
+  },
+  {
+    "id": "scam-multilingual",
+    "category": "scam",
+    "language": "en",
+    "text": "SCAM DETECTION — Cross-language payment platforms: Different regions use different payment platforms. Key platforms by region that appear in scam messages: GLOBAL: PayPal, Venmo, Cash App, Western Union, MoneyGram, Bitcoin/crypto wallets. SPAIN: Bizum, Revolut. LATAM: Nequi, Daviplata (Colombia), MercadoPago, CoDi/SPEI (Mexico), Yape/Plin (Perú). BRAZIL: Pix, PicPay. FRANCE: Lydia, Paylib. GERMANY: Giropay, Klarna. JAPAN: PayPay, LINE Pay. RUSSIA: Qiwi, Yandex.Money, Sberbank transfer. CHINA: WeChat Pay, Alipay, 支付宝, 微信支付. INDONESIA: GoPay, OVO, Dana. ARABIC countries: STC Pay, Mada. Romance scam red flags in ALL languages: (1) professing love very quickly (2) creating urgency for money (3) elaborate backstory about being unable to access own funds (4) moving conversation off-platform."
+  },
+  {
+    "id": "contact_info-en",
+    "category": "contact_info",
+    "language": "en",
+    "text": "CONTACT INFORMATION DETECTION IN BIOS — English: Profile biographies should NOT contain external contact information that bypasses the app's messaging system. REJECT bios containing: phone numbers (any format: +1234567890, (123) 456-7890, 123.456.7890), email addresses (anything@domain.com), social media handles clearly intended to divert ('follow me @user on Instagram', 'add me on Snap: username', 'my Telegram: @user', 'WhatsApp: +number'). APPROVE: mentioning social media as interests ('I love Instagram' without a handle), discussing communication preferences ('I prefer phone calls'). Evasion techniques: spacing digits (1 2 3 4 5 6 7 8 9 0), writing numbers as words ('five five five one two three four'), using 'at' instead of @ ('user at gmail dot com'), replacing characters in handles ('my insta is user underscore name')."
+  },
+  {
+    "id": "contact_info-es",
+    "category": "contact_info",
+    "language": "es",
+    "text": "DETECCIÓN DE INFORMACIÓN DE CONTACTO EN BIOS — Español: Las biografías NO deben contener información de contacto externa. RECHAZAR bios con: números de teléfono (cualquier formato), emails, handles de redes sociales para desviar conversación ('sígueme en IG: @usuario', 'mi Snap: usuario', 'mi Telegram: @usuario', 'WhatsApp: +número', 'búscame en Facebook como'). APROBAR: mencionar redes como interés ('me gusta Instagram'), hablar de preferencias de comunicación. Evasión: separar dígitos con espacios/puntos, escribir números en letras ('cinco cinco cinco'), usar 'arroba' en vez de @, 'punto' en vez de '.', usar letras similares (1nstagram, Wh4tsApp). Variantes regionales: 'búscame en' + red social, 'agrégame en', 'contáctame por'."
+  },
+  {
+    "id": "contact_info-multilingual",
+    "category": "contact_info",
+    "language": "en",
+    "text": "CONTACT INFO DETECTION — Cross-language evasion patterns: Users in ALL languages try to share external contact info to move off the dating app. Universal patterns: (1) PHONE NUMBERS: digits separated by spaces/dots/hyphens, numbers as words, international format (+XX), local format. (2) EMAIL: 'at' spelled out, 'dot' spelled out, spaces around @. (3) SOCIAL MEDIA: Instagram (IG, Insta, 📷), Snapchat (Snap, SC, 👻), Telegram (TG, ✈️), WhatsApp (WA, 📱), TikTok (TT). (4) PER-LANGUAGE invitations: EN 'add me on/follow me at', ES 'sígueme en/búscame en', FR 'ajoutez-moi sur/suivez-moi sur', DE 'folg mir auf/adde mich auf', PT 'me segue no/me adiciona no', AR 'تابعني على/أضفني على', JA 'フォローして/追加して', RU 'подпишись на/найди меня в', ZH '关注我的/加我的', ID 'follow aku di/add aku di'. In BIOS ONLY — in chat messages between matched users, sharing contact info is normal behavior and should be APPROVED."
+  },
+  {
+    "id": "personal_info-en",
+    "category": "personal_info",
+    "language": "en",
+    "text": "PERSONAL INFORMATION DETECTION IN BIOS — English: Biographies should not contain sensitive personal information that could enable identity theft, stalking, or privacy violations. REJECT bios containing: full home addresses, government ID numbers (SSN, passport, driver's license), financial information (bank account, credit card numbers), workplace addresses with specific details. APPROVE: general location ('I live in NYC'), job title ('I work in tech'), age, university name, neighborhood references. The distinction is: GENERAL location/job info is fine, SPECIFIC identifying details (exact address, ID numbers, phone) are not. Evasion: splitting sensitive numbers across multiple lines, writing addresses partially. Bio context: in a dating app, sharing too much personal info is a safety risk even if the user wants to share it."
+  },
+  {
+    "id": "personal_info-multilingual",
+    "category": "personal_info",
+    "language": "en",
+    "text": "PERSONAL INFO DETECTION — Cross-language: Government IDs vary by country: US (SSN), UK (NI number), Spain (DNI/NIE), Mexico (CURP/INE), Brazil (CPF/RG), France (INSEE), Germany (Personalausweis Nr.), Japan (マイナンバー/My Number), Russia (СНИЛС/ИНН), China (身份证号), Indonesia (NIK/KTP), Arab countries (الهوية الوطنية). Financial info: IBAN (European), routing/account numbers (US), CLABE (Mexico), Pix key (Brazil). REJECT any of these in bios even if partially shared. APPROVE: mentioning nationality, city, general job description, university. Key principle: protect users from themselves — even voluntary sharing of sensitive info in a public bio is a safety risk."
+  },
+  {
+    "id": "evasion-leet-speak",
+    "category": "evasion_tactics",
+    "language": "en",
+    "text": "EVASION TACTIC: LEET SPEAK AND CHARACTER SUBSTITUTION — Users replace letters with similar-looking numbers or symbols to bypass detection. Common substitutions: a→4/@, e→3, i→1/!, o→0, s→5/$, t→7/+, l→1/|, b→8, g→9. Examples: 'h4rass', 'thr34t', 'k1ll', 's3x', 'h4te', 'sc4m', 'f*ck', 'sh1t', 'b1tch'. Also: Cyrillic letters that look like Latin (а→a, е→e, о→o, с→c in Russian), fullwidth characters (Ａ instead of A in CJK), Unicode homoglyphs. Detection strategy: normalize text by replacing common substitutions before analysis, but ALSO analyze the original text for context. The ACT of using leet speak for prohibited words is itself a signal of malicious intent."
+  },
+  {
+    "id": "evasion-spacing-symbols",
+    "category": "evasion_tactics",
+    "language": "en",
+    "text": "EVASION TACTIC: SPACING, SYMBOLS, AND FRAGMENTATION — Users insert spaces, dots, or symbols between letters of prohibited words to avoid detection. Patterns: 's.e.x', 'k i l l', 's-c-a-m', 'h_a_t_e', 'f u c k', 'p.u.t.a', 'ma.ri.cón'. Also: zero-width characters (invisible Unicode chars between letters), alternating case (sExUaL), reversed text ('lluf' for 'full' reversed), mixing scripts ('hаte' with Cyrillic а). Multi-message fragmentation: splitting prohibited content across multiple messages. Emoji substitution: 🔪 for threats, 🍆🍑 for sexual content, 💰💵 for money requests. Detection: the intent to evade moderation is itself suspicious — if a message uses obvious obfuscation techniques for normal words, it's likely trying to hide prohibited content."
+  },
+  {
+    "id": "evasion-code-switching",
+    "category": "evasion_tactics",
+    "language": "en",
+    "text": "EVASION TACTIC: CODE-SWITCHING AND LANGUAGE MIXING — Users switch between languages mid-message to hide prohibited content, assuming moderation only understands one language. Examples: English message with Spanish slur ('you are a puta'), French message with English threat ('je vais te kill'), mixing Arabic and English ('يا son of a bitch'). Also: using a less-common language for insults (switching to Indonesian 'anjing' in an English conversation), Romanization of non-Latin scripts ('blyat' for Russian блять, 'kuso' for Japanese クソ, 'tamade' for Chinese 他妈的). Detection: moderate in ALL languages simultaneously, not just the declared user language. Treat language mixing as a potential evasion signal when the mixed-in words are from violation categories."
+  },
+  {
+    "id": "payment-platforms-global",
+    "category": "payment_solicitation",
+    "language": "en",
+    "text": "PAYMENT PLATFORM DETECTION — Comprehensive list of payment platforms and financial service mentions that indicate potential scam/solicitation in chat messages: GLOBAL: OnlyFans, onlyfans.com, venmo.me, cashapp, cash.app, paypal.me, paypal.com, ko-fi.com, buymeacoffee, gofundme, kickstarter. TRANSFERS: Western Union, MoneyGram, Wise (TransferWise), Remitly. CRYPTO: bitcoin, ethereum, crypto wallet, BTC address, ETH address, USDT, binance, coinbase. US: Venmo, Zelle, Cash App. EUROPE: Bizum, Revolut, N26, Lydia, Paylib, Giropay, Klarna, Twint. LATAM: Nequi, Daviplata, MercadoPago, CoDi, SPEI, Yape, Plin, PicPay, Pix. ASIA: PayPay, LINE Pay, GoPay, OVO, Dana, ShopeePay, GCash, Maya, STC Pay. CHINA: WeChat Pay (微信支付), Alipay (支付宝). RUSSIA: Qiwi, YooMoney. URL patterns: any mention of .me domains for payments, t.me/ (Telegram links), deep links to payment apps."
+  },
+  {
+    "id": "payment-evasion-patterns",
+    "category": "payment_solicitation",
+    "language": "en",
+    "text": "PAYMENT SOLICITATION EVASION — Users disguise payment requests and platform mentions: (1) SPACING: 'p a y p a l', 'v e n m o', 'c a s h  a p p', 'only fans'. (2) SUBSTITUTION: 'paypaI' (uppercase I instead of l), '0nlyfans', 'b1zum', 'crypt0'. (3) ABBREVIATION: 'PP' (PayPal), 'CA' (Cash App), 'OF' (OnlyFans), 'WU' (Western Union). (4) INDIRECT: 'send me a gift', 'help me with rent', 'I need $$ for food', 'tribute me'. (5) LINK OBFUSCATION: 'link in my bio', 'check my profile link', 'my website:', shorteners (bit.ly, tinyurl, t.co). (6) EMOJI: 💰💵💲🤑 combined with requests. (7) ROMANTIC FRAMING: 'if you love me you'd help', 'prove you're real by sending'. (8) URGENCY: 'I'll be evicted tomorrow', 'my kid needs medicine today', 'it's an emergency'. Detection: these patterns strongly correlate with scam/solicitation even without naming the platform."
+  },
+  {
+    "id": "dating-app-context-en",
+    "category": "context_guidelines",
+    "language": "en",
+    "text": "DATING APP MODERATION CONTEXT — Sugar Dating Platform: This is Black Sugar 21, a sugar dating app. CRITICAL CONTEXT that affects moderation decisions: (1) Users discuss financial arrangements — mentioning allowances, gifts, or financial expectations is NORMAL for this platform and should NOT be flagged as scam. However, direct payment links/platforms in early conversation ARE suspicious. (2) Age-gap relationships are the norm — do NOT flag age difference discussions. (3) Lifestyle discussions (luxury, travel, shopping) are normal. (4) Users may discuss what they 'offer' or 'seek' — this is standard sugar dating behavior, not solicitation. (5) Flirting and attraction-based conversation is expected and ALLOWED. (6) HOWEVER: explicit sexual content, harassment, threats, hate speech, and scams are NEVER acceptable. (7) The line is: discussing relationship expectations = OK, explicit payment-for-sex = NOT OK, exchanging payment platform info early = suspicious."
+  },
+  {
+    "id": "dating-app-context-es",
+    "category": "context_guidelines",
+    "language": "es",
+    "text": "CONTEXTO DE MODERACIÓN EN APP DE CITAS — Plataforma Sugar Dating: Esta es Black Sugar 21, una app de citas sugar. CONTEXTO CRÍTICO: (1) Los usuarios discuten arreglos financieros — mencionar mesadas, regalos o expectativas financieras es NORMAL para esta plataforma y NO debe marcarse como estafa. Sin embargo, enlaces de pago directos en conversación temprana SÍ son sospechosos. (2) Relaciones con diferencia de edad son la norma — NO marcar discusiones de diferencia de edad. (3) Discusiones de estilo de vida (lujo, viajes, compras) son normales. (4) Los usuarios pueden hablar de lo que 'ofrecen' o 'buscan' — es comportamiento estándar. (5) Coqueteo y conversación basada en atracción es esperada y PERMITIDA. (6) PERO: contenido sexual explícito, acoso, amenazas, discurso de odio y estafas NUNCA son aceptables. (7) La línea: discutir expectativas de relación = OK, pago explícito por sexo = NO OK, intercambiar plataformas de pago temprano = sospechoso."
+  },
+  {
+    "id": "bio-guidelines-en",
+    "category": "bio_moderation",
+    "language": "en",
+    "text": "BIO MODERATION GUIDELINES — Profile biography specific rules: A dating app bio should describe the person and what they're looking for. APPROVE: personal descriptions, hobbies, interests, what they seek in a partner, humor, quotes, lifestyle mentions, education, career mentions, travel experiences, personality traits, relationship expectations. REJECT in bios ONLY: (1) External contact info (phone, email, social handles for diverting off-app). (2) Explicit sexual content/services offered. (3) Hate speech or discrimination in any form. (4) Spam/promotional content. (5) Threats. (6) Sensitive personal identifiers (SSN, passport, bank). SUGAR DATING NUANCE: Mentioning being a 'sugar baby/daddy/mommy', discussing lifestyle expectations, or referencing financial compatibility is APPROVED — it's the purpose of the app. Key principle: bios have DIFFERENT rules than chat messages — contact info is rejected in bios but sharing it in chat between matched users is fine."
+  },
+  {
+    "id": "bio-guidelines-es",
+    "category": "bio_moderation",
+    "language": "es",
+    "text": "REGLAS DE MODERACIÓN DE BIOS — Biografías de perfil: APROBAR: descripciones personales, hobbies, intereses, lo que buscan en pareja, humor, citas, estilo de vida, educación, carrera, viajes, rasgos de personalidad, expectativas. RECHAZAR en bios: (1) Info de contacto externa (teléfono, email, redes para desviar). (2) Contenido sexual explícito/servicios ofrecidos. (3) Discurso de odio. (4) Spam/promoción. (5) Amenazas. (6) Identificadores personales sensibles (DNI, pasaporte, banco). MATIZ SUGAR: mencionar ser 'sugar baby/daddy/mommy', hablar de expectativas de estilo de vida o compatibilidad financiera está APROBADO. Los emojis comunes en bios no son violación: 💎👑🌹💰. Clave: las bios tienen reglas DIFERENTES a los mensajes de chat — la info de contacto se rechaza en bios pero compartirla en chat entre matches es normal."
+  },
+  {
+    "id": "severity-levels",
+    "category": "classification_guide",
+    "language": "en",
+    "text": "MODERATION SEVERITY AND CONFIDENCE LEVELS — Classification guidelines for accurate scoring: HIGH CONFIDENCE (0.95-1.0): Explicit sexual content, direct threats of violence, obvious hate speech slurs, clear scam with payment links. The violation is unambiguous. MEDIUM-HIGH CONFIDENCE (0.85-0.95): Implied threats, subtle harassment patterns, evasion tactics for clearly prohibited content, contact info in bios with clear intent to divert. MEDIUM CONFIDENCE (0.70-0.85): Borderline sexual content (graphic flirting that's on the edge), aggressive language that might be cultural, potential spam (affiliate-like language without clear links). LOW CONFIDENCE (0.50-0.70): Very subtle implications, cultural expressions that MIGHT be offensive, ambiguous intent. BELOW 0.50: Approve — not enough evidence for rejection. Category priority when multiple violations: threats > hate_speech > sexual > scam > harassment > spam > contact_info > personal_info. Always use the most severe applicable category."
+  },
+  {
+    "id": "false-positive-prevention",
+    "category": "classification_guide",
+    "language": "en",
+    "text": "FALSE POSITIVE PREVENTION — Common scenarios that should NOT be flagged: (1) DATING CONTEXT: 'you're hot/sexy/attractive' is NORMAL flirting in dating apps — not sexual harassment. (2) SUGAR DATING: discussing financial arrangements, allowances, gifts, lifestyle expectations is the CORE PURPOSE of this app. (3) CULTURAL EXPRESSIONS: some expressions sound harsh in translation but are normal ('wey/güey' in Mexican Spanish, 'mate' in Australian English, 'dude' in casual English). (4) SELF-REFERENTIAL: 'I'm crazy' self-description is not concerning. (5) MOVIE/SONG REFERENCES: quoting media that contains strong language. (6) DISCUSSING EXPERIENCES: 'I was harassed at work' is NOT harassment. (7) NUMBERS that look like phone numbers: zip codes, ages ('I'm 25'), dates ('June 15'), prices ('dinner was $50'). (8) LEGITIMATE URLS: Google Maps links, restaurant/venue websites shared in dating context. Quality moderation minimizes false positives while catching real threats."
+  }
+]

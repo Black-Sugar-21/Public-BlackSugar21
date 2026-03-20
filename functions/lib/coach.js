@@ -1,0 +1,2376 @@
+'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const { logger } = require('firebase-functions/v2');
+const admin = require('firebase-admin');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
+const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
+const {
+  calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
+  fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,
+  googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
+  placesTextSearch, transformPlaceToSuggestion,
+} = require('./places-helpers');
+
+// --- Coach infrastructure ---
+const PLACES_CHIP_I18N = {
+  en: (city) => `📍 Places in ${city}`,
+  es: (city) => `📍 Lugares en ${city}`,
+  fr: (city) => `📍 Lieux à ${city}`,
+  de: (city) => `📍 Orte in ${city}`,
+  pt: (city) => `📍 Lugares em ${city}`,
+  ja: (city) => `📍 ${city}のスポット`,
+  zh: (city) => `📍 ${city}的好去处`,
+  ru: (city) => `📍 Места в ${city}`,
+  ar: (city) => `📍 أماكن في ${city}`,
+  id: (city) => `📍 Tempat di ${city}`,
+};
+
+// In-memory cache for coach config (Cloud Functions instance lives ~15min)
+let _coachConfigCache = null;
+let _coachConfigCacheTime = 0;
+const COACH_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// ─── Default purchase/gift detection pattern sections (configurable via RC coach_config.placeSearch) ──
+// Each section is a pipe-separated regex fragment used in purchaseGiftPattern.
+// Override via Remote Config to add terms dynamically without redeployment.
+const DEFAULT_PURCHASE_VERBS =
+  'comprar(le)?|regalar(le)?|buscar\\s*(un\\s*)?(regalo|detalle|presente|obsequio)|deseo\\s+(comprar|regalar|llevar|dar)|necesito\\s+(comprar|buscar)|quiero\\s+(comprar|regalar|dar|llevar)(le)?' +
+  '|buy(ing)?|shop(ping)?\\s*for|purchase|gift\\s*(for|idea)|present\\s*for|pick\\s*up\\s*(some|a|the)' +
+  '|acheter|offrir(\\s+(un|des|du))?|chercher\\s*(un\\s*)?(cadeau|bouquet)' +
+  '|kaufen|schenken|besorgen|ein\\s*Geschenk|Geschenkidee' +
+  '|quero\\s+(comprar|dar|presentear)|presentear|dar\\s*de\\s*presente' +
+  '|買[うい]|買いたい|プレゼント|贈り物|贈る|あげたい|お土産' +
+  '|买[点个]?|送[礼给她他]|想[买送]|礼物' +
+  '|купить|подарить|подарок|хочу\\s*(купить|подарить)' +
+  '|اشتري|أشتري|شراء|هدي[ةه]|أريد\\s*(شراء|أشتري)' +
+  '|beli(kan)?|membeli|hadiah|oleh-?oleh|mau\\s*beli';
+
+const DEFAULT_PURCHASE_PRODUCTS =
+  'pizza(s)?|chocolate(s)?|chocolat(es)?|bombones?|helado(s)?|ramen|empanada(s)?|ceviche|churro(s)?|macaron(s|es)?|croissant(s)?|waffle(s)?|cr[eê]pe(s)?|boba|bubble\\s*tea|donut(s)?|cupcake(s)?|mochi|gyros?|falafel|shawarma|kebab' +
+  '|Schokolade|Pralinen|Bratwurst|Bretzel|Strudel|D[oö]ner|Kuchen|Eis(diele)?' +
+  '|brigadeiro(s)?|a[cç]a[ií]|pastel\\s*de\\s*nata|p[aã]o\\s*de\\s*queijo|sorvete' +
+  '|チョコ(レート)?|アイス(クリーム)?|ラーメン|もち|餅|ケーキ|和菓子|たこ焼き|お好み焼き|団子|寿司|刺身' +
+  '|巧克力|冰[淇激]淋|火[锅鍋]|拉[面麵]|珍珠奶茶|月[饼餅]|蛋糕|[饺餃]子|包子|奶茶|煎[饼餅]' +
+  '|шоколад(ки)?|мороженое|пицца|торт|суши|пирожн|блин(ы|чики)?' +
+  '|شوكولاتة?|كنافة|بقلاو[ةه]|آيس\\s*كريم' +
+  '|cokelat|bakso|nasi\\s*goreng|martabak|rendang|sat[ae]y?|kue|es\\s*krim';
+
+const DEFAULT_PURCHASE_GIFTS =
+  'rosas?|roses?|bouquet|tulipan(es)?|tulips?|Rosen|розы?|バラ|玫瑰|ورد|bunga(\\s*mawar)?' +
+  '|peluche(s)?|teddy\\s*bear|stuffed\\s*animal|oso\\s*de\\s*peluche|ourson|Teddyb[aä]r|pel[uú]cia|ぬいぐるみ|毛[绒絨]|دبدوب|boneka' +
+  '|anillo(s)?|ring(s)?|bague|anel|指輪|戒指|خاتم|cincin' +
+  '|collar(es)?|necklace(s)?|collier|Halskette|colar|ネックレス|[项項][链鏈]|قلادة|kalung' +
+  '|pulsera(s)?|bracelet(s)?|Armband|pulseira|ブレスレット|手[链鏈]|سوار|gelang' +
+  '|arete(s)?|pendientes?|earring(s)?|boucles?|Ohrring(e)?|brinco(s)?|イヤリング|耳[环環]|أقراط' +
+  '|reloj(es)?|watch(es)?|montre|Uhr(en)?|rel[oó]gio|腕時計|手[表錶]|ساعة|jam\\s*tangan' +
+  '|perfume(s)?|parfum(s)?|Parfüm|香水|عطر' +
+  '|vino(s)?|wine(s)?|vin(ho)?|Wein|ワイン|葡萄酒|[红紅]酒|نبيذ|anggur|champagn?[ea]?|champ[aá][ñn]|espumante|シャンパン|香[槟檳]|شمبانيا' +
+  '|vela(s)?|candle(s)?|bougie(s)?|Kerzen?|キャンドル|[蜡蠟][烛燭]|شموع|lilin' +
+  '|lingeri[ea]|lencer[ií]a|Dessous|ランジェリー|内衣' +
+  '|dulces?|sweets?|candy|bonbon(s)?|S[uü][ßs]igkeit|doce(s)?|お菓子|糖果|حلوى|permen|caramelo(s)?' +
+  '|pastel(es)?|cake(s)?|tarta(s)?|g[aâ]teau(x)?|bolo(s)?|kue\\s*tart' +
+  '|joya(s)?|bijou(x)?|Schmuck|joias?|ジュエリー|珠[宝寶]|مجوهرات|perhiasan';
+
+/**
+ * Reads coach configuration from Remote Config with fallback defaults.
+ * Caches in memory for 5 minutes to avoid repeated Remote Config reads.
+ * Keys: coach_config (JSON with all coach settings)
+ */
+async function getCoachConfig() {
+  if (_coachConfigCache && (Date.now() - _coachConfigCacheTime) < COACH_CONFIG_CACHE_TTL) {
+    return _coachConfigCache;
+  }
+  const defaults = {
+    enabled: true,
+    dailyCredits: 5,
+    maxMessageLength: 2000,
+    historyLimit: 10,
+    maxActivities: 30,
+    maxSuggestions: 3,
+    maxReplyLength: 5000,
+    rateLimitPerHour: 30,
+    temperature: 0.9,
+    maxTokens: 2048,
+    personalityTone: 'warm, supportive, encouraging but honest. Like a best friend who is also a dating expert',
+    responseStyle: {
+      maxParagraphs: 4,
+      useEmojis: true,
+      formalityLevel: 'casual_professional',
+      encouragementLevel: 'high',
+    },
+    coachingSpecializations: {
+      SUGAR_BABY: 'Focus on authenticity, making memorable impressions, conversation skills, self-confidence, and navigating age-gap dynamics gracefully. Help them present their best genuine self. Guide them on setting healthy boundaries while building real connections. Emphasize self-worth beyond appearances. WHEN SINGLE: help them craft standout profiles, manage multiple conversations strategically, recover from ghosting/rejection, build confidence after a breakup, and know when to invest energy vs. move on. WHEN IN A RELATIONSHIP: help them maintain their individuality, communicate needs without seeming demanding, plan thoughtful surprises within their means, navigate meeting their partner\'s social circle, handle lifestyle differences gracefully, and keep the spark alive with creative date ideas.',
+      SUGAR_DADDY: 'Focus on genuine connection beyond material things, creating unique experiences, showing authentic interest, and making their personality shine. Help them stand out through thoughtfulness rather than spending. Guide them on building trust and reading genuine interest vs. transactional behavior. WHEN SINGLE: help them write authentic profiles that attract genuine connections, craft first messages that show real interest, identify matches who value them as a person, manage dating app fatigue, and transition from online to meaningful in-person dates. WHEN IN A RELATIONSHIP: help them plan experiences that deepen emotional connection (not just expensive ones), navigate exclusivity conversations, handle partner\'s friends/family dynamics, show vulnerability appropriately, maintain romance through small daily gestures, deal with insecurities about age-gap perception, and build a partnership based on mutual growth.',
+      SUGAR_MOMMY: 'Focus on confidence, authentic connections, creative and memorable date ideas, and expressing genuine interest. Help them leverage their experience, sophistication, and independence as strengths. Guide them on navigating social dynamics and building connections based on mutual respect. WHEN SINGLE: help them overcome hesitation about re-entering the dating scene, build an engaging profile that balances confidence with approachability, manage conversations with younger matches, handle societal double standards gracefully, and maintain standards without seeming intimidating. WHEN IN A RELATIONSHIP: help them balance independence with partnership, plan dates that play to their strengths, handle power dynamics in the relationship, communicate expectations clearly, navigate public perception as a couple, keep the relationship exciting through shared new experiences, and build trust through consistent emotional availability.',
+    },
+    stagePrompts: {
+      no_conversation_yet: "This is a NEW match with zero messages exchanged. The user needs help crafting the PERFECT first message. Analyze the match's profile deeply — bio keywords, interests, photos — and create 2-3 highly personalized openers that reference specific details. Explain WHY each opener works psychologically. Also suggest the best TIME to send the first message based on temporal context. If the user seems anxious about reaching out, normalize first-message nerves and boost their confidence.",
+      just_started_talking: 'They just started chatting (1-5 messages). Focus on: keeping momentum alive, asking engaging open-ended questions, showing genuine interest, strategic self-disclosure (share something personal to build trust), and avoiding common early-chat mistakes (one-word replies, too many questions, moving too fast). Warn them about red flags to watch for at this stage. Suggest conversation topics based on the match\'s profile. Help them gauge mutual interest level from response patterns (timing, length, enthusiasm).',
+      getting_to_know: "They're in the getting-to-know phase (5-20 messages). Focus on: deepening the conversation beyond surface level, finding shared values and experiences, injecting humor and personality, creating inside jokes, and naturally transitioning toward suggesting a first date or call. Help them stand out from other matches. Suggest specific date ideas based on shared interests. Coach them on how to propose meeting up without seeming too eager or too passive. Help them handle if the conversation is going great but the other person avoids meeting in person.",
+      building_connection: "There's a real connection forming (20-50 messages). Focus on: taking it to the next level (video call, phone call, in-person date), showing vulnerability appropriately, navigating the exclusivity question, maintaining mystery while being open, and creating memorable shared experiences. Help them read signs of genuine interest vs. casual chatting. If they've already met in person, help them plan the perfect second/third date. Coach them on the transition from texting to a real relationship — pace, expectations, and emotional availability.",
+      active_conversation: 'They have an active, ongoing connection (50+ messages or already in a relationship). Focus on: MAINTAINING THE SPARK through creative and surprising date ideas, navigating relationship milestones (DTR talk, meeting friends/family, moving in, anniversaries), dealing with conflicts constructively using healthy communication frameworks, deepening emotional intimacy through meaningful conversations and shared experiences. COUPLE-SPECIFIC guidance: help with planning anniversary surprises, recovering from arguments, keeping routine from killing romance, balancing individual identity with partnership, handling jealousy or insecurities, navigating long-distance phases, managing stress as a couple, planning travel together, dealing with external pressures (family opinions, work-life balance), reigniting passion after a flat period, and building shared goals/dreams. Always suggest PLACES and ACTIVITIES to strengthen their bond.',
+    },
+    allowedTopics: [
+      'dating_advice', 'conversation_tips', 'profile_improvement',
+      'date_ideas', 'relationship_building', 'confidence_tips',
+      'first_date_advice', 'communication_skills', 'flirting_tips',
+      'body_language', 'online_dating', 'match_analysis',
+      'icebreakers', 'activity_suggestions', 'venue_recommendations',
+      'gift_ideas', 'grooming_fashion', 'emotional_intelligence',
+      'dealing_with_rejection', 'red_flags', 'green_flags',
+      'long_distance', 'cultural_differences', 'self_improvement',
+      'love_languages', 'attachment_styles', 'dating_strategy',
+      'sugar_dynamics', 'travel_dates', 'luxury_experiences',
+      'age_gap_dynamics', 'social_perception', 'boundary_setting',
+      'romantic_gestures', 'anniversary_ideas', 'breakup_recovery',
+      'ghosting', 'situationship', 'friends_to_dating',
+      'dating_apps_strategy', 'photo_tips', 'bio_writing',
+      'texting_etiquette', 'video_dating', 'safety_tips',
+      'couple_activities', 'seasonal_dates', 'budget_dates',
+      'luxury_dates', 'group_dates', 'double_dates',
+      'conflict_resolution', 'jealousy', 'trust_building',
+      'physical_chemistry', 'emotional_connection',
+      'meeting_family', 'moving_in_together', 'relationship_milestones',
+      'reigniting_spark', 'routine_boredom', 'couple_communication',
+      'managing_multiple_conversations', 'dating_burnout', 'social_anxiety_dating',
+      'starting_over', 'post_toxic_recovery', 'self_worth',
+      'couple_travel', 'surprise_planning', 'reconciliation',
+      'shared_goals', 'work_life_dating_balance', 'cohabitation',
+      'dealing_with_ex', 'dating_as_parent', 'second_chance_romance',
+    ],
+    blockedTopics: [
+      'politics', 'religion_debate', 'illegal_activities', 'violence',
+      'self_harm', 'medical_advice', 'legal_advice', 'financial_advice',
+      'hacking', 'drugs', 'weapons', 'gambling', 'academic_help',
+      'coding', 'math_homework', 'explicit_content', 'harassment_tips',
+      'stalking', 'manipulation_tactics', 'revenge',
+      'personal_data_extraction', 'contact_info_exchange',
+    ],
+    offTopicMessages: {
+      en: "I appreciate your curiosity! 😊 As your Date Coach, I'm here to help you with everything related to dating, relationships, and making great connections. Ask me about conversation tips, date ideas, profile advice, or anything romance-related — I'd love to help!",
+      es: "¡Aprecio tu curiosidad! 😊 Como tu Coach de Citas, estoy aquí para ayudarte con todo lo relacionado con citas, relaciones y conexiones. Pregúntame sobre consejos de conversación, ideas para citas, mejoras de perfil o cualquier tema romántico — ¡me encantaría ayudarte!",
+      fr: "J'apprécie ta curiosité ! 😊 En tant que Coach Dating, je suis là pour t'aider avec tout ce qui concerne les rencontres, les relations et les connexions. Demande-moi des conseils de conversation, des idées de rendez-vous ou des améliorations de profil !",
+      de: "Ich schätze deine Neugier! 😊 Als dein Dating-Coach bin ich hier, um dir bei allem rund um Dating, Beziehungen und Verbindungen zu helfen. Frag mich nach Gesprächstipps, Date-Ideen oder Profilverbesserungen!",
+      pt: "Agradeço sua curiosidade! 😊 Como seu Coach de Encontros, estou aqui para ajudar com tudo relacionado a encontros, relacionamentos e conexões. Me pergunte sobre dicas de conversa, ideias para encontros ou melhorias no perfil!",
+      ja: "ご質問ありがとう！😊 デートコーチとして、デート、恋愛、素敵な出会いに関するすべてをお手伝いします。会話のコツ、デートのアイデア、プロフィール改善など、何でも聞いてください！",
+      zh: "感谢你的好奇心！😊 作为你的约会教练，我专注于帮助你处理约会、感情和人际关系方面的问题。可以问我聊天技巧、约会创意、个人资料改进等恋爱相关话题！",
+      ru: "Ценю твоё любопытство! 😊 Как твой тренер по свиданиям, я здесь, чтобы помочь со всем, что связано с отношениями и знакомствами. Спрашивай о советах для общения, идеях для свиданий или улучшении профиля!",
+      ar: "أقدّر فضولك! 😊 كمدرب مواعدة، أنا هنا لمساعدتك في كل ما يتعلق بالمواعدة والعلاقات. اسألني عن نصائح المحادثة، أفكار المواعيد، أو تحسين ملفك الشخصي!",
+      id: "Aku menghargai rasa penasaranmu! 😊 Sebagai Coach Kencan, aku di sini untuk membantumu dengan segala hal tentang kencan, hubungan, dan koneksi. Tanyakan tentang tips percakapan, ide kencan, atau perbaikan profil!",
+    },
+    safetyMessages: {
+      en: "Your safety is my priority. If you're in an unsafe situation, please contact local emergency services. For relationship concerns, consider reaching out to a professional counselor.",
+      es: 'Tu seguridad es mi prioridad. Si estás en una situación insegura, contacta los servicios de emergencia locales. Para temas de relaciones, considera buscar un consejero profesional.',
+      fr: "Votre sécurité est ma priorité. Si vous êtes dans une situation dangereuse, veuillez contacter les services d'urgence locaux. Pour des préoccupations relationnelles, envisagez de consulter un conseiller professionnel.",
+      de: 'Deine Sicherheit hat Priorität. Wenn du in einer unsicheren Situation bist, kontaktiere bitte den lokalen Notdienst. Bei Beziehungsproblemen ziehe professionelle Beratung in Betracht.',
+      pt: 'Sua segurança é minha prioridade. Se você está em uma situação insegura, entre em contato com os serviços de emergência locais. Para questões de relacionamento, considere procurar um conselheiro profissional.',
+      ja: 'あなたの安全が最優先です。危険な状況にある場合は、地域の緊急サービスに連絡してください。恋愛の悩みについては、専門カウンセラーへの相談をお勧めします。',
+      zh: '您的安全是我的首要任务。如果您处于不安全的状况，请联系当地紧急服务。对于感情问题，建议咨询专业顾问。',
+      ru: 'Ваша безопасность — мой приоритет. Если вы в опасной ситуации, обратитесь в местные экстренные службы. По вопросам отношений рассмотрите обращение к профессиональному консультанту.',
+      ar: 'سلامتك هي أولويتي. إذا كنت في موقف غير آمن، يرجى الاتصال بخدمات الطوارئ المحلية. لمخاوف العلاقات، فكر في التواصل مع مستشار متخصص.',
+      id: 'Keselamatanmu adalah prioritasku. Jika kamu dalam situasi tidak aman, silakan hubungi layanan darurat setempat. Untuk masalah hubungan, pertimbangkan untuk berkonsultasi dengan konselor profesional.',
+    },
+    additionalGuidelines: '',
+    edgeCaseExtensions: '',
+    learningEnabled: true,
+    placeSearch: {
+      enableWithoutLocation: true,
+      minActivitiesForPlaceSearch: 6,
+      defaultRadius: 100000,
+      minRadius: 3000,
+      maxRadius: 300000,
+      radiusSteps: [100000, 130000, 180000, 250000, 300000],
+      progressiveRadiusSteps: [15000, 30000, 60000, 120000, 200000, 300000],
+      minPlacesTarget: 30,
+      loadMoreDefaultBaseRadius: 60000,
+      loadMoreExpansionBase: 2,
+      loadMoreMaxExpansionStep: 4,
+      perQueryResults: 20,
+      maxPlacesIntermediate: 60,
+      maxOutputTokensBudget: 8192,
+      purchaseExtraTerms: '',
+    },
+    rag: {
+      enabled: true,
+      topK: 3,
+      minScore: 0.3,
+      fetchMultiplier: 2,
+      maxQueryLength: 500,
+      maxChunkLength: 1500,
+      embeddingModel: 'gemini-embedding-001',
+      dimensions: 768,
+      collection: 'coachKnowledge',
+      promptHeader: 'EXPERT KNOWLEDGE BASE (use this verified dating advice to ground your response — reference specific tips when relevant):',
+    },
+  };
+
+  try {
+    const rc = admin.remoteConfig();
+    const template = await rc.getTemplate();
+    const param = template.parameters['coach_config'];
+    if (param && param.defaultValue && param.defaultValue.value) {
+      const rcConfig = JSON.parse(param.defaultValue.value);
+      const result = {...defaults, ...rcConfig};
+      // Deep merge sub-objects so individual RC fields override individual defaults
+      if (rcConfig.placeSearch && defaults.placeSearch) {
+        result.placeSearch = {...defaults.placeSearch, ...rcConfig.placeSearch};
+      }
+      if (rcConfig.rag && defaults.rag) {
+        result.rag = {...defaults.rag, ...rcConfig.rag};
+      }
+      _coachConfigCache = result;
+      _coachConfigCacheTime = Date.now();
+      return result;
+    }
+  } catch (err) {
+    logger.warn(`[getCoachConfig] Failed to read Remote Config, using defaults: ${err.message}`);
+    _coachConfigCache = defaults;
+    _coachConfigCacheTime = Date.now();
+  }
+  return defaults;
+}
+
+// ─── Coach Learning System ─────────────────────────────────────────────────────
+
+/**
+ * Analyze user message to extract topics, sentiment, and communication style.
+ * Lightweight keyword-based analysis — no extra Gemini call needed.
+ */
+function analyzeUserMessage(msg) {
+  const lower = msg.toLowerCase();
+  const topics = [];
+  const topicPatterns = {
+    first_date: /first date|primera cita|premier rendez|erstes date|primeiro encontro|first time meeting|primera vez|conocernos en persona|meet in person|meet up|quedar|verse en persona|wo treffen|où se voir|initial date|first outing|get to know|conocernos mejor|salir juntos|rendez-vous|Treffen|kennenlernen|nos vamos|let'?s meet/,
+    conversation_tips: /conversation|what to say|how to talk|qué decir|hablar con|conversa|chat tip|qué le digo|qué escribir|what.*write|how.*respond|cómo responder|qué contestar|mensaje|topic.*talk|tema.*hablar|de qué hablar|what.*discuss|keep.*talking|mantener.*conversación|awkward silence|silencio|boring chat|aburrida la conversación|interesting|interesante/,
+    profile_help: /profile|bio|photo|picture|perfil|foto|about me|descripción|description|improve.*profile|mejorar.*perfil|write.*bio|escribir.*bio|selfie|headshot|prompt|más fotos|more photos|best photo|mejor foto|what.*write.*about|qué poner en/,
+    match_analysis: /match|she said|he said|they said|dijo|wrote me|respond|what does.*mean|qué significa|analiz|what.*think|qué opinas|le gust[oó]|likes me|interesad[oa]|interested|does she|does he|le parezco|tiene interés|señales|signals|signs|she means|he means|chemistry|vibe|compatible|compatib|química|feeling|sentí|conexión|connection|spark|chispa/,
+    confidence: /confidence|nervous|shy|anxious|afraid|scared|miedo|nervios|insecure|insegur|self.?esteem|autoestima|worthy|digno|not good enough|no soy suficiente|doubt|duda|overthink|pensar demasiado|worry|preocup|embarrass|vergüenza|assertive|seguridad|brave|valiente|fear|temo|intimid|imposter|fake it|pretend|fingir|insuficiente|not enough|no merezco/,
+    icebreakers: /icebreaker|opener|first message|how to start|como empezar|primer mensaje|iniciar|open.*conversation|abrir.*conversación|romper.*hielo|break.*ice|creative.*opener|que.*le.*digo.*primero|what.*say.*first|intro|presentar|greet|saludar/,
+    date_ideas: /date idea|where.*go|what.*do|plan.*date|idea.*cita|qué hacer|dónde ir|activit|planeando|planning|sorpresa|surprise|special|romantic.*plan|plan.*romântic|creative date|cita creativa|segunda cita|second date|tercera cita|third date|next date|próxima cita|weekend plan|fin de semana|evening plan|noche|staycation|road trip|adventure date|weekend getaway|escapada|getaway|day trip|excursión|outing|salida/,
+    activity_places: /restaurant|bar|café|place|venue|lugar|sitio|club|hotel|spa|parque|park|playa|beach|cine|cinema|teatro|theater|museo|museum|bowling|karaoke|escape room|rooftop|garden|jardín|picnic|camping|senderismo|hiking|concert|concierto|galería|gallery|tienda|shop|store|mall|florerr?ía|bakery|pastelería|helad[eo]ría|ice cream|gym|gimnasio|yoga|plaza|mirador|lago|lake|montaña|mountain|food|comida|cena|dinner|brunch|breakfast|desayuno|wine|vino|cocktail|coctel|cerveza|beer/,
+    texting: /text back|message back|reply.*fast|respond|answer|responder|contestar|double text|doble mensaje|when.*text|cuándo.*escribir|how often|cada cuánto|too much|demasiado|clingy|pegajos|leave.*on read|dejar en visto|en visto|seen|visto|blue tick|late reply|tarda en responder|demora|slow.*reply|quick.*reply|fast.*reply/,
+    rejection: /reject|ghost|ignored|no resp|left on read|rechaz|ignorar|unmatch|deshacer match|blocked|bloqueó|friendzone|zona de amigos|not interested|no le intereso|turn.*down|moved on|avanzó|over me|olvidó|forgot|abandoned|dejó|dumped|botó|broke up|terminó|ended|se acabó/,
+    red_flags: /red flag|warning sign|suspicious|bandera roja|señal de alerta|toxic|tóxic|narcis|manipulat|controlling|controlador|jealous partner|pareja celos|possessive|posesiv|gaslighting|love bombing|breadcrumbing|catfish|fake profile|perfil falso|liar|mentiros|trust issue|problema de confianza|cheating|infidelidad|engañ/,
+    relationship: /relationship|serious|committed|exclusiv|relación|pareja|compromis|boyfriend|girlfriend|novia?o?|partner|together|juntos|official|formalizar|define.*relation|definir.*relación|long term|largo plazo|future|futuro|move in|vivir juntos|marriage|matrimonio|wedding|boda|engagement|compromiso|love|amor|soul ?mate|media naranja|the one|donde vamos|where.*going|next step|siguiente paso|DTR|commitment phob|miedo al compromiso|situationship|casual|open relationship|relación abierta/,
+    appearance: /look|fashion|outfit|dress|groom|style|ropa|vestir|apariencia|handsome|guap[oa]|attractive|atractiv|what.*wear|qué.*ponerme|qué.*vestir|hair|pelo|peinado|cologne|perfume|fragrance|makeup|maquillaje|accessories|accesorios|shoes|zapatos|suit|traje|casual|elegant|body|cuerpo|fitness|fit|gym|workout/,
+    emotional: /feeling|emotion|hurt|love|sad|happy|lonely|sentir|emoción|triste|soledad|disappointment|decepción|frustra|heartbreak|corazón roto|miss|extrañ|attached|apegad|vulnerability|vulnerab|open up|abrirse|share.*feelings|compartir.*sentimientos|overwhelming|abrumad|excited|emocionad|butterflies|mariposas|fell.*for|me enamoré|catch feelings|connected|conexión/,
+    safety: /safe|danger|uncomfortable|unsafe|segur|peligr|creepy|acoso|harass|stalker|follow.*me|me sigue|pressure|presion|force|forzar|unwanted|no deseado|boundary|límite|consent|consentimiento|respect|respeto|abuse|abuso|drunk|borracho|alone|solo.*con|first.*meet|meet.*stranger/,
+    gift_ideas: /gift|regalo|present|surprise|sorpresa|buy.*for|comprar.*para|what.*give|qué.*regalar|flower|flor|chocolate|wine|vino|jewelry|joya|ring|anillo|romantic gesture|gesto romántico|anniversary|aniversario|birthday.*date|cumpleaños|valentine|san valentín|detail|detalle|special.*occasion|ocasión especial|DIY|handmade|hecho a mano|playlist|experience gift|regalo experiencia|voucher|gift card|tarjeta regalo|personalized|personalizado/,
+    love_languages: /love language|lenguaje.*amor|acts of service|actos de servicio|words of affirmation|palabras.*afirmación|quality time|tiempo de calidad|physical touch|contacto físico|gift giving|dar regalos|show.*love|demostrar.*amor|how.*show|cómo.*demostrar|affection|cariño|spontaneous|espontáneo|attachment style|estilo de apego|emotional needs|necesidades emocionales|avoidant|ansioso|secure attachment|apego seguro/,
+    communication: /communicate|comunicar|listen|escuchar|understand|entender|misunderstand|malentendido|argument|discusión|fight|pelea|disagree|desacuerdo|conflict|conflicto|apologize|disculpar|forgive|perdonar|compromise|comprom|boundaries|límites|space|espacio|need.*talk|necesito.*hablar|express|expresar|open.*up|abrirse|nonverbal|tono de voz|tone of voice|assertive|asertiv|difficult conversation|conversación difícil/,
+    dating_strategy: /strategy|estrategia|approach|enfoque|technique|técnica|tactic|táctica|improve|mejorar|optimize|optimizar|more matches|más matches|better|mejor|successful|éxito|stand out|destacar|algorithm|algoritmo|likes|swipe|discovery|descubrimiento|visibility|visibilidad|app.*tip|expand pool|niche|más visible|more visible|boost|premium|super like|upgrade/,
+    sugar_dynamics: /sugar|arrangement|allowance|expectation|financial|spoil|consentir|lujo|luxury|lavish|generous|generos[oa]|benefactor|mentor|provider|proveedor|pamper|mimar|treat|tratar bien|age.?gap|diferencia de edad|younger.*older|older.*younger|mayor.*menor|sugar baby|sugar daddy|sugar mommy|mutually beneficial|beneficio mutuo|lifestyle|estilo de vida|travel.*together|viajar juntos|experience.*together|experiencia|fine dining|upscale|exclusiv/,
+    self_care: /self[- ]?care|auto[- ]?cuidado|me time|consentirme|cuidarme|bienestar|wellness|solo.*activit|día.*para\s*mí|jour.*pour\s*moi|Tag.*für\s*mich|dia.*para\s*mim|ご褒美|犒劳自己|побаловать\s*себя|عناية\s*بالنفس|perawatan\s*diri|treat\s*myself|me\s*faire\s*plaisir|mir.*gönnen|spa\s*day|yoga.*sol[oa]|paseo.*sol[oa]|walk.*alone|stroll/,
+    group_activities: /double\s*date|doble\s*cita|group\s*(date|outing|activity)|cita\s*(grupal|en\s*grupo)|triple\s*date|friend.*date|cita.*amig|game\s*night|noche.*juegos|salida.*amigos|bowling.*group|karaoke.*group|escape\s*room.*friend|amigos.*juntos|Doppel[- ]?date|encontro\s*duplo|ダブルデート|双人约会|двойное\s*свидание|موعد\s*جماعي/,
+    vague_intent: /\bbored\b|\baburrido\b|no\s*s[eé]\s*qu[eé]\s*hacer|what.*(should|can)\s*I\s*do|don'?t\s*know\s*what\s*to|qu[eé]\s*hago|qu[eé]\s*puedo\s*hacer|surprise\s*me|sorpréndeme|something\s*(fun|different)|algo\s*(divertido|diferente)|plan.*for\s*me|planea.*para\s*mí|cualquier\s*cosa|whatever|indeciso|undecided|not\s*sure\s*what/,
+  };
+
+  for (const [topic, pattern] of Object.entries(topicPatterns)) {
+    if (pattern.test(lower)) topics.push(topic);
+  }
+
+  const positivePattern = /thank|great|helpful|awesome|perfect|love it|exactly|gracias|genial|excelente|perfecto|muy bien|buen consejo|útil|merci|danke|obrigad/;
+  const isPositive = positivePattern.test(lower);
+  const style = msg.length > 200 ? 'detailed' : msg.length < 30 ? 'brief' : 'moderate';
+
+  return {
+    topics: topics.length > 0 ? topics : ['general'],
+    isPositive,
+    style,
+    messageLength: msg.length,
+  };
+}
+
+/**
+ * Build a personalized context string from the user's learning profile.
+ * Injected into the system prompt so Gemini can tailor responses.
+ */
+function buildLearningContext(learningProfile) {
+  if (!learningProfile) return '';
+  const parts = [];
+
+  const total = learningProfile.totalInteractions || 0;
+  if (total === 1) {
+    parts.push('This is their second conversation with you — they found you helpful before.');
+  } else if (total > 1 && total < 5) {
+    parts.push(`This user has had ${total} previous interactions. They\'re getting familiar with your coaching style.`);
+  } else if (total >= 5 && total < 20) {
+    parts.push(`Returning user with ${total} interactions. They trust your advice — be personalized and skip basics they already know.`);
+  } else if (total >= 20) {
+    parts.push(`Power user with ${total}+ interactions. They value advanced, detailed advice. Skip introductory topics.`);
+  }
+
+  const topicFreq = learningProfile.topicFrequency || {};
+  const sortedTopics = Object.entries(topicFreq)
+    .filter(([t]) => t !== 'general')
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+  if (sortedTopics.length > 0) {
+    const topStr = sortedTopics.map(([t, c]) => `${t.replace(/_/g, ' ')} (${c}x)`).join(', ');
+    parts.push(`Their most discussed topics: ${topStr}. Lean into these interests when relevant.`);
+  }
+
+  const styleCount = learningProfile.styleCount || {};
+  const styles = Object.entries(styleCount).sort(([, a], [, b]) => b - a);
+  if (styles.length > 0) {
+    const dominant = styles[0][0];
+    const styleAdvice = {
+      brief: 'They prefer short messages — keep responses concise and actionable.',
+      detailed: 'They write detailed messages — they appreciate thorough, in-depth responses.',
+      moderate: 'They write moderate-length messages — balance detail with brevity.',
+    };
+    if (styleAdvice[dominant]) parts.push(styleAdvice[dominant]);
+  }
+
+  const positive = learningProfile.positiveSignals || 0;
+  if (total > 5 && positive > 0) {
+    const ratio = positive / total;
+    if (ratio > 0.4) {
+      parts.push('High engagement: they frequently express gratitude. Your advice resonates well.');
+    } else if (ratio < 0.1 && total > 10) {
+      parts.push('Low expressed satisfaction — try varying your approach. Be more specific and actionable.');
+    }
+  }
+
+  const recent = learningProfile.recentTopics || [];
+  if (recent.length > 0 && total > 2) {
+    parts.push(`Recently discussed: ${recent.join(', ')}. Reference these for continuity.`);
+  }
+
+  return parts.length > 0
+    ? '\n\nUSER LEARNING PROFILE (personalize your response based on this):\n' + parts.join('\n')
+    : '';
+}
+
+/**
+ * Update per-user learning profile and global insights in Firestore.
+ * Non-critical — errors are logged but do not affect the response.
+ * Stores data in coachChats/{userId}.learningProfile and coachInsights/global.
+ */
+async function updateCoachLearning(db, userId, analysis, geminiTopics) {
+  try {
+    const allTopics = [...new Set([...analysis.topics, ...(geminiTopics || [])])];
+    const profileRef = db.collection('coachChats').doc(userId);
+
+    const updates = {
+      'learningProfile.totalInteractions': admin.firestore.FieldValue.increment(1),
+      'learningProfile.lastInteraction': admin.firestore.FieldValue.serverTimestamp(),
+      'learningProfile.recentTopics': allTopics.slice(0, 5),
+      'learningProfile.lastMessageLength': analysis.messageLength,
+      [`learningProfile.styleCount.${analysis.style}`]: admin.firestore.FieldValue.increment(1),
+    };
+
+    for (const topic of allTopics) {
+      updates[`learningProfile.topicFrequency.${topic}`] = admin.firestore.FieldValue.increment(1);
+    }
+
+    if (analysis.isPositive) {
+      updates['learningProfile.positiveSignals'] = admin.firestore.FieldValue.increment(1);
+    }
+
+    // Update global insights in parallel
+    const globalRef = db.collection('coachInsights').doc('global');
+    const globalUpdates = {
+      totalInteractions: admin.firestore.FieldValue.increment(1),
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    for (const topic of allTopics) {
+      globalUpdates[`topicCounts.${topic}`] = admin.firestore.FieldValue.increment(1);
+    }
+
+    await Promise.all([
+      profileRef.set(updates, {merge: true}),
+      globalRef.set(globalUpdates, {merge: true}),
+    ]);
+  } catch (err) {
+    logger.warn(`[updateCoachLearning] Non-critical error: ${err.message}`);
+  }
+}
+
+// ─── RAG: Retrieve relevant knowledge from coachKnowledge vector store ───────
+const RAG_COLLECTION = 'coachKnowledge';
+const RAG_EMBEDDING_MODEL = 'gemini-embedding-001';
+const RAG_DIMENSIONS = 768;
+const RAG_DEFAULT_TOP_K = 3;
+const RAG_MIN_SCORE = 0.3; // minimum cosine similarity to include results
+const RAG_MAX_QUERY_LENGTH = 500;
+const RAG_FETCH_MULTIPLIER = 2;
+const RAG_MAX_CHUNK_LENGTH = 1500;
+
+// ─── Moderation RAG: Retrieve moderation rules from moderationKnowledge ──────
+
+// --- Coach RAG ---
+async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en') {
+  if (!apiKey || ragConfig.enabled === false) return '';
+
+  // Config from RC with fallback to hardcoded defaults
+  const topK = Math.min(Math.max(ragConfig.topK || RAG_DEFAULT_TOP_K, 1), 10);
+  const minScore = Math.min(Math.max(ragConfig.minScore ?? RAG_MIN_SCORE, 0), 1);
+  const fetchMultiplier = Math.min(Math.max(ragConfig.fetchMultiplier || RAG_FETCH_MULTIPLIER, 1), 5);
+  const maxQueryLength = ragConfig.maxQueryLength || RAG_MAX_QUERY_LENGTH;
+  const maxChunkLength = ragConfig.maxChunkLength || RAG_MAX_CHUNK_LENGTH;
+  const embeddingModelName = ragConfig.embeddingModel || RAG_EMBEDDING_MODEL;
+  const dimensions = ragConfig.dimensions || RAG_DIMENSIONS;
+  const collectionName = ragConfig.collection || RAG_COLLECTION;
+  const promptHeader = ragConfig.promptHeader || 'EXPERT KNOWLEDGE BASE (use this verified dating advice to ground your response — reference specific tips when relevant):';
+
+  try {
+    // Validate and truncate query
+    if (!query || typeof query !== 'string' || query.trim().length < 3) return '';
+    const trimmedQuery = query.trim().substring(0, maxQueryLength);
+
+    // 1. Embed the user query with timeout
+    const genai = new GoogleGenerativeAI(apiKey);
+    const embeddingModel = genai.getGenerativeModel({model: embeddingModelName});
+
+    const embedPromise = embeddingModel.embedContent({
+      content: {parts: [{text: trimmedQuery}]},
+      taskType: 'RETRIEVAL_QUERY',
+      outputDimensionality: dimensions,
+    });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('RAG embedding timeout (5s)')), 5000),
+    );
+    const embResult = await Promise.race([embedPromise, timeoutPromise]);
+    const queryVector = embResult.embedding.values;
+
+    if (!queryVector || queryVector.length !== dimensions) {
+      logger.warn(`[RAG] Unexpected embedding dimension: ${queryVector?.length}, expected ${dimensions}`);
+      return '';
+    }
+
+    // 2. Firestore vector search with findNearest
+    const db = admin.firestore();
+    const collRef = db.collection(collectionName);
+    const fetchLimit = topK * fetchMultiplier;
+    const vectorQuery = collRef.findNearest('embedding', queryVector, {
+      limit: fetchLimit,
+      distanceMeasure: 'COSINE',
+      distanceResultField: '_distance',
+    });
+
+    const snapshot = await vectorQuery.get();
+    if (snapshot.empty) {
+      logger.info('[RAG] No knowledge chunks found');
+      return '';
+    }
+
+    // 3. Parse docs with distance scores and filter by minScore
+    // COSINE distance in Firestore = 1 - cosine_similarity, so lower = better
+    // Convert to similarity: similarity = 1 - distance
+    const docs = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const distance = data._distance ?? 1;
+      return {
+        text: (data.text || '').substring(0, maxChunkLength),
+        category: data.category || 'general',
+        language: data.language || 'en',
+        similarity: 1 - distance,
+      };
+    }).filter((d) => d.similarity >= minScore && d.text.length > 0);
+
+    if (docs.length === 0) {
+      logger.info(`[RAG] All ${snapshot.size} chunks filtered out (minScore=${minScore})`);
+      return '';
+    }
+
+    // 4. Language-aware ranking: prefer user lang, then English, then any
+    const langNorm = (lang || 'en').substring(0, 2).toLowerCase();
+    const userLangDocs = docs.filter((d) => d.language === langNorm);
+    const enDocs = docs.filter((d) => d.language === 'en' && d.language !== langNorm);
+    const otherDocs = docs.filter((d) => d.language !== langNorm && d.language !== 'en');
+
+    // Merge maintaining similarity order within each language group
+    const ranked = [...userLangDocs, ...enDocs, ...otherDocs];
+    // Deduplicate by category (keep highest similarity per category)
+    const seenCategories = new Set();
+    const deduped = ranked.filter((d) => {
+      if (seenCategories.has(d.category)) return false;
+      seenCategories.add(d.category);
+      return true;
+    });
+    const selected = deduped.slice(0, topK);
+
+    if (selected.length === 0) return '';
+
+    logger.info(`[RAG] Retrieved ${selected.length}/${snapshot.size} chunks (categories: ${selected.map((d) => d.category).join(', ')}, scores: ${selected.map((d) => d.similarity.toFixed(2)).join(', ')})`);
+
+    return `\n\n${promptHeader}\n` +
+      selected.map((d, i) => `[${i + 1}] (${d.category}): ${d.text}`).join('\n\n');
+  } catch (err) {
+    logger.warn(`[RAG] Knowledge retrieval failed (non-critical): ${err.message}`);
+    return '';
+  }
+}
+
+/**
+ * Callable: Send a message to the AI Date Coach and get a Gemini-powered response.
+ * The coach reads the user's profile for context and optionally match/conversation data.
+ * Both the user message and the coach reply are stored in Firestore.
+ * Configuration is dynamic via Remote Config key "coach_config".
+ * Off-topic questions receive an elegant redirect message.
+ * Payload: { message: string, matchId?: string, userLanguage: string }
+ * Response: { success, reply, suggestions?, activitySuggestions? }
+ * Location is always read from the user's Firestore profile (updated by HomeView).
+ * Homologado: iOS CoachChatViewModel / Android CoachChatViewModel
+ */
+
+// --- Coach main functions ---
+exports.dateCoachChat = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey, placesApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {message, matchId, userLanguage, loadMoreActivities, category: requestCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
+    const safeLoadCount = Math.max(0, Math.min(20, parseInt(rawLoadCount) || 0));
+
+    // 0. Load dynamic configuration from Remote Config
+    const config = await getCoachConfig();
+    const placesSearchConfig = await getPlacesSearchConfig();
+    const categoryQueryMap = getCategoryQueryMap(placesSearchConfig);
+
+    if (!config.enabled) {
+      throw new Error('Date Coach is temporarily unavailable. Please try again later.');
+    }
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      throw new Error('Message is required');
+    }
+    if (message.length > config.maxMessageLength) {
+      throw new Error(`Message too long (max ${config.maxMessageLength} characters)`);
+    }
+
+    const lang = (userLanguage || 'en').toLowerCase();
+    const db = admin.firestore();
+
+    try {
+      // 0.5. Credit check — verify user has remaining coach messages (skip for load more)
+      const userRefForCredits = db.collection('users').doc(userId);
+      const creditDoc = await userRefForCredits.get();
+      const creditData = creditDoc.exists ? creditDoc.data() : {};
+      const coachMessagesRemaining = typeof creditData.coachMessagesRemaining === 'number'
+        ? creditData.coachMessagesRemaining : 5;
+
+      if (!loadMoreActivities && coachMessagesRemaining <= 0) {
+        const noCreditsMsg = {
+          en: "You've used all your daily coach messages. They'll reset at midnight! ✨",
+          es: '¡Has usado todos tus mensajes diarios del coach. Se renovarán a medianoche! ✨',
+          fr: 'Vous avez utilisé tous vos messages quotidiens du coach. Ils seront renouvelés à minuit ! ✨',
+          pt: 'Você usou todas as suas mensagens diárias do coach. Elas serão renovadas à meia-noite! ✨',
+          de: 'Du hast alle täglichen Coach-Nachrichten aufgebraucht. Sie werden um Mitternacht erneuert! ✨',
+          zh: '您已用完今天的教练消息。它们将在午夜重置！✨',
+          ar: 'لقد استخدمت جميع رسائل المدرب اليومية. ستتجدد عند منتصف الليل! ✨',
+          id: 'Anda telah menggunakan semua pesan pelatih harian. Akan diperbarui pada tengah malam! ✨',
+          ru: 'Вы использовали все ежедневные сообщения коуча. Они обновятся в полночь! ✨',
+          ja: 'コーチへの1日のメッセージを使い切りました。深夜にリセットされます！✨',
+        };
+        return {
+          success: true,
+          reply: noCreditsMsg[lang] || noCreditsMsg.en,
+          suggestions: [],
+          coachMessagesRemaining: 0,
+        };
+      }
+
+      // 1. Rate limiting — check messages in last hour (skip for load more)
+      if (loadMoreActivities) {
+        // Fast path: skip profile, match, learning, history reads — only fetch places + call Gemini
+        const lmUserData = creditDoc.exists ? creditDoc.data() : {};
+        let lmLat = lmUserData.latitude;
+        let lmLng = lmUserData.longitude;
+        let lmHasLocation = !!(lmLat && lmLng);
+
+        // Temporal context (lightweight)
+        const lmOffset = typeof lmUserData.timezoneOffset === 'number' ? lmUserData.timezoneOffset : 0;
+        const lmLocalTime = new Date(Date.now() + lmOffset * 3600000);
+        const lmHour = lmLocalTime.getUTCHours();
+        const lmTimeOfDay = lmHour < 6 ? 'late night' : lmHour < 12 ? 'morning' : lmHour < 17 ? 'afternoon' : lmHour < 21 ? 'evening' : 'night';
+
+        // Track initial search radius for progressive loadMore expansion
+        const lmPsDefaults = config.placeSearch || {};
+        let lmBaseRadius = lmPsDefaults.loadMoreDefaultBaseRadius || 60000; // RC-configurable fallback if cache has no lastRadiusUsed
+        let lmLocationOverridden = false;
+
+        // Cache-first: check if we have cached places from the original query
+        // Skip cache on loadCount=0 (category switch → always fresh fetch)
+        if (safeLoadCount > 0) try {
+          const cacheDoc = await db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').get();
+          if (cacheDoc.exists) {
+            const cacheData = cacheDoc.data();
+            // Read initial search radius for progressive expansion in loadMore
+            if (typeof cacheData.lastRadiusUsed === 'number' && cacheData.lastRadiusUsed > 0) lmBaseRadius = cacheData.lastRadiusUsed;
+            // Inherit location override from initial search (e.g. user mentioned "Buenos Aires")
+            if (typeof cacheData.overrideLat === 'number' && typeof cacheData.overrideLng === 'number') {
+              lmLat = cacheData.overrideLat; lmLng = cacheData.overrideLng; lmHasLocation = true; lmLocationOverridden = true;
+              logger.info(`[dateCoachChat] loadMore: using cached override location (${lmLat.toFixed(2)}, ${lmLng.toFixed(2)})`);
+            }
+            const cacheExpiry = cacheData.expiresAt instanceof Date ? cacheData.expiresAt.getTime()
+              : (cacheData.expiresAt && typeof cacheData.expiresAt.toDate === 'function') ? cacheData.expiresAt.toDate().getTime()
+              : 0;
+            if (cacheExpiry > Date.now() && Array.isArray(cacheData.places) && cacheData.places.length > 0) {
+              // Cache is still valid — serve from cache
+              const excludeSet = new Set([
+                ...(Array.isArray(rawExcludePlaceIds) ? rawExcludePlaceIds.filter((id) => typeof id === 'string') : []),
+                ...(Array.isArray(cacheData.returnedPlaceIds) ? cacheData.returnedPlaceIds : []),
+              ]);
+              const cachedCategoryFilter = requestCategory || null;
+              const available = cacheData.places.filter((rp) =>
+                rp.placeId && !excludeSet.has(rp.placeId) &&
+                (!cachedCategoryFilter || normalizeCategory(rp.category) === cachedCategoryFilter),
+              );
+              if (available.length > 0) {
+                const batch = available.slice(0, 20);
+                const cachedActivities = batch.map((rp) => ({
+                  emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+                  title: (rp.name || 'Place').substring(0, 50),
+                  description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
+                  category: normalizeCategory(rp.category),
+                  bestFor: 'fun',
+                  ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+                  ...(rp.rating != null ? {rating: rp.rating} : {}),
+                  ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+                  ...(rp.website ? {website: rp.website} : {}),
+                  ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+                  ...(rp.address ? {address: rp.address} : {}),
+                  ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+                  ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+                  ...(rp.placeId ? {placeId: rp.placeId} : {}),
+                  ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+                }));
+                // Update cache with newly returned placeIds (non-blocking)
+                const newReturned = [...(cacheData.returnedPlaceIds || []), ...batch.filter((rp) => rp.placeId).map((rp) => rp.placeId)];
+                db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').update({returnedPlaceIds: newReturned}).catch(() => {});
+                logger.info(`[dateCoachChat] loadMore served ${cachedActivities.length} from cache (${available.length - batch.length} remaining)`);
+                return {
+                  success: true,
+                  activitySuggestions: cachedActivities,
+                  coachMessagesRemaining,
+                  ...(cacheData.dominantCategory ? {dominantCategory: cacheData.dominantCategory} : {}),
+                };
+              }
+            }
+          }
+        } catch (cacheReadErr) {
+          logger.warn(`[dateCoachChat] Cache read failed (continuing with fresh fetch): ${cacheReadErr.message}`);
+        } // end cache block (skipped when safeLoadCount === 0)
+
+        // Fetch Google Places with progressive radius expansion
+        // For category searches, progressively expand radius until minTarget results found
+        let lmPlaces = [];
+        const lmPsConfig = config.placeSearch || {};
+        const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (placesKey) {
+          try {
+            const lmMaxR = lmPsConfig.maxRadius || 300000;
+            const lmExpBase = lmPsConfig.loadMoreExpansionBase || 2;
+            const lmMaxStep = lmPsConfig.loadMoreMaxExpansionStep || 4;
+            const lmMinTarget = lmPsConfig.minPlacesTarget || 30;
+            const lmMaxIntermediate = lmPsConfig.maxPlacesIntermediate || 60;
+            const center = lmHasLocation ? {latitude: lmLat, longitude: lmLng} : null;
+            const lmCat = requestCategory && categoryQueryMap[requestCategory] ? requestCategory : null;
+            const lmIncludedType = lmCat && CATEGORY_TO_PLACES_TYPE[lmCat] ? [CATEGORY_TO_PLACES_TYPE[lmCat]] : null;
+            let lmQueries;
+            if (lmCat) {
+              const canonicalQ = categoryQueryMap[lmCat];
+              const terms = canonicalQ.split(' ').filter((t) => t.length > 2);
+              const subQ = terms.length > 3
+                ? [terms.slice(0, 3).join(' '), terms.slice(3).join(' ')]
+                : [terms.join(' ')];
+              lmQueries = [canonicalQ, ...subQ].slice(0, 3);
+            } else {
+              lmQueries = Object.keys(categoryQueryMap).sort(() => Math.random() - 0.5).slice(0, 4).map((k) => categoryQueryMap[k]);
+            }
+            const perQ = lmPsConfig.perQueryResults || 20;
+            const lmUseRestriction = lmHasLocation && center && !lmLocationOverridden;
+
+            // Build progressive radius steps based on context
+            const progressiveSteps = Array.isArray(lmPsConfig.progressiveRadiusSteps) && lmPsConfig.progressiveRadiusSteps.length > 0
+              ? lmPsConfig.progressiveRadiusSteps : [15000, 30000, 60000, 120000, 200000, 300000];
+            let effectiveSteps;
+            if (!lmHasLocation) {
+              // No location: single query without geographic filter
+              effectiveSteps = [null];
+            } else if (safeLoadCount === 0) {
+              // Category switch (loadCount=0): start fresh from smallest radius for best local results
+              effectiveSteps = progressiveSteps.map((s) => Math.min(lmMaxR, s));
+            } else {
+              // Progressive loadMore (loadCount>0): start from expanded base radius
+              const startRadius = Math.min(lmMaxR, lmBaseRadius * Math.pow(lmExpBase, Math.min(safeLoadCount, lmMaxStep) + 1));
+              const stepsFromStart = progressiveSteps.filter((s) => s >= startRadius).map((s) => Math.min(lmMaxR, s));
+              effectiveSteps = stepsFromStart.length > 0 ? stepsFromStart : [Math.min(lmMaxR, startRadius)];
+              // Add one extra expanded step for sparse categories (zoo, aquarium, bowling)
+              const maxStepVal = Math.max(...effectiveSteps);
+              if (maxStepVal < lmMaxR) effectiveSteps.push(Math.min(lmMaxR, maxStepVal * 2));
+            }
+
+            // Pre-populate unique IDs with excluded places to avoid counting them toward target
+            const excludeSet = Array.isArray(rawExcludePlaceIds) ? new Set(rawExcludePlaceIds.filter((id) => typeof id === 'string')) : new Set();
+            const allUniqueIds = new Set(excludeSet);
+            let allRawPlaces = [];
+            let stepsUsed = 0;
+
+            logger.info(`[dateCoachChat] loadMore progressive: ${lmQueries.length} queries, ${effectiveSteps.length} steps, type=${lmIncludedType ? lmIncludedType[0] : 'any'}, cat=${lmCat || 'any'}, target=${lmMinTarget}`);
+
+            for (const stepRadius of effectiveSteps) {
+              stepsUsed++;
+              const radiusMeters = stepRadius ? Math.min(lmMaxR, stepRadius) : null;
+              const res = await Promise.all(
+                lmQueries.map((q) => placesTextSearch(q, center, radiusMeters, lang, null, perQ, lmUseRestriction, lmIncludedType).catch(() => ({places: []}))),
+              );
+              const newPlaces = res.flatMap((r) => r.places).filter((p) => {
+                if (!p.id || allUniqueIds.has(p.id)) return false;
+                allUniqueIds.add(p.id);
+                return true;
+              });
+              allRawPlaces = [...allRawPlaces, ...newPlaces];
+              logger.info(`[dateCoachChat] loadMore step ${stepsUsed}/${effectiveSteps.length}: ${radiusMeters || 'no-radius'}m → +${newPlaces.length} new (total: ${allRawPlaces.length}/${lmMinTarget})`);
+              if (allRawPlaces.length >= lmMinTarget) break;
+            }
+
+            logger.info(`[dateCoachChat] loadMore progressive done: ${allRawPlaces.length} places in ${stepsUsed}/${effectiveSteps.length} steps, cat=${lmCat || 'any'}`);
+
+            lmPlaces = allRawPlaces.slice(0, lmMaxIntermediate).map((p) => {
+              const photoArr = p.photos || [];
+              return {
+                name: p.displayName?.text || '', address: p.formattedAddress || '',
+                rating: p.rating || 0, reviewCount: p.userRatingCount || 0, photoCount: photoArr.length,
+                latitude: p.location?.latitude || 0, longitude: p.location?.longitude || 0,
+                placeId: p.id || '', website: p.websiteUri || null, googleMapsUrl: p.googleMapsUri || null,
+                category: p.primaryType || null, description: p.editorialSummary?.text || null,
+                priceLevel: googlePriceLevelToString(p.priceLevel) || null,
+                photos: photoArr.slice(0, 3).map((ph) => ({
+                  url: `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=${lmPsConfig.photoMaxHeightPx || 400}&key=${placesKey}`,
+                  width: ph.widthPx || 400, height: ph.heightPx || 300,
+                })),
+              };
+            });
+          } catch (err) {
+            logger.warn(`[dateCoachChat] loadMore places fetch failed: ${err.message}`);
+          }
+        }
+
+        const lmPlacesCtx = lmPlaces.length > 0
+          ? '\nREAL PLACES (select from these and use their placeId):\n' + lmPlaces.map((p, i) =>
+            `${i + 1}. "${p.name}" [placeId:${p.placeId}] — ${p.address}${p.rating ? `, ★${p.rating}` : ''}${p.reviewCount ? ` (${p.reviewCount} reviews)` : ''}${p.priceLevel ? ` ${p.priceLevel}` : ''}${p.category ? ` [${p.category}]` : ''}${p.website ? ` | ${p.website}` : ''}${p.description ? `\n   ${p.description}` : ''}`).join('\n')
+          : '';
+
+        const lmExampleCat = requestCategory || 'restaurant';
+        const lmPrompt = `You are a dating coach assistant. Generate ${config.maxActivities} NEW and DIFFERENT activity/venue suggestions.` +
+          `\nUser's local time: ${lmTimeOfDay} (${lmHour}:00). Consider this for relevance.` +
+          (lmHasLocation ? `\nLocation: lat ${lmLat.toFixed(2)}, lng ${lmLng.toFixed(2)}` : '') +
+          (requestCategory ? `\nCategory focus: ${requestCategory}. ALL activities MUST use category: "${requestCategory}".` : '') +
+          lmPlacesCtx +
+          `\n\nThe user already has these activities: ${message.substring(0, 500)}` +
+          `\nProvide COMPLETELY DIFFERENT suggestions. Respond in ${lang}.` +
+          `\nRespond ONLY with valid JSON: {"activitySuggestions": [{"emoji": "🍷", "title": "Place Name", "placeId": "ChIJ...", "description": "Why great for dating (NEVER include price symbols like $)", "category": "${lmExampleCat}", "bestFor": "romantic", "priceLevel": "$$$", "instagram": null}]}`
+          + `\nIMPORTANT: If a place has a placeId, include it exactly as given. NEVER include $ symbols in description. For instagram, only include if CERTAIN it exists — otherwise use null. NEVER invent website URLs. For priceLevel, use the value from Google Maps data — if unknown, use null.`;
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error('AI service unavailable');
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const lmTokenBudget = lmPsConfig.maxOutputTokensBudget || 8192;
+        const lmModel = genAI.getGenerativeModel({
+          model: AI_MODEL_NAME,
+          generationConfig: {temperature: config.temperature, maxOutputTokens: Math.max(config.maxTokens, lmTokenBudget), responseMimeType: 'application/json'},
+        });
+        let lmText = null;
+        try {
+          const lmResult = await (async () => {
+            try {
+              return await lmModel.generateContent(lmPrompt);
+            } catch (e) {
+              logger.warn(`[dateCoachChat] loadMore Gemini retry: ${e.message}`);
+              await new Promise((r) => setTimeout(r, 1000));
+              return await lmModel.generateContent(lmPrompt);
+            }
+          })();
+          lmText = lmResult.response.text();
+        } catch (geminiErr) {
+          logger.warn(`[dateCoachChat] loadMore Gemini failed, using Places fallback: ${geminiErr.message}`);
+        }
+
+        let lmActivities;
+        try {
+          const parsed = parseGeminiJsonResponse(lmText);
+          const acts = parsed.activitySuggestions || parsed.activity_suggestions || parsed.activities || parsed.places;
+          if (Array.isArray(acts)) {
+            const lmLookupById = new Map();
+            const lmLookupByName = new Map();
+            for (const rp of lmPlaces) {
+              if (rp.placeId) lmLookupById.set(rp.placeId, rp);
+              if (rp.name) lmLookupByName.set(rp.name.toLowerCase().trim(), rp);
+            }
+            lmActivities = acts.slice(0, config.maxActivities).map((a) => {
+              const title = (a.title || a.name || '').substring(0, 50);
+              const geminiPlaceId = a.placeId || a.place_id || null;
+              const matched = fuzzyMatchPlace(title, geminiPlaceId, lmLookupById, lmLookupByName, lmPlaces);
+              const rawDesc = (a.description || '').substring(0, 120);
+              const cleanDesc = rawDesc.replace(/\$+/g, '').trim();
+              const resolvedPriceLevel = (matched && matched.priceLevel) || a.priceLevel || a.price_level || null;
+              const validatedInstagram = sanitizeInstagramHandle(a.instagram || a.instagramHandle || null);
+              const validatedWebsite = (matched && matched.website) || sanitizeWebsiteUrl(a.website) || null;
+              const base = {
+                emoji: (a.emoji || '📍').substring(0, 4), title,
+                description: cleanDesc || rawDesc,
+                category: normalizeCategory(a.category), bestFor: a.bestFor || a.best_for || 'fun',
+                ...(resolvedPriceLevel ? {priceLevel: resolvedPriceLevel} : {}),
+                ...(validatedInstagram ? {instagram: validatedInstagram} : {}),
+                ...(validatedWebsite ? {website: validatedWebsite} : {}),
+              };
+              if (matched) {
+                return {...base,
+                  ...(matched.rating != null ? {rating: matched.rating} : {}),
+                  ...(matched.reviewCount ? {reviewCount: matched.reviewCount} : {}),
+                  ...(matched.googleMapsUrl ? {googleMapsUrl: matched.googleMapsUrl} : {}),
+                  ...(matched.address ? {address: matched.address} : {}),
+                  ...(matched.latitude != null ? {latitude: matched.latitude} : {}),
+                  ...(matched.longitude != null ? {longitude: matched.longitude} : {}),
+                  ...(matched.placeId ? {placeId: matched.placeId} : {}),
+                  ...(matched.photos?.length > 0 ? {photos: matched.photos} : {}),
+                };
+              }
+              return {...base, ...(a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {})};
+            });
+          }
+        } catch {
+          logger.warn('[dateCoachChat] loadMore JSON parse failed');
+        }
+
+        // Fallback: build from Google Places if Gemini failed
+        if ((!lmActivities || lmActivities.length === 0) && lmPlaces.length > 0) {
+          logger.info(`[dateCoachChat] loadMore fallback from ${lmPlaces.length} Google Places`);
+          lmActivities = lmPlaces.slice(0, config.maxActivities).map((rp) => ({
+            emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍', title: (rp.name || 'Place').substring(0, 50),
+            description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
+            category: normalizeCategory(rp.category), bestFor: 'fun',
+            ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+            ...(rp.rating != null ? {rating: rp.rating} : {}),
+            ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+            ...(rp.address ? {address: rp.address} : {}),
+            ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+            ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+            ...(rp.placeId ? {placeId: rp.placeId} : {}),
+            ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+          }));
+        }
+
+        // Force requested category on all activities when a specific category was requested
+        // (Google Places already filtered by includedType, so all places match the category;
+        //  Gemini may assign different categories despite prompt instructions)
+        if (requestCategory && lmActivities && lmActivities.length > 0) {
+          const normalizedReqCat = normalizeCategory(requestCategory);
+          for (const a of lmActivities) a.category = normalizedReqCat;
+        }
+
+        // Sort by popularity: places with more reviews and higher ratings appear first
+        if (lmActivities && lmActivities.length > 1) {
+          lmActivities.sort((a, b) => {
+            const scoreA = (a.rating || 0) * 0.4 + Math.log10(1 + (a.reviewCount || 0)) * 0.6;
+            const scoreB = (b.rating || 0) * 0.4 + Math.log10(1 + (b.reviewCount || 0)) * 0.6;
+            return scoreB - scoreA;
+          });
+        }
+
+        // Compute dominant category for loadMore results
+        let lmDominantCategory = null;
+        if (lmActivities && lmActivities.length > 0) {
+          const lmCatCounts = {};
+          for (const a of lmActivities) {
+            if (a.category) lmCatCounts[a.category] = (lmCatCounts[a.category] || 0) + 1;
+          }
+          const lmTopCat = Object.entries(lmCatCounts).sort(([, a], [, b]) => b - a)[0];
+          if (lmTopCat && lmTopCat[1] / lmActivities.length >= 0.4) {
+            lmDominantCategory = lmTopCat[0];
+          }
+        }
+
+        return {
+          success: true,
+          activitySuggestions: lmActivities || [],
+          coachMessagesRemaining,
+          ...(lmDominantCategory ? {dominantCategory: lmDominantCategory} : {}),
+        };
+      }
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const recentMsgCount = !loadMoreActivities ? await db.collection('coachChats').doc(userId)
+        .collection('messages')
+        .where('sender', '==', 'user')
+        .where('timestamp', '>', admin.firestore.Timestamp.fromDate(oneHourAgo))
+        .count().get() : null;
+      if (!loadMoreActivities && recentMsgCount && recentMsgCount.data().count >= config.rateLimitPerHour) {
+        const rateLimitMsgs = {
+          en: "You've been very active! To ensure quality advice, please wait a few minutes before sending more messages.",
+          es: '¡Has estado muy activo! Para asegurar consejos de calidad, espera unos minutos antes de enviar más mensajes.',
+          fr: "Tu as été très actif ! Pour garantir des conseils de qualité, attends quelques minutes avant d'envoyer plus de messages.",
+          de: 'Du warst sehr aktiv! Um qualitativ hochwertige Ratschläge zu gewährleisten, warte bitte ein paar Minuten.',
+          pt: 'Você está muito ativo! Para garantir conselhos de qualidade, aguarde alguns minutos antes de enviar mais mensagens.',
+          ja: 'とてもアクティブですね！質の高いアドバイスのために、数分お待ちください。',
+          zh: '你很活跃！为确保高质量建议，请等待几分钟再发送更多消息。',
+          ru: 'Вы были очень активны! Для качественных советов подождите несколько минут.',
+          ar: 'لقد كنت نشطًا جدًا! لضمان نصائح عالية الجودة، يرجى الانتظار بضع دقائق.',
+          id: 'Kamu sangat aktif! Untuk memastikan saran berkualitas, tunggu beberapa menit sebelum mengirim pesan lagi.',
+        };
+        return {
+          success: true,
+          reply: rateLimitMsgs[lang] || rateLimitMsgs.en,
+          suggestions: [],
+          coachMessagesRemaining,
+        };
+      }
+
+      // 2. Read user profile + learning profile + match count in parallel
+      const matchesCountPromise = db.collection('matches')
+        .where('usersMatched', 'array-contains', userId).count().get();
+      const [userDoc, learningDoc, matchesCountSnap] = await Promise.all([
+        Promise.resolve(creditDoc), // Reuse already-fetched user doc
+        config.learningEnabled ? db.collection('coachChats').doc(userId).get() : Promise.resolve(null),
+        matchesCountPromise,
+      ]);
+      const learningProfile = learningDoc?.exists ? (learningDoc.data()?.learningProfile || null) : null;
+      const learningContext = config.learningEnabled ? buildLearningContext(learningProfile) : '';
+      const userData = userDoc.exists ? userDoc.data() : {};
+      const userName = userData.name || 'User';
+      const userAge = userData.birthDate
+        ? Math.floor((Date.now() - userData.birthDate.toDate().getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : null;
+      const userType = userData.userType || '';
+      const userBio = userData.bio || '';
+      const userInterests = (userData.interests || []).slice(0, 10).join(', ');
+      const userOrientation = userData.orientation || 'both';
+      const userGender = userData.male ? 'male' : 'female';
+      const userLat = userData.latitude;
+      const userLng = userData.longitude;
+      // Extended profile data for richer context
+      const userPhotosCount = (userData.pictures || []).length;
+      const userTimezone = userData.timezone || '';
+      const userTimezoneOffset = typeof userData.timezoneOffset === 'number' ? userData.timezoneOffset : null;
+      const totalMatches = matchesCountSnap.data().count || 0;
+      const likedCount = (userData.liked || []).length;
+      const passedCount = (userData.passed || []).length;
+      const dailyLikesRemaining = typeof userData.dailyLikesRemaining === 'number' ? userData.dailyLikesRemaining : 100;
+      const superLikesRemaining = typeof userData.superLikesRemaining === 'number' ? userData.superLikesRemaining : 5;
+      const maxDistance = userData.maxDistance || 200;
+      const minAge = userData.minAge;
+      const maxAge = userData.maxAge;
+
+      // 3. Optionally read match context
+      let matchContext = '';
+      let matchName = '';
+      let matchInterests = '';
+      let matchLat = null;
+      let matchLng = null;
+      let sharedInterests = '';
+      let relationshipStage = null;
+      if (matchId) {
+        const matchDoc = await db.collection('matches').doc(matchId).get();
+        if (matchDoc.exists) {
+          const matchData = matchDoc.data();
+          // Security: validate user belongs to this match
+          const usersMatched = matchData.usersMatched || [];
+          if (!usersMatched.includes(userId)) {
+            logger.warn(`[dateCoachChat] User ${userId} tried to access match ${matchId} they don't belong to`);
+          } else {
+          const matchMessageCount = matchData.messageCount || 0;
+          const matchTimestamp = matchData.timestamp;
+          const otherUserId = usersMatched.find((id) => id !== userId);
+          if (otherUserId) {
+            const otherDoc = await db.collection('users').doc(otherUserId).get();
+            if (otherDoc.exists) {
+              const other = otherDoc.data();
+              matchName = other.name || 'someone';
+              const otherInterestsArr = (other.interests || []).slice(0, 12);
+              matchInterests = otherInterestsArr.join(', ');
+              matchLat = other.latitude;
+              matchLng = other.longitude;
+              const matchAge = other.birthDate
+                ? Math.floor((Date.now() - other.birthDate.toDate().getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                : null;
+              const matchGender = other.male ? 'male' : 'female';
+              const matchOrientation = other.orientation || 'both';
+              const matchType = other.userType || '';
+              const matchPhotosCount = (other.pictures || []).length;
+
+              // Calculate shared interests
+              const userInterestsArr = (userData.interests || []).slice(0, 10);
+              const shared = userInterestsArr.filter((i) => otherInterestsArr.includes(i));
+              sharedInterests = shared.join(', ');
+
+              // Calculate match age (how long they've been matched)
+              let matchAgeDays = null;
+              if (matchTimestamp) {
+                const matchDate = matchTimestamp.toDate ? matchTimestamp.toDate() : new Date(matchTimestamp);
+                matchAgeDays = Math.floor((Date.now() - matchDate.getTime()) / (24 * 60 * 60 * 1000));
+              }
+
+              // Determine relationship stage based on messages and time
+              relationshipStage = 'new_match';
+              if (matchMessageCount === 0) {
+                relationshipStage = 'no_conversation_yet';
+              } else if (matchMessageCount < 5) {
+                relationshipStage = 'just_started_talking';
+              } else if (matchMessageCount < 20) {
+                relationshipStage = 'getting_to_know';
+              } else if (matchMessageCount < 50) {
+                relationshipStage = 'building_connection';
+              } else {
+                relationshipStage = 'active_conversation';
+              }
+
+              matchContext = `\nThe user is asking about a specific match:` +
+                `\n- Name: ${matchName}${matchAge ? `, Age: ${matchAge}` : ''}` +
+                `, Gender: ${matchGender}, Interest: ${matchOrientation}` +
+                (matchType ? `, Type: ${matchType}` : '') +
+                `\n- Photos: ${matchPhotosCount}` +
+                (other.bio ? `\n- Bio: "${other.bio.substring(0, 300)}"` : '\n- Bio: (no bio set)') +
+                (matchInterests ? `\n- Interests: ${matchInterests}` : '\n- Interests: (none)') +
+                (sharedInterests ? `\n- SHARED INTERESTS with user: ${sharedInterests} (use these for personalized advice!)` : '\n- No shared interests (suggest finding common ground)') +
+                `\n- Relationship stage: ${relationshipStage} (${matchMessageCount} messages exchanged${matchAgeDays !== null ? `, matched ${matchAgeDays} day(s) ago` : ''})` +
+                '\n';
+            }
+          }
+          // Read recent messages for conversation context (increase limit for better analysis)
+          const msgLimit = Math.min(config.historyLimit * 2, 20);
+          const recentMsgs = await db.collection('matches').doc(matchId)
+            .collection('messages').orderBy('timestamp', 'desc').limit(msgLimit).get();
+          if (!recentMsgs.empty) {
+            const msgs = recentMsgs.docs.reverse().map((d) => {
+              const m = d.data();
+              const sender = m.senderId === userId ? 'User' : matchName;
+              const msgType = m.type || 'text';
+              if (msgType === 'ephemeral_photo') return `${sender}: [sent a photo]`;
+              if (msgType === 'place') return `${sender}: [suggested a place: ${(m.message || '').substring(2, 100)}]`;
+              return `${sender}: ${(m.message || '').substring(0, 200)}`;
+            }).join('\n');
+            matchContext += `Recent conversation with ${matchName} (${recentMsgs.size} messages):\n${msgs}`;
+
+            // Analyze conversation dynamics
+            const userMsgs = recentMsgs.docs.filter((d) => d.data().senderId === userId);
+            const matchMsgs = recentMsgs.docs.filter((d) => d.data().senderId !== userId);
+            const avgUserLen = userMsgs.length > 0
+              ? Math.round(userMsgs.reduce((sum, d) => sum + (d.data().message || '').length, 0) / userMsgs.length) : 0;
+            const avgMatchLen = matchMsgs.length > 0
+              ? Math.round(matchMsgs.reduce((sum, d) => sum + (d.data().message || '').length, 0) / matchMsgs.length) : 0;
+            matchContext += `\nConversation dynamics: User avg message length: ${avgUserLen} chars, ${matchName} avg: ${avgMatchLen} chars. ` +
+              `User sent ${userMsgs.length}/${recentMsgs.size} messages (${Math.round(userMsgs.length / recentMsgs.size * 100)}%).`;
+          } else {
+            matchContext += `\nNo messages exchanged yet — this is an opportunity to help craft the perfect first message!`;
+          }
+        }
+      } // end usersMatched.includes security check
+      }
+
+      // 3b. Build location context for activity suggestions
+      // Location always from Firestore profile (updated by HomeView via updateDeviceSettings)
+      const effectiveLat = userLat;
+      const effectiveLng = userLng;
+      const hasLocation = !!(effectiveLat && effectiveLng);
+
+      // Temporal context — inject local time, day of week, season for relevant suggestions
+      const userOffset = typeof userData.timezoneOffset === 'number' ? userData.timezoneOffset : 0;
+      const userLocalTime = new Date(Date.now() + userOffset * 3600000);
+      const userLocalHour = userLocalTime.getUTCHours();
+      const userLocalDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][userLocalTime.getUTCDay()];
+      const userLocalMonth = userLocalTime.getUTCMonth(); // 0-11
+      const isWeekend = userLocalTime.getUTCDay() === 0 || userLocalTime.getUTCDay() === 6;
+      const season = userLocalMonth <= 1 || userLocalMonth === 11 ? 'winter' : userLocalMonth <= 4 ? 'spring' : userLocalMonth <= 7 ? 'summer' : 'autumn';
+      const timeOfDay = userLocalHour < 6 ? 'late night' : userLocalHour < 12 ? 'morning' : userLocalHour < 17 ? 'afternoon' : userLocalHour < 21 ? 'evening' : 'night';
+      const temporalContext = `\nUser's local time: ${userLocalDay} ${timeOfDay} (${userLocalHour}:00, ${season}). ${isWeekend ? 'It is the weekend.' : 'It is a weekday.'} Consider this when suggesting activities — avoid nightlife in the morning, outdoor activities late at night, etc.`;
+
+      let locationContext = '';
+      if (hasLocation) {
+        locationContext = `\nUser location: lat ${effectiveLat.toFixed(2)}, lng ${effectiveLng.toFixed(2)}`;
+        if (matchLat && matchLng) {
+          const midLat = ((effectiveLat + matchLat) / 2).toFixed(2);
+          const midLng = ((effectiveLng + matchLng) / 2).toFixed(2);
+          locationContext += ` | Match location: lat ${matchLat.toFixed(2)}, lng ${matchLng.toFixed(2)} | Midpoint: ${midLat}, ${midLng}`;
+        }
+      }
+
+      // Append temporal context to location context
+      locationContext += temporalContext;
+
+      // 3c. Fetch real places from Google Places API when location is available
+      // Detect if user message is a place search — two patterns:
+      // 1. Proximity words in 10 languages (e.g., "cercana", "nearby", "near me")
+      const proximityPattern = /\b(cercan[ao]s?|nearby|near me|near here|close by|around here|cerca de (aqu[ií]|m[ií])|por aqu[ií]|en la zona|en mi zona|dans le coin|in der nähe|perto de mim|perto daqui|近くの|附近|поблизости|рядом|dekat sini|di sekitar|around (downtown|the city|town|centro)|alrededor de|close to|junto a|in the .{2,20} area|en la zona de|بالقرب|قريب من هنا|في المنطقة|حولي|بجانبي)\b/i;
+      // 2. Place/business type keywords relevant for dating (all languages supported)
+      const placeTypePattern = /\b(florerr?[ií]a|florist|flower\s*shop|flor(es|ist)|joyerr?[ií]a|jewel(ry|er)|chocolater[ií]a|chocolate\s*shop|bomboner[ií]a|pastel(er[ií]a|shop)|baker[yi]|panader[ií]a|dulcer[ií]a|candy|helade?r[ií]a|ice\s*cream|gelater[ií]a|perfumer[ií]a|perfume\s*shop|regal(os?|er[ií]a)|gift\s*shop|tienda de regalos|restaurante?s?|café|cafeter[ií]a|coffee\s*shop|bar(es)?|pub|lounge|cocktail|coctel(er[ií]a)?|wine\s*bar|vinoteca|cervece?r[ií]a|brewery|brunch|bistro|trattoria|pizzer[ií]a|sushi|cena|dinner|comida|food|taquería|taco|burger|hamburgues(a|er[ií]a)|bbq|parrilla|asador|marisquer[ií]a|seafood|spa|masaje|massage|wellness|yoga|gym|gimnasio|sal[oó]n de belleza|beauty\s*salon|peluquer[ií]a|barber|hair\s*salon|mall|centro comercial|shopping|boutique|tienda de ropa|clothing|museo|museum|galer[ií]a de arte|art\s*gallery|teatro|theater|theatre|cine|cinema|movie|pel[ií]cul|bowling|boliche|karaoke|escape\s*room|arcade|mini\s*golf|parque|park|jardín|garden|bot[aá]nic|plaza|mirador|viewpoint|rooftop|terraza|playa|beach|club|discoteca|nightclub|disco|pista de baile|dance|lago|lake|monta[ñn]a|mountain|sendero|trail|hiking|camping|picnic|zoo(l[oó]gico)?|acuario|aquarium|planetario|planetarium|librer[ií]a|bookstore|book\s*shop|antique|antig[üu]edad|tattoo|tatuaje|pier(cing)?|fotograf[ií]a|photo\s*(studio|booth)|cooking\s*class|clase de cocina|potter[yi]|cer[aá]mica|art\s*class|mezcaler[ií]a|tequiler[ií]a|licorerr?[ií]a|liquor|wine\s*shop|deli|market|mercado|feria|fair|concert|concierto|m[uú]sica en vivo|live\s*music|jazz|show|espect[aá]culo|hotel|motel|hostal|hostel|airbnb|cabin|caba[ñn]a|resort|country\s*club|golf|tenis|tennis|ski|surf|d[oó]nde (comprar|llevar|ir|encontrar|buscar)|where\s*(to\s*)?(buy|find|go|get|take)|dance\s*class|clase de baile|adventure\s*park|parque de aventura|go-?karts?|karting|farmer'?s?\s*market|mercado org[aá]nico|food\s*truck|couple\s*photoshoot|sesi[oó]n de fotos|speakeasy|wine\s*tasting|cata de vinos?|cooking\s*experience|experiencia gastron[oó]mica|zip\s*line|tirolesa|paintball|laser\s*tag|trampoline|camas el[aá]sticas|boat\s*(ride|tour)|paseo en bote)\b/i;
+      // 3. Additional place search detection — intent phrases, food/drink verbs, proximity, all 10 languages
+      const placeSearchPattern = /\b(cerca\b|aqu[ií]\s*cerca|ac[aá]\s*cerca|por\s*ac[aá]|comer|cenar|almorzar|desayunar|merendar|tomar\s*(algo|caf[eé]|un\s*(trago|copa|coctel|drink|café))|ir\s*a\s*(comer|cenar|almorzar|desayunar|tomar)|salir\s*(a\s*)?(comer|cenar|de\s*cita|de\s*noche|a\s*pasear)|vamos\s*a\s*(comer|cenar|almorzar|tomar|salir)|lugar(es)?(\s+(para|donde|que|bonito|lindo|bueno))?|sitio(s)?(\s+(para|donde|que|bonito|lindo|bueno))?|recomi[eé]nd(ame|a(me)?|en)|sugi[eé]r(eme|e(me)?)|d[oó]nde\s*(puedo|podemos|deber[ií]a|voy|vamos|hay|queda|ir|comer|cenar)|qu[eé]\s*(me\s*)?recomiendas|conoces\s*alg[uú]n|sabes\s*de\s*alg[uú]n|hay\s*alg[uú]n|un\s*(buen|lindo|bonito)\s*(lugar|sitio|restaurante|bar|caf[eé])|mejore?s?\s*(lugar|sitio|restaurante|bar)e?s?|algún\s*(lugar|sitio|bar|café|restaurante)|alguna\s*(idea|sugerencia|recomendaci[oó]n)|ideas?\s*(de|para)\s*(lugar|sitio|cita|date|salir)|eat(ing)?|dine|din(ner|ing)(\s*(spot|place))?|lunch(ing)?|grab\s*(a\s*)?(bite|food|coffee|drink|beer)|get\s*(food|lunch|dinner|coffee|drinks?)|go\s*(out\s*)?(for|to)\s*(eat|dinner|lunch|drinks?|food)|want\s*to\s*(eat|go|try|find|visit|explore)|where\s*(can|should|do|to)\s*(i|we)?\s*(eat|go|find|get|drink|have)|best\s*(place|spot|restaurant|bar|venue)s?\s*(to|for|near|in|around)?|recommend(ation)?s?\s*(for|a)?|suggest(ion)?s?\s*(for|a)?|know\s*(of\s*)?(any|a)\s*(good|nice|great)?|looking\s*for\s*(a|some|the)?\s*(place|spot|restaurant|bar|venue)|somewhere\s*(nice|good|cool|fun|romantic|to\s*eat)|take\s*(me|her|him|us)\s*(to|somewhere)|manger|o[uù]\s*(aller|manger|boire|sortir)|un\s*endroit|quelque\s*part|id[eé]es?\s*de\s*(lieu|sortie|restaurant)|essen(\s*gehen)?|wohin(\s*gehen)?|irgendwo|wo\s*(kann|soll)|食べ(る|に|たい|よう|に行)?|飲み(に|たい|に行)?|どこ(か|に|で|へ)|おすすめ|いい(店|場所|レストラン)|吃[饭飯]?|喝|哪[里裡]|推[荐薦]|好的?(餐[厅廳]|地方|店)|makan|minum|tempat\s*(makan|bagus)|dimana|kemana|perto|pr[oó]ximo|onde\s*(posso|comer|ir|fica)|por\s*aqu[ií]|por\s*ac[aá]|поесть|поужинать|пообедать|позавтракать|где\s*(можно|поесть|найти)|порекомендуй|посоветуй|хорошее?\s*(место|ресторан|бар|кафе)|أين\s*(أجد|يمكن|نذهب|نأكل|نشرب)|مطعم|مقهى|بار|مكان\s*(جيد|حلو|رومانسي|للأكل|للشرب)|أريد\s*(أكل|أذهب|مكان)|أفضل\s*(مطعم|مقهى|مكان)|اقترح|وين\s*(نروح|أروح|أقدر\s*آكل))\b/i;
+      // 4. Purchase, gifting & product search — catches buy/gift intent + standalone date-relevant products (10 languages)
+      // Aligned with RAG categories: gift_ideas, date_ideas, activity_places in coachKnowledge
+      // Configurable via Remote Config coach_config.placeSearch: purchaseExtraTerms (append new terms without redeploy)
+      const ps = config.placeSearch || {};
+      const purchaseVerbs = DEFAULT_PURCHASE_VERBS;
+      const purchaseProducts = DEFAULT_PURCHASE_PRODUCTS;
+      const purchaseGifts = DEFAULT_PURCHASE_GIFTS;
+      const extraTerms = (ps.purchaseExtraTerms || '').trim();
+      let purchaseFullPattern = `${purchaseVerbs}|${purchaseProducts}|${purchaseGifts}`;
+      if (extraTerms) purchaseFullPattern += `|${extraTerms}`;
+      const purchaseGiftPattern = new RegExp('\\b(' + purchaseFullPattern + ')\\b', 'i');
+      // 5. Lifestyle, emotional & vague intent — catches surprise planning, celebrations, self-care,
+      //    reconciliation, travel, group activities, undecided/bored users, and compound requests (10 languages)
+      //    These queries imply the user wants PLACE suggestions but don't explicitly name a venue type or product
+      const lifestyleIntentPattern = /\b(sorprender(l[aeo])?|surpris[ea]|überrasch(en|ung)|surpreender|サプライズ|惊喜|удивить|مفاجأة|kejutan|celebrar(le)?|festejar|celebrate|fêter|feiern|祝う|庆祝|отпразд|احتفل|merayakan|aniversario|anniversary|anniversaire|Jahrestag|aniversário|記念日|纪念日|годовщин|ذكرى|ulang\s*tahun|reconcili(ar|arse|ación)?|disculpar(me|se|nos)?|make\s*it\s*up\s*(to|with)|apologize\s*(to|with)|se\s*réconcilier|versöhn(en|ung)|仲直り|和好|помирить|مصالحة|berdamai|auto[- ]?cuidado|self[- ]?care|me\s*time|consentirme|cuidarme|treat\s*myself|me\s*faire\s*plaisir|mir\s*(etwas\s*)?gönnen|自分へのご褒美|犒劳自己|побаловать\s*себя|عناية\s*(ب|ال)نفس|perawatan\s*diri|conocer\s*gente|meet\s*(new\s*)?people|rencontrer\s*des?\s*gens|Leute\s*kennenlernen|conhecer\s*pessoas|出会い(の場)?|认识(新)?人|познакоми|التعرف\s*على|kenalan|aburrido|me\s*aburro|no\s*s[eé]\s*qu[eé]\s*hacer|bored|don'?t\s*know\s*what\s*to\s*do|je\s*m'?ennuie|langweilig|Langeweile|entediado|退屈|无聊|скучно|не\s*знаю\s*что\s*делать|ملل|bosan|qu[eé]\s*hago\s*(hoy|este|esta)?|qu[eé]\s*puedo\s*hacer|what\s*(can|should)\s*I\s*do|viaje\s*rom[aá]ntic|escapad[ao]|getaway|romantic\s*(trip|getaway|escape)|voyage\s*romantique|romantische\s*Reise|viagem\s*rom[aâ]ntica|旅行(デート)?|浪漫旅[行游]|романтическ\w*\s*(поездк|путешестви)|رحلة\s*رومانسية|liburan\s*romantis|doble\s*cita|double\s*date|cita\s*(grupal|en\s*grupo)|group\s*(date|outing|activity)|sortie\s*(en\s*)?groupe|Doppel[- ]?date|encontro\s*duplo|ダブルデート|双人约会|двойное\s*свидание|موعد\s*جماعي|llevar(l[aeo]|le|les)\s*(a|de)|take\s*(her|him|them)\s*(out|somewhere|to)|emmener|mitnehmen|levar\s*(el[ae])|連れて行|带.{0,4}去|сводить|يأخذ(ها)?|ajak\s*(dia\s*)?keluar|planificar\s*(una\s*)?(cita|salida|noche|velada)|plan\s*(a|the|our)?\s*(date|outing|night|evening)|organiser\s*(une\s*)?soirée|Abend\s*planen|planejar\s*(um\s*)?(encontro|noite)|デートの?(計画|プラン)|计划.{0,4}(约会|晚上)|спланировать\s*(свидание|вечер)|خطة?\s*(موعد|سهرة)|rencana\s*kencan|noche\s*especial|special\s*(night|evening|occasion)|soirée\s*spéciale|besonderer\s*Abend|noite\s*especial|特別な夜|特别的(夜晚|晚上)|особенный\s*вечер|ليلة\s*خاصة|malam\s*spesial|fin\s*de\s*semana|weekend\s*(plan|idea|activity)|week-?end|Wochenende|fim\s*de\s*semana|週末|周末|выходн|عطلة\s*نهاية|akhir\s*pekan|mantener\s*la\s*(chispa|llama|pasi[oó]n)|reignit|rekindle|keep\s*the\s*spark|spice\s*things?\s*up|rutina\s*(de?\s*pareja|en\s*la\s*relaci[oó]n)|relationship\s*rut|stuck\s*in\s*a?\s*rut|conocer\s*(a\s*)?(sus?\s*)?(padres?|familia|amigos?|suegr)|meet\s*(the\s*)?(parents?|family|friends|in-?laws)|présenter\s*(aux?\s*)?parents|Eltern\s*(kennen\s*)?lernen|conhecer\s*(os\s*)?(pais?|família)|親に会|见家长|познакомить(ся)?\s*(с\s*)?(родител|семь)|يقابل\s*(أهل|عائلة)|kenalan\s*orang\s*tua|mudarnos?\s*juntos?|moving?\s*(in)?\s*together|emm[eé]nager\s*ensemble|zusammen\s*(ein)?ziehen|morar\s*juntos?|同棲|同居|переехать\s*вместе|living\s*together|conviv(ir|encia)|cohabita(r|tion)|celos?\s*(de?\s*mi\s*pareja)?|jealous(y)?|cel[oó]s[oa]?|eifersüchtig|ciúmes?|嫉妬|吃醋|ревност|غيرة|cemburu|pelea\s*(con\s*mi\s*pareja)?|argument\s*with\s*(my\s*)?(partner|boyfriend|girlfriend)|discusi[oó]n\s*(con|de\s*pareja)|fight\s*with\s*(my\s*)?(partner|boyfriend|girlfriend)|nos?\s*peleamos|had\s*a\s*fight|recuperar\s*(la\s*)?(confianza|relaci[oó]n)|rebuild\s*trust|volver\s*a\s*confiar|starting\s*over\s*(after|dating)|empezar\s*de\s*nuevo|volver\s*a\s*salir|regres[aoe]\s*(a\s*las?\s*)?citas|volver\s*a\s*intentar|getting\s*back\s*(out\s*there|into\s*dating)|retour\s*(aux?\s*)?rencontres|wieder\s*daten|voltar\s*a\s*namorar|再びデート|重新约会|вернуться\s*к\s*свиданиям|العودة\s*للمواعدة|kembali\s*berkencan|dating\s*fatigue|cansado\s*de\s*(las\s*)?citas|harto\s*de\s*(buscar|citas|apps?)|tired\s*of\s*(dating|swiping|apps?))\b/i;
+      const isUserPlaceSearch = proximityPattern.test(message) || placeTypePattern.test(message) || placeSearchPattern.test(message) || purchaseGiftPattern.test(message) || lifestyleIntentPattern.test(message) || message.includes('📍');
+
+      const noLocationInstruction = !hasLocation
+        ? (isUserPlaceSearch
+          ? `\n\nNOTE — LIMITED LOCATION: You do not have the user's exact location, but they are searching for places. Provide the best suggestions you can based on the search results and your knowledge. At the end of your response, briefly and casually mention (in the user's language ${lang}) that you could give more precise local recommendations if they enable location in the app or mention their city. Do NOT refuse to suggest places — always provide recommendations even without exact location.`
+          : `\n\nIMPORTANT — NO LOCATION AVAILABLE: You do not have the user's location. When the user asks about places, venues, date spots, things to do, or activity recommendations, you MUST first ask them what city or area they would like suggestions for before providing venue recommendations. Ask this question IN THE USER'S LANGUAGE (${lang}). Once the user mentions a city or area in the conversation (current or previous messages in history), use that location for your suggestions. If the user already mentioned a city or area in their current message, use that directly without asking again.`)
+        : '';
+
+      // Phase 1: Intent Extraction — lightweight Gemini call to parse WHAT and WHERE from user message
+      let extractedIntent = null;
+      if (isUserPlaceSearch) {
+        try {
+          const intentApiKey = process.env.GEMINI_API_KEY;
+          if (intentApiKey) {
+            const intentAI = new GoogleGenerativeAI(intentApiKey);
+            const intentModel = intentAI.getGenerativeModel({
+              model: AI_MODEL_NAME,
+              generationConfig: {temperature: 0.1, maxOutputTokens: 256, responseMimeType: 'application/json'},
+            });
+            const intentPrompt = `Extract search intent from this message. The user speaks "${lang}".
+Message: "${message.substring(0, 300)}"
+
+Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaurant, café, sushi, spa, park, flower shop, chocolate shop, jewelry store, gift shop, wine shop, bakery, perfume store, pizzeria, ice cream shop)", "placeQueries": ["2-3 short search queries in the user's language optimized for Google Places. IMPORTANT: Map PRODUCTS to SHOPS — e.g. 'comprar chocolates' → ['chocolatería', 'tienda de chocolates', 'chocolate artesanal'], 'buy flowers' → ['florist', 'flower shop', 'bouquet delivery'], 'quiero pizza' → ['pizzería', 'pizza restaurant', 'mejor pizza'], 'pub con buena música' → ['pub música en vivo', 'bar con música', 'pub popular'], 'rosas para mi cita' → ['florería', 'rosas frescas', 'floristería'], 'acheter du vin' → ['cave à vin', 'caviste', 'wine shop'], 'Schokolade kaufen' → ['Schokoladenladen', 'Chocolatier', 'Pralinenladen']"], "locationMention": "city/area mentioned in message or null", "mood": "desired vibe in 2-3 words or null", "googleCategory": "closest Google Places type from: cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo, or null (use shopping_mall for gift/product/jewelry shops, bakery for chocolate/pastry/sweets shops, cafe for ice cream shops)"}`;
+            const intentResult = await intentModel.generateContent(intentPrompt);
+            const intentText = intentResult.response.text();
+            extractedIntent = parseGeminiJsonResponse(intentText);
+            logger.info(`[dateCoachChat] Intent extracted: placeType=${extractedIntent.placeType}, location=${extractedIntent.locationMention}, category=${extractedIntent.googleCategory}`);
+          }
+        } catch (intentErr) {
+          logger.warn(`[dateCoachChat] Intent extraction failed (non-critical): ${intentErr.message}`);
+        }
+      }
+
+      let placesLastRadiusUsed = 0;
+      const fetchCoachPlaces = async () => {
+        const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (!placesKey) return [];
+        const ps = config.placeSearch || {};
+        if (!hasLocation && !(isUserPlaceSearch && ps.enableWithoutLocation !== false)) return [];
+        try {
+          const psConfig = config.placeSearch || {};
+          const minR = psConfig.minRadius || 3000;
+          const maxR = psConfig.maxRadius || 300000;
+          // Coach IA: search around user's location OR the city mentioned in the message
+          // If the user mentions a specific city (e.g. "voy a Buenos Aires") → forward geocode it
+          let center = hasLocation
+            ? {latitude: effectiveLat, longitude: effectiveLng}
+            : null;
+          let locationOverridden = false;
+          if (extractedIntent && typeof extractedIntent.locationMention === 'string' && extractedIntent.locationMention.length >= 2) {
+            try {
+              const mentionedCoords = await forwardGeocode(extractedIntent.locationMention);
+              if (mentionedCoords) {
+                center = mentionedCoords;
+                locationOverridden = true;
+                logger.info(`[dateCoachChat] Location overridden to "${extractedIntent.locationMention}": ${mentionedCoords.latitude}, ${mentionedCoords.longitude}`);
+              }
+            } catch (geoErr) {
+              logger.warn(`[dateCoachChat] Forward geocode failed for "${extractedIntent.locationMention}": ${geoErr.message}`);
+            }
+          }
+          // Start from smallest progressive radius step (no minimum skip)
+          // In cities like Concepción, 15km finds plenty of results
+          const computedMinR = 0;
+
+          let queries;
+          const effectiveCategory = requestCategory || null;
+          // Determine the Google Places includedType for category-specific searches
+          let searchIncludedType = null;
+          if (effectiveCategory && CATEGORY_TO_PLACES_TYPE[effectiveCategory]) {
+            searchIncludedType = [CATEGORY_TO_PLACES_TYPE[effectiveCategory]];
+          } else if (isUserPlaceSearch && extractedIntent && extractedIntent.googleCategory) {
+            // Use intent category as type filter — even when location overridden to a mentioned city
+            // "restaurants in Temuco" → includedType: restaurant. "places in Temuco" → googleCategory=null → no filter
+            const intentCat = normalizeCategory(extractedIntent.googleCategory);
+            if (intentCat && CATEGORY_TO_PLACES_TYPE[intentCat]) {
+              searchIncludedType = [CATEGORY_TO_PLACES_TYPE[intentCat]];
+            }
+          }
+
+          if (effectiveCategory && categoryQueryMap[effectiveCategory]) {
+            // Category filter — run 3 queries: canonical + split terms for diversity
+            const canonicalQuery = categoryQueryMap[effectiveCategory];
+            const terms = canonicalQuery.split(' ').filter((t) => t.length > 2);
+            const subQueries = terms.length > 3
+              ? [terms.slice(0, 3).join(' '), terms.slice(3).join(' ')]
+              : [terms.join(' ')];
+            queries = [canonicalQuery, ...subQueries].slice(0, 3);
+          } else if (isUserPlaceSearch && extractedIntent && locationOverridden) {
+            // City mentioned (e.g. "restaurants in Temuco") — use intent-aware queries for relevant results
+            const intentQueries = Array.isArray(extractedIntent.placeQueries) && extractedIntent.placeQueries.length > 0
+              ? extractedIntent.placeQueries.filter((q) => typeof q === 'string' && q.length > 0).slice(0, 3)
+              : [];
+            if (intentQueries.length > 0) {
+              queries = intentQueries;
+              // Add canonical category query for extra coverage
+              if (extractedIntent.googleCategory) {
+                const catKey = normalizeCategory(extractedIntent.googleCategory);
+                if (catKey && categoryQueryMap[catKey] && !queries.includes(categoryQueryMap[catKey])) {
+                  queries.push(categoryQueryMap[catKey]);
+                }
+              }
+            } else {
+              // No specific intent queries — diverse categories as fallback
+              const allCats = Object.keys(categoryQueryMap);
+              const shuffled = [...allCats].sort(() => Math.random() - 0.5);
+              queries = shuffled.slice(0, 5).map((k) => categoryQueryMap[k]);
+            }
+          } else if (isUserPlaceSearch && extractedIntent) {
+            // Intent-aware search: use Gemini-extracted queries in user's language
+            const intentQueries = Array.isArray(extractedIntent.placeQueries) && extractedIntent.placeQueries.length > 0
+              ? extractedIntent.placeQueries.filter((q) => typeof q === 'string' && q.length > 0).slice(0, 3)
+              : [];
+            if (intentQueries.length > 0) {
+              queries = intentQueries;
+              // Add canonical category query if we have one for extra coverage
+              if (searchIncludedType && extractedIntent.googleCategory) {
+                const catKey = normalizeCategory(extractedIntent.googleCategory);
+                if (catKey && categoryQueryMap[catKey] && !queries.includes(categoryQueryMap[catKey])) {
+                  queries.push(categoryQueryMap[catKey]);
+                }
+              }
+            } else {
+              // Fallback: use extracted placeType or raw message
+              queries = [extractedIntent.placeType || message.substring(0, 100)];
+            }
+          } else if (isUserPlaceSearch) {
+            // Place search detected but intent extraction failed — use raw message
+            queries = [message.substring(0, 100)];
+          } else {
+            // General conversation — use diverse category queries for variety
+            const allCats = Object.keys(categoryQueryMap);
+            const shuffled = [...allCats].sort(() => Math.random() - 0.5);
+            queries = shuffled.slice(0, 4).map((k) => categoryQueryMap[k]);
+          }
+
+          const perQuery = psConfig.perQueryResults || 20;
+          // Use locationRestriction (hard geographic filter) when user has location
+          // When location is overridden to a mentioned city, use locationBias (soft preference)
+          // so Google returns results FROM that city, not filtered to the user's physical area
+          const useRestriction = hasLocation && center && !locationOverridden;
+
+          // Progressive radius: start small (15km), expand if fewer than minTarget results
+          // Optimized: in urban areas (most users) a single round suffices; suburban 2 rounds; rural 3+
+          const progressiveSteps = Array.isArray(psConfig.progressiveRadiusSteps) && psConfig.progressiveRadiusSteps.length > 0
+            ? psConfig.progressiveRadiusSteps : [15000, 30000, 60000, 120000, 200000, 300000];
+          const minTarget = psConfig.minPlacesTarget || 30;
+          const maxIntermediate = psConfig.maxPlacesIntermediate || 60;
+
+          // Skip steps smaller than computedMinR (match midpoint requires coverage of both users)
+          const effectiveSteps = hasLocation
+            ? (progressiveSteps.filter((s) => s >= computedMinR).length > 0
+              ? progressiveSteps.filter((s) => s >= computedMinR)
+              : [Math.min(maxR, Math.max(...progressiveSteps))])
+            : [null]; // no location = single query without radius
+
+          const allUniqueIds = new Set();
+          let allRawPlaces = [];
+          let lastRadius = 0;
+
+          for (const stepRadius of effectiveSteps) {
+            const radiusMeters = stepRadius ? Math.min(maxR, stepRadius) : null;
+            lastRadius = stepRadius || 0;
+
+            const results = await Promise.all(
+              queries.map((q) => placesTextSearch(q, center, radiusMeters, lang, null, perQuery, useRestriction, searchIncludedType).catch(() => ({places: []}))),
+            );
+
+            const newPlaces = results.flatMap((r) => r.places).filter((p) => {
+              if (!p.id || allUniqueIds.has(p.id)) return false;
+              allUniqueIds.add(p.id);
+              return true;
+            });
+            allRawPlaces = [...allRawPlaces, ...newPlaces];
+
+            logger.info(`[dateCoachChat] Progressive radius: ${radiusMeters}m → ${newPlaces.length} new places (total: ${allRawPlaces.length}, target: ${minTarget})`);
+
+            if (allRawPlaces.length >= minTarget) break;
+          }
+
+          placesLastRadiusUsed = lastRadius;
+          const unique = allRawPlaces.slice(0, maxIntermediate);
+
+          return unique.map((p) => {
+            const photoArr = p.photos || [];
+            return {
+              name: p.displayName?.text || '',
+              address: p.formattedAddress || '',
+              rating: p.rating || 0,
+              reviewCount: p.userRatingCount || 0,
+              photoCount: photoArr.length,
+              latitude: p.location?.latitude || 0,
+              longitude: p.location?.longitude || 0,
+              placeId: p.id || '',
+              website: p.websiteUri || null,
+              googleMapsUrl: p.googleMapsUri || null,
+              category: p.primaryType || null,
+              description: p.editorialSummary?.text || null,
+              priceLevel: googlePriceLevelToString(p.priceLevel) || null,
+              photos: photoArr.slice(0, 3).map((ph) => ({
+                url: `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=${psConfig.photoMaxHeightPx || 400}&key=${placesKey}`,
+                width: ph.widthPx || 400,
+                height: ph.heightPx || 300,
+              })),
+            };
+          });
+        } catch (err) {
+          logger.warn(`[dateCoachChat] Places fetch failed (non-critical): ${err.message}`);
+          return [];
+        }
+      };
+
+      // 4. Read coach history + fetch real places + RAG knowledge in parallel
+      const ragConfig = config.rag || {};
+      const [historySnap, realPlaces, ragKnowledge] = await Promise.all([
+        db.collection('coachChats').doc(userId)
+          .collection('messages').orderBy('timestamp', 'desc').limit(config.historyLimit).get(),
+        fetchCoachPlaces(),
+        retrieveCoachKnowledge(message, process.env.GEMINI_API_KEY, ragConfig, lang),
+      ]);
+      if (isUserPlaceSearch) {
+        logger.info(`[dateCoachChat] Place search: hasLocation=${hasLocation}, realPlaces=${realPlaces.length}, isUserPlaceSearch=${isUserPlaceSearch}`);
+      }
+      const history = historySnap.empty ? '' : historySnap.docs.reverse().map((d) => {
+        const m = d.data();
+        return `${m.sender === 'user' ? 'User' : 'Coach'}: ${(m.message || '').substring(0, 300)}`;
+      }).join('\n');
+
+      // Build real places context for Gemini
+      let realPlacesContext = '';
+      if (realPlaces.length > 0) {
+        realPlacesContext = '\n\nREAL PLACES FROM GOOGLE MAPS (you MUST select from these for activity suggestions):\n' +
+          realPlaces.map((p, i) =>
+            `${i + 1}. "${p.name}" [placeId:${p.placeId}] — ${p.address}${p.rating ? `, ★${p.rating}` : ''}${p.reviewCount ? ` (${p.reviewCount} reviews)` : ''}${p.priceLevel ? ` ${p.priceLevel}` : ''}${p.category ? ` [${p.category}]` : ''}${p.website ? ` | ${p.website}` : ''}${p.description ? `\n   ${p.description}` : ''}`,
+          ).join('\n');
+      }
+
+      // 5. Build system prompt with content guardrails + activity suggestions
+      const langInstruction = getLanguageInstruction(lang);
+      const hasMatchContext = !!matchId && matchContext.length > 0;
+
+      const blockedTopicsStr = (config.blockedTopics || []).join(', ');
+      const offTopicMsg = (config.offTopicMessages || {})[lang] || (config.offTopicMessages || {}).en ||
+        "I'm your Date Coach — I'm best at helping with dating, relationships, and connections!";
+
+      // When user is explicitly searching for places, force activitySuggestions inclusion
+      const minPlaceResults = (config.placeSearch || {}).minActivitiesForPlaceSearch || 6;
+      const placeSearchInstruction = isUserPlaceSearch
+        ? `\n\nCRITICAL — USER IS SEARCHING FOR PLACES OR PRODUCTS:
+The user is explicitly asking about places, venues, locations, shops, or products to buy (gifts, food, drinks, etc.).
+1. You MUST include an "activitySuggestions" array in your JSON response with at least ${minPlaceResults} places/shops.
+2. Keep your "reply" text SHORT (2-3 sentences max) — just briefly introduce the suggestions. The MAIN content is the activitySuggestions array.
+3. Select places from the REAL PLACES list provided. Use their EXACT names.
+4. This is NOT optional — if you omit activitySuggestions, the response is INVALID.
+5. NEVER respond with only text. The activitySuggestions array is the PRIORITY.
+6. For PRODUCT searches (chocolates, flowers, wine, gifts, jewelry, perfume, pizza, cake, etc.), suggest SHOPS and STORES where they can buy those products — prioritize specialty stores over generic venues.`
+        : '';
+
+      // Build activity block — use real Google Maps places when available
+      const hasRealPlaces = realPlaces.length > 0;
+      const targetActivities = config.maxActivities;
+      const activityFormatSpec = `Each activity suggestion must have:
+- "emoji": a single relevant emoji
+- "title": the EXACT name of the place as shown in Google Maps (do NOT rename or translate). Max 50 chars
+- "placeId": the placeId from the Google Maps data (copy it exactly). null if not from Google Maps
+- "description": why this is great for them specifically, in the user's language (max 80 chars). NEVER include price symbols ($) or price info in description — the priceLevel field handles pricing separately
+- "category": one of "cafe", "restaurant", "bar", "night_club", "movie_theater", "park", "museum", "bowling_alley", "art_gallery", "bakery", "shopping_mall", "spa", "aquarium", "zoo"
+- "bestFor": one of "first_date", "romantic", "fun", "adventurous", "relaxed", "special_occasion"
+- "priceLevel": one of "$", "$$", "$$$", "$$$$" (use the price shown in Google Maps data if available. If no price data, use null — NEVER guess)
+- "rating": use the REAL rating from Google Maps if provided. Otherwise omit
+- "website": use the REAL website from the place data if provided. null if unknown. NEVER invent URLs
+- "instagram": ONLY include if this venue's Instagram handle appears in the Google Maps data provided. Use the exact handle without @. If the Google Maps data does not include an Instagram handle for this place, use null. NEVER guess or make up handles — hallucinated handles damage user trust`;
+
+      const activityBlock = hasRealPlaces
+        ? (hasMatchContext
+          ? `\nWhen the context is appropriate (user asks about dates, activities, where to go, what to do, wants suggestions), include an "activitySuggestions" array with 8-${targetActivities} personalized date ideas.
+
+You MUST select places from the REAL PLACES list provided below (from Google Maps). Do NOT invent or hallucinate venue names. Pick the ones most relevant for this couple based on:
+- Both users' shared interests (${sharedInterests || 'none — pick diverse places to discover common ground'})
+- User interests: ${userInterests || 'none'} | Match interests: ${matchInterests || 'none'}
+- The conversation tone, topics discussed, and relationship stage
+- The user type dynamics (${userType || 'unknown'} dating ${matchName})
+- Vary categories: restaurants, outdoor plans, cultural events, nightlife, adventures, wellness, entertainment
+- Include a mix of price levels and moods (first date, romantic, fun, adventurous, relaxed, special occasion)
+
+${activityFormatSpec}
+
+Only include activitySuggestions when contextually relevant (user discusses dates, asks for ideas, mentions going out, etc.). Do NOT include them for generic profile advice or conversation tips.${realPlacesContext}`
+          : `\nIf the user asks about places to go, things to do, or recommendations, include an "activitySuggestions" array with 8-${targetActivities} great places.
+
+You MUST select places from the REAL PLACES list provided below (from Google Maps). Do NOT invent or hallucinate venue names. Pick the most interesting ones for the user based on their interests (${userInterests || 'none specified'}).
+Focus on: trendy restaurants, cool bars, cultural spots, outdoor activities, entertainment, wellness, nightlife.
+
+${activityFormatSpec}
+
+Include activitySuggestions when the user asks about places, things to do, going out, or recommendations.${realPlacesContext}`)
+        : (hasMatchContext
+          ? `\nWhen the context is appropriate (user asks about dates, activities, where to go, what to do, wants suggestions), include an "activitySuggestions" array with 8-${targetActivities} personalized date ideas. Base these on:
+- Both users' shared interests (${sharedInterests || 'none — suggest activities to discover common ground'})
+- User interests: ${userInterests || 'none'} | Match interests: ${matchInterests || 'none'}
+- The conversation tone, topics discussed, and relationship stage
+- The user type dynamics (${userType || 'unknown'} dating ${matchName})
+- Creative, specific ideas (not generic "go to dinner") — vary categories: restaurants, outdoor plans, cultural events, nightlife, adventures, wellness experiences, entertainment
+- Include a mix of price levels and moods (first date, romantic, fun, adventurous, relaxed, special occasion)${locationContext ? `\n- Their approximate location context: ${locationContext}` : ''}
+
+IMPORTANT: Suggest REAL, well-known, highly-rated venues and places — not generic ideas.
+
+${activityFormatSpec}
+
+Only include activitySuggestions when contextually relevant (user discusses dates, asks for ideas, mentions going out, etc.). Do NOT include them for generic profile advice or conversation tips.`
+          : `\nIf the user asks about places to go, things to do, or recommendations, include an "activitySuggestions" array with 8-${targetActivities} great places and experiences to enjoy. These are NOT date suggestions — they are general lifestyle recommendations for the user based on their interests (${userInterests || 'none specified'}).${locationContext ? `\n- Consider their location context: ${locationContext}` : ''}
+Focus on: trendy restaurants, cool bars, cultural spots, outdoor activities, entertainment, wellness, nightlife — places worth visiting regardless of dating.
+IMPORTANT: Suggest REAL, well-known, highly-rated venues — not generic ideas.
+
+${activityFormatSpec}
+
+Include activitySuggestions when the user asks about places, things to do, going out, or recommendations.`);
+
+      // Build user-type specialization from config
+      const userTypeSpec = (config.coachingSpecializations || {})[userType] || '';
+      const stagePrompt = relationshipStage ? ((config.stagePrompts || {})[relationshipStage] || '') : '';
+      const responseStyleConfig = config.responseStyle || {};
+
+      const contentGuardrails = `
+CONTENT GUARDRAILS — STRICTLY ENFORCE:
+You are EXCLUSIVELY a dating, relationship, and connection coach. You MUST stay within your domain at all times.
+WHEN IN DOUBT, ANSWER. If a topic is even remotely related to dating, relationships, attraction, social skills, personal improvement for dating, or places/gifts for dates — it IS on-topic. Be generous in interpreting relevance.
+
+ALLOWED TOPICS — COMPREHENSIVE LIST (answer ALL of these enthusiastically):
+
+🗣️ CONVERSATION & COMMUNICATION:
+- Conversation tips, what to say, how to respond, texting etiquette
+- Icebreakers, openers, first messages for new matches
+- How to keep a conversation interesting and engaging
+- How to flirt (subtle vs. direct), banter, humor in dating
+- Active listening techniques, asking better questions
+- How to handle awkward silences or boring chats
+- Double texting, response timing, message frequency
+- How to express interest without being too intense
+- How to bring up serious topics (exclusivity, boundaries, future)
+- Voice notes, video calls, phone call tips
+- How to transition from app chat to real life
+
+💘 DATING & DATES:
+- First date advice, second date ideas, creative date planning
+- Where to go, what to do, venue recommendations, activity suggestions
+- Date logistics: timing, duration, who pays, transportation
+- How to create a memorable date experience
+- Themed dates, budget-friendly dates, luxury dates
+- Group dates, double dates, friend introductions
+- Weekend plans, evening plans, daytime dates
+- Season-specific date ideas (winter, summer, rainy day, holiday)
+- Virtual/long-distance date ideas
+- How to read the vibe during a date (is it going well?)
+- Post-date etiquette: texting after, follow-up, asking for a second date
+
+📍 PLACES & VENUES (ALWAYS ON-TOPIC — people search places for dates):
+- ANY place, business, store, restaurant, bar, café, park search
+- Gift shops, florists, jewelry, bakeries, chocolatiers, wine shops
+- Romantic venues, rooftops, viewpoints, scenic spots
+- Entertainment: bowling, karaoke, escape rooms, arcades, movies, theater
+- Wellness: spas, yoga, gyms (for couples or self-improvement)
+- Museums, galleries, cultural venues, concerts, live music
+- Hotels, resorts, B&Bs (for travel dates or special occasions)
+- Outdoor activities: hiking, beaches, parks, gardens, picnics
+- Shopping areas, malls, boutiques (for date outfits or gift shopping)
+
+🎁 ROMANTIC GESTURES & GIFTS:
+- Gift ideas for any occasion (birthdays, anniversaries, Valentine's, Christmas, "just because")
+- Romantic surprises, thoughtful details, creative gestures
+- Love letters, poems, playlists, handmade gifts
+- How to plan a special occasion or celebration
+- How to show appreciation and gratitude to a partner
+- Love languages: understanding and applying them
+- Anniversary ideas, milestone celebrations
+- How to apologize meaningfully with gestures
+
+👤 PROFILE & SELF-PRESENTATION:
+- Profile optimization: bio writing, prompt answers, headline crafting
+- Photo tips: which photos work best, order, variety, selfie vs. candid
+- How to show personality through a profile
+- What to include/exclude in a dating profile
+- Profile review and constructive feedback
+- Discovery settings optimization (age range, distance, preferences)
+- App strategy: when to swipe, super likes, daily routines
+
+💪 CONFIDENCE & SELF-IMPROVEMENT FOR DATING:
+- Building confidence, overcoming shyness, reducing anxiety
+- Self-esteem in dating, knowing your worth
+- Overcoming fear of rejection, vulnerability
+- Body language, posture, eye contact
+- Grooming, fashion, outfit ideas for dates
+- Fitness and wellness as part of dating confidence
+- Overcoming dating burnout and app fatigue
+- Building an interesting life (hobbies, social circles) that attracts people
+- Introvert dating strategies vs. extrovert dating
+- How to be authentic while still making a good impression
+
+❤️ RELATIONSHIPS & CONNECTIONS:
+- Understanding attraction, chemistry, compatibility
+- Red flags and green flags in dating and relationships
+- How to know if someone is interested (signals, signs)
+- Defining the relationship (DTR), exclusivity talk
+- Moving from dating to a committed relationship
+- Trust building, emotional intimacy, vulnerability
+- Dealing with jealousy, insecurity in relationships
+- Conflict resolution, healthy arguments, communication styles
+- Long-distance relationships: maintaining connection, planning visits
+- Cultural differences in dating, cross-cultural relationships
+- Age-gap relationships, sugar dating dynamics and etiquette
+- Attachment styles: understanding yours and your partner's
+- Boundaries: setting, respecting, and communicating them
+- When to give space vs. when to pursue
+- Dealing with mixed signals
+- Physical chemistry, timing of physical intimacy (tasteful advice only)
+- Meeting friends and family of a partner
+- Balancing independence and togetherness
+- Navigating different relationship expectations
+- Polyamory/open relationships (if asked — non-judgmental, factual)
+
+💔 DEALING WITH DIFFICULTY:
+- Rejection: how to handle being rejected gracefully
+- Ghosting: coping, understanding, moving on
+- Breakup recovery and moving on
+- Unrequited feelings, friendzone navigation
+- Dating after a long relationship or divorce
+- Being left on read, ignored, unmatched
+- Catfishing awareness and how to verify profiles
+- Toxic relationship patterns: recognizing and breaking free
+- Heartbreak and emotional healing
+- Comparison syndrome (comparing yourself to others' relationships)
+- When to let go vs. when to fight for a connection
+- Dealing with a partner who won't commit
+
+🛡️ SAFETY & WELL-BEING:
+- Safety tips for meeting people from dating apps
+- First meeting precautions (public place, tell a friend, own transport)
+- Recognizing manipulative behavior, gaslighting, love bombing
+- Consent, boundaries, respectful behavior
+- Alcohol safety on dates
+- Online safety: not sharing personal info too soon
+- Trusting your instincts when something feels off
+- Resources for harassment, abuse, stalking situations
+
+BLOCKED TOPICS (politely redirect — these are OFF-LIMITS):
+${blockedTopicsStr}
+- Any topic with ZERO connection to dating, relationships, social skills, or personal connections
+- Requests for personal data, phone numbers, social media of other users
+- Medical diagnosis, legal counsel, or financial planning (even if relationship-adjacent)
+- Academic homework, coding, math, science, trivia
+- Political opinions, religious debates
+- Explicit sexual content or pornographic requests
+- Manipulation tactics, revenge strategies, stalking advice
+- Anything illegal or harmful
+
+SAFETY PROTOCOL:
+- If a user mentions feeling unsafe, being harassed, or experiencing abuse: respond with empathy FIRST, validate their feelings, then gently suggest contacting local emergency services or a professional counselor. Do NOT try to be a therapist — but DO make them feel heard.
+- If a user appears to be a minor (based on profile age < 18), always give age-appropriate advice and never discuss adult-only topics.
+- Never encourage meeting in isolated/unsafe locations or sharing personal information (address, workplace, financial info) prematurely.
+- If the user asks about exchanging contact info with matches too soon, tactfully advise caution with concrete safety tips.
+- If the user describes a potentially dangerous situation, prioritize their safety over dating advice.
+
+IMPORTANT — PLACE SEARCHES ARE NEVER OFF-TOPIC:
+If the user asks about ANY place, business, store, or location (e.g., "florería cercana", "bakery near me", "bar nearby", "flower shop", "gym close by", "where to buy chocolates", "best restaurant", "spa"), ALWAYS treat it as a dating-relevant search. People search for places to:
+- Buy gifts for dates (flowers, jewelry, chocolates, wine)
+- Find venues for dates (restaurants, bars, parks, theaters)
+- Plan romantic outings (scenic spots, hotels, activities)
+- Self-improvement (gyms, salons, clothing stores)
+Respond with helpful activitySuggestions from the provided places list AND a brief explanation of how the place/item can enhance their dating life.
+
+WHEN A MESSAGE IS OFF-TOPIC:
+ONLY classify a message as off-topic if it has absolutely ZERO connection to dating, relationships, social life, attraction, places, venues, gifts, self-improvement, confidence, or personal connections. Examples of truly off-topic: "solve this equation", "write code for me", "who won the election", "what's the weather", "help with my homework".
+If off-topic, respond with:
+{"off_topic": true, "reply": "${offTopicMsg.replace(/"/g, '\\"')}", "suggestions": ["${lang === 'es' ? 'Mejora mi perfil' : 'Improve my profile'}", "${lang === 'es' ? 'Ideas para primera cita' : 'First date ideas'}", "${lang === 'es' ? 'Consejos de conversación' : 'Conversation tips'}"]}
+
+EDGE CASES — HANDLE ALL GRACEFULLY:
+
+Greetings & Short Messages:
+- Vague greetings ("hi", "hello", "hola"): Warmly greet by name, mention their stats, and offer 2-3 specific things you can help with (e.g., "I see you have ${totalMatches} match(es) — want help with any of them? Or I can help optimize your profile!")
+- Very short messages ("ok", "thanks", "cool"): Acknowledge positively and proactively suggest the next step based on their context
+- Emojis only: Interpret the sentiment and respond warmly, offer specific help
+
+Match-Related Scenarios:
+- User asking "what should I say" WITHOUT match selected: Ask them to select a match for personalized analysis, BUT also give a general conversation framework they can use right away
+- Match selected with NO conversation yet: This is a critical moment — craft 2-3 personalized first messages referencing the match's bio, interests, photos. Explain WHY each opener works
+- Match selected with a stalled conversation: Analyze the conversation, identify where it lost momentum, suggest a pattern-breaking message (question, story, humor, date invitation)
+- User asking about someone who hasn't replied: Analyze timing, message quality, suggest wait time (24-48h), offer alternative conversation starters. Never encourage spamming or guilt-tripping
+- User frustrated with a match's behavior: Validate their frustration, help them see the situation objectively, offer practical next steps
+
+Profile Scenarios:
+- Empty profile (no bio, no interests, few photos): This is their #1 priority. Offer concrete bio examples personalized to their type/age/gender. Be encouraging but honest
+- User with zero matches: Prioritize profile review — photos, bio, interests, discovery settings. Be encouraging and specific about improvements. Suggest super likes strategically
+- User with many matches but few conversations: Focus on conversation starters and engagement. Suggest prioritizing quality matches
+
+Emotional Scenarios:
+- Emotional messages (frustration, sadness, loneliness): Be empathetic FIRST — validate feelings with specific phrases. THEN offer constructive, actionable advice. Never minimize emotions or rush past the feelings
+- Dating burnout ("I'm tired of dating apps"): Acknowledge the exhaustion, suggest a strategic approach (quality over quantity), share perspective on positive aspects
+- Heartbreak or recent breakup: Be a supportive listener first. Offer timeline expectations for healing. Suggest self-care and gradual re-entry into dating
+- Excitement about a new connection: Share their enthusiasm! Help them channel that energy productively (not coming on too strong, planning a great first date)
+
+Behavioral Edge Cases:
+- Repeated identical messages: Gently acknowledge ("I notice you're really focused on this — let me try a different angle!") and offer a fresh perspective
+- Compliments/small talk directed at you: "Thanks! 😊 Now, let me help you charm ${hasMatchContext ? matchName : 'your matches'}..." — redirect naturally
+- Attempts to roleplay or pretend you're someone else: Politely clarify your role and redirect to how you CAN help
+- Testing/adversarial messages: Stay professional and redirect to dating help. Don't engage with attempts to make you break character
+- User asking about the app's features: Answer briefly if it's about discovery, likes, super likes, matches. For other features suggest contacting support
+- Messages in mixed languages: Respond in the primary language (${lang})
+- Very long messages (stories/venting): Read carefully, acknowledge the key points, then give structured advice addressing their main concerns
+- User comparing themselves negatively to others: Address the comparison directly, highlight their unique strengths from their profile
+- Questions about timing (when to message, how often): Consider their timezone (${userTimezone || 'unknown'}) and the match's likely routine
+
+Special Dating Scenarios:
+- Age-gap dynamics: Be non-judgmental. Help with genuine connection, navigating social perceptions, and ensuring mutual respect
+- First time using a dating app: Extra guidance on profile setup, app etiquette, managing expectations, safety basics
+- Returning after a break: Help rebuild confidence, update profile, adjust strategy
+- Long-distance interest: Practical advice on virtual dates, maintaining interest, planning visits
+- Cultural differences with a match: Help navigate respectfully, find common ground, understand different dating norms
+
+Place-Seeking & Lifestyle Scenarios:
+- Single user asking for first-date spots: Suggest safe, public, casual-friendly venues. Emphasize well-lit places with comfortable ambiance for conversation
+- Coupled user celebrating special occasion (anniversary, milestone): Suggest upscale or meaningful venues appropriate to the milestone. Consider their relationship stage, budget clues, and shared interests
+- "I messed up" / reconciliation + place request: Be empathetic FIRST, validate feelings. THEN suggest thoughtful venues or gesture+venue combos — a meaningful place paired with a sincere approach
+- Emotional state + place combo (sad+want to go out, excited+want to celebrate): Address the emotion explicitly FIRST with validation, THEN pivot to place suggestions that match the emotional need — cozy comforting spots for sadness, energizing celebratory venues for excitement
+- Gift + location compound request ("buy flowers and a nice dinner spot"): Treat as multi-part — suggest both the product shop AND the venue in a mini-plan format (step 1: purchase, step 2: venue). Use nearby/same-area logic when possible
+- Solo self-care activity request ("me time", "consentirme", "auto-cuidado"): This is ALWAYS on-topic. Suggest individual-friendly activities: spa, bookstore café, scenic walks, yoga studios, art classes, solo-friendly restaurants. Frame positively as self-investment
+- Meeting new people / social places for singles: Suggest interactive, social-friendly venues: group classes, social bars with events, hobby meetups, co-working cafés, open mic nights, food markets, community events
+- Frustrated user with no matches + "what should I do this weekend?": Triple approach — (1) brief empathetic acknowledgment, (2) confidence-boosting activity suggestions, (3) social venues where they might naturally meet people. Include photo-worthy spots for profile improvement
+- Romantic travel / getaway question: Suggest experience types rather than specific far-away hotels (e.g., wine tasting routes, coastal walks, scenic drives). Focus on nearby or day-trip destinations unless they specify otherwise
+- Full date planning request ("plan me a complete date"): Provide a chronological mini-plan — preparation tip, opening activity, main venue, optional backup. Mention timing and logistics briefly
+- Vague or undecided ("I'm bored", "qué hago", "no sé qué hacer"): Do NOT ask clarifying questions — proactively suggest 3-4 diverse venue options spanning categories (outdoor, food, cultural, active). Show variety to help them decide. Always treat as a place search
+- Safe first-meeting place request: Prioritize well-lit, populated, public venues with easy transportation access. Mention safety tip naturally
+- Post-breakup healing activities: Lead with empathy. Suggest rebuilding activities — creative classes, fitness, social cooking, nature walks. Frame as investing in yourself
+- Group date / double date / friend activities: Suggest interactive group-friendly venues: escape rooms, bowling, karaoke, game cafés, trivia nights, cooking classes. Note group logistics
+- Multi-step surprise planning ("quiero sorprender a alguien especial"): Offer a stepped plan with 2-3 effort levels. Component 1: thoughtful gesture or gift. Component 2: venue or experience. Component 3: personal touch or follow-up idea
+
+Established Relationship / Couple Scenarios:
+- Maintaining the spark / routine boredom ("ya no sé qué hacer con mi pareja", "we're stuck in a rut"): Validate that all relationships go through phases. Suggest specific novelty-injecting activities: new cuisine together, adventure dates, surprise mini-dates during the week, recreating first date, taking a class together. ALWAYS include place suggestions
+- Moving in together / cohabitation questions: Give practical + emotional advice — discuss expectations before moving, maintain individual activities and friendships, create shared rituals, navigate different cleanliness/schedule habits. Suggest date nights to maintain romance when living together
+- Meeting each other's family / friends: Help with preparation — conversation topics for parents, what to bring as a gift (link to gift shops), how to handle cultural differences, managing anxiety about first impressions. Suggest a pre-dinner drink venue to calm nerves
+- Trust rebuilding after conflict or argument: Be empathetic first. Suggest genuine actions: honest conversation frameworks (I-statements), a meaningful gesture+place combo, revisiting affirming memories. Never take sides or assign blame
+- Couple communication improvement ("no nos comunicamos bien"): Offer specific frameworks — scheduled check-ins, gratitude practice, non-violent communication basics, understanding different communication styles. Suggest couple-friendly activities that naturally encourage conversation (cooking class, scenic walks)
+- Anniversary / milestone celebration planning: Ask which anniversary (or suggest ideas matching their relationship length). Provide tiered suggestions from intimate to grand. Include specific venue types and gift ideas tailored to their interests
+- Dealing with jealousy or insecurity in relationship: Validate feelings without encouraging controlling behavior. Suggest building trust through transparency, quality time, and self-confidence boosting activities. Recommend couple-friendly venues for reconnection
+- Long-distance relationship phases: Practical advice on virtual date ideas, care packages (suggest where to buy items), countdown activities, visit planning with real venue suggestions for when they reunite
+- Different love languages in practice: Help identify both partners' love languages and suggest specific actions for each — gift shops for gift-givers, restaurant suggestions for quality-time partners, activity venues for acts-of-service partners
+- Navigating different relationship expectations: Help frame productive conversations about pace, exclusivity, future plans. Provide neutral frameworks, not prescriptive answers
+- Reigniting passion / "date each other again": Suggest treating each other like new dates — dress up, go to a new venue they've never tried, write love notes, plan surprise outings. Include specific place suggestions for novel experiences
+- Shared goals and future planning: Help frame conversations about travel together, finances, living arrangements as exciting joint projects. Suggest planning activities (travel fairs, home expos, cooking together as practice for hosting)
+- Couple travel planning: Suggest experience types (wine routes, city exploration, nature retreats, beach getaways) matched to their interests. Include practical logistics and venue categories for the destination
+- Dealing with in-laws or external relationship pressure: Provide coping strategies, boundary-setting language, and suggest stress-relief couple activities. Frame as "you two as a team"
+- Surprise planning for partner: Offer multi-step plans: reconnaissance (find what they've mentioned wanting), purchase (specific shop types), execution (venue + timing). Personalize based on partner's interests if available from match context
+
+Actively Single Scenarios:
+- Starting over after a long relationship or divorce: Extra empathy and patience. Focus on rediscovery — updating their profile to reflect who they are NOW, not who they were in the relationship. Suggest self-care venues and social activities to rebuild confidence gradually
+- Social anxiety about dating: Normalize the anxiety. Suggest low-pressure date formats (walking dates, coffee shops, activity-based dates where conversation happens naturally). Offer specific conversation scripts they can fall back on
+- Online vs offline dating strategy: Help balance both approaches. For online: profile optimization, messaging strategy. For offline: suggest social venues, group activities, hobby classes where they can meet people naturally. Include real venue suggestions
+- Managing multiple matches simultaneously: Help with organization without being manipulative — track conversations, be honest about non-exclusivity, prioritize quality over quantity. Suggest date venues that work well for getting to know someone new
+- Self-focus vs dating balance: Validate that investing in themselves IS part of their dating journey. Suggest self-improvement activities (gym, classes, hobbies) that also increase their dating appeal and confidence
+- Post-toxic relationship recovery: Extra sensitivity. Focus on recognizing healthy vs unhealthy patterns, rebuilding trust in their instincts, setting boundaries from the start. Suggest confidence-building activities and supportive social venues
+- Dating app fatigue / burnout: Acknowledge exhaustion is real. Suggest strategic pauses, profile refreshes, changing approach (different opener styles, new photos, different venue suggestions for dates). Help them rediscover what makes dating fun
+- First time on dating apps: Comprehensive but non-overwhelming guidance. Cover profile basics, safety essentials, messaging etiquette, and first-date logistics. Be encouraging about the learning curve
+- Returning to dating after a long break: Help rebuild confidence, update their approach for current dating culture, suggest easy first dates that take pressure off
+- Dating as a parent: Practical advice on timing, when to mention kids, how to balance dating with parenting responsibilities. Suggest family-friendly venues for later stages and adult-only venues for early dates
+- Dealing with an ex (still connected, co-parenting, mutual friends): Help set healthy boundaries, navigate social situations gracefully, avoid comparison with new dates. Focus forward on building new connections
+- Second-chance romance (reconnecting with someone from the past): Help evaluate if it's worth pursuing, how to reach out tastefully, planning a reunion meeting at the right venue
+${config.edgeCaseExtensions ? `\n${config.edgeCaseExtensions}` : ''}
+${config.additionalGuidelines ? `\nADDITIONAL GUIDELINES:\n${config.additionalGuidelines}` : ''}`;
+
+      const systemPrompt = `You are Date Coach, an expert AI dating advisor for a premium dating app called Black Sugar 21.
+Your role is to help users improve their dating life with personalized, actionable advice.
+Personality: ${config.personalityTone}
+
+USER PROFILE (use this data to personalize EVERY response):
+- Name: ${userName}${userAge ? `, Age: ${userAge}` : ''}
+- Type: ${userType || 'not specified'}, Gender: ${userGender}, Interest: ${userOrientation}
+${userBio ? `- Bio: "${userBio.substring(0, 300)}"` : '- Bio: (not set yet — proactively offer to help write one if relevant to their question)'}
+${userInterests ? `- Interests: ${userInterests}` : '- Interests: (none selected — if they ask about profile help, suggest adding interests)'}
+- Photos: ${userPhotosCount} photo(s)${userPhotosCount === 0 ? ' — CRITICAL: they have no photos! If relevant, encourage them to add photos as a top priority' : userPhotosCount === 1 ? ' — suggest adding more photo variety (3-5 is ideal)' : userPhotosCount >= 5 ? ' — great photo count!' : ''}
+- Discovery preferences: ${minAge && maxAge ? `Age range ${minAge}-${maxAge}` : 'default'}, Max distance: ${maxDistance}km
+- Dating activity: ${totalMatches} total match(es), ${likedCount} liked / ${passedCount} passed, ${dailyLikesRemaining}/100 likes remaining today, ${superLikesRemaining}/5 super likes remaining
+${totalMatches === 0 ? '- ⚠️ NO MATCHES YET — Focus advice on profile improvement, discovery strategy, and first impressions' : totalMatches < 3 ? '- FEW MATCHES — They may benefit from profile optimization and engagement tips' : totalMatches >= 10 ? '- EXPERIENCED USER — has multiple matches, focus on deepening connections and quality over quantity' : ''}
+${userTimezone ? `- Timezone: ${userTimezone}${userTimezoneOffset !== null ? ` (UTC${userTimezoneOffset >= 0 ? '+' : ''}${userTimezoneOffset})` : ''}` : ''}
+${matchContext}${learningContext}
+${contentGuardrails}
+${ragKnowledge}
+PRECISION GUIDELINES — FOLLOW STRICTLY:
+
+1. PERSONALIZATION IS MANDATORY:
+   - ALWAYS reference specific details from the user's profile (name, age, bio, interests, user type, photo count) when giving advice
+   - Never give generic advice when you have data to personalize with
+   - If their profile is incomplete, weave profile improvement suggestions naturally into your response
+   - Reference their dating stats (${totalMatches} matches, ${likedCount} likes, ${superLikesRemaining} super likes) to contextualize advice
+
+2. WHEN THE USER HAS A MATCH SELECTED:
+   - Reference the match's NAME, interests, bio, and conversation to give hyper-specific advice
+   - If there are SHARED INTERESTS, build recommendations around them (e.g., "Since you both love hiking, suggest a scenic trail date near you")
+   - Analyze the conversation dynamics: message balance (who talks more?), engagement level (are they asking questions back?), topic depth, response time patterns
+   - Give concrete observations like "I notice your last 3 messages were questions — try sharing a personal story to balance the conversation"
+   - If the match has no bio or few interests, suggest the user ask open-ended questions to discover common ground
+   - Consider the match's potential communication style based on their profile
+${stagePrompt ? `   - RELATIONSHIP STAGE GUIDANCE: ${stagePrompt}` : `   - Adapt your advice to the relationship stage (no convo yet → craft perfect opener, early → maintain momentum + show personality, building → deepen + suggest meeting, active → next steps + exclusivity)`}
+
+3. WHEN NO MATCH IS SELECTED (general question):
+   - Use the user's profile stats to contextualize advice (e.g., "With ${totalMatches} matches, let's focus on quality conversations")
+   - If they have 0 matches: priority = profile optimization. Be encouraging, specific, and action-oriented
+   - If they have matches but ask general questions: relate advice back to their specific situation
+   - Reference their bio, interests, and user type to tailor every suggestion
+   - Proactively suggest selecting a match for more personalized help when appropriate
+
+4. FOR ACTIVITY/VENUE/PRODUCT SUGGESTIONS:
+   - ALWAYS suggest REAL places with correct names — NEVER invent fake venue names
+   - If you have location coordinates, suggest venues near that area
+   - Base suggestions on shared interests when a match is selected
+   - Mix price levels ($ to $$$$) and moods appropriately for the context
+   - Include diverse categories: romantic, adventurous, casual, cultural, foodie, outdoor
+   - When suggesting a place, briefly explain WHY it's a good fit for their situation
+   - For PRODUCT/GIFT searches (chocolates, flowers, wine, jewelry, perfume, pizza, cakes, etc.), suggest specific SHOPS and STORES where they can buy those items — prioritize specialty stores (chocolaterías, floristerías, joyerías, vinotecas, panaderías) over generic malls
+   - When the user mentions a product by name (e.g., 'pizza', 'ramen', 'helado'), interpret it as a search for venues that serve or sell that product
+
+5. USER TYPE AWARENESS — DYNAMIC COACHING:
+${userTypeSpec ? `   ${userTypeSpec}` : `   - SUGAR_BABY: Focus on authenticity, making memorable impressions, conversation skills, self-confidence, and navigating age-gap dynamics gracefully. Help them present their best genuine self
+   - SUGAR_DADDY: Focus on genuine connection beyond material things, creating unique experiences, showing authentic interest, and making their personality shine. Help them stand out through thoughtfulness
+   - SUGAR_MOMMY: Focus on confidence, authentic connections, creative and memorable date ideas, and expressing genuine interest. Help them leverage their experience and sophistication`}
+
+6. RESPONSE QUALITY STANDARDS:
+   - Be ${config.personalityTone}
+   - Every response must be ACTIONABLE — include at least one specific thing the user can do RIGHT NOW
+   - Use the "${responseStyleConfig.formalityLevel || 'casual_professional'}" tone: professional expertise delivered in a friendly, approachable way
+   ${responseStyleConfig.useEmojis !== false ? '- Use emojis naturally to add warmth (1-3 per response, not excessive)' : '- Avoid emojis in responses'}
+   - Keep responses concise (${responseStyleConfig.maxParagraphs || 4} paragraphs max) but information-dense
+   - Structure advice clearly: observation → analysis → specific recommendation
+   - Encouragement level: ${responseStyleConfig.encouragementLevel || 'high'} — ${responseStyleConfig.encouragementLevel === 'moderate' ? 'be supportive but balanced' : 'always end on an encouraging, empowering note'}
+   - Use the user's language naturally
+   - Include concrete examples when possible (e.g., sample messages they could send, specific date plans)
+
+7. CONVERSATION CONTINUITY:
+   - If the conversation history shows recurring topics, acknowledge their focus and offer progressively deeper insights
+   - Reference previous advice you've given in the session if relevant
+   - Build on earlier conversations rather than starting from scratch each time
+   - If the user seems stuck, proactively suggest a new angle or different approach
+
+8. NEVER DO THESE:
+   - Never be judgmental about dating preferences, lifestyle, age gaps, or relationship styles
+   - Never give one-size-fits-all generic advice when you have profile data
+   - Never invent facts about the user or their matches
+   - Never suggest manipulative tactics — always focus on genuine connection
+   - Never be preachy or condescending — treat users as equal adults making their own choices
+   - Never give the same response twice — if asked similar questions, find a new angle
+${activityBlock}
+${placeSearchInstruction}
+${noLocationInstruction}
+${langInstruction}
+
+Respond in JSON format:
+{
+  "reply": "Your coaching response here (concise, actionable, personalized, with warmth and specific examples)",
+  "suggestions": ["Contextual follow-up 1", "Related suggestion 2", "Next step 3"],
+  "activitySuggestions": [{"emoji": "🍷", "title": "Real Place Name", "placeId": "ChIJ...", "description": "Why this fits their situation", "category": "restaurant", "bestFor": "romantic", "priceLevel": "$$", "rating": 4.6, "website": "https://realwebsite.com", "instagram": null}],
+  "topics": ["first_date", "conversation_tips"]
+}
+
+TOPIC CLASSIFICATION — Classify the user's question into 1-3 categories from this expanded list:
+first_date, conversation_tips, profile_help, match_analysis, confidence, icebreakers, date_ideas, activity_places, texting, rejection, red_flags, relationship, appearance, emotional, safety, gift_ideas, love_languages, communication, dating_strategy, sugar_dynamics, general
+Always include the "topics" array in your response.
+
+For off-topic messages, use: {"off_topic": true, "reply": "redirect message", "suggestions": ["topic1", "topic2", "topic3"]}
+
+The "suggestions" array should contain ${config.maxSuggestions} short follow-up questions/topics the user might want to ask next. Make suggestions HIGHLY CONTEXTUAL — based on what the user just asked and their current situation. Vary the types: include a deeper question, a related topic, and a practical next step. Keep each suggestion under 40 characters.
+${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this response — the user is explicitly searching for places, shops, or products to buy. You MUST include it with real venues/shops from the REAL PLACES list.' : 'The "activitySuggestions" array is OPTIONAL — only include it when contextually relevant (date ideas, venue searches, gift shopping, product shopping, place recommendations).'}`;
+
+      // 6. Call Gemini
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        logger.error('[dateCoachChat] GEMINI_API_KEY not configured');
+        throw new Error('AI service unavailable');
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      // When user searches for places, increase token budget significantly —
+      // JSON with activitySuggestions + reply + suggestions + topics needs high token budget
+      const placeTokenBudget = (config.placeSearch || {}).maxOutputTokensBudget || 8192;
+      const outputTokens = (isUserPlaceSearch || hasRealPlaces) ? Math.max(config.maxTokens, placeTokenBudget) : config.maxTokens;
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_NAME,
+        generationConfig: {
+          temperature: config.temperature,
+          maxOutputTokens: outputTokens,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const conversationPrompt = history
+        ? `${systemPrompt}\n\nConversation history:\n${history}\n\nUser: ${message.substring(0, config.maxMessageLength)}`
+        : `${systemPrompt}\n\nUser: ${message.substring(0, config.maxMessageLength)}`;
+
+      const result = await (async () => {
+        try {
+          return await model.generateContent(conversationPrompt);
+        } catch (e) {
+          logger.warn(`[dateCoachChat] Gemini call failed, retrying in 1s: ${e.message}`);
+          await new Promise((r) => setTimeout(r, 1000));
+          return await model.generateContent(conversationPrompt);
+        }
+      })();
+      const responseText = result.response.text();
+
+      let reply;
+      let suggestions;
+      let activitySuggestions;
+      let isOffTopic = false;
+      let geminiTopics = [];
+      try {
+        logger.info(`[dateCoachChat] Raw response (first 500): ${responseText.substring(0, 500)}`);
+        const parsed = parseGeminiJsonResponse(responseText);
+
+        // Normalize field names — Gemini may use snake_case or camelCase variants
+        const activities = parsed.activitySuggestions || parsed.activity_suggestions || parsed.activities || parsed.places;
+        logger.info(`[dateCoachChat] Parsed keys: ${Object.keys(parsed).join(', ')}, activitySuggestions isArray: ${Array.isArray(activities)}, length: ${Array.isArray(activities) ? activities.length : 'N/A'}`);
+        geminiTopics = Array.isArray(parsed.topics) ? parsed.topics.filter((t) => typeof t === 'string').slice(0, 5) : [];
+
+        // Detect off-topic response from Gemini
+        if (parsed.off_topic === true) {
+          isOffTopic = true;
+          reply = parsed.reply || offTopicMsg;
+          suggestions = Array.isArray(parsed.suggestions) ?
+            parsed.suggestions.slice(0, config.maxSuggestions) : undefined;
+        } else {
+          reply = parsed.reply || parsed.response || responseText;
+          suggestions = Array.isArray(parsed.suggestions) ?
+            parsed.suggestions.slice(0, config.maxSuggestions) : undefined;
+          if (Array.isArray(activities) && activities.length > 0) {
+            // Build lookup of real places by normalized name for merging
+            const realPlaceLookup = new Map();
+            for (const rp of realPlaces) {
+              if (rp.name) realPlaceLookup.set(rp.name.toLowerCase().trim(), rp);
+            }
+
+            // Build dual lookup: by name AND by placeId for more robust matching
+            const realPlaceByIdLookup = new Map();
+            for (const rp of realPlaces) {
+              if (rp.placeId) realPlaceByIdLookup.set(rp.placeId, rp);
+            }
+
+            activitySuggestions = activities.slice(0, targetActivities).map((a) => {
+              const title = (a.title || a.name || '').substring(0, 50);
+              // Try to match with real place data: placeId → exact name → fuzzy name
+              const matched = fuzzyMatchPlace(title, a.placeId, realPlaceByIdLookup, realPlaceLookup, realPlaces);
+
+              // Determine best priceLevel: Google Places > Gemini > omit if unknown
+              const resolvedPriceLevel = (matched && matched.priceLevel) ||
+                                         a.priceLevel || a.price_level || null;
+
+              // Clean description: strip any $ symbols Gemini may have embedded
+              const rawDesc = (a.description || '').substring(0, 120);
+              const cleanDesc = rawDesc.replace(/\$+/g, '').trim();
+
+              const base = {
+                emoji: (a.emoji || '📍').substring(0, 4),
+                title,
+                description: cleanDesc,
+                category: normalizeCategory(a.category),
+                bestFor: a.bestFor || a.best_for || 'fun',
+                ...(resolvedPriceLevel ? {priceLevel: resolvedPriceLevel} : {}),
+              };
+
+              // Validate instagram from Gemini
+              const validInstagram = sanitizeInstagramHandle(a.instagram);
+
+              if (matched) {
+                // Enrich with real Google Maps data (use conditional spread to avoid undefined — Firestore rejects undefined values)
+                return {
+                  ...base,
+                  ...(matched.rating != null ? {rating: matched.rating} : (a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {})),
+                  ...(matched.reviewCount ? {reviewCount: matched.reviewCount} : {}),
+                  ...(matched.website ? {website: matched.website} : (sanitizeWebsiteUrl(a.website) ? {website: sanitizeWebsiteUrl(a.website)} : {})),
+                  ...(validInstagram ? {instagram: validInstagram} : {}),
+                  ...(matched.googleMapsUrl ? {googleMapsUrl: matched.googleMapsUrl} : {}),
+                  ...(matched.address ? {address: matched.address} : {}),
+                  ...(matched.latitude != null ? {latitude: matched.latitude} : {}),
+                  ...(matched.longitude != null ? {longitude: matched.longitude} : {}),
+                  ...(matched.placeId ? {placeId: matched.placeId} : {}),
+                  ...(matched.photos && matched.photos.length > 0 ? {photos: matched.photos} : {}),
+                };
+              } else {
+                // No real place match — use Gemini's output with validation
+                return {
+                  ...base,
+                  ...(a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {}),
+                  ...(sanitizeWebsiteUrl(a.website) ? {website: sanitizeWebsiteUrl(a.website)} : {}),
+                  ...(validInstagram ? {instagram: validInstagram} : {}),
+                };
+              }
+            });
+            // Log merge stats for diagnostics
+            const matchedCount = activitySuggestions.filter((s) => s.photos || s.googleMapsUrl).length;
+            logger.info(`[dateCoachChat] Merge: ${matchedCount}/${activitySuggestions.length} activities matched with Google Places data`);
+          }
+        }
+      } catch (parseErr) {
+        logger.warn(`[dateCoachChat] JSON parse failed: ${parseErr.message}. Raw (first 300): ${responseText.substring(0, 300)}`);
+        // If JSON parsing fails, try to extract reply field from partial JSON
+        const replyMatch = responseText.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+        if (replyMatch) {
+          reply = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        } else {
+          // Last resort: strip markdown artifacts and use raw text
+          reply = responseText.replace(/```[\s\S]*?```/g, '').replace(/```json\s*/g, '').replace(/```/g, '').trim();
+        }
+      }
+
+      // GUARANTEED FALLBACK: If user searched for places but Gemini didn't include activities,
+      // build them directly from Google Places data. This ensures the user ALWAYS gets
+      // place cards when they search for places, regardless of Gemini's output.
+      if (isUserPlaceSearch && (!activitySuggestions || activitySuggestions.length === 0) && realPlaces.length > 0) {
+        logger.info(`[dateCoachChat] Gemini omitted activitySuggestions — building fallback from ${realPlaces.length} Google Places`);
+        activitySuggestions = realPlaces.slice(0, config.maxActivities).map((rp) => ({
+          emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+          title: (rp.name || 'Place').substring(0, 50),
+          description: (rp.description || rp.address || '').substring(0, 120),
+          category: normalizeCategory(rp.category),
+          bestFor: 'fun',
+          ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+          ...(rp.rating != null ? {rating: rp.rating} : {}),
+          ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+          ...(rp.website ? {website: rp.website} : {}),
+          ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+          ...(rp.address ? {address: rp.address} : {}),
+          ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+          ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+          ...(rp.placeId ? {placeId: rp.placeId} : {}),
+          ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+        }));
+      }
+
+      // Supplement: add remaining Google Places to reach 30 total activities
+      const MAX_INITIAL_ACTIVITIES = 30;
+      if (realPlaces.length > 0 && activitySuggestions && activitySuggestions.length > 0 && activitySuggestions.length < MAX_INITIAL_ACTIVITIES) {
+        const usedPlaceIds = new Set(activitySuggestions.filter((a) => a.placeId).map((a) => a.placeId));
+        const unusedPlaces = realPlaces.filter((rp) => rp.placeId && !usedPlaceIds.has(rp.placeId));
+        const supplementNeeded = MAX_INITIAL_ACTIVITIES - activitySuggestions.length;
+        const supplementActivities = unusedPlaces.slice(0, supplementNeeded).map((rp) => ({
+          emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+          title: (rp.name || 'Place').substring(0, 50),
+          description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
+          category: normalizeCategory(rp.category),
+          bestFor: 'fun',
+          ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+          ...(rp.rating != null ? {rating: rp.rating} : {}),
+          ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+          ...(rp.website ? {website: rp.website} : {}),
+          ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+          ...(rp.address ? {address: rp.address} : {}),
+          ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+          ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+          ...(rp.placeId ? {placeId: rp.placeId} : {}),
+          ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+        }));
+        if (supplementActivities.length > 0) {
+          activitySuggestions = [...activitySuggestions, ...supplementActivities];
+          logger.info(`[dateCoachChat] Supplemented with ${supplementActivities.length} direct Google Places (total: ${activitySuggestions.length})`);
+        }
+      }
+
+      // Sort by popularity: places with more reviews and higher ratings appear first
+      if (activitySuggestions && activitySuggestions.length > 1) {
+        activitySuggestions.sort((a, b) => {
+          const scoreA = (a.rating || 0) * 0.4 + Math.log10(1 + (a.reviewCount || 0)) * 0.6;
+          const scoreB = (b.rating || 0) * 0.4 + Math.log10(1 + (b.reviewCount || 0)) * 0.6;
+          return scoreB - scoreA;
+        });
+      }
+
+      // Compute dominant category from activity suggestions + intent extraction
+      let dominantCategory = null;
+      // Priority 1: Use intent-extracted googleCategory if place search was detected
+      if (isUserPlaceSearch && extractedIntent && extractedIntent.googleCategory) {
+        const intentCat = normalizeCategory(extractedIntent.googleCategory);
+        if (intentCat && intentCat !== 'restaurant') {
+          // Only use intent category if it's specific (not the default fallback)
+          dominantCategory = intentCat;
+        } else if (extractedIntent.googleCategory && extractedIntent.googleCategory !== 'null') {
+          dominantCategory = intentCat;
+        }
+      }
+      // Priority 2: Compute from activity distribution if intent didn't provide one
+      if (!dominantCategory && activitySuggestions && activitySuggestions.length > 0) {
+        const catCounts = {};
+        for (const a of activitySuggestions) {
+          if (a.category) catCounts[a.category] = (catCounts[a.category] || 0) + 1;
+        }
+        const sortedCats = Object.entries(catCounts).sort(([, a], [, b]) => b - a);
+        if (sortedCats.length > 0 && sortedCats[0][1] / activitySuggestions.length >= 0.3) {
+          dominantCategory = sortedCats[0][0];
+        }
+      }
+
+      // Append location-aware suggestion chip (e.g. "📍 Lugares en Santiago")
+      // Only when: has location, not off-topic, not loadMore, response doesn't already have activities
+      if (hasLocation && !isOffTopic && !loadMoreActivities && (!activitySuggestions || activitySuggestions.length === 0)) {
+        try {
+          const cityName = await reverseGeocode(effectiveLat, effectiveLng, userId);
+          if (cityName) {
+            const chipFn = PLACES_CHIP_I18N[lang] || PLACES_CHIP_I18N['en'];
+            const locationChip = chipFn(cityName);
+            if (!suggestions) suggestions = [];
+            // Avoid duplicating if Gemini already generated a similar suggestion
+            const alreadyHasPlaceChip = suggestions.some((s) => s.includes('📍') || s.toLowerCase().includes(cityName.toLowerCase()));
+            if (!alreadyHasPlaceChip) {
+              suggestions.push(locationChip);
+            }
+          }
+        } catch (cityErr) {
+          logger.warn(`[dateCoachChat] Location chip failed (non-critical): ${cityErr.message}`);
+        }
+      }
+
+      // Cache places for loadMore (non-critical — failure must not affect response)
+      if (realPlaces.length > 0) {
+        try {
+          const returnedPlaceIds = (activitySuggestions || []).filter((a) => a.placeId).map((a) => a.placeId);
+          await db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').set({
+            query: message.substring(0, 200),
+            places: realPlaces,
+            returnedPlaceIds,
+            dominantCategory,
+            lastRadiusUsed: placesLastRadiusUsed,
+            ...(extractedIntent ? {intent: {placeType: extractedIntent.placeType || null, googleCategory: extractedIntent.googleCategory || null, locationMention: extractedIntent.locationMention || null}} : {}),
+            ...(locationOverridden && center ? {overrideLat: center.latitude, overrideLng: center.longitude} : {}),
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          });
+        } catch (cacheErr) {
+          logger.warn(`[dateCoachChat] Cache write failed (non-critical): ${cacheErr.message}`);
+        }
+      }
+
+      // 7. Store both messages + decrement credits atomically (skip for load more)
+      let newRemaining = coachMessagesRemaining;
+      let userMsgRef, coachMsgRef;
+      if (!loadMoreActivities) {
+        const messagesRef = db.collection('coachChats').doc(userId).collection('messages');
+        // Use Timestamp.now() with +1ms offset for coach to guarantee deterministic order
+        // (FieldValue.serverTimestamp() assigns identical timestamps in a batch,
+        //  causing random order via document ID tiebreaker in getCoachHistory)
+        const userTs = admin.firestore.Timestamp.now();
+        const coachTs = new admin.firestore.Timestamp(
+          userTs.seconds, userTs.nanoseconds + 1000000,
+        );
+        const batch = db.batch();
+
+        userMsgRef = messagesRef.doc();
+        coachMsgRef = messagesRef.doc();
+
+        batch.set(userMsgRef, {
+          message: message.substring(0, config.maxMessageLength),
+          sender: 'user',
+          timestamp: userTs,
+          ...(matchId ? {matchId} : {}),
+        });
+
+        batch.set(coachMsgRef, {
+          message: reply.substring(0, config.maxReplyLength),
+          sender: 'coach',
+          timestamp: coachTs,
+          ...(matchId ? {matchId} : {}),
+          ...(suggestions ? {suggestions} : {}),
+          ...(activitySuggestions ? {activitySuggestions} : {}),
+          ...(isOffTopic ? {offTopic: true} : {}),
+        });
+
+        // 8. Decrement coach messages remaining (atomic increment avoids TOCTOU race)
+        newRemaining = Math.max(0, coachMessagesRemaining - 1);
+        batch.update(userRefForCredits, {
+          coachMessagesRemaining: admin.firestore.FieldValue.increment(-1),
+        });
+
+        await batch.commit();
+
+        // 9. Update learning profile (non-critical — failure must not affect response)
+        if (config.learningEnabled) {
+          try {
+            const msgAnalysis = analyzeUserMessage(message);
+            await updateCoachLearning(db, userId, msgAnalysis, geminiTopics);
+          } catch (learningError) {
+            logger.warn(`[dateCoachChat] Learning update failed (non-critical): ${learningError.message}`);
+          }
+        }
+      }
+
+      logger.info(`[dateCoachChat] Coach replied to user ${userId}${matchId ? ` (match: ${matchId})` : ''}${isOffTopic ? ' [off-topic]' : ''}${activitySuggestions ? ` with ${activitySuggestions.length} activities` : ''} (credits: ${newRemaining})`);    
+      return {
+        success: true,
+        reply,
+        ...(suggestions ? {suggestions} : {}),
+        ...(activitySuggestions ? {activitySuggestions} : {}),
+        coachMessagesRemaining: newRemaining,
+        userMessageId: userMsgRef?.id,
+        coachMessageId: coachMsgRef?.id,
+        ...(dominantCategory ? {dominantCategory} : {}),
+      };
+    } catch (error) {
+      logger.error(`[dateCoachChat] Error: ${error.message}`);
+      throw new Error(`Coach unavailable: ${error.message}`);
+    }
+  },
+);
+
+/**
+ * Callable: Get coach chat history for the authenticated user.
+ * Payload: { limit?: number } (default 50, max 100)
+ * Response: { success, messages: [{id, message, sender, timestamp, matchId?, suggestions?}] }
+ * Homologado: iOS CoachChatViewModel / Android CoachChatViewModel
+ */
+exports.getCoachHistory = onCall(
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {limit: rawLimit, beforeTimestamp} = request.data || {};
+    const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 100);
+
+    const db = admin.firestore();
+
+    try {
+      let query = db.collection('coachChats').doc(userId)
+        .collection('messages').orderBy('timestamp', 'desc');
+
+      if (beforeTimestamp) {
+        const cursorDate = new Date(beforeTimestamp);
+        if (!isNaN(cursorDate.getTime())) {
+          query = query.startAfter(admin.firestore.Timestamp.fromDate(cursorDate));
+        }
+      }
+
+      query = query.limit(limit);
+      const snap = await query.get();
+
+      const messages = snap.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          message: data.message || '',
+          sender: data.sender || 'coach',
+          timestamp: data.timestamp ? data.timestamp.toDate().toISOString() : null,
+          ...(data.matchId ? {matchId: data.matchId} : {}),
+          ...(data.suggestions ? {suggestions: data.suggestions} : {}),
+          ...(data.activitySuggestions ? {activitySuggestions: data.activitySuggestions} : {}),
+        };
+      });
+
+      // Reverse to return in ascending order (oldest first)
+      messages.reverse();
+
+      const userDocForCredits = await db.collection('users').doc(userId).get();
+      const currentCredits = userDocForCredits.exists
+        ? (typeof userDocForCredits.data().coachMessagesRemaining === 'number'
+          ? userDocForCredits.data().coachMessagesRemaining : 5)
+        : 5;
+
+      logger.info(`[getCoachHistory] Returned ${messages.length} messages for user ${userId}` +
+        (beforeTimestamp ? ` (before ${beforeTimestamp})` : ''));
+      return {success: true, messages, hasMore: snap.docs.length === limit, coachMessagesRemaining: currentCredits};
+    } catch (error) {
+      logger.error(`[getCoachHistory] Error: ${error.message}`);
+      throw new Error(`Failed to load coach history: ${error.message}`);
+    }
+  },
+);
+
+exports.deleteCoachMessage = onCall(
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 15},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {messageId} = request.data || {};
+
+    if (!messageId || typeof messageId !== 'string') {
+      throw new Error('messageId is required');
+    }
+
+    const db = admin.firestore();
+
+    try {
+      const msgRef = db.collection('coachChats').doc(userId)
+        .collection('messages').doc(messageId);
+
+      const msgDoc = await msgRef.get();
+      if (!msgDoc.exists) {
+        return {success: true}; // Idempotent
+      }
+
+      await msgRef.delete();
+
+      logger.info(`[deleteCoachMessage] Deleted message ${messageId} for user ${userId}`);
+      return {success: true};
+    } catch (error) {
+      logger.error(`[deleteCoachMessage] Error: ${error.message}`);
+      throw new Error(`Failed to delete message: ${error.message}`);
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLACES HELPERS — Midpoint, Haversine, Google Places API (New)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calcula el punto medio geográfico entre dos coordenadas (fórmula esférica).
+ */
+
+// --- Realtime coach tips ---
+exports.getRealtimeCoachTips = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {matchId, userLanguage} = request.data || {};
+
+    if (!matchId) throw new Error('matchId is required');
+    const lang = (userLanguage || 'en').toLowerCase();
+    const db = admin.firestore();
+
+    try {
+      // 1. Read match and verify participant
+      const matchDoc = await db.collection('matches').doc(matchId).get();
+      if (!matchDoc.exists) throw new Error('Match not found');
+      const matchData = matchDoc.data();
+      const usersMatched = matchData.usersMatched || [];
+      if (!usersMatched.includes(userId)) throw new Error('Not a participant');
+      const otherUserId = usersMatched.find((id) => id !== userId);
+
+      // 2. Read both profiles + last 20 messages in parallel
+      const [userDoc, otherDoc, messagesSnap] = await Promise.all([
+        db.collection('users').doc(userId).get(),
+        db.collection('users').doc(otherUserId).get(),
+        db.collection('matches').doc(matchId)
+          .collection('messages').orderBy('timestamp', 'desc').limit(20).get(),
+      ]);
+
+      const userData = userDoc.exists ? userDoc.data() : {};
+      const otherData = otherDoc.exists ? otherDoc.data() : {};
+      const userName = userData.name || 'User';
+      const matchName = otherData.name || 'Match';
+      const userInterests = (userData.interests || []).slice(0, 8).join(', ');
+      const matchInterests = (otherData.interests || []).slice(0, 8).join(', ');
+
+      const messages = messagesSnap.docs.map((d) => {
+        const m = d.data();
+        return {
+          sender: m.senderId === userId ? 'user' : 'match',
+          text: (m.message || '').substring(0, 200),
+          type: m.type || 'text',
+        };
+      }).reverse();
+
+      // 3. If too few messages, return basic response
+      if (messages.length < 3) {
+        return {
+          success: true,
+          chemistryScore: 50,
+          chemistryTrend: 'stable',
+          engagementLevel: 'low',
+          tips: [],
+          preDateDetected: false,
+          suggestedAction: null,
+        };
+      }
+
+      // 4. Build conversation transcript
+      const transcript = messages
+        .filter((m) => m.type === 'text')
+        .map((m) => `${m.sender === 'user' ? userName : matchName}: ${m.text}`)
+        .join('\n');
+
+      // 5. Build Gemini prompt
+      const langInstruction = getLanguageInstruction(lang);
+      const systemPrompt = `You are a real-time dating coach AI analyzing a live chat conversation.
+Analyze the following conversation between ${userName} and ${matchName} and provide actionable coaching insights.
+
+User profile: ${userData.userType || 'unknown'}, interests: ${userInterests || 'none'}
+Match profile: ${otherData.userType || 'unknown'}, interests: ${matchInterests || 'none'}
+
+Recent conversation:
+${transcript}
+
+${langInstruction}
+
+Respond ONLY with a valid JSON object (no markdown, no extra text):
+{
+  "chemistryScore": <number 0-100, based on mutual engagement, emotional connection, humor, and reciprocity>,
+  "chemistryTrend": "<rising|falling|stable> based on how the conversation energy is evolving",
+  "engagementLevel": "<high|medium|low> based on response length, questions asked, enthusiasm",
+  "tips": [
+    {"text": "<specific actionable tip based on the conversation>", "type": "<conversation|flirting|suggestion|warning>", "icon": "<lightbulb|heart|calendar|alert>"}
+  ],
+  "preDateDetected": <true if they are discussing meeting up, planning a date, or mentioning places/times to meet>,
+  "suggestedAction": {"type": "<ask_question|compliment|suggest_date|change_topic|be_playful>", "text": "<specific suggested message the user could send>"}
+}
+
+Rules:
+- Give 1-3 tips maximum, each specific to THIS conversation (not generic)
+- The suggestedAction text should be a concrete message the user could copy and send
+- chemistryScore should reflect genuine connection signals (not just message count)
+- Set preDateDetected=true ONLY if there are clear signals of planning to meet
+- Tips should reference specific things said in the conversation
+- Be encouraging but honest — if engagement is low, say so constructively`;
+
+      // 6. Call Gemini
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error('AI service unavailable');
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_LITE, generationConfig: {maxOutputTokens: 1024, responseMimeType: 'application/json'}});
+      const result = await model.generateContent(systemPrompt);
+      const responseText = result.response.text();
+
+      // 7. Parse response
+      let parsed;
+      try {
+        parsed = parseGeminiJsonResponse(responseText);
+      } catch {
+        logger.warn(`[getRealtimeCoachTips] Failed to parse Gemini response: ${responseText.substring(0, 200)}`);
+        return {
+          success: true,
+          chemistryScore: 50,
+          chemistryTrend: 'stable',
+          engagementLevel: 'medium',
+          tips: [],
+          preDateDetected: false,
+          suggestedAction: null,
+        };
+      }
+
+      const tips = Array.isArray(parsed.tips) ? parsed.tips.slice(0, 3).map((t) => ({
+        text: (t.text || '').substring(0, 200),
+        type: t.type || 'conversation',
+        icon: t.icon || 'lightbulb',
+      })) : [];
+
+      const suggestedAction = parsed.suggestedAction ? {
+        type: parsed.suggestedAction.type || 'ask_question',
+        text: (parsed.suggestedAction.text || '').substring(0, 200),
+      } : null;
+
+      logger.info(`[getRealtimeCoachTips] matchId=${matchId}, score=${parsed.chemistryScore}, tips=${tips.length}`);
+      return {
+        success: true,
+        chemistryScore: Math.max(0, Math.min(100, parseInt(parsed.chemistryScore) || 50)),
+        chemistryTrend: ['rising', 'falling', 'stable'].includes(parsed.chemistryTrend) ? parsed.chemistryTrend : 'stable',
+        engagementLevel: ['high', 'medium', 'low'].includes(parsed.engagementLevel) ? parsed.engagementLevel : 'medium',
+        tips,
+        preDateDetected: !!parsed.preDateDetected,
+        suggestedAction,
+      };
+    } catch (error) {
+      logger.error(`[getRealtimeCoachTips] Error: ${error.message}`);
+      throw new Error(`Coach analysis unavailable: ${error.message}`);
+    }
+  },
+);
+

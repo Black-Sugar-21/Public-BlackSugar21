@@ -1,17 +1,17 @@
 {
   "parameters": {
-    "enable_screen_protection": {
+    "store_url_android": {
       "defaultValue": {
-        "value": "true"
+        "value": "https://play.google.com/apps/internaltest/4701541622558266346"
       },
-      "description": " security screen",
+      "description": "store url android",
       "valueType": "STRING"
     },
-    "reviewer_uid": {
+    "store_url_ios": {
       "defaultValue": {
-        "value": "g4Zbr8tEguMcpZonw72xM5MGse32"
+        "value": "https://testflight.apple.com/join/gSquX4CT"
       },
-      "description": "UID del reviewer exento de protección de pantalla. Configurable sin redeploy.",
+      "description": "store url ios",
       "valueType": "STRING"
     },
     "moderation_image_jpeg_quality": {
@@ -25,15 +25,15 @@
       "defaultValue": {
         "value": "true"
       },
-      "description": "Habilitar o deshabilitar el sistema de sugerencias de lugares para citas",
+      "description": "[DEPRECATED — usar places_search_config.enabled] Habilitar o deshabilitar el sistema de sugerencias de lugares para citas",
       "valueType": "BOOLEAN"
     },
-    "store_url_android": {
+    "places_search_config": {
       "defaultValue": {
-        "value": "https://play.google.com/apps/internaltest/4701541622558266346"
+        "value": "{\"enabled\":true,\"radiusSteps\":[100000,130000,180000,250000,300000],\"progressiveRadiusSteps\":[15000,30000,60000,120000,200000,300000],\"minPlacesTarget\":30,\"minRadius\":3000,\"maxRadius\":300000,\"loadMoreDefaultBaseRadius\":60000,\"loadMoreExpansionBase\":2,\"loadMoreMaxExpansionStep\":4,\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"queriesWithCategory\":3,\"queriesWithoutCategory\":5,\"useRestriction\":true,\"photoMaxHeightPx\":400,\"photosPerPlace\":5,\"travelSpeedKmH\":40,\"maxLoadCount\":20,\"defaultLanguage\":\"es\",\"defaultCategoryQueryCount\":4}"
       },
-      "description": "store url android",
-      "valueType": "STRING"
+      "description": "Configuración dinámica de búsqueda de lugares para citas (ChatView). Progressive radius strategy (homologado con Coach IA): progressiveRadiusSteps (búsqueda inicial), minPlacesTarget, minRadius, maxRadius, loadMoreDefaultBaseRadius/ExpansionBase/MaxExpansionStep (loadMore exponencial). radiusSteps: radios para pageToken path (backward compat). perQueryResults: resultados por query Google Places. maxPlacesIntermediate: cap de places únicos. queriesWithCategory/WithoutCategory: queries paralelas. useRestriction: hard/soft geo filter. photoMaxHeightPx: altura fotos. photosPerPlace: max fotos por lugar. travelSpeedKmH: velocidad estimada viaje. maxLoadCount: clamp loadCount. defaultLanguage: idioma fallback. defaultCategoryQueryCount: queries con categoría. categoryQueryMap: (opcional) objeto {category: queryTerms} para override dinámico — si null usa fallback hardcodeado con 14 categorías bilingües.",
+      "valueType": "JSON"
     },
     "ai_moderation_confidence_threshold": {
       "defaultValue": {
@@ -46,6 +46,13 @@
         "value": "5"
       },
       "valueType": "NUMBER"
+    },
+    "enable_screen_protection": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": " security screen",
+      "valueType": "STRING"
     },
     "ai_model_config": {
       "defaultValue": {
@@ -61,7 +68,7 @@
     },
     "compatibility_weights": {
       "defaultValue": {
-        "value": "{   \"age\": 0.20,   \"engagement\": 0.20,   \"responseRate\": 0.15,   \"selectivity\": 0.15,   \"matchQuality\": 0.15,   \"safety\": 0.10,   \"premium\": 0.05 }"
+        "value": "{\"age\":0.20,\"engagement\":0.20,\"responseRate\":0.15,\"selectivity\":0.15,\"matchQuality\":0.15,\"safety\":0.10,\"premium\":0.05}"
       },
       "description": " Pesos para el algoritmo de compatibilidad. La suma debe ser 1.0",
       "valueType": "JSON"
@@ -94,8 +101,15 @@
     },
     "image_moderation_config": {
       "defaultValue": {
-        "value": "{   \"confidenceThreshold\": 80,   \"autoRejectThreshold\": 90,   \"enabledChecks\": {     \"nudity\": true,     \"violence\": true,     \"fakeProfiles\": true,     \"underage\": true,     \"multiplePeople\": true,     \"lowQuality\": false,     \"helmet\": false,     \"faceMask\": false,     \"sunglasses\": false,     \"backToCamera\": false,     \"distantFullBody\": false   },   \"genderVerification\": {     \"enabled\": true,     \"confidenceThreshold\": 70   } }"
+        "value": "{\"confidenceThreshold\":80,\"autoRejectThreshold\":90,\"enabledChecks\":{\"nudity\":true,\"violence\":true,\"fakeProfiles\":true,\"underage\":true,\"multiplePeople\":true,\"lowQuality\":false,\"helmet\":false,\"faceMask\":false,\"sunglasses\":false,\"backToCamera\":false,\"distantFullBody\":false},\"genderVerification\":{\"enabled\":true,\"confidenceThreshold\":70}}"
       },
+      "valueType": "JSON"
+    },
+    "moderation_config": {
+      "defaultValue": {
+        "value": "{\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.2,\"fetchMultiplier\":4,\"collection\":\"moderationKnowledge\"}}"
+      },
+      "description": "Dynamic configuration for Moderation RAG (server-side only). Controls RAG pipeline parameters for moderateMessage and autoModerateMessage. Kill switch: rag.enabled=false. Tunable without redeployment.",
       "valueType": "JSON"
     },
     "moderation_image_max_dimension": {
@@ -125,11 +139,11 @@
       "description": "Configuración completa del sistema de penalización por comportamiento ofensivo",
       "valueType": "JSON"
     },
-    "store_url_ios": {
+    "reviewer_uid": {
       "defaultValue": {
-        "value": "https://testflight.apple.com/join/gSquX4CT"
+        "value": "g4Zbr8tEguMcpZonw72xM5MGse32"
       },
-      "description": "store url ios",
+      "description": "UID del reviewer exento de protección de pantalla. Configurable sin redeploy.",
       "valueType": "STRING"
     },
     "reviewer_test_phone": {
@@ -168,9 +182,30 @@
     },
     "minimum_age_by_country": {
       "defaultValue": {
-        "value": "{   \"US\": 18,   \"GB\": 18,   \"CA\": 18,   \"AU\": 18,   \"JP\": 18,   \"KR\": 19,   \"TH\": 20,   \"DE\": 18,   \"FR\": 18,   \"ES\": 18,   \"IT\": 18,   \"PT\": 18,   \"BR\": 18,   \"MX\": 18,   \"AR\": 18,   \"CL\": 18,   \"CO\": 18,   \"PE\": 18,   \"SA\": 21,   \"AE\": 21,   \"IN\": 18,   \"CN\": 18,   \"RU\": 18,   \"default\": 18 }"
+        "value": "{\"US\":18,\"GB\":18,\"CA\":18,\"AU\":18,\"JP\":18,\"KR\":19,\"TH\":20,\"DE\":18,\"FR\":18,\"ES\":18,\"IT\":18,\"PT\":18,\"BR\":18,\"MX\":18,\"AR\":18,\"CL\":18,\"CO\":18,\"PE\":18,\"SA\":21,\"AE\":21,\"IN\":18,\"CN\":18,\"RU\":18,\"default\":18}"
       },
       "valueType": "JSON"
+    },
+    "coach_config": {
+      "defaultValue": {
+        "value": "{\"enabled\":true,\"maxMessageLength\":2000,\"historyLimit\":10,\"maxActivities\":30,\"maxSuggestions\":3,\"maxReplyLength\":5000,\"rateLimitPerHour\":30,\"temperature\":0.9,\"maxTokens\":2048,\"learningEnabled\":true,\"personalityTone\":\"warm, supportive, encouraging but honest\",\"blockedTopics\":[\"politics\",\"religion\",\"coding\",\"programming\",\"math\",\"science homework\",\"medical advice\",\"legal advice\",\"financial advice\",\"gambling\",\"drugs\",\"weapons\",\"hacking\",\"cheating strategies\",\"manipulation tactics\",\"revenge\",\"stalking\",\"explicit sexual content\",\"pornography\",\"self-harm\",\"terrorism\",\"illegal activities\"],\"additionalGuidelines\":\"\",\"dailyCredits\":5,\"placeSearch\":{\"enableWithoutLocation\":true,\"minActivitiesForPlaceSearch\":6,\"defaultRadius\":100000,\"minRadius\":3000,\"maxRadius\":300000,\"radiusSteps\":[100000,130000,180000,250000,300000],\"progressiveRadiusSteps\":[15000,30000,60000,120000,200000,300000],\"minPlacesTarget\":30,\"loadMoreDefaultBaseRadius\":60000,\"loadMoreExpansionBase\":2,\"loadMoreMaxExpansionStep\":4,\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"maxOutputTokensBudget\":8192},\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.25,\"fetchMultiplier\":3,\"collection\":\"coachKnowledge\",\"promptHeader\":\"SUGAR DATING EXPERT KNOWLEDGE BASE (use this curated sugar dating and relationship advice to personalize your response — reference specific tips about sugar dynamics, arrangements, boundaries, safety, and etiquette when relevant):\"}}"
+      },
+      "description": "Dynamic configuration for AI Date Coach (server-side only). Controls behavior, limits, guardrails, content policies, and learning system without redeployment.",
+      "valueType": "JSON"
+    },
+    "coach_max_input_length": {
+      "defaultValue": {
+        "value": "2000"
+      },
+      "description": "Max input length for Coach Chat (range 100-10000). Read by Android RemoteConfigManager + iOS RemoteConfigService.",
+      "valueType": "NUMBER"
+    },
+    "coach_daily_credits": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "description": "Daily coach credits (range 1-100). CF resetCoachMessages reads from coach_config.dailyCredits. This key is for client-side UI threshold.",
+      "valueType": "NUMBER"
     }
   }
 }

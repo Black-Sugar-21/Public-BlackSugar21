@@ -214,6 +214,19 @@ service cloud.firestore {
       allow write: if false; // Solo admin SDK puede escribir
     }
 
+    // --- COACH CHATS (AI Date Coach conversations) ---
+    // Users can only read their own coach chat history.
+    // All writes go through Cloud Functions (admin SDK) — no direct client writes.
+    match /coachChats/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Solo admin SDK (Cloud Functions)
+
+      match /messages/{messageId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // Solo admin SDK (Cloud Functions)
+      }
+    }
+
     // --- SYSTEM STATS (for Cloud Functions) ---
     match /system_stats/{docId} {
       // Solo Cloud Functions (admin SDK) pueden leer/escribir: bypass de reglas automático.

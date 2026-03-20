@@ -1,0 +1,399 @@
+#!/usr/bin/env node
+/**
+ * Modularization script for index.original.js → lib/ modules
+ * 
+ * Reads the monolithic file and creates separate module files.
+ * Each module gets proper require headers and exports.
+ * 
+ * Usage: node scripts/modularize.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const SRC = path.join(__dirname, '..', 'index.original.js');
+const LIB = path.join(__dirname, '..', 'lib');
+
+// Read all lines (1-indexed in config, 0-indexed in array)
+const allLines = fs.readFileSync(SRC, 'utf-8').split('\n');
+const total = allLines.length;
+
+function extractLines(startLine, endLine) {
+  // startLine and endLine are 1-indexed inclusive
+  return allLines.slice(startLine - 1, endLine).join('\n');
+}
+
+// Find the line number where a pattern first appears at/after startLine
+function findLine(pattern, startLine = 1) {
+  const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+  for (let i = startLine - 1; i < allLines.length; i++) {
+    if (regex.test(allLines[i])) return i + 1; // return 1-indexed
+  }
+  return -1;
+}
+
+// Find the line before the next exports.XXX or function/const/async definition
+function findEndOfBlock(startLine) {
+  // Walk forward from startLine looking for the next top-level declaration
+  for (let i = startLine; i < allLines.length; i++) {
+    const line = allLines[i];
+    if (i === startLine - 1) continue; // skip start line
+    if (/^exports\./.test(line) || 
+        /^function /.test(line) || 
+        /^async function /.test(line) ||
+        /^const .* = (?:onCall|onDocumentCreated|onObjectFinalized|onSchedule|onDocumentUpdated)/.test(line) ||
+        /^\/\/ ={5,}/.test(line) || // section dividers
+        /^\/\*\*/.test(line) && i > startLine + 2) { // JSDoc of next block
+      return i; // 1-indexed line BEFORE this one
+    }
+  }
+  return allLines.length;
+}
+
+function writeModule(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf-8');
+  const lines = content.split('\n').length;
+  console.log(`  ✅ ${path.basename(filePath)} (${lines} lines)`);
+}
+
+// ============================================================
+// MODULE DEFINITIONS
+// ============================================================
+
+console.log('\n🔧 Modularizing index.original.js → lib/\n');
+
+// ============================================================
+// 1. discovery.js (L181-473)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const { haversineDistanceKm, encodeGeohash, precisionForRadius, normalizeLongitude, queryBoundsForRadius, calcAge } = require('./geo');
+
+`;
+  // L161-180 are just comments/blank before the export
+  const code = extractLines(161, 474);
+  writeModule(path.join(LIB, 'discovery.js'), header + code + '\n');
+})();
+
+// ============================================================
+// 2. matches.js (L475-789)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const admin = require('firebase-admin');
+
+`;
+  const code = extractLines(475, 789);
+  writeModule(path.join(LIB, 'matches.js'), header + code + '\n');
+})();
+
+// ============================================================
+// 3. notifications.js (L790-901 + L6236-6271 test notifs + L6879-6973 handlePending + L6974-7001 testToUser)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const admin = require('firebase-admin');
+
+`;
+  // sendTestNotification + updateFCMToken
+  const part1 = extractLines(790, 901);
+  // testSuperLikesResetNotification + testDailyLikesResetNotification
+  const part2 = extractLines(6236, 6304);
+  // handlePendingNotification
+  const part3 = extractLines(6879, 6973);
+  // sendTestNotificationToUser
+  const part4 = extractLines(6974, 7072);
+  writeModule(path.join(LIB, 'notifications.js'), 
+    header + part1 + '\n\n' + part2 + '\n\n' + part3 + '\n\n' + part4 + '\n');
+})();
+
+// ============================================================
+// 4. storage.js (L902-1014 + L6305-6398)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const { onObjectFinalized } = require('firebase-functions/v2/storage');
+const admin = require('firebase-admin');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const sharp = require('sharp');
+
+`;
+  // generateProfileThumbnail 
+  const part1 = extractLines(902, 1014);
+  // generateMissingThumbnails
+  const part2 = extractLines(6305, 6398);
+  writeModule(path.join(LIB, 'storage.js'), header + part1 + '\n\n' + part2 + '\n');
+})();
+
+// ============================================================
+// 5. users.js (L1015-1441)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const { GoogleGenerativeAI, geminiApiKey, AI_MODEL_LITE } = require('./shared');
+
+`;
+  const code = extractLines(1015, 1441);
+  writeModule(path.join(LIB, 'users.js'), header + code + '\n');
+})();
+
+// ============================================================
+// 6. batch.js (L1442-1690)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+
+`;
+  const code = extractLines(1442, 1690);
+  writeModule(path.join(LIB, 'batch.js'), header + code + '\n');
+})();
+
+// ============================================================
+// 7. stories.js (L1691-1911 + L7478-7547)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const admin = require('firebase-admin');
+
+`;
+  // createStory, markStoryAsViewed, deleteStory, getBatchStoryStatus, getBatchPersonalStories
+  const part1 = extractLines(1691, 1911);
+  // cleanupExpiredStories
+  const part2 = extractLines(7478, 7547);
+  writeModule(path.join(LIB, 'stories.js'), header + part1 + '\n\n' + part2 + '\n');
+})();
+
+// ============================================================
+// 8. moderation.js (L1912-2446 helpers + L3537-3698 RAG + L7073-7195 autoMod helpers + L7196-7364 autoModerateMessage)
+// The moderation functions + all their helpers
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const admin = require('firebase-admin');
+const crypto = require('crypto');
+const { GoogleGenerativeAI, geminiApiKey, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
+
+`;
+  // Moderation exports (validateProfileImage, moderateProfileImage, moderateMessage)
+  // + helper prompt builders (but skip the duplicated shared functions)
+  const modExports = extractLines(1912, 2068);
+  
+  // Helper functions: buildProfileImagePrompt through buildMessageModerationPrompt
+  // Skip getLanguageInstruction (L2069-2085) — already in shared.js
+  const modHelpers = extractLines(2086, 2393);
+  
+  // Skip normalizeCategory (L2394-2418) — already in shared.js
+  // Skip parseGeminiJsonResponse (L2419-2446) — already in shared.js
+  
+  // Moderation config + RAG: getModerationConfig, retrieveModerationKnowledge
+  // L3537-3698
+  const modConfig = extractLines(3537, 3698);
+  
+  // autoModerateMessage helpers: getMessageHash, applyQuickFilters, getCachedModerationResult, saveModerationToCache  
+  const autoModHelpers = extractLines(7073, 7195);
+  
+  // autoModerateMessage trigger
+  const autoModTrigger = extractLines(7196, 7364);
+  
+  writeModule(path.join(LIB, 'moderation.js'),
+    header + 
+    '// --- Moderation config & RAG ---\n' + modConfig + '\n\n' +
+    '// --- Prompt builders ---\n' + modHelpers + '\n\n' +
+    '// --- Moderation exports ---\n' + modExports + '\n\n' +
+    '// --- Auto-moderation helpers ---\n' + autoModHelpers + '\n\n' +
+    '// --- Auto-moderation trigger ---\n' + autoModTrigger + '\n');
+})();
+
+// ============================================================
+// 9. ai-services.js (L2447-3078)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const { GoogleGenerativeAI, geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
+const { calcAge } = require('./geo');
+
+`;
+  const code = extractLines(2447, 3078);
+  writeModule(path.join(LIB, 'ai-services.js'), header + code + '\n');
+})();
+
+// ============================================================  
+// 10. coach.js — the big one
+// Coach infrastructure (L3079-3536) + learning (L3375-3536) + coachRAG (L3699-3812) 
+// + dateCoachChat (L3813-5385) + getCoachHistory (L5386-5441) + deleteCoachMessage (L5442-5481)
+// + getRealtimeCoachTips (L7548-7696)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const { GoogleGenerativeAI, geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
+const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
+
+`;
+  // Coach infrastructure: PLACES_CHIP_I18N, config caches, purchase patterns, getCoachConfig
+  // Skip duplicate reverseGeocode/forwardGeocode (L3099-3160) — use geo.js
+  // Start at L3161 (PLACES_CHIP_I18N)
+  // Actually we need to grab from L3079 for any comments, but skip the geocode functions
+  
+  // First grab the constants/caches that are NOT in geo.js (L3079-3098 are comments + cache vars that are duplicated)
+  // Let's start at line where PLACES_CHIP_I18N begins
+  const placesChipLine = findLine('PLACES_CHIP_I18N', 3079);
+  
+  // Skip geocode cache vars and functions (they're in geo.js)
+  // Go from PLACES_CHIP_I18N through getCoachConfig + learning + coachRAG
+  const coachInfra = extractLines(placesChipLine, 3536);
+  
+  // Coach RAG: retrieveCoachKnowledge
+  const coachRAG = extractLines(3699, 3812);
+  
+  // dateCoachChat + getCoachHistory + deleteCoachMessage  
+  const coachMain = extractLines(3813, 5481);
+  
+  // getRealtimeCoachTips (at end of file)
+  const coachTips = extractLines(7548, total);
+  
+  writeModule(path.join(LIB, 'coach.js'),
+    header +
+    '// --- Coach infrastructure ---\n' + coachInfra + '\n\n' +
+    '// --- Coach RAG ---\n' + coachRAG + '\n\n' +
+    '// --- Coach main functions ---\n' + coachMain + '\n\n' +
+    '// --- Realtime coach tips ---\n' + coachTips + '\n');
+})();
+
+// ============================================================
+// 11. places.js (L5482-5924 helpers + L5925-6235 exports) 
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onCall } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, GoogleGenerativeAI, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
+const { haversineDistanceKm } = require('./geo');
+
+`;
+  // Place helpers: calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
+  // fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap, googlePriceLevelToString,
+  // isValidCoachInstagramHandle, sanitizeInstagramHandle, sanitizeWebsiteUrl,
+  // placesTextSearch, transformPlaceToSuggestion
+  const helpers = extractLines(5482, 5924);
+  
+  // getDateSuggestions + searchPlaces
+  const exports_code = extractLines(5925, 6235);
+  
+  writeModule(path.join(LIB, 'places.js'), header + helpers + '\n\n' + exports_code + '\n');
+})();
+
+// ============================================================
+// 12. scheduled.js (L6399-6786+L6793-6878)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const admin = require('firebase-admin');
+
+`;
+  // resetDailyLikes, resetSuperLikes, resetCoachMessages, checkMutualLikesAndCreateMatch
+  const part1 = extractLines(6399, 6786);
+  
+  // scheduledCheckMutualLikes alias — this is just one line: exports.scheduledCheckMutualLikes = exports.checkMutualLikesAndCreateMatch;
+  // It's at L6786 which is included above
+  
+  // processScheduledDeletions
+  const part2 = extractLines(6793, 6878);
+  
+  writeModule(path.join(LIB, 'scheduled.js'), header + part1 + '\n\n' + part2 + '\n');
+})();
+
+// ============================================================
+// 13. geohash.js (L7365-7477)
+// ============================================================
+(() => {
+  const header = `'use strict';
+const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const admin = require('firebase-admin');
+const { encodeGeohash } = require('./geo');
+
+`;
+  const code = extractLines(7365, 7477);
+  writeModule(path.join(LIB, 'geohash.js'), header + code + '\n');
+})();
+
+console.log('\n✅ All 13 module files created in lib/\n');
+
+// ============================================================
+// Now create the new index.js
+// ============================================================
+const indexContent = `'use strict';
+
+// Initialize Firebase Admin SDK ONCE before any module imports
+const admin = require('firebase-admin');
+admin.initializeApp();
+
+// Re-export all modules
+const modules = [
+  './lib/discovery',
+  './lib/matches',
+  './lib/notifications',
+  './lib/storage',
+  './lib/users',
+  './lib/batch',
+  './lib/stories',
+  './lib/moderation',
+  './lib/ai-services',
+  './lib/coach',
+  './lib/places',
+  './lib/scheduled',
+  './lib/geohash',
+];
+
+modules.forEach(mod => {
+  Object.assign(exports, require(mod));
+});
+`;
+
+const indexPath = path.join(__dirname, '..', 'index.js');
+fs.writeFileSync(indexPath, indexContent, 'utf-8');
+console.log(`✅ New index.js created (${indexContent.split('\n').length} lines)\n`);
+
+// ============================================================
+// Verify: count total exports
+// ============================================================
+console.log('🔍 Verifying exports...\n');
+
+// Clear require cache to ensure fresh load
+Object.keys(require.cache).forEach(key => {
+  if (key.includes('/functions/')) delete require.cache[key];
+});
+
+try {
+  const funcs = require(path.join(__dirname, '..'));
+  const exportNames = Object.keys(funcs).sort();
+  console.log(`Total exports: ${exportNames.length}`);
+  console.log('Exports:', exportNames.join(', '));
+} catch (err) {
+  console.error('❌ Error loading new index.js:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+}
+
+console.log('\n🎉 Modularization complete!\n');

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Chat Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  }
+
+  .phone {
+    width: 390px;
+    background: #0d0d14;
+    border-radius: 48px;
+    border: 2px solid #2a2a3a;
+    overflow: hidden;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px #111;
+    position: relative;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 4px;
+    background: #0d0d14;
+  }
+  .status-time { font-size: 15px; font-weight: 600; color: #fff; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { fill: #fff; }
+
+  /* Navigation */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px 12px;
+    background: #0d0d14;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    gap: 10px;
+  }
+  .nav-back {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #831bfc;
+    font-size: 16px;
+    font-weight: 400;
+  }
+  .nav-chevron { font-size: 18px; margin-top: -1px; }
+  .nav-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .nav-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #831bfc, #ff6eb4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    position: relative;
+  }
+  .nav-online-dot {
+    width: 10px;
+    height: 10px;
+    background: #4cd964;
+    border: 2px solid #0d0d14;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
+  .nav-name { font-size: 17px; font-weight: 600; color: #fff; }
+  .nav-actions { display: flex; gap: 16px; color: #831bfc; font-size: 20px; }
+  .nav-sparkle { color: #831bfc; font-size: 18px; }
+
+  /* Chat area */
+  .chat-area {
+    padding: 12px 16px;
+    background: #0d0d14;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .date-divider {
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    margin: 4px 0 8px;
+  }
+
+  .bubble-row {
+    display: flex;
+    margin-bottom: 2px;
+  }
+  .bubble-row.sent { justify-content: flex-end; }
+  .bubble-row.received { justify-content: flex-start; }
+
+  .bubble {
+    max-width: 72%;
+    padding: 10px 14px;
+    border-radius: 20px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .bubble.sent {
+    background: linear-gradient(135deg, #831bfc, #9c59ea);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+
+  .bubble.received {
+    background: #1e1e2e;
+    color: #e8e8ee;
+    border-bottom-left-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* AI Chemistry Panel */
+  .ai-panel {
+    margin: 0 -16px;
+    background: #111120;
+    border-top: 1px solid rgba(131,27,252,0.25);
+    padding: 14px 16px 0;
+  }
+
+  .ai-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .ai-chemistry-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ai-sparkle { color: #831bfc; font-size: 16px; }
+
+  .ai-chemistry-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #aaa;
+  }
+
+  .ai-chemistry-score {
+    font-size: 15px;
+    font-weight: 700;
+    color: #4cd964;
+  }
+
+  .ai-chemistry-arrow { color: #4cd964; font-size: 13px; }
+
+  .ai-close {
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .ai-analysis {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+
+  .ai-heart { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  .ai-analysis-text {
+    font-size: 13px;
+    color: #c0c0cc;
+    line-height: 1.5;
+  }
+
+  .ai-tips {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .ai-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #888;
+  }
+
+  .ai-tip-icon { color: #831bfc; flex-shrink: 0; margin-top: 1px; }
+
+  .ai-suggestion-box {
+    background: rgba(131,27,252,0.08);
+    border: 1px solid rgba(131,27,252,0.2);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+
+  .ai-suggestion-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #831bfc;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ai-suggestion-text {
+    font-size: 13.5px;
+    color: #d0d0e0;
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+
+  .ai-suggestion-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .btn-copy {
+    font-size: 13px;
+    color: #831bfc;
+    background: rgba(131,27,252,0.1);
+    border: 1px solid rgba(131,27,252,0.3);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-use {
+    font-size: 13px;
+    color: #fff;
+    background: linear-gradient(135deg, #831bfc, #9c59ea);
+    border: none;
+    border-radius: 20px;
+    padding: 6px 20px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Input bar */
+  .input-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px 24px;
+    background: #0d0d14;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .input-camera { color: #831bfc; font-size: 22px; }
+
+  .input-field {
+    flex: 1;
+    background: #1e1e2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 22px;
+    padding: 10px 16px;
+    font-size: 15px;
+    color: #555;
+    font-family: inherit;
+  }
+
+  .input-send {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #831bfc, #9c59ea);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">12:14</span>
+    <div class="status-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" opacity=".3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 20 14"><path d="M10 2.5C6.5 2.5 3.3 3.9 1 6.2L0 5.2C2.6 2.6 6.1 1 10 1s7.4 1.6 10 4.2l-1 1C16.7 3.9 13.5 2.5 10 2.5z"/><path d="M10 5.5c-2.5 0-4.7 1-6.3 2.6L2.7 7.1C4.6 5.2 7.2 4 10 4s5.4 1.2 7.3 3.1l-1 1.1C14.7 6.5 12.5 5.5 10 5.5z"/><path d="M10 8.5c-1.4 0-2.7.6-3.6 1.5l-1-1C6.6 7.8 8.2 7 10 7s3.4.8 4.6 2l-1 1c-.9-.9-2.2-1.5-3.6-1.5z"/><circle cx="10" cy="13" r="1.5"/></svg>
+      <span style="font-size:12px;color:#fff;font-weight:600">52%</span>
+    </div>
+  </div>
+
+  <!-- Nav Bar -->
+  <div class="nav-bar">
+    <div class="nav-back">
+      <span class="nav-chevron">‹</span>
+      <span style="font-size:15px">Atrás</span>
+    </div>
+    <div class="nav-profile">
+      <div class="nav-avatar">
+        👩
+        <div class="nav-online-dot"></div>
+      </div>
+      <span class="nav-name">Valentina</span>
+    </div>
+    <div class="nav-actions">
+      <span class="nav-sparkle">✦</span>
+      <span style="font-size:16px">🔑</span>
+      <span style="font-size:18px;color:#555">⋮</span>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-area">
+    <div class="date-divider">Hoy</div>
+
+    <div class="bubble-row sent">
+      <div class="bubble sent">Hola! Vi tu perfil y me encantó 😊</div>
+    </div>
+
+    <div class="bubble-row received">
+      <div class="bubble received">Jaja gracias, qué te gustó? 😏</div>
+    </div>
+
+    <div class="bubble-row sent">
+      <div class="bubble sent">Tu forma de describir lo que buscas</div>
+    </div>
+    <div class="bubble-row sent">
+      <div class="bubble sent">Muy directa, me gusta eso ✨</div>
+    </div>
+
+    <div class="bubble-row received">
+      <div class="bubble received">Jaja sí, no me gusta perder el tiempo 😂</div>
+    </div>
+
+    <div class="bubble-row received">
+      <div class="bubble received">Y tú qué buscas? 🤔</div>
+    </div>
+  </div>
+
+  <!-- AI Panel -->
+  <div class="ai-panel">
+    <div class="ai-panel-header">
+      <div class="ai-chemistry-badge">
+        <span class="ai-sparkle">✦</span>
+        <span class="ai-chemistry-label">Química</span>
+        <span class="ai-chemistry-score">72%</span>
+        <span class="ai-chemistry-arrow">↗</span>
+      </div>
+      <span class="ai-close">✕</span>
+    </div>
+
+    <div class="ai-analysis">
+      <span class="ai-heart">❤️</span>
+      <span class="ai-analysis-text">
+        Valentina está mostrando interés real con preguntas directas. Es el momento perfecto para ser auténtico y generar conexión emocional.
+      </span>
+    </div>
+
+    <div class="ai-tips">
+      <div class="ai-tip">
+        <span class="ai-tip-icon">💡</span>
+        <span>Ella preguntó qué buscas — sé honesto pero con intriga...</span>
+      </div>
+      <div class="ai-tip">
+        <span class="ai-tip-icon">💡</span>
+        <span>Su tono juguetón con emojis indica apertura a la conversación</span>
+      </div>
+    </div>
+
+    <div class="ai-suggestion-box">
+      <div class="ai-suggestion-label">
+        <span>💬</span> Respuesta sugerida
+      </div>
+      <div class="ai-suggestion-text">
+        "Busco algo real, con alguien que no tenga miedo de decir lo que quiere... como tú 😉"
+      </div>
+      <div class="ai-suggestion-actions">
+        <button class="btn-copy">📋 Copiar</button>
+        <button class="btn-use">Usar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="input-bar">
+    <span class="input-camera">📷</span>
+    <div class="input-field">Enviar un mensaje</div>
+    <div class="input-send">↑</div>
+  </div>
+
+</div>
+</body>
+</html>

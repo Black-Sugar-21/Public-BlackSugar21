@@ -57,16 +57,16 @@ export class TranslationService {
 
     // Hero Section
     'hero.title': {
-      es: 'BLACK SUGAR 21',
-      en: 'BLACK SUGAR 21'
+      es: 'Tu historia de amor tiene un nuevo aliado.',
+      en: 'Your Love Story Just Found Its Ally.'
     },
     'hero.tagline': {
-      es: 'La red exclusiva +18 para Sugar Mommies y Sugar Babies.',
-      en: 'The exclusive +18 network for Sugar Mommies and Sugar Babies.'
+      es: 'Consejos personalizados, ideas de citas y lugares reales — todo desde tu perfil.',
+      en: 'Personalized advice, date ideas, and real place suggestions — right from your profile.'
     },
     'hero.subtitle': {
-      es: 'Donde el lujo encuentra la compañía perfecta.',
-      en: 'Where luxury meets the perfect company.'
+      es: 'Disponible en iOS y Android.',
+      en: 'Available on iOS and Android.'
     },
     'hero.ios': {
       es: 'Descargar en iOS',
@@ -93,6 +93,64 @@ export class TranslationService {
     'features.connections.desc': {
       es: 'Conecta con personas que saben lo que quieren.',
       en: 'Connect with people who know what they want.'
+    },
+    'features.coach.title': {
+      es: 'Coach IA de Citas',
+      en: 'AI Dating Coach'
+    },
+    'features.coach.desc': {
+      es: 'Un coach de IA que te guía con consejos, ideas de citas y sugerencias de lugares reales cerca de ti.',
+      en: 'An AI coach that guides you with advice, date ideas, and real place suggestions near you.'
+    },
+
+    // AI Coach Section
+    'coach.section.label': {
+      es: 'COACH IA DE CITAS',
+      en: 'AI DATING COACH'
+    },
+    'coach.section.title': {
+      es: 'Tu historia de amor tiene un nuevo aliado.',
+      en: 'Your Love Story Just Found Its Ally.'
+    },
+    'coach.section.subtitle': {
+      es: 'Accede instantáneamente desde tu perfil',
+      en: 'Access instantly from your Profile'
+    },
+    'coach.feature1.title': {
+      es: 'Consejos personalizados',
+      en: 'Personalized Advice'
+    },
+    'coach.feature1.desc': {
+      es: 'El coach analiza tus matches y te da consejos específicos para cada conversación.',
+      en: 'The coach analyzes your matches and gives you specific advice for each conversation.'
+    },
+    'coach.feature2.title': {
+      es: 'Lugares reales para tu cita',
+      en: 'Real places for your date'
+    },
+    'coach.feature2.desc': {
+      es: 'Sugiere cafeterías, restaurantes, bares y más cerca de tu ubicación — con fotos y reseñas reales.',
+      en: 'Suggests cafés, restaurants, bars and more near your location — with real photos and reviews.'
+    },
+    'coach.feature3.title': {
+      es: 'Ideas para romper el hielo',
+      en: 'Icebreaker ideas'
+    },
+    'coach.feature3.desc': {
+      es: 'No sabes qué decir? El coach te sugiere mensajes, temas y preguntas para mantener la conversación.',
+      en: 'Don\'t know what to say? The coach suggests messages, topics and questions to keep the conversation going.'
+    },
+    'coach.feature4.title': {
+      es: 'Cómo invitar a salir',
+      en: 'How to ask them out'
+    },
+    'coach.feature4.desc': {
+      es: 'Te ayuda a redactar el mensaje perfecto para invitar a salir, adaptado a tu match.',
+      en: 'Helps you craft the perfect message to ask someone out, tailored to your match.'
+    },
+    'coach.cta': {
+      es: 'Descarga la app y conoce tu coach',
+      en: 'Download the app and meet your coach'
     },
 
     // Terms Section
