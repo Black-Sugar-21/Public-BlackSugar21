@@ -163,6 +163,9 @@ exports.getCompatibleProfileIds = onCall(
 
           const candidate = doc.data();
 
+          // NUNCA mostrar el propio perfil en discovery
+          if (doc.id === currentUserId) continue;
+
           // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
           const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
           const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
@@ -272,6 +275,9 @@ exports.getCompatibleProfileIds = onCall(
         if (compatibleIds.length >= limit) break;
         const candidate = doc.data();
 
+        // NUNCA mostrar el propio perfil en discovery
+        if (doc.id === currentUserId) continue;
+
         // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
         const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
         const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
@@ -332,6 +338,41 @@ exports.getCompatibleProfileIds = onCall(
         }
 
         compatibleIds.push(doc.id);
+      }
+    }
+
+    // ═══ REVIEWER GEO BYPASS ═══
+    // Los perfiles de test/reviewer pueden estar en otra ciudad (ej: Santiago)
+    // mientras el reviewer está en otra ubicación (ej: Concepción, 430km).
+    // El geohash query solo cubre maxDistance (~200km), así que los perfiles
+    // de test quedan fuera. Esta query adicional los trae sin filtro geográfico.
+    const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+    if (isReviewerUser && compatibleIds.length < limit) {
+      try {
+        const reviewerSnap = await db.collection('users')
+          .where('isReviewer', '==', true)
+          .get();
+
+        for (const doc of reviewerSnap.docs) {
+          if (compatibleIds.length >= limit) break;
+          if (doc.id === currentUserId) continue;
+          if (seenUserIds.has(doc.id)) continue;
+          if (compatibleIds.includes(doc.id)) continue;
+
+          const candidate = doc.data();
+          // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
+          const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
+          if (excludedIds.has(doc.id) && !(isReviewerUser && isReviewerProfile)) continue;
+
+          if (candidate.accountStatus !== 'active') continue;
+          if (candidate.paused === true) continue;
+
+          seenUserIds.add(doc.id);
+          compatibleIds.push(doc.id);
+        }
+        logger.info(`[getCompatibleProfileIds] Reviewer geo bypass: added profiles, total now ${compatibleIds.length}`);
+      } catch (err) {
+        logger.warn(`[getCompatibleProfileIds] Reviewer geo bypass query failed: ${err.message}`);
       }
     }
 

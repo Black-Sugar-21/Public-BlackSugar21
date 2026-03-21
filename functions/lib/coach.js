@@ -9,7 +9,7 @@ const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
   fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,
   googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
-  placesTextSearch, transformPlaceToSuggestion,
+  placesTextSearch, transformPlaceToSuggestion, CATEGORY_TO_PLACES_TYPE,
 } = require('./places-helpers');
 
 // --- Coach infrastructure ---
@@ -522,7 +522,10 @@ exports.dateCoachChat = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const userId = request.auth.uid;
-    const {message, matchId, userLanguage, loadMoreActivities, category: requestCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
+    const {message, matchId, userLanguage, loadMoreActivities, category: _rawCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
+    // Normalize category early: handles multilingual display names sent from older app versions
+    // (e.g. "Cafetería" → "cafe", "Restaurante" → "restaurant", "Bar/Pub" → "bar")
+    const requestCategory = _rawCategory ? normalizeCategory(_rawCategory) : _rawCategory;
     const safeLoadCount = Math.max(0, Math.min(20, parseInt(rawLoadCount) || 0));
 
     // 0. Load dynamic configuration from Remote Config
@@ -592,72 +595,82 @@ exports.dateCoachChat = onCall(
         let lmBaseRadius = lmPsDefaults.loadMoreDefaultBaseRadius || 60000; // RC-configurable fallback if cache has no lastRadiusUsed
         let lmLocationOverridden = false;
 
-        // Cache-first: check if we have cached places from the original query
-        // Skip cache on loadCount=0 (category switch → always fresh fetch)
-        if (safeLoadCount > 0) try {
+        // Always read cache metadata (location override + radius) — even on category switch (loadCount=0).
+        // Bug fix: previously the entire cache block was skipped on loadCount=0, so overrideLat/overrideLng
+        // (e.g. user mentioned "Concepción") were never loaded → fresh Places fetch used wrong GPS coords.
+        let _lmCacheData = null;
+        try {
           const cacheDoc = await db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').get();
           if (cacheDoc.exists) {
-            const cacheData = cacheDoc.data();
+            _lmCacheData = cacheDoc.data();
             // Read initial search radius for progressive expansion in loadMore
-            if (typeof cacheData.lastRadiusUsed === 'number' && cacheData.lastRadiusUsed > 0) lmBaseRadius = cacheData.lastRadiusUsed;
-            // Inherit location override from initial search (e.g. user mentioned "Buenos Aires")
-            if (typeof cacheData.overrideLat === 'number' && typeof cacheData.overrideLng === 'number') {
-              lmLat = cacheData.overrideLat; lmLng = cacheData.overrideLng; lmHasLocation = true; lmLocationOverridden = true;
+            if (typeof _lmCacheData.lastRadiusUsed === 'number' && _lmCacheData.lastRadiusUsed > 0) lmBaseRadius = _lmCacheData.lastRadiusUsed;
+            // Inherit location override from initial search (e.g. user mentioned "Concepción")
+            if (typeof _lmCacheData.overrideLat === 'number' && typeof _lmCacheData.overrideLng === 'number') {
+              lmLat = _lmCacheData.overrideLat; lmLng = _lmCacheData.overrideLng; lmHasLocation = true; lmLocationOverridden = true;
               logger.info(`[dateCoachChat] loadMore: using cached override location (${lmLat.toFixed(2)}, ${lmLng.toFixed(2)})`);
-            }
-            const cacheExpiry = cacheData.expiresAt instanceof Date ? cacheData.expiresAt.getTime()
-              : (cacheData.expiresAt && typeof cacheData.expiresAt.toDate === 'function') ? cacheData.expiresAt.toDate().getTime()
-              : 0;
-            if (cacheExpiry > Date.now() && Array.isArray(cacheData.places) && cacheData.places.length > 0) {
-              // Cache is still valid — serve from cache
-              const excludeSet = new Set([
-                ...(Array.isArray(rawExcludePlaceIds) ? rawExcludePlaceIds.filter((id) => typeof id === 'string') : []),
-                ...(Array.isArray(cacheData.returnedPlaceIds) ? cacheData.returnedPlaceIds : []),
-              ]);
-              const cachedCategoryFilter = requestCategory || null;
-              const available = cacheData.places.filter((rp) =>
-                rp.placeId && !excludeSet.has(rp.placeId) &&
-                (!cachedCategoryFilter || normalizeCategory(rp.category) === cachedCategoryFilter),
-              );
-              if (available.length > 0) {
-                const batch = available.slice(0, 20);
-                const cachedActivities = batch.map((rp) => ({
-                  emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
-                  title: (rp.name || 'Place').substring(0, 50),
-                  description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
-                  category: normalizeCategory(rp.category),
-                  bestFor: 'fun',
-                  ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
-                  ...(rp.rating != null ? {rating: rp.rating} : {}),
-                  ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
-                  ...(rp.website ? {website: rp.website} : {}),
-                  ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
-                  ...(rp.address ? {address: rp.address} : {}),
-                  ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
-                  ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
-                  ...(rp.placeId ? {placeId: rp.placeId} : {}),
-                  ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
-                }));
-                // Update cache with newly returned placeIds (non-blocking)
-                const newReturned = [...(cacheData.returnedPlaceIds || []), ...batch.filter((rp) => rp.placeId).map((rp) => rp.placeId)];
-                db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').update({returnedPlaceIds: newReturned}).catch(() => {});
-                logger.info(`[dateCoachChat] loadMore served ${cachedActivities.length} from cache (${available.length - batch.length} remaining)`);
-                return {
-                  success: true,
-                  activitySuggestions: cachedActivities,
-                  coachMessagesRemaining,
-                  ...(cacheData.dominantCategory ? {dominantCategory: cacheData.dominantCategory} : {}),
-                };
-              }
             }
           }
         } catch (cacheReadErr) {
-          logger.warn(`[dateCoachChat] Cache read failed (continuing with fresh fetch): ${cacheReadErr.message}`);
-        } // end cache block (skipped when safeLoadCount === 0)
+          logger.warn(`[dateCoachChat] Cache metadata read failed (continuing with fresh fetch): ${cacheReadErr.message}`);
+        }
+
+        // Serve from cached places only when NOT a category switch (loadCount>0).
+        // Category switch (loadCount=0) always triggers a fresh Places fetch for that category.
+        if (safeLoadCount > 0 && _lmCacheData) try {
+          const cacheExpiry = _lmCacheData.expiresAt instanceof Date ? _lmCacheData.expiresAt.getTime()
+            : (_lmCacheData.expiresAt && typeof _lmCacheData.expiresAt.toDate === 'function') ? _lmCacheData.expiresAt.toDate().getTime()
+            : 0;
+          if (cacheExpiry > Date.now() && Array.isArray(_lmCacheData.places) && _lmCacheData.places.length > 0) {
+            // Cache is still valid — serve from cache
+            const excludeSet = new Set([
+              ...(Array.isArray(rawExcludePlaceIds) ? rawExcludePlaceIds.filter((id) => typeof id === 'string') : []),
+              ...(Array.isArray(_lmCacheData.returnedPlaceIds) ? _lmCacheData.returnedPlaceIds : []),
+            ]);
+            const cachedCategoryFilter = requestCategory || null;
+            const available = _lmCacheData.places.filter((rp) =>
+              rp.placeId && !excludeSet.has(rp.placeId) &&
+              (!cachedCategoryFilter || normalizeCategory(rp.category) === cachedCategoryFilter),
+            );
+            if (available.length > 0) {
+              const batch = available.slice(0, 20);
+              const cachedActivities = batch.map((rp) => ({
+                emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+                title: (rp.name || 'Place').substring(0, 50),
+                description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
+                category: normalizeCategory(rp.category),
+                bestFor: 'fun',
+                ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+                ...(rp.rating != null ? {rating: rp.rating} : {}),
+                ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+                ...(rp.website ? {website: rp.website} : {}),
+                ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+                ...(rp.address ? {address: rp.address} : {}),
+                ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+                ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+                ...(rp.placeId ? {placeId: rp.placeId} : {}),
+                ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+              }));
+              // Update cache with newly returned placeIds (non-blocking)
+              const newReturned = [...(_lmCacheData.returnedPlaceIds || []), ...batch.filter((rp) => rp.placeId).map((rp) => rp.placeId)];
+              db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').update({returnedPlaceIds: newReturned}).catch(() => {});
+              logger.info(`[dateCoachChat] loadMore served ${cachedActivities.length} from cache (${available.length - batch.length} remaining)`);
+              return {
+                success: true,
+                activitySuggestions: cachedActivities,
+                coachMessagesRemaining,
+                ...(_lmCacheData.dominantCategory ? {dominantCategory: _lmCacheData.dominantCategory} : {}),
+              };
+            }
+          }
+        } catch (cacheServeErr) {
+          logger.warn(`[dateCoachChat] Cache serve failed (continuing with fresh fetch): ${cacheServeErr.message}`);
+        } // end cache serve block
 
         // Fetch Google Places with progressive radius expansion
         // For category searches, progressively expand radius until minTarget results found
         let lmPlaces = [];
+        let lmLastRadius = 0;
         const lmPsConfig = config.placeSearch || {};
         const placesKey = process.env.GOOGLE_PLACES_API_KEY;
         if (placesKey) {
@@ -669,7 +682,14 @@ exports.dateCoachChat = onCall(
             const lmMaxIntermediate = lmPsConfig.maxPlacesIntermediate || 60;
             const center = lmHasLocation ? {latitude: lmLat, longitude: lmLng} : null;
             const lmCat = requestCategory && categoryQueryMap[requestCategory] ? requestCategory : null;
-            const lmIncludedType = lmCat && CATEGORY_TO_PLACES_TYPE[lmCat] ? [CATEGORY_TO_PLACES_TYPE[lmCat]] : null;
+            // Use type filter from validated lmCat, or directly from CATEGORY_TO_PLACES_TYPE if
+            // requestCategory is known but missing from categoryQueryMap (e.g. Remote Config override)
+            const lmTypeKey = lmCat || (requestCategory && CATEGORY_TO_PLACES_TYPE[requestCategory] ? requestCategory : null);
+            // CATEGORY_TO_PLACES_TYPE now stores an array — use all types for parallel searches
+            const rawTypeEntry = lmTypeKey ? CATEGORY_TO_PLACES_TYPE[lmTypeKey] : null;
+            const lmAllTypes = rawTypeEntry ? (Array.isArray(rawTypeEntry) ? rawTypeEntry : [rawTypeEntry]) : null;
+            // Keep single-type ref for logging/fallback compatibility
+            const lmIncludedType = lmAllTypes ? [lmAllTypes[0]] : null;
             let lmQueries;
             if (lmCat) {
               const canonicalQ = categoryQueryMap[lmCat];
@@ -678,6 +698,9 @@ exports.dateCoachChat = onCall(
                 ? [terms.slice(0, 3).join(' '), terms.slice(3).join(' ')]
                 : [terms.join(' ')];
               lmQueries = [canonicalQ, ...subQ].slice(0, 3);
+            } else if (requestCategory) {
+              // Category not in queryMap (e.g. Remote Config missing key) — build basic query
+              lmQueries = [requestCategory.replace(/_/g, ' ')];
             } else {
               lmQueries = Object.keys(categoryQueryMap).sort(() => Math.random() - 0.5).slice(0, 4).map((k) => categoryQueryMap[k]);
             }
@@ -710,13 +733,18 @@ exports.dateCoachChat = onCall(
             let allRawPlaces = [];
             let stepsUsed = 0;
 
-            logger.info(`[dateCoachChat] loadMore progressive: ${lmQueries.length} queries, ${effectiveSteps.length} steps, type=${lmIncludedType ? lmIncludedType[0] : 'any'}, cat=${lmCat || 'any'}, target=${lmMinTarget}`);
+            logger.info(`[dateCoachChat] loadMore progressive: ${lmQueries.length} queries, ${effectiveSteps.length} steps, types=${lmAllTypes ? lmAllTypes.join('|') : 'any'}, cat=${lmCat || 'any'}, target=${lmMinTarget}`);
 
             for (const stepRadius of effectiveSteps) {
               stepsUsed++;
+              lmLastRadius = stepRadius || 0;
               const radiusMeters = stepRadius ? Math.min(lmMaxR, stepRadius) : null;
+              // Build all (query × type) combinations for parallel fetch; cap at 12 to avoid API quota bursts
+              const searchPairs = lmAllTypes
+                ? lmQueries.flatMap((q) => lmAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
+                : lmQueries.map((q) => ({q, t: null}));
               const res = await Promise.all(
-                lmQueries.map((q) => placesTextSearch(q, center, radiusMeters, lang, null, perQ, lmUseRestriction, lmIncludedType).catch(() => ({places: []}))),
+                searchPairs.map(({q, t}) => placesTextSearch(q, center, radiusMeters, lang, null, perQ, lmUseRestriction, t).catch(() => ({places: []}))),
               );
               const newPlaces = res.flatMap((r) => r.places).filter((p) => {
                 if (!p.id || allUniqueIds.has(p.id)) return false;
@@ -729,6 +757,27 @@ exports.dateCoachChat = onCall(
             }
 
             logger.info(`[dateCoachChat] loadMore progressive done: ${allRawPlaces.length} places in ${stepsUsed}/${effectiveSteps.length} steps, cat=${lmCat || 'any'}`);
+
+            // Fallback: if type filter yielded 0 results (sparse/rare categories like zoo, aquarium,
+            // spa, bowling_alley or regional differences in Google Places type tagging),
+            // retry once at max radius without includedType — text queries are specific enough.
+            if (allRawPlaces.length === 0 && lmIncludedType !== null) {
+              logger.info(`[dateCoachChat] loadMore 0 results with includedType=${lmIncludedType[0]}, retrying without type filter`);
+              const fallbackRadius = lmHasLocation ? Math.min(lmMaxR, Math.max(...progressiveSteps)) : null;
+              const fallbackRes = await Promise.all(
+                lmQueries.map((q) => placesTextSearch(q, center, fallbackRadius, lang, null, perQ, lmUseRestriction, null)
+                  .catch(() => ({places: []}))),
+              );
+              const fallbackPlaces = fallbackRes.flatMap((r) => r.places).filter((p) => {
+                if (!p.id || allUniqueIds.has(p.id)) return false;
+                allUniqueIds.add(p.id);
+                return true;
+              });
+              if (fallbackPlaces.length > 0) {
+                allRawPlaces = fallbackPlaces;
+                logger.info(`[dateCoachChat] loadMore no-type fallback: found ${allRawPlaces.length} places`);
+              }
+            }
 
             lmPlaces = allRawPlaces.slice(0, lmMaxIntermediate).map((p) => {
               const photoArr = p.photos || [];
@@ -759,7 +808,7 @@ exports.dateCoachChat = onCall(
         const lmPrompt = `You are a dating coach assistant. Generate ${config.maxActivities} NEW and DIFFERENT activity/venue suggestions.` +
           `\nUser's local time: ${lmTimeOfDay} (${lmHour}:00). Consider this for relevance.` +
           (lmHasLocation ? `\nLocation: lat ${lmLat.toFixed(2)}, lng ${lmLng.toFixed(2)}` : '') +
-          (requestCategory ? `\nCategory focus: ${requestCategory}. ALL activities MUST use category: "${requestCategory}".` : '') +
+          (requestCategory ? `\nCategory focus: ${requestCategory}. ALL activities MUST use category: "${requestCategory}".` : '\nIMPORTANT: Maximize category diversity — use at least 4-5 DIFFERENT categories (cafe, restaurant, bar, park, museum, art_gallery, bakery, shopping_mall, spa, night_club, bowling_alley).') +
           lmPlacesCtx +
           `\n\nThe user already has these activities: ${message.substring(0, 500)}` +
           `\nProvide COMPLETELY DIFFERENT suggestions. Respond in ${lang}.` +
@@ -790,9 +839,27 @@ exports.dateCoachChat = onCall(
           logger.warn(`[dateCoachChat] loadMore Gemini failed, using Places fallback: ${geminiErr.message}`);
         }
 
+        // Cache the fresh fetch results so loadCount=1 can serve from cache instead of re-fetching
+        if (lmPlaces.length > 0) {
+          db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').set({
+            places: lmPlaces,
+            returnedPlaceIds: [],
+            dominantCategory: requestCategory || null,
+            lastRadiusUsed: lmLastRadius || 0,
+            ...(lmLocationOverridden ? {overrideLat: lmLat, overrideLng: lmLng} : {}),
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          }).catch((e) => logger.warn(`[dateCoachChat] loadMore cache write failed (non-critical): ${e.message}`));
+        }
+
         let lmActivities;
+        // Guard: parseGeminiJsonResponse requires a non-null string; skip if Gemini failed
+        if (!lmText) {
+          logger.warn('[dateCoachChat] loadMore Gemini returned null text — using Places fallback directly');
+        }
         try {
-          const parsed = parseGeminiJsonResponse(lmText);
+          const parsed = lmText ? parseGeminiJsonResponse(lmText) : null;
+          if (!parsed) throw new Error('no_text');
           const acts = parsed.activitySuggestions || parsed.activity_suggestions || parsed.activities || parsed.places;
           if (Array.isArray(acts)) {
             const lmLookupById = new Map();
@@ -1130,12 +1197,23 @@ exports.dateCoachChat = onCall(
             const intentAI = new GoogleGenerativeAI(intentApiKey);
             const intentModel = intentAI.getGenerativeModel({
               model: AI_MODEL_NAME,
-              generationConfig: {temperature: 0.1, maxOutputTokens: 256, responseMimeType: 'application/json'},
+              generationConfig: {temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json'},
             });
-            const intentPrompt = `Extract search intent from this message. The user speaks "${lang}".
+            const intentPrompt = `Extract search intent from this message. User language: "${lang}".
 Message: "${message.substring(0, 300)}"
 
-Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaurant, café, sushi, spa, park, flower shop, chocolate shop, jewelry store, gift shop, wine shop, bakery, perfume store, pizzeria, ice cream shop)", "placeQueries": ["2-3 short search queries in the user's language optimized for Google Places. IMPORTANT: Map PRODUCTS to SHOPS — e.g. 'comprar chocolates' → ['chocolatería', 'tienda de chocolates', 'chocolate artesanal'], 'buy flowers' → ['florist', 'flower shop', 'bouquet delivery'], 'quiero pizza' → ['pizzería', 'pizza restaurant', 'mejor pizza'], 'pub con buena música' → ['pub música en vivo', 'bar con música', 'pub popular'], 'rosas para mi cita' → ['florería', 'rosas frescas', 'floristería'], 'acheter du vin' → ['cave à vin', 'caviste', 'wine shop'], 'Schokolade kaufen' → ['Schokoladenladen', 'Chocolatier', 'Pralinenladen']"], "locationMention": "city/area mentioned in message or null", "mood": "desired vibe in 2-3 words or null", "googleCategory": "closest Google Places type from: cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo, or null (use shopping_mall for gift/product/jewelry shops, bakery for chocolate/pastry/sweets shops, cafe for ice cream shops)"}`;
+Return JSON with these fields:
+- "placeType": short venue type (e.g. pub, café, spa, park, flower shop, pizzeria)
+- "placeQueries": 2-3 short search queries in user's language for Google Places. Map products to shops (chocolates→chocolatería, flowers→florería, pizza→pizzería)
+- "locationMention": city/area/country mentioned or null. Extract the location even from indirect references:
+  * Travel: "voy a Buenos Aires", "going to Paris", "viajo a Madrid"
+  * Friends/family: "mi amigo vive en Lima", "my sister is in London", "tengo familia en Bogotá"
+  * Partner/date: "mi pareja está en Santiago", "my match lives in Tokyo", "ella es de Medellín"
+  * Curiosity: "qué hay en New York", "how is nightlife in Berlin", "cómo es la vida en Roma"
+  * Future plans: "me mudo a Barcelona", "moving to Dubai", "pensando en ir a Bali"
+  * Any mention of a city/country name = extract it
+- "mood": desired vibe in 2-3 words or null
+- "googleCategory": closest from: cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo (use shopping_mall for gift shops, bakery for sweets) or null`;
             const intentResult = await intentModel.generateContent(intentPrompt);
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
@@ -1144,9 +1222,222 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
         } catch (intentErr) {
           logger.warn(`[dateCoachChat] Intent extraction failed (non-critical): ${intentErr.message}`);
         }
+
+        // Fallback: if Gemini intent extraction failed or returned no locationMention,
+        // try regex-based city detection for common travel patterns in 10 languages.
+        // City name capture: uppercase letter start + up to 3 additional words (handles
+        // "Buenos Aires", "New York", "São Paulo", "Kuala Lumpur", "Rio de Janeiro")
+        if (!extractedIntent || !extractedIntent.locationMention) {
+          // Unicode-aware city name: starts with uppercase, allows accents, hyphens, apostrophes
+          const cityCapture = '([A-ZÀ-ÜÆÅÇÐÑÖØÞŠŽĐĆŁŚŹŻÁÉÍÓÚÝÀÈÌÒÙÂÊÎÔÛÄËÏÖÜĀĒĪŌŪŸÃÕÃŅĶĢĻŅŖŢ][a-zà-üæåçðñöøþšžđćłśźżáéíóúýàèìòùâêîôûäëïöüāēīōūÿãõñ]+(?:[\\s\\-\'][A-ZÀ-Üa-zà-ü][a-zà-ü]*){0,4})';
+          const travelPatterns = [
+            // ═══════════════════════════════════════════════════════════════
+            // ESPAÑOL (ES) — 8 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // ES-1: Verbos de movimiento + preposición + Ciudad
+            // "voy a Buenos Aires", "viajo a Madrid", "vuelo a Lima", "me mudo a Barcelona"
+            // "nos vamos a Cancún", "escapada a Punta del Este", "vacaciones en Cartagena"
+            // "llego a Santiago mañana", "parto hacia Montevideo", "regreso a Bogotá"
+            new RegExp('(?:voy|viajo|viajamos|iré|iremos|viajar|me voy|nos vamos|salgo|salimos|visitar|visitaré|visitaremos|conocer|conoceré|ir|estaré|estaremos|estoy|vuelo|volamos|mudándome|mudándonos|regreso|vuelvo|llego|llegamos|parto|partimos|escapada|escaparme|escaparnos|vacacion(?:es|ar)|finde? en|weekend en|fui|fuimos|anduve|pasé por|paso por|vivo en|viví en|nací en|crecí en|me crié en|trabajo en|estudio en|tengo que ir|quiero ir|necesito ir|planeo ir|pienso ir|quisiera ir|me gustaría ir|ojalá pueda ir|sueño con ir)\\s+(?:a|hacia|para|en|al?|por)\\s+' + cityCapture, 'i'),
+            // ES-2: Preguntas directas — "dónde puedo ir en X", "qué hacer en X"
+            // "dónde puedo comer en Valparaíso", "qué visitar en Cusco"
+            new RegExp('(?:dond[eé]|qu[eé]|cómo|cuál(?:es)?)\\s+(?:puedo|podemos|hay|se puede|debo|debemos|debería|podría|podríamos|me recomiendas|nos recomiendas|sugier(?:es|en))\\s+(?:ir|hacer|visitar|ver|comer|tomar|salir|pasear|recorrer|explorar|conocer|comprar|encontrar|buscar|probar)\\s+(?:en|por|de|cerca de)\\s+' + cityCapture, 'i'),
+            // ES-3: Sustantivos de recomendación — "recomendaciones en X", "planes en X"
+            // "bares en Mendoza", "restaurantes en Quito", "vida nocturna en Medellín"
+            new RegExp('(?:recomendaciones|sugerencias|opciones|ideas|planes|actividades|sitios|bares|restaurantes|cafés?|cafeterías|discotecas|museos|parques|tiendas|hoteles|hostales|alojamiento|hospedaje|lugares|cosas que hacer|lo mejor de|imperdibles|favoritos|populares|top|mejores|vida nocturna|gastronomía|cultura|turismo|atracciones)\\s+(?:en|para|de|cerca de|por)\\s+' + cityCapture, 'i'),
+            // ES-4: Expresiones coloquiales latam
+            // "qué onda en Guadalajara", "qué pedo en CDMX", "la movida en Barranquilla"
+            // "pasarla bien en Viña", "carretear en Santiago", "rumbear en Cali"
+            new RegExp('(?:qué onda|qué pedo|la movida|pasarla bien|carretear|rumbear|parrandear|janguear|farrear|salir de fiesta|salir de juerga|ir de copas|ir de cañas|salir de rumba|salir de parranda|la noche|el ambiente|el rollo|chambear|currar)\\s+(?:en|por|de)\\s+' + cityCapture, 'i'),
+            // ES-5: Contexto indirecto — "cuando esté en X", "si voy a X", "algún día en X"
+            // "cuando llegue a Montevideo", "si viajo a Córdoba", "algún día visitaré Tokio"
+            new RegExp('(?:cuando\\s+(?:esté|llegue|vaya|viaje|vuelva|pase por)|si\\s+(?:voy|viajo|vamos|fuera|fuese|pudiera ir)|algún día\\s+(?:en|visitaré|iré|conoceré)|antes de ir|después de llegar|al llegar|de camino|de paso por|escala en|conexión en)\\s+(?:a|en|por)?\\s*' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // ENGLISH (EN) — 7 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // EN-1: Movement verbs — "going to NYC", "flying to Dubai", "relocating to Austin"
+            new RegExp('(?:going|traveling|travelling|visiting|trip|heading|fly|flying|moving|relocating|arriving|landing|vacation|vacationing|weekend|holiday|honeymoon|getaway|stopover|layover|backpacking|touring|exploring|drove|driving|sailed|cruising|road trip|emigrating|immigrating|deployed|stationed|transferred|posted|assigned|sent|commuting)\\s+(?:to|in|at|through|around)\\s+' + cityCapture, 'i'),
+            // EN-2: Questions — "what to do in London", "best spots in LA"
+            new RegExp('(?:what|where|things|best|top|cool|nice|fun|good|great|romantic|cheap|hidden|local|popular|famous|must[- ]?see|must[- ]?visit|bucket[- ]?list|off[- ]?the[- ]?beaten)\\s+(?:to do|to go|to see|to eat|to drink|to visit|to explore|places|spots|bars|restaurants|cafes|clubs|pubs|activities|attractions|landmarks|neighborhoods|areas|districts|gems)\\s+(?:in|around|near|at|across|throughout)\\s+' + cityCapture, 'i'),
+            // EN-3: Requests — "recommend bars in X", "show me X", "find restaurants near X"
+            new RegExp('(?:recommend|suggest|find|discover|show me|look for|search for|help me find|know any|any good|any nice|point me to)\\s+(?:places|spots|bars|restaurants|cafes|activities|things|clubs|pubs|shops|stores|hotels|hostels|food|eats|drinks)\\s+(?:in|around|near|at)\\s+' + cityCapture, 'i'),
+            // EN-4: Life context — "I live in X", "I'm based in X", "I work in X"
+            // "I used to live in X", "I grew up in X", "I was born in X", "I'm originally from X"
+            new RegExp('(?:I\\s+(?:live|work|study|am based|reside|stay|grew up|was born|am from|am originally from|used to live|spent time)|I\'m\\s+(?:based|living|working|studying|staying|from|originally from|currently in)|I\'ve\\s+(?:been to|visited|lived in|worked in)|been\\s+(?:living|working|staying|based))\\s+(?:in|at|from)\\s+' + cityCapture, 'i'),
+            // EN-5: Informal/slang — "hitting up X", "checking out X", "tryna go to X"
+            new RegExp('(?:hitting up|checking out|tryna go|wanna go|gonna go|bout to go|finna go|planning on|thinking about|considering|dreaming of|dying to go|can\'t wait to go|excited about|pumped for|stoked about)\\s+(?:to|in)?\\s*' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // PORTUGUÊS (PT) — 4 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // PT-1: Verbos — "vou para São Paulo", "mudo para Porto"
+            new RegExp('(?:vou|viajo|viajamos|visitar|visitarei|conhecer|irei|iremos|estou|estarei|estaremos|férias|feriado|escapada|mudo|mudando|volto|chego|passo|moro|morei|nasci|cresci|trabalho|estudo|fui|fomos|andei)\\s+(?:para|a|em|ao|à|pro|pra|no|na)\\s+' + cityCapture, 'i'),
+            // PT-2: Perguntas — "o que fazer em X", "onde comer no X"
+            new RegExp('(?:o que|onde|coisas para|melhor(?:es)?|dicas de|sugestões de|opções em|recomendações de|rolê em|balada em|noite em|gastronomia em|turismo em)\\s+(?:fazer|ir|visitar|comer|ver|conhecer|explorar|beber|curtir)?\\s*(?:em|no|na|por|de)?\\s*' + cityCapture, 'i'),
+            // PT-3: Coloquial BR — "rolê em X", "bora pra X", "trampo em X"
+            new RegExp('(?:rolê|bora|bora pra|vamo(?:s)? (?:pra|para)|trampo|role|curtir|zoar|da hora|sinistro|irado|maneiro|show de bola)\\s+(?:em|pra|para|no|na|de)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // FRANÇAIS (FR) — 4 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // FR-1: Verbes — "je vais à Lyon", "on part à Nice", "lune de miel à Bora Bora"
+            new RegExp('(?:je vais|je voyage|je pars|j\'irai|on va|nous allons|on part|vacances|séjour|escapade|week-?end|lune de miel|je vis|j\'habite|je travaille|j\'étudie|je suis|je rentre|j\'arrive|je déménage|je m\'installe)\\s+(?:à|en|au|aux|vers|pour|dans|sur)\\s+' + cityCapture, 'i'),
+            // FR-2: Questions — "que faire à X", "où sortir à X", "les meilleurs bars de X"
+            new RegExp('(?:que|quoi|où|comment|quel(?:s|les?)?|les meilleurs?|les meilleures?|bons plans?|bonnes adresses|endroits?|restos?|bars?|boîtes?|sorties?|activités?|vie nocturne|gastronomie)\\s+(?:faire|aller|visiter|voir|manger|boire|sortir|découvrir|explorer)?\\s*(?:à|en|au|aux|de|du|dans|sur)?\\s*' + cityCapture, 'i'),
+            // FR-3: Argot — "kiffer X", "c'est cool à X", "la teuf à X"
+            new RegExp('(?:kiffer|c\'est (?:cool|bien|génial|top|ouf)|la teuf|faire la fête|sortir|traîner|se balader|flâner)\\s+(?:à|en|au|dans)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // DEUTSCH (DE) — 4 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // DE-1: Verben — "reise nach Berlin", "fliege nach Wien", "umziehen nach Zürich"
+            new RegExp('(?:reise|fahre|fliege|ziehe|gehe|umziehen|pendeln|urlaub|wochenende|ausflug|kurztrip|städtereise|flitterwochen|bin|wohne|lebe|arbeite|studiere|war|komme aus|stamme aus)\\s+(?:nach|in|auf|an|aus|von)\\s+' + cityCapture, 'i'),
+            // DE-2: Fragen — "was kann man in X machen", "beste Bars in X"
+            new RegExp('(?:was|wo|wie|welche|beste[rns]?|gute[rns]?|coole?|tolle?|schöne?|empfehlung(?:en)?|tipps?|geheimtipps?|ausgehtipps?|kneipen|restaurants?|bars?|clubs?|nachtleben|sehenswürdigkeiten|aktivitäten)\\s+(?:kann|soll|gibt|machen|unternehmen|besuchen|sehen|essen|trinken|erleben)?\\s*(?:man|es|ich|wir)?\\s*(?:in|auf|bei|an|für|von|aus)?\\s*' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // ITALIANO (IT) — 4 patrones
+            // ═══════════════════════════════════════════════════════════════
+            // IT-1: Verbi — "vado a Roma", "viaggio a Firenze", "mi trasferisco a Milano"
+            new RegExp('(?:vado|viaggio|visito|andrò|andiamo|vacanza|viaggerò|weekend|gita|mi trasferisco|abito|vivo|lavoro|studio|torno|arrivo|parto|sono stato|sono di|vengo da)\\s+(?:a|in|per|verso|ad|da|di)\\s+' + cityCapture, 'i'),
+            // IT-2: Domande — "cosa fare a X", "dove mangiare a X", "migliori bar di X"
+            new RegExp('(?:cosa|dove|come|qual[ie]?|i migliori|le migliori|bei|bel|bei posti|locali|ristoranti|bar|discoteche|pub|pizzerie|gelaterie|attrazioni|movida|vita notturna|divertimento|consigli per)\\s+(?:fare|andare|visitare|vedere|mangiare|bere|uscire|scoprire|esplorare)?\\s*(?:a|in|ad|di|da|per|nel|nella)?\\s*' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // 日本語 (JA) — city in latin chars + Japanese particles
+            // ═══════════════════════════════════════════════════════════════
+            // "Tokyo に行く", "Osaka のおすすめ", "Kyoto で食べる"
+            new RegExp(cityCapture + '\\s*(?:に行く|に行きたい|に行こう|へ行く|に旅行|を訪問|で遊ぶ|のおすすめ|で食べる|で飲む|の観光|のナイトライフ|のバー|のレストラン|に住んでる|に住んでいる|出身)', 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // 中文 (ZH) — city in latin chars + Chinese verbs
+            // ═══════════════════════════════════════════════════════════════
+            // "去 Beijing", "到 Shanghai 旅游", "在 Shenzhen 吃什么"
+            new RegExp('(?:去|到|在|飞往|前往|搬到|住在|来自|工作在|想去|准备去|计划去|打算去)\\s*' + cityCapture, 'i'),
+            new RegExp(cityCapture + '\\s*(?:好玩吗|怎么样|有什么|推荐|攻略|美食|酒吧|夜生活|景点)', 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // РУССКИЙ (RU) — city in latin chars + Russian verbs
+            // ═══════════════════════════════════════════════════════════════
+            // "еду в Moscow", "лечу в Istanbul", "живу в Prague"
+            new RegExp('(?:еду|лечу|путешеств|поеду|летим|отпуск|живу|работаю|учусь|родился|вырос|хочу поехать|планирую поехать|собираюсь|мечтаю поехать|перееду|переезжаю|был|была|бывал)\\s+(?:в|на|до|из)\\s+' + cityCapture, 'i'),
+            // "что делать в X", "лучшие бары X", "ночная жизнь X"
+            new RegExp('(?:что делать|куда пойти|где поесть|где выпить|лучшие|топ|популярные|интересные|бары|рестораны|клубы|ночная жизнь|достопримечательности|советы|рекомендации)\\s+(?:в|на|для|по)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // العربية (AR) — city in latin chars + Arabic verbs
+            // ═══════════════════════════════════════════════════════════════
+            new RegExp('(?:سأسافر|أذهب|سأذهب|رحلة|أعيش|أعمل|أدرس|ولدت|أسكن|أريد أن أذهب|أخطط|أحلم بالذهاب|انتقلت|سأنتقل)\\s+(?:إلى|الى|ل|في|من)\\s+' + cityCapture, 'i'),
+            // "ماذا أفعل في X", "أفضل مطاعم X"
+            new RegExp('(?:ماذا|أين|كيف|أفضل|أحسن|أجمل|مطاعم|بارات|مقاهي|أماكن|معالم|حياة ليلية|نصائح|توصيات)\\s+(?:أفعل|أذهب|آكل|أشرب|أزور)?\\s*(?:في|ب|من)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // BAHASA INDONESIA (ID)
+            // ═══════════════════════════════════════════════════════════════
+            // "pergi ke Bali", "jalan-jalan ke Jakarta", "tinggal di Bandung"
+            new RegExp('(?:pergi|jalan[- ]?jalan|liburan|berkunjung|terbang|pindah|wisata|tinggal|kerja|kuliah|lahir|besar|mau ke|pengen ke|rencana ke|impian ke|pulang ke|balik ke|pernah ke)\\s+(?:ke|di|menuju|dari)\\s+' + cityCapture, 'i'),
+            // "apa yang bisa dilakukan di X", "rekomendasi bar di X"
+            new RegExp('(?:apa yang|dimana|mana|rekomendasi|saran|tempat|bar|restoran|kafe|klub|kehidupan malam|wisata|atraksi|tips)\\s+(?:bisa|harus|sebaiknya)?\\s*(?:dilakukan|dikunjungi|dimakan|diminum)?\\s*(?:di|ke|untuk|dekat)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // 한국어 (KO) — city in latin chars + Korean particles
+            // ═══════════════════════════════════════════════════════════════
+            new RegExp(cityCapture + '\\s*(?:에\\s*(?:가|갈|갑니다|여행|살|살고|일하|공부)|로\\s*(?:가|여행|이사)|을\\s*(?:방문|여행)|의\\s*(?:맛집|바|클럽|관광|추천)|에서\\s*(?:뭐|어디|먹을|마실))', 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // TÜRKÇE (TR) — bonus: common dating app language
+            // ═══════════════════════════════════════════════════════════════
+            new RegExp('(?:gidiyorum|gideceğim|seyahat|tatil|geziyorum|yaşıyorum|çalışıyorum|taşınıyorum|uçuyorum|ziyaret)\\s+(?:için)?\\s*' + cityCapture + '(?:\'[ydn]a|\'[ydn]e|\'[td]a|\'[td]e)?', 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // CROSS-LANGUAGE GENERIC PATTERNS
+            // ═══════════════════════════════════════════════════════════════
+            // Generic venue search — "bars in Rome", "restaurantes en Lima", "café à Paris"
+            new RegExp('(?:lugares|places|lieux|orte|tempat|locali|posti|spots|bars?|restaurants?|restaurantes?|cafés?|cafeterías?|nightlife|nightclub|clubs?|discotecas?|pubs?|scene|vida nocturna|movida|gastronomía|gastronomie|gastronomy|food scene|drinks?|cocktails?|rooftop|terrazas?|brunch)\\s+(?:en|in|à|di|at|around|near|a|em|por|cerca de|no|na|dans|nei|von|bei)\\s+' + cityCapture, 'i'),
+
+            // Catch-all reverse — "en [City] dónde/qué/what/where"
+            new RegExp('(?:en|in|à|em|di|auf|на|في|di)\\s+' + cityCapture + '\\s+(?:donde|dónde|qué|que|what|where|où|que faire|was|wo|cosa|dove|o que|onde|apa|어디|何|哪|где|أين)', 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // RELATIONSHIP / SOCIAL CONTEXT (someone in another city)
+            // ═══════════════════════════════════════════════════════════════
+            // ES — "mi amigo vive en X", "mi novia está en X", "ella es de X"
+            // "tengo un match en X", "conocí a alguien de X", "mi ex es de X"
+            new RegExp('(?:mi\\s+(?:amig[oa]|novi[oa]|pareja|esposa?|match|cita|familia|hermana?|prima?|tí[oa]|ex|crush|ligue|rollo|pretendiente|interés)|ella|él|conocí a (?:alguien|una persona)|salgo con alguien|hablo con alguien|chatea? con alguien|tengo un match|me gusta alguien)\\s+(?:vive|está|es de|trabaja|estudia|nació|creció|se mudó|queda|reside)\\s+(?:en|de)\\s+' + cityCapture, 'i'),
+            // EN — "my friend lives in X", "she's from X", "dating someone in X"
+            // "my match is in X", "talking to someone from X", "long distance with someone in X"
+            new RegExp('(?:my\\s+(?:friend|girlfriend|boyfriend|partner|wife|husband|match|date|family|sister|brother|cousin|ex|crush|fling|situationship)|she|he|someone I(?:\'m| am)\\s+(?:talking|chatting|dating)|met someone|dating someone|seeing someone|talking to someone|matched with someone|long[- ]?distance)\\s+(?:lives?|is (?:from|in|based)|works?|studies|was born|stays?|resides?|moved to|located|based)\\s+(?:in|from|at|near)\\s+' + cityCapture, 'i'),
+            // PT — "meu amigo mora em X", "ela é de X", "meu match é de X"
+            new RegExp('(?:meu\\s+(?:amig[oa]|namorad[oa]|parceiro|marido|esposa|match|crush|ex|ficante)|ela|ele|minha família|minha\\s+(?:amiga|namorada|esposa)|conheci alguém)\\s+(?:mora|está|é de|trabalha|vive|nasceu|cresceu|se mudou)\\s+(?:em|de|no|na|pra|para)\\s+' + cityCapture, 'i'),
+            // FR — "mon ami habite à X", "elle est de X"
+            new RegExp('(?:mon\\s+(?:ami|copain|copine|partenaire|mari|femme|match|crush|ex|pote)|ma\\s+(?:copine|amie|femme)|elle|il|quelqu\'un)\\s+(?:habite|vit|est de|travaille|étudie|est basé|se trouve)\\s+(?:à|en|au|de|du)\\s+' + cityCapture, 'i'),
+            // DE — "mein Freund wohnt in X", "sie kommt aus X"
+            new RegExp('(?:mein(?:e)?\\s+(?:Freund(?:in)?|Partner(?:in)?|Frau|Mann|Match|Crush|Ex|Kumpel)|sie|er|jemand)\\s+(?:wohnt|lebt|ist aus|arbeitet|studiert|kommt aus|ist in|wurde geboren)\\s+(?:in|aus|von|bei|nach)\\s+' + cityCapture, 'i'),
+            // IT — "il mio amico vive a X", "lei è di X"
+            new RegExp('(?:il mio|la mia|mio|mia)\\s+(?:amic[oa]|ragazza?|partner|marit[oa]|moglie|match|crush|ex)\\s+(?:vive|abita|è di|lavora|studia|è nato)\\s+(?:a|in|di|da|ad)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // CURIOSITY / GENERAL INTEREST
+            // ═══════════════════════════════════════════════════════════════
+            // ES — "cómo es X", "háblame de X", "vale la pena X", "es seguro X"
+            new RegExp('(?:cómo es|qué tal es|me interesa|háblame de|cuéntame de|qué hay en|qué onda en|es bonit[oa]|vale la pena|es segur[oa]|es car[oa]|es barat[oa]|merece la pena|quiero saber de|info sobre|información sobre|datos de|es peligros[oa])\\s+' + cityCapture, 'i'),
+            // EN — "how is X", "tell me about X", "is X safe", "is X expensive"
+            new RegExp('(?:how is|tell me about|what(?:\'?s| is)\\s+.{0,15}\\s*like|is .{0,8} (?:nice|safe|expensive|cheap|worth|dangerous|fun|boring|overrated)|worth visiting|heard about|curious about|interested in|thinking about|dreaming about|info about|facts about)\\s+' + cityCapture, 'i'),
+            // PT — "como é X", "me fala de X", "X é legal?"
+            new RegExp('(?:como é|me fala de|conta sobre|o que acha de|vale a pena|é legal|é segur[oa]|é car[oa]|é barat[oa]|é perigoso)\\s+' + cityCapture, 'i'),
+            // FR — "c'est comment X", "parle-moi de X"
+            new RegExp('(?:c\'est comment|parle[- ]moi de|raconte[- ]moi|ça vaut le coup|c\'est cher|c\'est dangereux|c\'est beau|j\'ai entendu parler de)\\s+' + cityCapture, 'i'),
+
+            // ═══════════════════════════════════════════════════════════════
+            // SOLO / SINGLE TRAVELER
+            // ═══════════════════════════════════════════════════════════════
+            // ES — "viajar solo a X", "mochilero en X", "aventura en X"
+            new RegExp('(?:viajar\\s+sol[oa]|irme\\s+sol[oa]|aventura|recorrer|explorar\\s+sol[oa]|mochile(?:ar|ro)|nómada digital|freelancer|trabajo remoto|digital nomad)\\s+(?:a|en|por|hacia|desde)\\s+' + cityCapture, 'i'),
+            // EN — "solo trip to X", "digital nomad in X", "gap year in X"
+            new RegExp('(?:solo\\s+trip|travel\\s+alone|backpack(?:ing)?|explore\\s+alone|wander|solo\\s+travel|digital\\s+nomad|remote\\s+work|gap\\s+year|sabbatical|study\\s+abroad|work\\s+abroad|expat\\s+life|nomading)\\s+(?:to|in|around|through|across)\\s+' + cityCapture, 'i'),
+          ];
+
+          // Extended skip words: common words in all 10 languages that could be false positive city names
+          const skipWords = new Set([
+            // ES
+            'que', 'una', 'uno', 'unas', 'unos', 'las', 'los', 'mis', 'tus', 'sus', 'con', 'para', 'por',
+            'como', 'donde', 'esta', 'este', 'esa', 'ese', 'algo', 'todo', 'otra', 'otro', 'cual', 'bien',
+            'mal', 'mas', 'muy', 'sin', 'hay', 'ser', 'ver', 'dar', 'vez', 'dia', 'hoy', 'ayer',
+            // EN
+            'the', 'when', 'where', 'what', 'how', 'who', 'why', 'this', 'that', 'some', 'any', 'all',
+            'can', 'will', 'would', 'could', 'should', 'may', 'might', 'much', 'many', 'few', 'more',
+            'most', 'very', 'just', 'also', 'here', 'there', 'now', 'then', 'out', 'them',
+            // PT
+            'isso', 'isto', 'essa', 'esse', 'aqui', 'ali', 'mais', 'bem', 'mal', 'sim', 'nao',
+            // FR
+            'les', 'des', 'mes', 'tes', 'ses', 'une', 'ces', 'aux', 'qui', 'quoi', 'ici', 'bien',
+            // DE
+            'das', 'die', 'der', 'den', 'dem', 'ein', 'eine', 'hier', 'dort', 'dann', 'noch', 'auch',
+            // IT
+            'che', 'chi', 'per', 'con', 'dal', 'del', 'nel', 'sul', 'qui', 'poi', 'ora',
+            // Generic
+            'app', 'date', 'cita', 'match', 'chat', 'coach', 'sugar', 'black',
+          ]);
+
+          for (const pattern of travelPatterns) {
+            const match = message.match(pattern);
+            if (match && match[1] && match[1].trim().length >= 3) {
+              const cityCandidate = match[1].trim();
+              if (!skipWords.has(cityCandidate.toLowerCase())) {
+                if (!extractedIntent) extractedIntent = {};
+                extractedIntent.locationMention = cityCandidate;
+                logger.info(`[dateCoachChat] Fallback location extraction: "${cityCandidate}" from message`);
+                break;
+              }
+            }
+          }
+        }
       }
 
       let placesLastRadiusUsed = 0;
+      let placesCenter = null;
+      let placesLocationOverridden = false;
       const fetchCoachPlaces = async () => {
         const placesKey = process.env.GOOGLE_PLACES_API_KEY;
         if (!placesKey) return [];
@@ -1168,6 +1459,8 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
               if (mentionedCoords) {
                 center = mentionedCoords;
                 locationOverridden = true;
+                placesCenter = mentionedCoords;
+                placesLocationOverridden = true;
                 logger.info(`[dateCoachChat] Location overridden to "${extractedIntent.locationMention}": ${mentionedCoords.latitude}, ${mentionedCoords.longitude}`);
               }
             } catch (geoErr) {
@@ -1180,17 +1473,25 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
 
           let queries;
           const effectiveCategory = requestCategory || null;
-          // Determine the Google Places includedType for category-specific searches
-          let searchIncludedType = null;
+          // Determine the Google Places includedType(s) for category-specific searches.
+          // CATEGORY_TO_PLACES_TYPE now stores arrays — use all types for parallel coverage.
+          let searchAllTypes = null; // array of type strings, or null = no filter
           if (effectiveCategory && CATEGORY_TO_PLACES_TYPE[effectiveCategory]) {
-            searchIncludedType = [CATEGORY_TO_PLACES_TYPE[effectiveCategory]];
+            const entry = CATEGORY_TO_PLACES_TYPE[effectiveCategory];
+            searchAllTypes = Array.isArray(entry) ? entry : [entry];
           } else if (isUserPlaceSearch && extractedIntent && extractedIntent.googleCategory) {
-            // Use intent category as type filter — even when location overridden to a mentioned city
-            // "restaurants in Temuco" → includedType: restaurant. "places in Temuco" → googleCategory=null → no filter
             const intentCat = normalizeCategory(extractedIntent.googleCategory);
-            if (intentCat && CATEGORY_TO_PLACES_TYPE[intentCat]) {
-              searchIncludedType = [CATEGORY_TO_PLACES_TYPE[intentCat]];
+            // For generic city searches (e.g. "places in Concepcion"), use multi-category search
+            // to maximize category diversity. Only lock to a single category when the user
+            // explicitly asked for a specific type (e.g. "restaurants in Temuco").
+            const isGenericCitySearch = locationOverridden && extractedIntent.placeQueries &&
+              extractedIntent.placeQueries.some((q) => typeof q === 'string' &&
+                /lugar|place|spot|venue|sitio|endroit|lieu|sortir|ort|ausgehen|platz|local|sair|atividade|passeio|opcion|activit|cita|date|rendez|salir|hacer|tempat|kencan|jalan|pergi|donde\s*ir|que\s*hacer|things?\s*to\s*do|where\s*to/i.test(q));
+            if (!isGenericCitySearch && intentCat && CATEGORY_TO_PLACES_TYPE[intentCat]) {
+              const entry = CATEGORY_TO_PLACES_TYPE[intentCat];
+              searchAllTypes = Array.isArray(entry) ? entry : [entry];
             }
+            // For generic searches, searchAllTypes stays null → Google returns diverse types naturally
           }
 
           if (effectiveCategory && categoryQueryMap[effectiveCategory]) {
@@ -1202,7 +1503,7 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
               : [terms.join(' ')];
             queries = [canonicalQuery, ...subQueries].slice(0, 3);
           } else if (isUserPlaceSearch && extractedIntent && locationOverridden) {
-            // City mentioned (e.g. "restaurants in Temuco") — use intent-aware queries for relevant results
+            // City mentioned — use intent-aware queries for relevant results
             const intentQueries = Array.isArray(extractedIntent.placeQueries) && extractedIntent.placeQueries.length > 0
               ? extractedIntent.placeQueries.filter((q) => typeof q === 'string' && q.length > 0).slice(0, 3)
               : [];
@@ -1215,11 +1516,19 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
                   queries.push(categoryQueryMap[catKey]);
                 }
               }
+              // For generic city searches, add diverse category queries to maximize variety
+              if (!searchAllTypes) {
+                const allCats = Object.keys(categoryQueryMap);
+                const shuffled = [...allCats].sort(() => Math.random() - 0.5);
+                const diverseQueries = shuffled.slice(0, 6).map((k) => categoryQueryMap[k])
+                  .filter((q) => !queries.includes(q));
+                queries = [...queries, ...diverseQueries].slice(0, 8);
+              }
             } else {
               // No specific intent queries — diverse categories as fallback
               const allCats = Object.keys(categoryQueryMap);
               const shuffled = [...allCats].sort(() => Math.random() - 0.5);
-              queries = shuffled.slice(0, 5).map((k) => categoryQueryMap[k]);
+              queries = shuffled.slice(0, 8).map((k) => categoryQueryMap[k]);
             }
           } else if (isUserPlaceSearch && extractedIntent) {
             // Intent-aware search: use Gemini-extracted queries in user's language
@@ -1229,7 +1538,7 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
             if (intentQueries.length > 0) {
               queries = intentQueries;
               // Add canonical category query if we have one for extra coverage
-              if (searchIncludedType && extractedIntent.googleCategory) {
+              if (searchAllTypes && extractedIntent.googleCategory) {
                 const catKey = normalizeCategory(extractedIntent.googleCategory);
                 if (catKey && categoryQueryMap[catKey] && !queries.includes(categoryQueryMap[catKey])) {
                   queries.push(categoryQueryMap[catKey]);
@@ -1240,13 +1549,16 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
               queries = [extractedIntent.placeType || message.substring(0, 100)];
             }
           } else if (isUserPlaceSearch) {
-            // Place search detected but intent extraction failed — use raw message
-            queries = [message.substring(0, 100)];
+            // Place search detected but intent extraction failed — use raw message + diverse categories
+            const allCats = Object.keys(categoryQueryMap);
+            const shuffled = [...allCats].sort(() => Math.random() - 0.5);
+            const diverseFallback = shuffled.slice(0, 5).map((k) => categoryQueryMap[k]);
+            queries = [message.substring(0, 100), ...diverseFallback].slice(0, 6);
           } else {
             // General conversation — use diverse category queries for variety
             const allCats = Object.keys(categoryQueryMap);
             const shuffled = [...allCats].sort(() => Math.random() - 0.5);
-            queries = shuffled.slice(0, 4).map((k) => categoryQueryMap[k]);
+            queries = shuffled.slice(0, 6).map((k) => categoryQueryMap[k]);
           }
 
           const perQuery = psConfig.perQueryResults || 20;
@@ -1277,8 +1589,12 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
             const radiusMeters = stepRadius ? Math.min(maxR, stepRadius) : null;
             lastRadius = stepRadius || 0;
 
+            // Build (query × type) pairs; cap at 12 to avoid API quota bursts
+            const mainPairs = searchAllTypes
+              ? queries.flatMap((q) => searchAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
+              : queries.map((q) => ({q, t: null}));
             const results = await Promise.all(
-              queries.map((q) => placesTextSearch(q, center, radiusMeters, lang, null, perQuery, useRestriction, searchIncludedType).catch(() => ({places: []}))),
+              mainPairs.map(({q, t}) => placesTextSearch(q, center, radiusMeters, lang, null, perQuery, useRestriction, t).catch(() => ({places: []}))),
             );
 
             const newPlaces = results.flatMap((r) => r.places).filter((p) => {
@@ -1360,6 +1676,11 @@ Return JSON: {"placeType": "short type for Google search (e.g. pub, bar, restaur
 
       // When user is explicitly searching for places, force activitySuggestions inclusion
       const minPlaceResults = (config.placeSearch || {}).minActivitiesForPlaceSearch || 6;
+      // If the user mentioned a different city (e.g. "Buenos Aires") and we overrode the search location,
+      // tell Gemini that the REAL PLACES are from THAT city, not the user's GPS location
+      const locationOverrideInstruction = placesLocationOverridden && extractedIntent && extractedIntent.locationMention
+        ? `\n\nIMPORTANT — LOCATION OVERRIDE: The user mentioned "${extractedIntent.locationMention}" in their message. The REAL PLACES listed below are from "${extractedIntent.locationMention}", NOT the user's current GPS location. Your reply MUST reference "${extractedIntent.locationMention}" as the location for these suggestions. Do NOT say your recommendations are limited to the user's current city — these places ARE in "${extractedIntent.locationMention}".`
+        : '';
       const placeSearchInstruction = isUserPlaceSearch
         ? `\n\nCRITICAL — USER IS SEARCHING FOR PLACES OR PRODUCTS:
 The user is explicitly asking about places, venues, locations, shops, or products to buy (gifts, food, drinks, etc.).
@@ -1368,7 +1689,7 @@ The user is explicitly asking about places, venues, locations, shops, or product
 3. Select places from the REAL PLACES list provided. Use their EXACT names.
 4. This is NOT optional — if you omit activitySuggestions, the response is INVALID.
 5. NEVER respond with only text. The activitySuggestions array is the PRIORITY.
-6. For PRODUCT searches (chocolates, flowers, wine, gifts, jewelry, perfume, pizza, cake, etc.), suggest SHOPS and STORES where they can buy those products — prioritize specialty stores over generic venues.`
+6. For PRODUCT searches (chocolates, flowers, wine, gifts, jewelry, perfume, pizza, cake, etc.), suggest SHOPS and STORES where they can buy those products — prioritize specialty stores over generic venues.${locationOverrideInstruction}`
         : '';
 
       // Build activity block — use real Google Maps places when available
@@ -1395,7 +1716,7 @@ You MUST select places from the REAL PLACES list provided below (from Google Map
 - User interests: ${userInterests || 'none'} | Match interests: ${matchInterests || 'none'}
 - The conversation tone, topics discussed, and relationship stage
 - The user type dynamics (${userType || 'unknown'} dating ${matchName})
-- Vary categories: restaurants, outdoor plans, cultural events, nightlife, adventures, wellness, entertainment
+- IMPORTANT: Maximize category diversity — include places from at least 4-5 DIFFERENT categories (cafe, restaurant, bar, night_club, park, museum, art_gallery, bakery, shopping_mall, spa, bowling_alley, movie_theater, aquarium, zoo). Do NOT concentrate on a single category.
 - Include a mix of price levels and moods (first date, romantic, fun, adventurous, relaxed, special occasion)
 
 ${activityFormatSpec}
@@ -1404,7 +1725,7 @@ Only include activitySuggestions when contextually relevant (user discusses date
           : `\nIf the user asks about places to go, things to do, or recommendations, include an "activitySuggestions" array with 8-${targetActivities} great places.
 
 You MUST select places from the REAL PLACES list provided below (from Google Maps). Do NOT invent or hallucinate venue names. Pick the most interesting ones for the user based on their interests (${userInterests || 'none specified'}).
-Focus on: trendy restaurants, cool bars, cultural spots, outdoor activities, entertainment, wellness, nightlife.
+Focus on: MAXIMUM category diversity — select from at least 4-5 DIFFERENT categories (cafe, restaurant, bar, park, museum, art_gallery, bakery, shopping_mall, spa, night_club, bowling_alley, movie_theater). Do NOT concentrate results in a single category.
 
 ${activityFormatSpec}
 
@@ -1424,7 +1745,7 @@ ${activityFormatSpec}
 
 Only include activitySuggestions when contextually relevant (user discusses dates, asks for ideas, mentions going out, etc.). Do NOT include them for generic profile advice or conversation tips.`
           : `\nIf the user asks about places to go, things to do, or recommendations, include an "activitySuggestions" array with 8-${targetActivities} great places and experiences to enjoy. These are NOT date suggestions — they are general lifestyle recommendations for the user based on their interests (${userInterests || 'none specified'}).${locationContext ? `\n- Consider their location context: ${locationContext}` : ''}
-Focus on: trendy restaurants, cool bars, cultural spots, outdoor activities, entertainment, wellness, nightlife — places worth visiting regardless of dating.
+Focus on: MAXIMUM category diversity — include at least 4-5 DIFFERENT categories (cafe, restaurant, bar, park, museum, art_gallery, bakery, shopping_mall, spa, night_club, bowling_alley, movie_theater). Places worth visiting regardless of dating.
 IMPORTANT: Suggest REAL, well-known, highly-rated venues — not generic ideas.
 
 ${activityFormatSpec}
@@ -1879,7 +2200,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
               };
 
               // Validate instagram from Gemini
-              const validInstagram = sanitizeInstagramHandle(a.instagram);
+              const validInstagram = sanitizeInstagramHandle(a.instagram || a.instagramHandle || null);
 
               if (matched) {
                 // Enrich with real Google Maps data (use conditional spread to avoid undefined — Firestore rejects undefined values)
@@ -2013,7 +2334,16 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       // Only when: has location, not off-topic, not loadMore, response doesn't already have activities
       if (hasLocation && !isOffTopic && !loadMoreActivities && (!activitySuggestions || activitySuggestions.length === 0)) {
         try {
-          const cityName = await reverseGeocode(effectiveLat, effectiveLng, userId);
+          // Use overridden city name if user mentioned a different city (e.g. "Buenos Aires")
+          // Otherwise, reverse geocode the user's GPS coordinates
+          let cityName;
+          if (placesLocationOverridden && extractedIntent && extractedIntent.locationMention) {
+            cityName = extractedIntent.locationMention;
+          } else if (placesLocationOverridden && placesCenter) {
+            cityName = await reverseGeocode(placesCenter.latitude, placesCenter.longitude, userId);
+          } else {
+            cityName = await reverseGeocode(effectiveLat, effectiveLng, userId);
+          }
           if (cityName) {
             const chipFn = PLACES_CHIP_I18N[lang] || PLACES_CHIP_I18N['en'];
             const locationChip = chipFn(cityName);
@@ -2040,7 +2370,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
             dominantCategory,
             lastRadiusUsed: placesLastRadiusUsed,
             ...(extractedIntent ? {intent: {placeType: extractedIntent.placeType || null, googleCategory: extractedIntent.googleCategory || null, locationMention: extractedIntent.locationMention || null}} : {}),
-            ...(locationOverridden && center ? {overrideLat: center.latitude, overrideLng: center.longitude} : {}),
+            ...(placesLocationOverridden && placesCenter ? {overrideLat: placesCenter.latitude, overrideLng: placesCenter.longitude} : {}),
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
           });

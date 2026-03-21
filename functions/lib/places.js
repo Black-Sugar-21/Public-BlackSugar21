@@ -1,10 +1,8 @@
 'use strict';
 const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
-const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
-const { haversineDistanceKm } = require('./geo');
+const { placesApiKey } = require('./shared');
+const { forwardGeocode } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
   fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,

@@ -210,6 +210,23 @@ exports.resetSuperLikes = onSchedule(
 );
 
 /**
+ * Read coach_config from Remote Config (server-side JSON).
+ * Lightweight version for scheduled functions — reads only dailyCredits.
+ */
+async function getCoachConfig() {
+  try {
+    const rc = admin.remoteConfig();
+    const template = await rc.getServerTemplate();
+    const serverConfig = template.evaluate();
+    const rawValue = serverConfig.getString('coach_config');
+    if (rawValue) return JSON.parse(rawValue);
+  } catch (e) {
+    logger.warn(`[getCoachConfig] Failed to read Remote Config: ${e.message}`);
+  }
+  return {dailyCredits: 5};
+}
+
+/**
  * Scheduled: Reset de mensajes del AI Date Coach diarios.
  * Corre cada hora. Resetea solo usuarios cuya medianoche local ya pasó (usa timezoneOffset).
  * Siempre restaura a 20 mensajes.

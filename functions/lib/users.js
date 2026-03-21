@@ -211,7 +211,7 @@ exports.reportUser = onCall(
           `Should this user be suspended? Respond with JSON: {"shouldSuspend": bool, "confidence": 0-1, "reasoning": "string"}`;
 
         const {GoogleGenerativeAI} = require('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || defineSecret('GEMINI_API_KEY').value());
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({model: AI_MODEL_LITE, generationConfig: {maxOutputTokens: 256, responseMimeType: 'application/json'}});
         const result = await model.generateContent(aiPrompt);
         const responseText = result.response.text();

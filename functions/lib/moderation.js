@@ -12,6 +12,10 @@ const MOD_RAG_COLLECTION = 'moderationKnowledge';
 const MOD_RAG_TOP_K = 4;
 const MOD_RAG_MIN_SCORE = 0.25;
 const MOD_RAG_FETCH_MULTIPLIER = 3;
+const RAG_EMBEDDING_MODEL = 'gemini-embedding-001';
+const RAG_DIMENSIONS = 768;
+const RAG_MAX_QUERY_LENGTH = 500;
+const RAG_MAX_CHUNK_LENGTH = 1500;
 
 // In-memory cache for moderation config
 let _moderationConfigCache = null;

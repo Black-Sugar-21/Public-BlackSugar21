@@ -1,9 +1,7 @@
 'use strict';
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, normalizeCategory, categoryEmojiMap } = require('./shared');
-const { haversineDistanceKm } = require('./geo');
+// Helpers: no shared imports needed — all values received as function parameters
 
 function calculateMidpoint(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180;
@@ -115,22 +113,71 @@ function fuzzyMatchPlace(title, geminiPlaceId, byIdLookup, byNameLookup, allPlac
   return null;
 }
 
-/** Mapa de categorías a tipos Google Places API (New) */
+/**
+ * Mapa de categorías iOS → array de tipos Google Places API (New).
+ * Primer elemento = tipo canónico; los siguientes amplían cobertura regional/lingüística.
+ * Se usan en búsquedas paralelas con deduplicación por place.id.
+ * Referencia: https://developers.google.com/maps/documentation/places/web-service/place-types
+ */
 const CATEGORY_TO_PLACES_TYPE = {
-  cafe: 'cafe',
-  restaurant: 'restaurant',
-  bar: 'bar',
-  night_club: 'night_club',
-  movie_theater: 'movie_theater',
-  park: 'park',
-  museum: 'museum',
-  bowling_alley: 'bowling_alley',
-  art_gallery: 'art_gallery',
-  bakery: 'bakery',
-  shopping_mall: 'shopping_mall',
-  spa: 'spa',
-  aquarium: 'aquarium',
-  zoo: 'zoo',
+  cafe: [
+    'cafe', 'coffee_shop',
+  ],
+  restaurant: [
+    'restaurant',
+    'american_restaurant', 'brazilian_restaurant', 'chinese_restaurant', 'french_restaurant',
+    'greek_restaurant', 'indian_restaurant', 'indonesian_restaurant', 'italian_restaurant',
+    'japanese_restaurant', 'korean_restaurant', 'latin_american_restaurant',
+    'lebanese_restaurant', 'mediterranean_restaurant', 'mexican_restaurant',
+    'middle_eastern_restaurant', 'pizza_restaurant', 'ramen_restaurant',
+    'sandwich_shop', 'seafood_restaurant', 'spanish_restaurant', 'steak_house',
+    'sushi_restaurant', 'thai_restaurant', 'turkish_restaurant', 'vietnamese_restaurant',
+    'hamburger_restaurant', 'brunch_restaurant', 'fast_food_restaurant',
+  ],
+  bar: [
+    'bar', 'wine_bar', 'cocktail_bar', 'pub',
+    'sake_bar', 'whiskey_bar', 'beer_garden', 'beer_hall', 'tapas_bar',
+  ],
+  night_club: [
+    'night_club',
+  ],
+  movie_theater: [
+    'movie_theater', 'drive_in_movie_theater',
+  ],
+  park: [
+    'park', 'national_park', 'botanical_garden', 'nature_preserve',
+    'hiking_area', 'tourist_attraction', 'cultural_landmark', 'scenic_point',
+    'plaza', 'campground',
+  ],
+  museum: [
+    'museum', 'cultural_center', 'history_museum',
+    'natural_history_museum', 'science_museum', 'childrens_museum',
+  ],
+  bowling_alley: [
+    'bowling_alley', 'amusement_center', 'amusement_park',
+    'billiard_hall', 'escape_room', 'arcade_game_center',
+  ],
+  art_gallery: [
+    'art_gallery', 'art_studio',
+  ],
+  bakery: [
+    'bakery', 'pastry_shop', 'confectionery', 'candy_store',
+    'dessert_shop', 'ice_cream_shop', 'donut_shop',
+  ],
+  shopping_mall: [
+    'shopping_mall', 'shopping_center', 'department_store', 'outlet_mall',
+    'market', 'clothing_store',
+  ],
+  spa: [
+    'spa', 'wellness_center', 'beauty_salon',
+    'massage_therapist', 'sauna',
+  ],
+  aquarium: [
+    'aquarium',
+  ],
+  zoo: [
+    'zoo', 'wildlife_park',
+  ],
 };
 
 // In-memory cache for places search config (same pattern as getCoachConfig)
@@ -201,22 +248,55 @@ async function getPlacesSearchConfig() {
   return defaults;
 }
 
-/** Default category query map — hardcoded fallback when Remote Config is unavailable. */
+/**
+ * Default category query map — multilingual search terms per iOS category.
+ * Includes EN, ES, PT, FR, DE, IT, ID, JA, ZH, AR so Google Places finds
+ * venues in their local language regardless of the user's language setting.
+ */
 const DEFAULT_CATEGORY_QUERY_MAP = {
-  cafe: 'café coffee shop cafetería coffeehouse specialty coffee',
-  restaurant: 'restaurant restaurante fine dining bistro trattoria steakhouse',
-  bar: 'bar pub cervecería brewery cocktail lounge speakeasy taproom wine bar',
-  night_club: 'nightclub discoteca club nocturno disco dance club karaoke',
-  movie_theater: 'movie theater cinema cine multiplex sala de cine',
-  park: 'park parque jardín botánico botanical garden plaza mirador',
-  museum: 'museum museo gallery exhibition centro cultural',
-  bowling_alley: 'bowling boliche bowling alley arcade billar',
-  art_gallery: 'art gallery galería de arte exhibition contemporary art',
-  bakery: 'bakery panadería pastelería patisserie confitería repostería',
-  shopping_mall: 'shopping mall centro comercial outlet tienda boutique',
-  spa: 'spa wellness masajes termas sauna relax centro de bienestar',
-  aquarium: 'aquarium acuario oceanario sea life marine',
-  zoo: 'zoo zoológico safari park bioparque wildlife sanctuary',
+  cafe: 'café coffee shop cafetería coffeehouse specialty coffee ' +
+    'koffie kafe kaffee caffè kafeterya 咖啡 カフェ مقهى',
+  restaurant: 'restaurant restaurante bistro trattoria steakhouse ' +
+    'restaurante bistrô ristorante Restaurant churrascaria ' +
+    'レストラン 餐厅 مطعم warung rumah makan',
+  bar: 'bar pub cervecería brewery cocktail lounge wine bar taproom ' +
+    'brasserie Kneipe birreria taberna pivo bar sake bar ' +
+    'バー 酒吧 حانة warung bir',
+  night_club: 'nightclub discoteca boate club nocturno dance club karaoke ' +
+    'boîte de nuit Nachtclub discoteca malam klub malam ' +
+    'ナイトクラブ 夜总会 ملهى lilin',
+  movie_theater: 'movie theater cinema cine multiplex sala de cine ' +
+    'cinéma Kino cinematografo bioscoop sinema ' +
+    '映画館 电影院 سينما',
+  park: 'park parque jardín botánico botanical garden plaza mirador ' +
+    'parc jardin Stadtpark giardino taman kebun raya ' +
+    '公园 parque nacional 公園 حديقة taman kota',
+  museum: 'museum museo musée Kunstmuseum museo nazionale muzeum ' +
+    'cultural center centro cultural centro histórico ' +
+    '博物館 博物馆 متحف museum sejarah',
+  bowling_alley: 'bowling boliche bowling alley arcade billar laser tag ' +
+    'piste de bowling Bowlingbahn bocciodromo escape room ' +
+    'ボウリング 保龄球 بولينج area bermain',
+  art_gallery: 'art gallery galería de arte exhibition contemporary art ' +
+    "galerie d'art Kunstgalerie galleria d'arte pinacoteca " +
+    '美術館 艺术画廊 معرض فني galeri seni',
+  bakery: 'bakery panadería pastelería patisserie confitería repostería ' +
+    'boulangerie Bäckerei panificio toko roti donut pastry shop ' +
+    'ベーカリー 面包店 مخبز kue',
+  shopping_mall: 'shopping mall centro comercial outlet department store ' +
+    'centre commercial Einkaufszentrum centro commerciale ' +
+    'pusat perbelanjaan mall plaza boutique ' +
+    'ショッピングモール 购物中心 مركز تسوق',
+  spa: 'spa wellness masajes termas sauna relax centro de bienestar ' +
+    'salon beauté Wellnesszentrum centro benessere pijat ' +
+    'onsen bathhouse beauty salon hammam ' +
+    'スパ 水疗 سبا pijat refleksi',
+  aquarium: 'aquarium acuario oceanario sea life marine ' +
+    'aquarium Aquarium acquario oceanarium ' +
+    '水族館 水族馆 أكواريوم akuarium',
+  zoo: 'zoo zoológico safari park wildlife sanctuary bioparque ' +
+    'zoo jardin zoologique Tierpark giardino zoologico ' +
+    '動物園 动物园 حديقة حيوان kebun binatang',
 };
 
 /**
@@ -342,7 +422,7 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
   if (includedTypes && Array.isArray(includedTypes) && includedTypes.length > 0) {
     body.includedType = includedTypes[0];
   }
-  if (center && center.latitude && center.longitude) {
+  if (center && center.latitude != null && center.longitude != null) {
     const radius = radiusMeters || 100000;
     if (useRestriction) {
       // locationRestriction requires rectangle (low/high), NOT circle
@@ -377,6 +457,23 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
   });
 
   if (!resp.ok) {
+    if (resp.status === 429) {
+      // Rate limited — wait 1s and retry once
+      logger.warn('[placesTextSearch] Rate limited (429), retrying in 1s');
+      await new Promise((r) => setTimeout(r, 1000));
+      const retryResp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': PLACES_FIELD_MASK},
+        body: JSON.stringify(body),
+      });
+      if (!retryResp.ok) {
+        const retryErr = await retryResp.text();
+        logger.error(`[placesTextSearch] API error ${retryResp.status} after retry: ${retryErr}`);
+        throw new Error(`Places API error: ${retryResp.status}`);
+      }
+      const retryData = await retryResp.json();
+      return {places: retryData.places || [], nextPageToken: retryData.nextPageToken || null};
+    }
     const errText = await resp.text();
     logger.error(`[placesTextSearch] API error ${resp.status}: ${errText}`);
     throw new Error(`Places API error: ${resp.status}`);
@@ -464,4 +561,5 @@ module.exports = {
   sanitizeWebsiteUrl,
   placesTextSearch,
   transformPlaceToSuggestion,
+  CATEGORY_TO_PLACES_TYPE,
 };
