@@ -46,3 +46,4 @@ Thumbs.db
 scripts/serviceAccountKey.json
 scripts/*-adminsdk-*.json
 scripts/cleanup-log-*.txt
+.claude/worktrees/
