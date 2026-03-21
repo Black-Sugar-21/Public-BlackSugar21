@@ -1,0 +1,28 @@
+{
+  "folders": [
+    {
+      "name": "Web / Firebase (Angular)",
+      "path": "/Users/daniel/IdeaProjects/Public-BlackSugar21"
+    },
+    {
+      "name": "Android",
+      "path": "/Users/daniel/AndroidStudioProjects/BlackSugar212"
+    },
+    {
+      "name": "iOS (Swift)",
+      "path": "/Users/daniel/AndroidStudioProjects/iOS"
+    }
+  ],
+  "settings": {
+    "explorer.sortOrder": "type",
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.git": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.gradle": true,
+      "**/.idea": true,
+      "**/DerivedData": true
+    }
+  }
+}
