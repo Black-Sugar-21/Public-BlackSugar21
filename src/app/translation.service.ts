@@ -57,12 +57,12 @@ export class TranslationService {
 
     // Hero Section
     'hero.title': {
-      es: 'Seduce con inteligencia. Conecta de verdad.',
-      en: 'Seduce Smarter. Connect Deeper.'
+      es: 'Tu coach personal con IA.',
+      en: 'Your Personal AI Coach.'
     },
     'hero.tagline': {
-      es: 'Consejos personalizados, ideas de citas y lugares reales — todo desde tu perfil.',
-      en: 'Personalized advice, date ideas, and real place suggestions — right from your profile.'
+      es: 'Descubre lugares, recibe consejos personalizados y mejora tu vida social con guía inteligente.',
+      en: 'Discover places, get personalized advice, and enhance your social life with intelligent guidance.'
     },
     'hero.subtitle': {
       es: '',
@@ -87,30 +87,30 @@ export class TranslationService {
       en: 'Create stories to show you\'re so much more than a photo.'
     },
     'features.connections.title': {
-      es: 'Conexiones reales',
-      en: 'Real connections'
+      es: 'Vida social',
+      en: 'Social Life'
     },
     'features.connections.desc': {
-      es: 'Conecta con personas que saben lo que quieren.',
-      en: 'Connect with people who know what they want.'
+      es: 'Mejora tus habilidades sociales con orientación inteligente.',
+      en: 'Improve your social skills with intelligent guidance.'
     },
     'features.coach.title': {
-      es: 'Coach IA de Citas',
-      en: 'AI Dating Coach'
+      es: 'Coach IA',
+      en: 'AI Coach'
     },
     'features.coach.desc': {
-      es: 'Un coach de IA que te guía con consejos, ideas de citas y sugerencias de lugares reales cerca de ti.',
-      en: 'An AI coach that guides you with advice, date ideas, and real place suggestions near you.'
+      es: 'Un coach de IA que te guía con consejos personalizados y sugerencias de lugares reales cerca de ti.',
+      en: 'An AI coach that guides you with personalized advice and real place suggestions near you.'
     },
 
     // AI Coach Section
     'coach.section.label': {
-      es: 'COACH IA DE CITAS',
-      en: 'AI DATING COACH'
+      es: 'COACH IA',
+      en: 'AI COACH'
     },
     'coach.section.title': {
-      es: 'Seduce con inteligencia. Conecta de verdad.',
-      en: 'Seduce Smarter. Connect Deeper.'
+      es: 'Tu guía personal con inteligencia artificial.',
+      en: 'Your personal guide powered by AI.'
     },
     'coach.section.subtitle': {
       es: 'Accede instantáneamente desde tu perfil',
@@ -121,12 +121,12 @@ export class TranslationService {
       en: 'Personalized Advice'
     },
     'coach.feature1.desc': {
-      es: 'El coach analiza tus matches y te da consejos específicos para cada conversación.',
-      en: 'The coach analyzes your matches and gives you specific advice for each conversation.'
+      es: 'El coach analiza tu contexto y te da consejos específicos para cada situación.',
+      en: 'The coach analyzes your context and gives you specific advice for each situation.'
     },
     'coach.feature2.title': {
-      es: 'Lugares reales para tu cita',
-      en: 'Real places for your date'
+      es: 'Descubre lugares reales',
+      en: 'Discover real places'
     },
     'coach.feature2.desc': {
       es: 'Sugiere cafeterías, restaurantes, bares y más cerca de tu ubicación — con fotos y reseñas reales.',
@@ -141,12 +141,12 @@ export class TranslationService {
       en: 'Don\'t know what to say? The coach suggests messages, topics and questions to keep the conversation going.'
     },
     'coach.feature4.title': {
-      es: 'Cómo invitar a salir',
-      en: 'How to ask them out'
+      es: 'Mejora tu confianza',
+      en: 'Build your confidence'
     },
     'coach.feature4.desc': {
-      es: 'Te ayuda a redactar el mensaje perfecto para invitar a salir, adaptado a tu match.',
-      en: 'Helps you craft the perfect message to ask someone out, tailored to your match.'
+      es: 'Te ayuda a comunicarte mejor y ganar seguridad en tus interacciones sociales.',
+      en: 'Helps you communicate better and gain confidence in your social interactions.'
     },
     'coach.cta': {
       es: 'Descarga la app y conoce tu coach',
@@ -271,8 +271,8 @@ export class TranslationService {
       en: 'Conversation history and messages'
     },
     'dataDeletion.data4': {
-      es: 'Matches y conexiones con otros usuarios',
-      en: 'Matches and connections with other users'
+      es: 'Historial de interacciones y conversaciones con el coach',
+      en: 'Coach interaction and conversation history'
     },
     'dataDeletion.data5': {
       es: 'Datos de ubicación y preferencias de búsqueda',
@@ -557,8 +557,8 @@ export class TranslationService {
       en: 'Direct insults, verbal harassment, or persistent spam'
     },
     'moderation.penalty.level2.impact': {
-      es: 'Impacto: Reducción notable de visibilidad en el matching',
-      en: 'Impact: Noticeable visibility reduction in matching'
+      es: 'Impacto: Reducción notable de visibilidad en la plataforma',
+      en: 'Impact: Noticeable visibility reduction on the platform'
     },
     'moderation.penalty.level3.title': {
       es: 'Nivel Alto (+5 puntos)',
