@@ -6,6 +6,7 @@ interface Translations {
   [key: string]: {
     es: string;
     en: string;
+    pt?: string;
   };
 }
 
@@ -87,12 +88,12 @@ export class TranslationService {
       en: 'Create stories to show you\'re so much more than a photo.'
     },
     'features.connections.title': {
-      es: 'Vida social',
-      en: 'Social Life'
+      es: 'Compatibilidad IA',
+      en: 'AI Compatibility'
     },
     'features.connections.desc': {
-      es: 'Mejora tus habilidades sociales con orientación inteligente.',
-      en: 'Improve your social skills with intelligent guidance.'
+      es: 'Cada perfil muestra un porcentaje de compatibilidad calculado por IA, basado en intereses compartidos, edad, proximidad y preferencias.',
+      en: 'Each profile displays a compatibility percentage calculated by AI, based on shared interests, age, proximity, and preferences.'
     },
     'features.coach.title': {
       es: 'Coach IA',
@@ -133,12 +134,12 @@ export class TranslationService {
       en: 'Suggests cafés, restaurants, bars and more near your location — with real photos and reviews.'
     },
     'coach.feature3.title': {
-      es: 'Ideas para romper el hielo',
-      en: 'Icebreaker ideas'
+      es: 'Coaching en tiempo real',
+      en: 'Real-time Coaching'
     },
     'coach.feature3.desc': {
-      es: 'No sabes qué decir? El coach te sugiere mensajes, temas y preguntas para mantener la conversación.',
-      en: 'Don\'t know what to say? The coach suggests messages, topics and questions to keep the conversation going.'
+      es: 'Un banner inteligente analiza tus conversaciones en vivo, mostrando compatibilidad, tips contextuales y respuestas sugeridas.',
+      en: 'A smart banner analyzes your conversations live, showing compatibility, contextual tips, and suggested responses.'
     },
     'coach.feature4.title': {
       es: 'Mejora tu confianza',
