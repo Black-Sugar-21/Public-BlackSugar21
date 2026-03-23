@@ -638,3 +638,201 @@ exports.getDatingAdvice = onCall(
     return {success: true, ...selected};
   },
 );
+
+/**
+ * Callable: calculateAIChemistry — Análisis profundo de compatibilidad con RAG + Gemini.
+ *
+ * Usa el sistema RAG (397 chunks, 70 categorías) para enriquecer el análisis de compatibilidad
+ * con conocimiento experto sobre citas, cocina, actividades y regalos.
+ *
+ * Payload: { targetUserId }
+ * Response: { score, reasons, tip, factors, cached }
+ *
+ * Cache: chemistryCache/{pairId} con TTL 7 días
+ */
+exports.calculateAIChemistry = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const currentUserId = request.auth.uid;
+    const targetUserId = (request.data || {}).targetUserId;
+    if (!targetUserId) throw new Error('targetUserId required');
+
+    const db = admin.firestore();
+    const apiKey = geminiApiKey.value();
+
+    // ── Cache check (TTL 7 días) ──
+    const pairId = [currentUserId, targetUserId].sort().join('_');
+    const cacheRef = db.collection('chemistryCache').doc(pairId);
+    const cacheDoc = await cacheRef.get();
+    if (cacheDoc.exists) {
+      const cached = cacheDoc.data();
+      const ageMs = Date.now() - (cached.calculatedAt?.toMillis?.() || 0);
+      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+        logger.info(`[AIChemistry] Cache hit for ${pairId} (age: ${Math.round(ageMs / 3600000)}h)`);
+        return {...cached, cached: true};
+      }
+    }
+
+    // ── Load both profiles ──
+    const [u1Doc, u2Doc] = await Promise.all([
+      db.collection('users').doc(currentUserId).get(),
+      db.collection('users').doc(targetUserId).get(),
+    ]);
+    if (!u1Doc.exists || !u2Doc.exists) {
+      return {success: true, score: 55, reasons: [], tip: '', factors: {}, cached: false};
+    }
+    const u1 = u1Doc.data();
+    const u2 = u2Doc.data();
+
+    // ── Algorithmic base score (same as client-side) ──
+    const i1 = new Set((u1.interests || []).map(String));
+    const i2 = (u2.interests || []).map(String);
+    const i2Set = new Set(i2);
+    const shared = i2.filter((i) => i1.has(i));
+    const union = new Set([...i1, ...i2Set]);
+
+    let factors = {};
+
+    // Factor 1: Intereses
+    if (i1.size > 0 && i2Set.size > 0) {
+      const jaccard = union.size > 0 ? shared.length / union.size : 0;
+      const bonus = Math.min(shared.length * 0.08, 0.3);
+      factors.interests = shared.length === 0 ? 0.35 : Math.min(jaccard + bonus, 1.0);
+    }
+
+    // Factor 2: Edad
+    const age1 = calcAge(u1.birthDate);
+    const age2 = calcAge(u2.birthDate);
+    if (age1 > 0 && age2 > 0) {
+      const ageDiff = Math.abs(age1 - age2);
+      factors.age = Math.exp(-(ageDiff * ageDiff) / 72.0);
+    }
+
+    // Factor 3: Tipo complementario
+    const t1 = (u1.userType || '').toUpperCase();
+    const t2 = (u2.userType || '').toUpperCase();
+    if (t1 && t2) {
+      const dm1 = t1.includes('DADDY') || t1.includes('MOMMY');
+      const b1 = t1.includes('BABY');
+      const dm2 = t2.includes('DADDY') || t2.includes('MOMMY');
+      const b2 = t2.includes('BABY');
+      factors.type = (dm1 && b2) || (b1 && dm2) ? 1.0 : t1 === t2 ? 0.55 : 0.6;
+    }
+
+    // Algorithmic score (weighted)
+    const weights = {interests: 25, age: 15, type: 15};
+    let totalW = 0, totalS = 0;
+    for (const [k, w] of Object.entries(weights)) {
+      if (factors[k] !== undefined) {
+        totalS += factors[k] * w;
+        totalW += w;
+      }
+    }
+    const algorithmicScore = totalW > 0 ? totalS / totalW : 0.5;
+
+    // ── RAG: buscar conocimiento relevante ──
+    let ragContext = '';
+    try {
+      const sharedStr = shared.map((s) => s.replace('interest_', '').replace(/_/g, ' ')).join(', ');
+      const queryText = sharedStr.length > 0
+        ? `compatibility advice for couple with shared interests: ${sharedStr}`
+        : `general dating compatibility advice for new connection`;
+
+      const genai = new GoogleGenerativeAI(apiKey);
+      const embModel = genai.getGenerativeModel({model: 'gemini-embedding-001'});
+      const embedResult = await embModel.embedContent({
+        content: {parts: [{text: queryText}]},
+        taskType: 'RETRIEVAL_QUERY',
+        outputDimensionality: 768,
+      });
+      const queryVector = embedResult.embedding.values;
+
+      const collRef = db.collection('coachKnowledge');
+      const snapshot = await collRef.findNearest('embedding', queryVector, {
+        limit: 4,
+        distanceMeasure: 'COSINE',
+        distanceResultField: '_distance',
+      }).get();
+
+      const chunks = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {text: (data.text || '').substring(0, 500), category: data.category || '', similarity: 1 - (data._distance ?? 1)};
+        })
+        .filter((d) => d.similarity >= 0.25 && d.text.length > 0)
+        .slice(0, 3);
+
+      if (chunks.length > 0) {
+        ragContext = chunks.map((c, i) => `[${i + 1}] (${c.category}): ${c.text}`).join('\n');
+        logger.info(`[AIChemistry] RAG: ${chunks.length} chunks (${chunks.map((c) => c.category).join(', ')})`);
+      }
+    } catch (ragErr) {
+      logger.warn(`[AIChemistry] RAG failed (non-critical): ${ragErr.message}`);
+    }
+
+    // ── Gemini analysis ──
+    let aiScore = 0.5;
+    let reasons = [];
+    let tip = '';
+    try {
+      const genai = new GoogleGenerativeAI(apiKey);
+      const model = genai.getGenerativeModel({model: AI_MODEL_LITE});
+
+      const bio1 = (u1.bio || '').substring(0, 200);
+      const bio2 = (u2.bio || '').substring(0, 200);
+      const prompt = `You are an expert compatibility analyst. Analyze these two profiles and rate their chemistry.
+
+Profile A: Age ${age1}, Type: ${t1 || 'unknown'}, Interests: ${[...i1].slice(0, 8).join(', ') || 'none'}${bio1 ? ', Bio: "' + bio1 + '"' : ''}
+Profile B: Age ${age2}, Type: ${t2 || 'unknown'}, Interests: ${i2.slice(0, 8).join(', ') || 'none'}${bio2 ? ', Bio: "' + bio2 + '"' : ''}
+Shared interests: ${shared.length > 0 ? shared.join(', ') : 'none'}
+${ragContext ? '\nExpert knowledge:\n' + ragContext : ''}
+
+IMPORTANT: This app is NEW with few users. Be GENEROUS with scoring (range 0.5-0.95).
+Respond ONLY with valid JSON:
+{"score": 0.0-1.0, "reasons": ["reason1", "reason2", "reason3"], "tip": "one actionable tip for connection"}`;
+
+      const result = await model.generateContent({
+        contents: [{role: 'user', parts: [{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 256, temperature: 0.3},
+      });
+      const text = result.response.text();
+      const parsed = parseGeminiJsonResponse(text);
+      if (parsed && typeof parsed.score === 'number') {
+        aiScore = Math.max(0.5, Math.min(parsed.score, 0.95));
+        reasons = Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 3) : [];
+        tip = typeof parsed.tip === 'string' ? parsed.tip : '';
+      }
+    } catch (aiErr) {
+      logger.warn(`[AIChemistry] Gemini failed (non-critical): ${aiErr.message}`);
+    }
+
+    // ── Blend: 40% algorithmic + 60% AI ──
+    const blended = algorithmicScore * 0.4 + aiScore * 0.6;
+    const finalScore = Math.round(48 + blended * 44); // Range 48-92%
+
+    const result = {
+      success: true,
+      score: Math.max(48, Math.min(92, finalScore)),
+      reasons,
+      tip,
+      factors: {
+        algorithmic: Math.round(algorithmicScore * 100),
+        ai: Math.round(aiScore * 100),
+        sharedInterests: shared.length,
+        ragChunksUsed: ragContext ? ragContext.split('\n').length : 0,
+      },
+      cached: false,
+    };
+
+    // ── Save to cache ──
+    try {
+      await cacheRef.set({...result, calculatedAt: admin.firestore.FieldValue.serverTimestamp()});
+    } catch (cacheErr) {
+      logger.warn(`[AIChemistry] Cache write failed: ${cacheErr.message}`);
+    }
+
+    logger.info(`[AIChemistry] ${pairId}: score=${result.score}, algo=${factors.interests?.toFixed(2)}, ai=${aiScore.toFixed(2)}, rag=${result.factors.ragChunksUsed}`);
+    return result;
+  },
+);
