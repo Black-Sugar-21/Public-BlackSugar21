@@ -1064,7 +1064,7 @@ firebase deploy --only storage
   /* Gradients */
   --gradient-gold: linear-gradient(135deg, var(--gold-dark), var(--gold));
   --gradient-purple: linear-gradient(135deg, #2a002e, var(--purple));
-  --gradient-luxury: linear-gradient(135deg, var(--bg-card), #252525);
+  --gradient-premium: linear-gradient(135deg, var(--bg-card), #252525);
   --gradient-main: linear-gradient(to bottom, #0A0A14, #140B28, #1C0E38);
 }
 ```

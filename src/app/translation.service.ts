@@ -447,8 +447,9 @@ export class TranslationService {
 
     // Footer
     'footer.tagline': {
-      es: 'Donde el lujo encuentra la compañía perfecta • Solo mayores de 18 años',
-      en: 'Where luxury meets the perfect company • 18+ only'
+      es: 'Descubre conexiones genuinas con orientación potenciada por IA • Solo mayores de 18 años',
+      en: 'Discover genuine connections with AI-powered guidance • 18+ only',
+      pt: 'Descubra conexões genuínas com orientação impulsionada por IA • Apenas maiores de 18 anos'
     },
     'footer.home': {
       es: 'Inicio',
