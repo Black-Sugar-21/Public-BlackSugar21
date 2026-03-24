@@ -642,50 +642,92 @@ exports.getDatingAdvice = onCall(
 /**
  * Callable: calculateAIChemistry — Análisis profundo de compatibilidad con RAG + Gemini.
  *
- * Usa el sistema RAG (397 chunks, 70 categorías) para enriquecer el análisis de compatibilidad
- * con conocimiento experto sobre citas, cocina, actividades y regalos.
+ * Diseñado para app nueva con pocos usuarios:
+ * - Scores generosos (48-92%) para UX positiva
+ * - Fallbacks en cada capa (RAG fail → algo only, Gemini fail → algo only)
+ * - Cache inteligente con invalidación por cambio de perfil
+ * - Rate limiting por usuario (max 20 calls/hora)
+ * - Sparse data handling: perfiles incompletos reciben score base alto
  *
- * Payload: { targetUserId }
- * Response: { score, reasons, tip, factors, cached }
+ * Payload: { targetUserId, lang? }
+ * Response: { score, reasons[], tip, factors{}, cached, confidence }
  *
- * Cache: chemistryCache/{pairId} con TTL 7 días
+ * Cache: chemistryCache/{pairId} con TTL dinámico (3-14 días según confianza)
  */
 exports.calculateAIChemistry = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const currentUserId = request.auth.uid;
-    const targetUserId = (request.data || {}).targetUserId;
+    const data = request.data || {};
+    const targetUserId = data.targetUserId;
+    const lang = (data.lang || 'en').substring(0, 2).toLowerCase();
     if (!targetUserId) throw new Error('targetUserId required');
+    if (currentUserId === targetUserId) throw new Error('Cannot calculate chemistry with yourself');
 
     const db = admin.firestore();
     const apiKey = geminiApiKey.value();
+    const startTime = Date.now();
 
-    // ── Cache check (TTL 7 días) ──
+    // ── Rate limiting (20 calls/hour per user) ──
+    const rateLimitRef = db.collection('rateLimits').doc(`chemistry_${currentUserId}`);
+    try {
+      const rlDoc = await rateLimitRef.get();
+      if (rlDoc.exists) {
+        const rl = rlDoc.data();
+        const hourAgo = Date.now() - 3600000;
+        if ((rl.lastReset?.toMillis?.() || 0) > hourAgo && (rl.count || 0) >= 20) {
+          logger.warn(`[AIChemistry] Rate limited: ${currentUserId} (${rl.count} calls/hr)`);
+          // Return a decent default instead of error
+          return {success: true, score: 65, reasons: [], tip: '', factors: {}, cached: false, confidence: 'low', rateLimited: true};
+        }
+      }
+    } catch (rlErr) {
+      // Rate limit check failed — continue anyway (non-critical)
+    }
+
+    // ── Cache check (TTL dinámico) ──
     const pairId = [currentUserId, targetUserId].sort().join('_');
     const cacheRef = db.collection('chemistryCache').doc(pairId);
-    const cacheDoc = await cacheRef.get();
-    if (cacheDoc.exists) {
-      const cached = cacheDoc.data();
-      const ageMs = Date.now() - (cached.calculatedAt?.toMillis?.() || 0);
-      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
-        logger.info(`[AIChemistry] Cache hit for ${pairId} (age: ${Math.round(ageMs / 3600000)}h)`);
-        return {...cached, cached: true};
+    try {
+      const cacheDoc = await cacheRef.get();
+      if (cacheDoc.exists) {
+        const cached = cacheDoc.data();
+        const ageMs = Date.now() - (cached.calculatedAt?.toMillis?.() || 0);
+        // TTL dinámico: alta confianza → 14 días, baja → 3 días
+        const ttlMs = cached.confidence === 'high' ? 14 * 86400000 : cached.confidence === 'medium' ? 7 * 86400000 : 3 * 86400000;
+        if (ageMs < ttlMs) {
+          logger.info(`[AIChemistry] Cache hit ${pairId} (age: ${Math.round(ageMs / 3600000)}h, confidence: ${cached.confidence})`);
+          return {...cached, cached: true};
+        }
       }
+    } catch (cacheErr) {
+      logger.warn(`[AIChemistry] Cache read failed (non-critical): ${cacheErr.message}`);
     }
 
     // ── Load both profiles ──
-    const [u1Doc, u2Doc] = await Promise.all([
-      db.collection('users').doc(currentUserId).get(),
-      db.collection('users').doc(targetUserId).get(),
-    ]);
-    if (!u1Doc.exists || !u2Doc.exists) {
-      return {success: true, score: 55, reasons: [], tip: '', factors: {}, cached: false};
+    let u1, u2;
+    try {
+      const [u1Doc, u2Doc] = await Promise.all([
+        db.collection('users').doc(currentUserId).get(),
+        db.collection('users').doc(targetUserId).get(),
+      ]);
+      if (!u1Doc.exists || !u2Doc.exists) {
+        return {success: true, score: 60, reasons: ['New profiles detected'], tip: 'Complete your profile for better matches', factors: {}, cached: false, confidence: 'low'};
+      }
+      u1 = u1Doc.data();
+      u2 = u2Doc.data();
+    } catch (loadErr) {
+      logger.error(`[AIChemistry] Profile load failed: ${loadErr.message}`);
+      return {success: true, score: 58, reasons: [], tip: '', factors: {}, cached: false, confidence: 'low'};
     }
-    const u1 = u1Doc.data();
-    const u2 = u2Doc.data();
 
-    // ── Algorithmic base score (same as client-side) ──
+    // ── Profile completeness check (app nueva: muchos perfiles incompletos) ──
+    const u1Complete = [u1.bio, (u1.interests || []).length >= 2, (u1.pictures || []).length >= 2, u1.latitude].filter(Boolean).length;
+    const u2Complete = [u2.bio, (u2.interests || []).length >= 2, (u2.pictures || []).length >= 2, u2.latitude].filter(Boolean).length;
+    const avgCompleteness = (u1Complete + u2Complete) / 8.0; // 0-1
+
+    // ── Algorithmic base score (6 factors, dynamic weights) ──
     const i1 = new Set((u1.interests || []).map(String));
     const i2 = (u2.interests || []).map(String);
     const i2Set = new Set(i2);
@@ -693,23 +735,42 @@ exports.calculateAIChemistry = onCall(
     const union = new Set([...i1, ...i2Set]);
 
     let factors = {};
+    let dataPoints = 0; // Track how many factors we can calculate
 
-    // Factor 1: Intereses
+    // Factor 1: Intereses compartidos (peso: 25)
     if (i1.size > 0 && i2Set.size > 0) {
       const jaccard = union.size > 0 ? shared.length / union.size : 0;
       const bonus = Math.min(shared.length * 0.08, 0.3);
-      factors.interests = shared.length === 0 ? 0.35 : Math.min(jaccard + bonus, 1.0);
+      // App nueva: sin intereses en común → score base 0.4 (no penalizar mucho)
+      factors.interests = shared.length === 0 ? 0.4 : Math.min(jaccard + bonus, 1.0);
+      dataPoints++;
+    } else {
+      // Perfiles sin intereses → asumir compatibilidad media-alta (app nueva)
+      factors.interests = 0.55;
+      dataPoints += 0.5; // Half confidence
     }
 
-    // Factor 2: Edad
+    // Factor 2: Compatibilidad de edad (peso: 15)
     const age1 = calcAge(u1.birthDate);
     const age2 = calcAge(u2.birthDate);
     if (age1 > 0 && age2 > 0) {
       const ageDiff = Math.abs(age1 - age2);
-      factors.age = Math.exp(-(ageDiff * ageDiff) / 72.0);
+      factors.age = Math.exp(-(ageDiff * ageDiff) / 72.0); // σ=6
+      dataPoints++;
     }
 
-    // Factor 3: Tipo complementario
+    // Factor 3: Proximidad geográfica (peso: 15)
+    if (u1.latitude && u1.longitude && u2.latitude && u2.longitude) {
+      const R = 6371; // km
+      const dLat = (u2.latitude - u1.latitude) * Math.PI / 180;
+      const dLon = (u2.longitude - u1.longitude) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(u1.latitude * Math.PI / 180) * Math.cos(u2.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      factors.geo = km <= 10 ? 1.0 : km <= 50 ? 0.85 : km <= 150 ? 0.65 : km <= 500 ? 0.4 : 0.2;
+      dataPoints++;
+    }
+
+    // Factor 4: Tipo complementario (peso: 15)
     const t1 = (u1.userType || '').toUpperCase();
     const t2 = (u2.userType || '').toUpperCase();
     if (t1 && t2) {
@@ -718,10 +779,28 @@ exports.calculateAIChemistry = onCall(
       const dm2 = t2.includes('DADDY') || t2.includes('MOMMY');
       const b2 = t2.includes('BABY');
       factors.type = (dm1 && b2) || (b1 && dm2) ? 1.0 : t1 === t2 ? 0.55 : 0.6;
+      dataPoints++;
     }
 
-    // Algorithmic score (weighted)
-    const weights = {interests: 25, age: 15, type: 15};
+    // Factor 5: Rango de edad preferido (peso: 10)
+    if (u1.minAge && u1.maxAge && age2 > 0) {
+      if (age2 >= u1.minAge && age2 <= u1.maxAge) {
+        const mid = (u1.minAge + u1.maxAge) / 2;
+        const span = Math.max((u1.maxAge - u1.minAge) / 2, 1);
+        const dev = Math.abs(age2 - mid) / span;
+        factors.range = 1.0 - (dev * 0.3); // Penalize edges gently
+      } else {
+        factors.range = 0.35; // Out of range but not zero (app nueva)
+      }
+      dataPoints++;
+    }
+
+    // Factor 6: Completitud del perfil (peso: 5)
+    factors.completeness = avgCompleteness;
+    dataPoints += 0.5;
+
+    // Weighted score (dynamic: only factors with data)
+    const weights = {interests: 25, age: 15, geo: 15, type: 15, range: 10, completeness: 5};
     let totalW = 0, totalS = 0;
     for (const [k, w] of Object.entries(weights)) {
       if (factors[k] !== undefined) {
@@ -729,50 +808,66 @@ exports.calculateAIChemistry = onCall(
         totalW += w;
       }
     }
-    const algorithmicScore = totalW > 0 ? totalS / totalW : 0.5;
+    const algorithmicScore = totalW > 0 ? totalS / totalW : 0.55;
 
-    // ── RAG: buscar conocimiento relevante ──
+    // ── Confidence level (determines cache TTL and AI weight) ──
+    const confidence = dataPoints >= 4 ? 'high' : dataPoints >= 2.5 ? 'medium' : 'low';
+    // App nueva: AI weight decreases with less data (AI can hallucinate with sparse input)
+    const aiWeight = confidence === 'high' ? 0.6 : confidence === 'medium' ? 0.45 : 0.3;
+
+    // ── RAG: buscar conocimiento relevante (with timeout) ──
     let ragContext = '';
+    let ragChunksUsed = 0;
     try {
       const sharedStr = shared.map((s) => s.replace('interest_', '').replace(/_/g, ' ')).join(', ');
       const queryText = sharedStr.length > 0
         ? `compatibility advice for couple with shared interests: ${sharedStr}`
-        : `general dating compatibility advice for new connection`;
+        : age1 > 0 && age2 > 0
+          ? `dating compatibility advice for ${Math.min(age1, age2)}-${Math.max(age1, age2)} age range`
+          : `general dating compatibility advice for new connection`;
 
       const genai = new GoogleGenerativeAI(apiKey);
       const embModel = genai.getGenerativeModel({model: 'gemini-embedding-001'});
-      const embedResult = await embModel.embedContent({
+
+      // RAG with 4s timeout
+      const embedPromise = embModel.embedContent({
         content: {parts: [{text: queryText}]},
         taskType: 'RETRIEVAL_QUERY',
         outputDimensionality: 768,
       });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('RAG timeout')), 4000));
+      const embedResult = await Promise.race([embedPromise, timeoutPromise]);
       const queryVector = embedResult.embedding.values;
 
       const collRef = db.collection('coachKnowledge');
       const snapshot = await collRef.findNearest('embedding', queryVector, {
-        limit: 4,
+        limit: 5,
         distanceMeasure: 'COSINE',
         distanceResultField: '_distance',
       }).get();
 
+      // Deduplicate by category, filter by quality
+      const seenCats = new Set();
       const chunks = snapshot.docs
         .map((doc) => {
-          const data = doc.data();
-          return {text: (data.text || '').substring(0, 500), category: data.category || '', similarity: 1 - (data._distance ?? 1)};
+          const d = doc.data();
+          return {text: (d.text || '').substring(0, 500), category: d.category || '', similarity: 1 - (d._distance ?? 1)};
         })
         .filter((d) => d.similarity >= 0.25 && d.text.length > 0)
+        .filter((d) => { if (seenCats.has(d.category)) return false; seenCats.add(d.category); return true; })
         .slice(0, 3);
 
       if (chunks.length > 0) {
         ragContext = chunks.map((c, i) => `[${i + 1}] (${c.category}): ${c.text}`).join('\n');
+        ragChunksUsed = chunks.length;
         logger.info(`[AIChemistry] RAG: ${chunks.length} chunks (${chunks.map((c) => c.category).join(', ')})`);
       }
     } catch (ragErr) {
       logger.warn(`[AIChemistry] RAG failed (non-critical): ${ragErr.message}`);
     }
 
-    // ── Gemini analysis ──
-    let aiScore = 0.5;
+    // ── Gemini analysis (with 8s timeout) ──
+    let aiScore = 0.65; // Default generous for app nueva
     let reasons = [];
     let tip = '';
     try {
@@ -781,58 +876,90 @@ exports.calculateAIChemistry = onCall(
 
       const bio1 = (u1.bio || '').substring(0, 200);
       const bio2 = (u2.bio || '').substring(0, 200);
-      const prompt = `You are an expert compatibility analyst. Analyze these two profiles and rate their chemistry.
+      const langInstruction = lang !== 'en' ? `\nIMPORTANT: Respond reasons and tip in language code "${lang}".` : '';
+      const prompt = `You are an expert compatibility analyst for a social app. Analyze these two profiles.
 
-Profile A: Age ${age1}, Type: ${t1 || 'unknown'}, Interests: ${[...i1].slice(0, 8).join(', ') || 'none'}${bio1 ? ', Bio: "' + bio1 + '"' : ''}
-Profile B: Age ${age2}, Type: ${t2 || 'unknown'}, Interests: ${i2.slice(0, 8).join(', ') || 'none'}${bio2 ? ', Bio: "' + bio2 + '"' : ''}
-Shared interests: ${shared.length > 0 ? shared.join(', ') : 'none'}
+Profile A: Age ${age1 || '?'}, Type: ${t1 || '?'}, Interests: ${[...i1].slice(0, 8).join(', ') || 'none'}${bio1 ? ', Bio: "' + bio1 + '"' : ''}
+Profile B: Age ${age2 || '?'}, Type: ${t2 || '?'}, Interests: ${i2.slice(0, 8).join(', ') || 'none'}${bio2 ? ', Bio: "' + bio2 + '"' : ''}
+Shared interests: ${shared.length > 0 ? shared.map((s) => s.replace('interest_', '').replace(/_/g, ' ')).join(', ') : 'none yet'}
+Profile completeness: ${Math.round(avgCompleteness * 100)}%
 ${ragContext ? '\nExpert knowledge:\n' + ragContext : ''}
 
-IMPORTANT: This app is NEW with few users. Be GENEROUS with scoring (range 0.5-0.95).
-Respond ONLY with valid JSON:
-{"score": 0.0-1.0, "reasons": ["reason1", "reason2", "reason3"], "tip": "one actionable tip for connection"}`;
+RULES:
+- This is a NEW app with few users. Be GENEROUS and encouraging (score range 0.55-0.95).
+- Even with few shared interests, find POSITIVE potential for connection.
+- If profiles are incomplete, score based on available data optimistically.
+- Focus on what COULD work, not what's missing.
+- Reasons should be encouraging and actionable.
+- Tip should suggest a concrete first step to connect.${langInstruction}
 
-      const result = await model.generateContent({
+Respond ONLY with valid JSON:
+{"score": 0.55-0.95, "reasons": ["positive reason 1", "positive reason 2", "positive reason 3"], "tip": "one encouraging actionable tip"}`;
+
+      const geminiPromise = model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: 256, temperature: 0.3},
+        generationConfig: {maxOutputTokens: 300, temperature: 0.4},
       });
-      const text = result.response.text();
+      const geminiTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 8000));
+      const geminiResult = await Promise.race([geminiPromise, geminiTimeout]);
+
+      const text = geminiResult.response.text();
       const parsed = parseGeminiJsonResponse(text);
       if (parsed && typeof parsed.score === 'number') {
-        aiScore = Math.max(0.5, Math.min(parsed.score, 0.95));
-        reasons = Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 3) : [];
-        tip = typeof parsed.tip === 'string' ? parsed.tip : '';
+        aiScore = Math.max(0.55, Math.min(parsed.score, 0.95));
+        reasons = Array.isArray(parsed.reasons) ? parsed.reasons.filter((r) => typeof r === 'string' && r.length > 0).slice(0, 3) : [];
+        tip = typeof parsed.tip === 'string' ? parsed.tip.substring(0, 200) : '';
       }
     } catch (aiErr) {
       logger.warn(`[AIChemistry] Gemini failed (non-critical): ${aiErr.message}`);
+      // Fallback reasons for app nueva
+      if (shared.length > 0) {
+        reasons = [`${shared.length} shared interest${shared.length > 1 ? 's' : ''} detected`];
+      }
     }
 
-    // ── Blend: 40% algorithmic + 60% AI ──
-    const blended = algorithmicScore * 0.4 + aiScore * 0.6;
-    const finalScore = Math.round(48 + blended * 44); // Range 48-92%
+    // ── Blend: dynamic weight based on confidence ──
+    const algoWeight = 1.0 - aiWeight;
+    const blended = algorithmicScore * algoWeight + aiScore * aiWeight;
+
+    // Score range: 48-92% (never too low for new app, never unrealistically high)
+    const finalScore = Math.round(48 + blended * 44);
+
+    // ── Bonus for sparse profiles (app nueva: be generous) ──
+    const sparseBonus = avgCompleteness < 0.5 ? 5 : 0; // +5% if profiles incomplete
 
     const result = {
       success: true,
-      score: Math.max(48, Math.min(92, finalScore)),
+      score: Math.max(48, Math.min(92, finalScore + sparseBonus)),
       reasons,
       tip,
       factors: {
         algorithmic: Math.round(algorithmicScore * 100),
         ai: Math.round(aiScore * 100),
         sharedInterests: shared.length,
-        ragChunksUsed: ragContext ? ragContext.split('\n').length : 0,
+        ragChunksUsed,
+        profileCompleteness: Math.round(avgCompleteness * 100),
+        dataPoints: Math.round(dataPoints),
       },
+      confidence,
       cached: false,
     };
 
-    // ── Save to cache ──
+    // ── Save to cache + update rate limit ──
     try {
-      await cacheRef.set({...result, calculatedAt: admin.firestore.FieldValue.serverTimestamp()});
-    } catch (cacheErr) {
-      logger.warn(`[AIChemistry] Cache write failed: ${cacheErr.message}`);
+      const batch = db.batch();
+      batch.set(cacheRef, {...result, calculatedAt: admin.firestore.FieldValue.serverTimestamp()});
+      batch.set(rateLimitRef, {
+        count: admin.firestore.FieldValue.increment(1),
+        lastReset: admin.firestore.FieldValue.serverTimestamp(),
+      }, {merge: true});
+      await batch.commit();
+    } catch (writeErr) {
+      logger.warn(`[AIChemistry] Cache/rate write failed: ${writeErr.message}`);
     }
 
-    logger.info(`[AIChemistry] ${pairId}: score=${result.score}, algo=${factors.interests?.toFixed(2)}, ai=${aiScore.toFixed(2)}, rag=${result.factors.ragChunksUsed}`);
+    const elapsed = Date.now() - startTime;
+    logger.info(`[AIChemistry] ${pairId}: score=${result.score} confidence=${confidence} algo=${Math.round(algorithmicScore * 100)} ai=${Math.round(aiScore * 100)} rag=${ragChunksUsed} data=${Math.round(dataPoints)} ${elapsed}ms`);
     return result;
   },
 );
