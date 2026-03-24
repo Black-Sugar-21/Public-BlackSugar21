@@ -566,18 +566,86 @@ exports.detectProfileRedFlags = onCall(
  * Homologado: iOS/Android AIEnhancedMatchingService
  */
 exports.generateIcebreakers = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    // ✅ Respuesta homologada: iOS/Android leen resultData["starters"] como [String]
-    const starters = [
-      '¿Cuál es tu hobby secreto que pocas personas conocen? 🤫',
-      '¿Cuál fue la última vez que intentaste algo nuevo? 🌟',
-      '¿Café ☕ o té 🍵? ¿Y por qué?',
-      '¿Qué serie estás viendo ahora mismo? 📺',
-      '¿Cuál es tu lugar favorito en la ciudad? 🏙️',
+    const {userId1, userId2} = request.data || {};
+    if (!userId1 || !userId2) throw new Error('userId1 and userId2 are required');
+
+    const db = admin.firestore();
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // Fallback starters if AI fails
+    const fallbackStarters = [
+      {message: '¿Cuál es tu hobby secreto que pocas personas conocen? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'},
+      {message: '¿Cuál fue la última vez que intentaste algo nuevo? 🌟', reasoning: 'Shows openness', emoji: '🌟'},
+      {message: '¿Café ☕ o té 🍵? ¿Y por qué?', reasoning: 'Light and fun', emoji: '☕'},
     ];
-    return {success: true, starters};
+
+    try {
+      // Read both user profiles
+      const [user1Snap, user2Snap] = await Promise.all([
+        db.collection('users').doc(userId1).get(),
+        db.collection('users').doc(userId2).get(),
+      ]);
+
+      const user1 = user1Snap.exists ? user1Snap.data() : {};
+      const user2 = user2Snap.exists ? user2Snap.data() : {};
+
+      const user1Name = user1.name || 'User';
+      const user2Name = user2.name || 'Match';
+      const user1Bio = user1.bio || '';
+      const user2Bio = user2.bio || '';
+      const user1Interests = Array.isArray(user1.interests) ? user1.interests.join(', ') : '';
+      const user2Interests = Array.isArray(user2.interests) ? user2.interests.join(', ') : '';
+      const lang = user1.deviceLanguage || 'es';
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
+
+      const prompt = `You are a dating conversation expert. Generate exactly 3 personalized icebreaker messages that ${user1Name} can send to ${user2Name} to start a great conversation.
+
+Context:
+- ${user1Name}'s bio: "${user1Bio}"
+- ${user1Name}'s interests: ${user1Interests || 'not specified'}
+- ${user2Name}'s bio: "${user2Bio}"
+- ${user2Name}'s interests: ${user2Interests || 'not specified'}
+
+Rules:
+- Messages must be in ${getLanguageInstruction(lang)} language
+- Each message should be 1-2 sentences max, casual and fun
+- Reference SPECIFIC shared interests or details from their profiles when possible
+- Include one relevant emoji per message
+- Make them feel personal, NOT generic
+- Avoid cliché pickup lines
+- If no shared interests, use creative questions based on their bios
+
+Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning": "why this works", "emoji": "🎯"}]`;
+
+      const result = await model.generateContent({
+        contents: [{role: 'user', parts: [{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 512, temperature: 0.9},
+      });
+
+      const text = result.response.text();
+      const parsed = parseGeminiJsonResponse(text);
+
+      if (Array.isArray(parsed) && parsed.length >= 3) {
+        const icebreakers = parsed.slice(0, 3).map((item) => ({
+          message: item.message || item.text || '',
+          reasoning: item.reasoning || '',
+          emoji: item.emoji || '💬',
+        }));
+        logger.info(`[generateIcebreakers] Generated ${icebreakers.length} personalized icebreakers for ${user1Name}→${user2Name}`);
+        return {success: true, icebreakers, starters: icebreakers.map((i) => i.message)};
+      }
+
+      logger.warn('[generateIcebreakers] AI returned invalid format, using fallback');
+      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+    } catch (err) {
+      logger.warn(`[generateIcebreakers] AI failed (${err.message}), using fallback`);
+      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+    }
   },
 );
 
