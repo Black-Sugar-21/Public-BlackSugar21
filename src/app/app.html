@@ -97,6 +97,21 @@
             <img src="google-play-badge.webp" alt="Disponible en Google Play">
           </a>
         </div>
+
+        <div class="hero-screenshot animate-in delay-4">
+          <img
+            *ngIf="getCurrentLanguage() === 'en'"
+            src="discovery-en.png"
+            alt="Find connections with AI analysis"
+            class="hero-screenshot-img"
+          />
+          <img
+            *ngIf="getCurrentLanguage() === 'es'"
+            src="discovery-es.png"
+            alt="Encuentra conexiones con análisis de IA"
+            class="hero-screenshot-img"
+          />
+        </div>
       </div>
     </section>
 

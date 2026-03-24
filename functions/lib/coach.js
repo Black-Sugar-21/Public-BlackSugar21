@@ -36,7 +36,7 @@ const COACH_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Override via Remote Config to add terms dynamically without redeployment.
 const DEFAULT_PURCHASE_VERBS =
   'comprar(le)?|regalar(le)?|buscar\\s*(un\\s*)?(regalo|detalle|presente|obsequio)|deseo\\s+(comprar|regalar|llevar|dar)|necesito\\s+(comprar|buscar)|quiero\\s+(comprar|regalar|dar|llevar)(le)?' +
-  '|buy(ing)?|shop(ping)?\\s*for|purchase|gift\\s*(for|idea)|present\\s*for|pick\\s*up\\s*(some|a|the)' +
+  '|buy(ing)?|shop(ping)?\\s*for|purchase|gift\\s*(for|idea)|present\\s*for|pick\\s*up\\s*(some|a|the)|gift\\s*ideas?|what\\s*to\\s*(buy|get|give)|best\\s*gift' +
   '|acheter|offrir(\\s+(un|des|du))?|chercher\\s*(un\\s*)?(cadeau|bouquet)' +
   '|kaufen|schenken|besorgen|ein\\s*Geschenk|Geschenkidee' +
   '|quero\\s+(comprar|dar|presentear)|presentear|dar\\s*de\\s*presente' +
@@ -65,7 +65,21 @@ const DEFAULT_PURCHASE_GIFTS =
   '|arete(s)?|pendientes?|earring(s)?|boucles?|Ohrring(e)?|brinco(s)?|イヤリング|耳[环環]|أقراط' +
   '|reloj(es)?|watch(es)?|montre|Uhr(en)?|rel[oó]gio|腕時計|手[表錶]|ساعة|jam\\s*tangan' +
   '|perfume(s)?|parfum(s)?|Parfüm|香水|عطر' +
-  '|vino(s)?|wine(s)?|vin(ho)?|Wein|ワイン|葡萄酒|[红紅]酒|نبيذ|anggur|champagn?[ea]?|champ[aá][ñn]|espumante|シャンパン|香[槟檳]|شمبانيا' +
+  '|vino(s)?|wine(s)?|vin(ho)?|Wein|ワイン|葡萄酒|[红紅]酒|نبيذ|anggur|champagn?[ea]?|champ[aá][ñn]|espumante|シャンパン|香[槟檳]|شمبانيا'
+  + '|whisky|whiskey|bourbon|scotch|ウイスキー|威士忌|виски|ويسكي'
+  + '|vodka|ウォッカ|伏特加|водка|فودكا'
+  + '|gin|ginebra|ジン|金酒|джин|جن'
+  + '|ron|rum|rhum|ラム|朗姆酒|ром|روم'
+  + '|tequila|テキーラ|龙舌兰|текила|تكيلا'
+  + '|pisco|ピスコ|皮斯科|писко'
+  + '|mezcal|mescal|メスカル|梅斯卡尔|мескаль'
+  + '|cognac|co[ñn]ac|コニャック|干邑|коньяк|كونياك'
+  + '|brandy|aguardiente|ブランデー|白兰地|бренди'
+  + '|grappa|граппа|グラッパ'
+  + '|sake|saké|日本酒|清酒|саке|ساكي'
+  + '|licor(es)?|liqueur|lik[öo]r|リキュール|利口酒|ликёр|مشروب(ات)?\\s*روحية'
+  + '|cerveza(s)?\\s*artesanal(es)?|craft\\s*beer|Craft-?Bier|クラフトビール|精酿啤酒|крафтовое\\s*пиво|بيرة\\s*حرفية|bir\\s*craft'
+  + '|galleta(s)?|cookie(s)?|biscuit(s)?|Kekse?|Pl[aä]tzchen|クッキー|ビスケット|[饼餅]干|печенье|بسكويت|kue\\s*kering|sablé(s)?|shortbread' +
   '|vela(s)?|candle(s)?|bougie(s)?|Kerzen?|キャンドル|[蜡蠟][烛燭]|شموع|lilin' +
   '|lingeri[ea]|lencer[ií]a|Dessous|ランジェリー|内衣' +
   '|dulces?|sweets?|candy|bonbon(s)?|S[uü][ßs]igkeit|doce(s)?|お菓子|糖果|حلوى|permen|caramelo(s)?' +
@@ -475,14 +489,16 @@ async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en'
       return '';
     }
 
-    // 4. Language-aware ranking: prefer user lang, then English, then any
+    // 4. Language-aware ranking: prefer user lang, then multi/en, then any
+    // "multi" = universal knowledge (works for all languages) — treat as high priority
     const langNorm = (lang || 'en').substring(0, 2).toLowerCase();
     const userLangDocs = docs.filter((d) => d.language === langNorm);
-    const enDocs = docs.filter((d) => d.language === 'en' && d.language !== langNorm);
-    const otherDocs = docs.filter((d) => d.language !== langNorm && d.language !== 'en');
+    const multiDocs = docs.filter((d) => d.language === 'multi' && d.language !== langNorm);
+    const enDocs = docs.filter((d) => d.language === 'en' && d.language !== langNorm && d.language !== 'multi');
+    const otherDocs = docs.filter((d) => d.language !== langNorm && d.language !== 'en' && d.language !== 'multi');
 
     // Merge maintaining similarity order within each language group
-    const ranked = [...userLangDocs, ...enDocs, ...otherDocs];
+    const ranked = [...userLangDocs, ...multiDocs, ...enDocs, ...otherDocs];
     // Deduplicate by category (keep highest similarity per category)
     const seenCategories = new Set();
     const deduped = ranked.filter((d) => {
@@ -690,6 +706,8 @@ exports.dateCoachChat = onCall(
             const lmAllTypes = rawTypeEntry ? (Array.isArray(rawTypeEntry) ? rawTypeEntry : [rawTypeEntry]) : null;
             // Keep single-type ref for logging/fallback compatibility
             const lmIncludedType = lmAllTypes ? [lmAllTypes[0]] : null;
+            // Retrieve cached cuisineType from initial search (if any)
+            const cachedCuisine = (_lmCacheData && _lmCacheData.intent && _lmCacheData.intent.cuisineType) || null;
             let lmQueries;
             if (lmCat) {
               const canonicalQ = categoryQueryMap[lmCat];
@@ -698,6 +716,13 @@ exports.dateCoachChat = onCall(
                 ? [terms.slice(0, 3).join(' '), terms.slice(3).join(' ')]
                 : [terms.join(' ')];
               lmQueries = [canonicalQ, ...subQ].slice(0, 3);
+              // Add cuisine-specific query from cache for better coverage on category switches
+              if (cachedCuisine && lmCat === 'restaurant') {
+                const cuisineQ = `${cachedCuisine} restaurant`;
+                if (!lmQueries.some((q) => q.toLowerCase().includes(cachedCuisine.toLowerCase()))) {
+                  lmQueries.push(cuisineQ);
+                }
+              }
             } else if (requestCategory) {
               // Category not in queryMap (e.g. Remote Config missing key) — build basic query
               lmQueries = [requestCategory.replace(/_/g, ' ')];
@@ -1162,7 +1187,7 @@ exports.dateCoachChat = onCall(
       // 1. Proximity words in 10 languages (e.g., "cercana", "nearby", "near me")
       const proximityPattern = /\b(cercan[ao]s?|nearby|near me|near here|close by|around here|cerca de (aqu[ií]|m[ií])|por aqu[ií]|en la zona|en mi zona|dans le coin|in der nähe|perto de mim|perto daqui|近くの|附近|поблизости|рядом|dekat sini|di sekitar|around (downtown|the city|town|centro)|alrededor de|close to|junto a|in the .{2,20} area|en la zona de|بالقرب|قريب من هنا|في المنطقة|حولي|بجانبي)\b/i;
       // 2. Place/business type keywords relevant for dating (all languages supported)
-      const placeTypePattern = /\b(florerr?[ií]a|florist|flower\s*shop|flor(es|ist)|joyerr?[ií]a|jewel(ry|er)|chocolater[ií]a|chocolate\s*shop|bomboner[ií]a|pastel(er[ií]a|shop)|baker[yi]|panader[ií]a|dulcer[ií]a|candy|helade?r[ií]a|ice\s*cream|gelater[ií]a|perfumer[ií]a|perfume\s*shop|regal(os?|er[ií]a)|gift\s*shop|tienda de regalos|restaurante?s?|café|cafeter[ií]a|coffee\s*shop|bar(es)?|pub|lounge|cocktail|coctel(er[ií]a)?|wine\s*bar|vinoteca|cervece?r[ií]a|brewery|brunch|bistro|trattoria|pizzer[ií]a|sushi|cena|dinner|comida|food|taquería|taco|burger|hamburgues(a|er[ií]a)|bbq|parrilla|asador|marisquer[ií]a|seafood|spa|masaje|massage|wellness|yoga|gym|gimnasio|sal[oó]n de belleza|beauty\s*salon|peluquer[ií]a|barber|hair\s*salon|mall|centro comercial|shopping|boutique|tienda de ropa|clothing|museo|museum|galer[ií]a de arte|art\s*gallery|teatro|theater|theatre|cine|cinema|movie|pel[ií]cul|bowling|boliche|karaoke|escape\s*room|arcade|mini\s*golf|parque|park|jardín|garden|bot[aá]nic|plaza|mirador|viewpoint|rooftop|terraza|playa|beach|club|discoteca|nightclub|disco|pista de baile|dance|lago|lake|monta[ñn]a|mountain|sendero|trail|hiking|camping|picnic|zoo(l[oó]gico)?|acuario|aquarium|planetario|planetarium|librer[ií]a|bookstore|book\s*shop|antique|antig[üu]edad|tattoo|tatuaje|pier(cing)?|fotograf[ií]a|photo\s*(studio|booth)|cooking\s*class|clase de cocina|potter[yi]|cer[aá]mica|art\s*class|mezcaler[ií]a|tequiler[ií]a|licorerr?[ií]a|liquor|wine\s*shop|deli|market|mercado|feria|fair|concert|concierto|m[uú]sica en vivo|live\s*music|jazz|show|espect[aá]culo|hotel|motel|hostal|hostel|airbnb|cabin|caba[ñn]a|resort|country\s*club|golf|tenis|tennis|ski|surf|d[oó]nde (comprar|llevar|ir|encontrar|buscar)|where\s*(to\s*)?(buy|find|go|get|take)|dance\s*class|clase de baile|adventure\s*park|parque de aventura|go-?karts?|karting|farmer'?s?\s*market|mercado org[aá]nico|food\s*truck|couple\s*photoshoot|sesi[oó]n de fotos|speakeasy|wine\s*tasting|cata de vinos?|cooking\s*experience|experiencia gastron[oó]mica|zip\s*line|tirolesa|paintball|laser\s*tag|trampoline|camas el[aá]sticas|boat\s*(ride|tour)|paseo en bote)\b/i;
+      const placeTypePattern = /\b(florerr?[ií]a|florist|flower\s*shop|flor(es|ist)|joyerr?[ií]a|jewel(ry|er)|chocolater[ií]a|chocolate\s*shop|bomboner[ií]a|pastel(er[ií]a|shop)|baker[yi]|panader[ií]a|dulcer[ií]a|candy|helade?r[ií]a|ice\s*cream|gelater[ií]a|perfumer[ií]a|perfume\s*shop|regal(os?|er[ií]a)|gift\s*shop|tienda de regalos|restaurante?s?|café|cafeter[ií]a|coffee\s*shop|bar(es)?|pub|lounge|cocktail|coctel(er[ií]a)?|wine\s*bar|vinoteca|cervece?r[ií]a|brewery|brunch|bistro|trattoria|pizzer[ií]a|sushi|cena|dinner|comida|food|taquería|taco|burger|hamburgues(a|er[ií]a)|bbq|parrilla|asador|marisquer[ií]a|seafood|spa|masaje|massage|wellness|yoga|gym|gimnasio|sal[oó]n de belleza|beauty\s*salon|peluquer[ií]a|barber|hair\s*salon|mall|centro comercial|shopping|boutique|tienda de ropa|clothing|museo|museum|galer[ií]a de arte|art\s*gallery|teatro|theater|theatre|cine|cinema|movie|pel[ií]cul|bowling|boliche|karaoke|escape\s*room|arcade|mini\s*golf|parque|park|jardín|garden|bot[aá]nic|plaza|mirador|viewpoint|rooftop|terraza|playa|beach|club|discoteca|nightclub|disco|pista de baile|dance|lago|lake|monta[ñn]a|mountain|sendero|trail|hiking|camping|picnic|zoo(l[oó]gico)?|acuario|aquarium|planetario|planetarium|librer[ií]a|bookstore|book\s*shop|antique|antig[üu]edad|tattoo|tatuaje|pier(cing)?|fotograf[ií]a|photo\s*(studio|booth)|cooking\s*class|clase de cocina|potter[yi]|cer[aá]mica|art\s*class|mezcaler[ií]a|tequiler[ií]a|licorerr?[ií]a|liquor|wine\s*shop|deli|market|mercado|feria|fair|concert|concierto|m[uú]sica en vivo|live\s*music|jazz|show|espect[aá]culo|hotel|motel|hostal|hostel|airbnb|cabin|caba[ñn]a|resort|country\s*club|golf|tenis|tennis|ski|surf|d[oó]nde (comprar|llevar|ir|encontrar|buscar)|where\s*(to\s*)?(buy|find|go|get|take)|dance\s*class|clase de baile|adventure\s*park|parque de aventura|go-?karts?|karting|farmer'?s?\s*market|mercado org[aá]nico|food\s*truck|couple\s*photoshoot|sesi[oó]n de fotos|speakeasy|wine\s*tasting|cata de vinos?|cooking\s*experience|experiencia gastron[oó]mica|zip\s*line|tirolesa|paintball|laser\s*tag|trampoline|camas el[aá]sticas|boat\s*(ride|tour)|paseo en bote|comida\s*(árabe|arabe|china|italiana|mexicana|japonesa|tailandesa|india|peruana|coreana|francesa|griega|turca|vietnamita|brasile[ñn]a|cubana|espa[ñn]ola|colombiana|venezolana|chilena|argentina|alemana|americana|hawaiana|etiope|marroqu[ií]|libanesa|mediterr[aá]nea|asi[aá]tica|latina|fusi[oó]n|vegana|vegetariana|org[aá]nica|saludable|r[aá]pida|gourmet|casera|criolla|noikkei|tex-?mex)|cocina\s*(árabe|arabe|china|italiana|mexicana|japonesa|tailandesa|india|peruana|coreana|francesa|griega|turca|vietnamita|brasile[ñn]a|mediterr[aá]nea|asi[aá]tica|latina|fusi[oó]n|vegana|vegetariana|gourmet|criolla|nikkei|tex-?mex)|arab(ic|ian)?\s*(food|restaurant|cuisine)|chinese\s*(food|restaurant|cuisine)|italian\s*(food|restaurant|cuisine)|mexican\s*(food|restaurant|cuisine)|japanese\s*(food|restaurant|cuisine)|thai\s*(food|restaurant|cuisine)|indian\s*(food|restaurant|cuisine)|peruvian\s*(food|restaurant|cuisine)|korean\s*(food|restaurant|cuisine)|french\s*(food|restaurant|cuisine)|greek\s*(food|restaurant|cuisine)|turkish\s*(food|restaurant|cuisine)|vietnamese\s*(food|restaurant|cuisine)|brazilian\s*(food|restaurant|cuisine)|mediterranean\s*(food|restaurant|cuisine)|asian\s*(food|restaurant|cuisine)|vegan\s*(food|restaurant|cuisine)|vegetarian\s*(food|restaurant|cuisine)|fusion\s*(food|restaurant|cuisine)|soul\s*food|comfort\s*food|street\s*food|fine\s*dining|dim\s*sum|hot\s*pot|pho|pad\s*thai|curry|tandoori|naan|hummus|shawarma|falafel|d[oö]ner|kebab|gyros?|bibimbap|ramen\s*(shop|bar|house)|udon|tempura|wok|stir\s*fry|noodle\s*(house|shop|bar)|dumpling|bao|poke\s*bowl|acai\s*bowl|smoothie|juice\s*bar|tea\s*house|t[eé]\s*house|cuisine\s*(arabe|chinoise|italienne|mexicaine|japonaise|tha[ïi]landaise|indienne|p[eé]ruvienne|cor[eé]enne|fran[cç]aise|grecque|turque|vietnamienne|br[eé]silienne|m[eé]diterran[eé]enne|asiatique|v[eé]g[eé]talienne|v[eé]g[eé]tarienne)|arabisches?\s*Essen|chinesisches?\s*Essen|italienisches?\s*Essen|mexikanisches?\s*Essen|japanisches?\s*Essen|thai\s*Essen|indisches?\s*Essen|griechisches?\s*Essen|t[uü]rkisches?\s*Essen|comida\s*(árabe|chinesa|italiana|mexicana|japonesa|tailandesa|indiana|peruana|coreana|francesa|grega|turca|vietnamita|brasileira|mediterr[aâ]nea|asi[aá]tica|vegana|vegetariana)|アラブ料理|中華料理|中国料理|イタリア(ン|料理)|メキシコ料理|タイ料理|インド料理|韓国料理|フランス料理|ベトナム料理|ペルー料理|ギリシャ料理|トルコ料理|和食|洋食|阿拉伯[菜餐]|中[餐菜]|意大利[菜餐]|墨西哥[菜餐]|日本[菜料]理|泰[国國][菜餐]|印度[菜餐]|韩[国國][菜餐]|法[国國][菜餐]|越南[菜餐]|地中海[菜餐]|арабская\s*кухня|китайская\s*кухня|итальянская\s*кухня|мексиканская\s*кухня|японская\s*кухня|тайская\s*кухня|индийская\s*кухня|корейская\s*кухня|французская\s*кухня|средиземноморская\s*кухня|مطعم\s*(عربي|صيني|إيطالي|مكسيكي|ياباني|تايلاندي|هندي|كوري|فرنسي|تركي|لبناني|يوناني)|أكل\s*(عربي|صيني|إيطالي|مكسيكي|ياباني|هندي|تركي|لبناني)|makanan\s*(arab|cina|italia|meksiko|jepang|thailand|india|korea|perancis|turki|vietnam|laut)|masakan\s*(arab|cina|italia|jepang|korea|india|padang|sunda|jawa))\b/i;
       // 3. Additional place search detection — intent phrases, food/drink verbs, proximity, all 10 languages
       const placeSearchPattern = /\b(cerca\b|aqu[ií]\s*cerca|ac[aá]\s*cerca|por\s*ac[aá]|comer|cenar|almorzar|desayunar|merendar|tomar\s*(algo|caf[eé]|un\s*(trago|copa|coctel|drink|café))|ir\s*a\s*(comer|cenar|almorzar|desayunar|tomar)|salir\s*(a\s*)?(comer|cenar|de\s*cita|de\s*noche|a\s*pasear)|vamos\s*a\s*(comer|cenar|almorzar|tomar|salir)|lugar(es)?(\s+(para|donde|que|bonito|lindo|bueno))?|sitio(s)?(\s+(para|donde|que|bonito|lindo|bueno))?|recomi[eé]nd(ame|a(me)?|en)|sugi[eé]r(eme|e(me)?)|d[oó]nde\s*(puedo|podemos|deber[ií]a|voy|vamos|hay|queda|ir|comer|cenar)|qu[eé]\s*(me\s*)?recomiendas|conoces\s*alg[uú]n|sabes\s*de\s*alg[uú]n|hay\s*alg[uú]n|un\s*(buen|lindo|bonito)\s*(lugar|sitio|restaurante|bar|caf[eé])|mejore?s?\s*(lugar|sitio|restaurante|bar)e?s?|algún\s*(lugar|sitio|bar|café|restaurante)|alguna\s*(idea|sugerencia|recomendaci[oó]n)|ideas?\s*(de|para)\s*(lugar|sitio|cita|date|salir)|eat(ing)?|dine|din(ner|ing)(\s*(spot|place))?|lunch(ing)?|grab\s*(a\s*)?(bite|food|coffee|drink|beer)|get\s*(food|lunch|dinner|coffee|drinks?)|go\s*(out\s*)?(for|to)\s*(eat|dinner|lunch|drinks?|food)|want\s*to\s*(eat|go|try|find|visit|explore)|where\s*(can|should|do|to)\s*(i|we)?\s*(eat|go|find|get|drink|have)|best\s*(place|spot|restaurant|bar|venue)s?\s*(to|for|near|in|around)?|recommend(ation)?s?\s*(for|a)?|suggest(ion)?s?\s*(for|a)?|know\s*(of\s*)?(any|a)\s*(good|nice|great)?|looking\s*for\s*(a|some|the)?\s*(place|spot|restaurant|bar|venue)|somewhere\s*(nice|good|cool|fun|romantic|to\s*eat)|take\s*(me|her|him|us)\s*(to|somewhere)|manger|o[uù]\s*(aller|manger|boire|sortir)|un\s*endroit|quelque\s*part|id[eé]es?\s*de\s*(lieu|sortie|restaurant)|essen(\s*gehen)?|wohin(\s*gehen)?|irgendwo|wo\s*(kann|soll)|食べ(る|に|たい|よう|に行)?|飲み(に|たい|に行)?|どこ(か|に|で|へ)|おすすめ|いい(店|場所|レストラン)|吃[饭飯]?|喝|哪[里裡]|推[荐薦]|好的?(餐[厅廳]|地方|店)|makan|minum|tempat\s*(makan|bagus)|dimana|kemana|perto|pr[oó]ximo|onde\s*(posso|comer|ir|fica)|por\s*aqu[ií]|por\s*ac[aá]|поесть|поужинать|пообедать|позавтракать|где\s*(можно|поесть|найти)|порекомендуй|посоветуй|хорошее?\s*(место|ресторан|бар|кафе)|أين\s*(أجد|يمكن|نذهب|نأكل|نشرب)|مطعم|مقهى|بار|مكان\s*(جيد|حلو|رومانسي|للأكل|للشرب)|أريد\s*(أكل|أذهب|مكان)|أفضل\s*(مطعم|مقهى|مكان)|اقترح|وين\s*(نروح|أروح|أقدر\s*آكل))\b/i;
       // 4. Purchase, gifting & product search — catches buy/gift intent + standalone date-relevant products (10 languages)
@@ -1195,16 +1220,38 @@ exports.dateCoachChat = onCall(
           const intentApiKey = process.env.GEMINI_API_KEY;
           if (intentApiKey) {
             const intentAI = new GoogleGenerativeAI(intentApiKey);
+            // Intent extraction config — RC-configurable via coach_config.intentExtraction
+            const ieConfig = config.intentExtraction || {};
             const intentModel = intentAI.getGenerativeModel({
               model: AI_MODEL_NAME,
-              generationConfig: {temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json'},
+              generationConfig: {temperature: ieConfig.temperature || 0.1, maxOutputTokens: ieConfig.maxTokens || 512, responseMimeType: 'application/json'},
             });
             const intentPrompt = `Extract search intent from this message. User language: "${lang}".
 Message: "${message.substring(0, 300)}"
 
 Return JSON with these fields:
-- "placeType": short venue type (e.g. pub, café, spa, park, flower shop, pizzeria)
-- "placeQueries": 2-3 short search queries in user's language for Google Places. Map products to shops (chocolates→chocolatería, flowers→florería, pizza→pizzería)
+- "placeType": short venue type (e.g. pub, café, spa, park, flower shop, pizzeria, arabic restaurant, chinese restaurant, sushi bar, chocolatería, florería, joyería)
+- "placeQueries": 2-3 short search queries in user's language for Google Places. CRITICAL mappings:
+  * BUYING/SHOPPING intent (comprar, buy, regalar, gift, llevar, para llevar, takeaway, to go, emporter, mitnehmen, テイクアウト, 外卖, на вынос, للأخذ, bawa pulang):
+    - chocolates/bombones → ["chocolatería", "tienda de chocolates", "bombonería"] (NOT restaurant)
+    - flores/flowers/Blumen/fleurs/花/цветы/ورد/bunga → ["florería", "floristería", "flower shop"] (NOT restaurant, use user's language)
+    - joyas/jewelry → ["joyería", "tienda de joyas", "jewelry store"] (NOT restaurant)
+    - perfume → ["perfumería", "tienda de perfumes", "perfume store"] (NOT restaurant)
+    - regalos/gifts/cadeaux/Geschenke/プレゼント/礼物/подарки/هدايا → ["tienda de regalos", "gift shop", "boutique"] (NOT restaurant)
+    - vinos/wine/champagne/espumante/シャンパン/香槟 → ["vinoteca", "wine shop", "licorería", "wine store"] (NOT restaurant)
+    - licor/whisky/vodka/rum/tequila/spirits/bebidas alcohólicas → ["licorería", "liquor store", "tienda de licores"] (NOT bar)
+    - cerveza artesanal/craft beer → ["tienda de cervezas", "craft beer shop", "beer store"]
+    - ropa/clothing → ["tienda de ropa", "boutique"] (NOT restaurant)
+    - pasteles/cakes/galletas/cookies/macarons → ["pastelería", "repostería", "bakery"]
+    - helados/ice cream → ["heladería", "ice cream shop"]
+    - sushi para llevar/takeaway sushi → ["sushi delivery", "sushi takeaway", "sushi para llevar"] (NOT sit-down restaurant)
+    - comida china para llevar → ["comida china delivery", "chinese takeaway", "chinese food to go"]
+    - comida para llevar/takeout/takeaway (any cuisine) → add "delivery" or "para llevar" to cuisine query
+    - galletas/cookies/biscuits/Kekse/ビスケット/饼干/печенье/بسكويت/kue kering → ["bakery", "pastelería", "cookie shop"]
+  * Cuisine types → "restaurante [cuisine]" (e.g. "comida árabe"→"restaurante árabe")
+  * Specific dishes → restaurant type (sushi→sushi restaurant, shawarma→arabic restaurant)
+  * Generic food → restaurant (comer, cenar, almorzar→restaurante)
+  * GIFT intent (regalar, para mi cita, for my date, as a gift): when the user wants to BUY food/drinks AS A GIFT, use shop/store queries NOT restaurant. Example: "comprar sushi para regalar" → sushi delivery/takeaway, "champagne para mi cita" → vinoteca/wine shop
 - "locationMention": city/area/country mentioned or null. Extract the location even from indirect references:
   * Travel: "voy a Buenos Aires", "going to Paris", "viajo a Madrid"
   * Friends/family: "mi amigo vive en Lima", "my sister is in London", "tengo familia en Bogotá"
@@ -1213,7 +1260,20 @@ Return JSON with these fields:
   * Future plans: "me mudo a Barcelona", "moving to Dubai", "pensando en ir a Bali"
   * Any mention of a city/country name = extract it
 - "mood": desired vibe in 2-3 words or null
-- "googleCategory": closest from: cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo (use shopping_mall for gift shops, bakery for sweets) or null`;
+- "cuisineType": specific cuisine if mentioned (arabic, chinese, italian, mexican, japanese, thai, indian, peruvian, korean, french, greek, turkish, vietnamese, brazilian, mediterranean, asian, vegan, vegetarian, fusion) or null
+- "searchType": one of "eat" (food/cuisine/dining), "buy" (shopping/gifts/products), "visit" (activities/places) or null. This helps determine whether to show restaurants, shops, or venues
+- "googleCategory": closest from: cafe, restaurant, bar, night_club, movie_theater, park, museum, bowling_alley, art_gallery, bakery, shopping_mall, spa, aquarium, zoo, florist, liquor_store. IMPORTANT category rules:
+  * Cuisine searches (comida árabe, sushi, etc.) → "restaurant"
+  * Chocolate/candy/sweets/pasteles/cookies/galletas/helados → "bakery"
+  * Flowers/roses/bouquet/florería/fleuriste/Blumen/花/цветы/ورد/bunga → "florist"
+  * Wine/champagne/whisky/vodka/gin/rum/tequila/pisco/licor/spirits/sake/mezcal/aguardiente/grappa/cognac/brandy → "liquor_store"
+  * Gifts/jewelry/perfume/clothing → "shopping_mall"
+  * Coffee/tea → "cafe"
+  * Drinks/cocktails/beer (to DRINK at a venue) → "bar"
+  * Buy beer/craft beer (to TAKE HOME) → "liquor_store"
+  * Massage/wellness/beauty → "spa"
+  * NEVER use "restaurant" for buying products — use "bakery", "florist", "liquor_store", or "shopping_mall" instead
+  * NEVER use "bar" for buying alcohol to take home — use "liquor_store" instead`;
             const intentResult = await intentModel.generateContent(intentPrompt);
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
@@ -1537,6 +1597,40 @@ Return JSON with these fields:
               : [];
             if (intentQueries.length > 0) {
               queries = intentQueries;
+              const isBuySearch = extractedIntent.searchType === 'buy';
+              if (isBuySearch) {
+                // Shopping/buying intent — add specialty store queries, NOT restaurants
+                // RC-configurable via coach_config.placeSearch.shopFallbacks
+                const DEFAULT_SHOP_FALLBACKS = {
+                  bakery: ['chocolatería', 'pastelería', 'bakery', 'candy shop', 'cookie shop', 'galletas artesanales'],
+                  florist: ['florería', 'floristería', 'flower shop', 'fleuriste', 'Blumenladen', 'floricultura', '花屋', '花店', 'цветочный магазин', 'محل زهور', 'toko bunga'],
+                  liquor_store: ['licorería', 'vinoteca', 'liquor store', 'wine shop', 'cave à vin', 'Weinhandlung', '酒屋', '酒类专卖', 'винный магазин', 'متجر مشروبات', 'toko minuman'],
+                  shopping_mall: ['gift shop', 'tienda de regalos', 'joyería', 'boutique', 'perfumería'],
+                };
+                const shopFallbacks = (ps.shopFallbacks && typeof ps.shopFallbacks === 'object')
+                  ? {...DEFAULT_SHOP_FALLBACKS, ...ps.shopFallbacks}
+                  : DEFAULT_SHOP_FALLBACKS;
+                const catKey = extractedIntent.googleCategory ? normalizeCategory(extractedIntent.googleCategory) : null;
+                const fallbacks = shopFallbacks[catKey] || shopFallbacks.shopping_mall;
+                const missingFallback = fallbacks.find((fb) => !queries.some((q) => q.toLowerCase().includes(fb.toLowerCase().split(' ')[0])));
+                if (missingFallback) queries.push(missingFallback);
+              } else if (extractedIntent.cuisineType && typeof extractedIntent.cuisineType === 'string') {
+                // Cuisine search — add cuisine-specific query + fallback alternatives
+                const ct = extractedIntent.cuisineType.toLowerCase();
+                const cuisineQuery = `${extractedIntent.cuisineType} restaurant`;
+                if (!queries.some((q) => q.toLowerCase().includes(ct))) {
+                  queries.push(cuisineQuery);
+                }
+                // Cuisine fallback queries — RC-configurable via coach_config.placeSearch.cuisineFallbackQueries
+                const DEFAULT_CUISINE_FALLBACK = {arabic:'mediterranean restaurant',chinese:'asian restaurant',italian:'mediterranean restaurant',mexican:'latin restaurant',japanese:'asian restaurant',thai:'asian restaurant',indian:'curry restaurant',peruvian:'ceviche restaurant',korean:'asian restaurant',french:'bistro',greek:'mediterranean restaurant',turkish:'kebab restaurant',vietnamese:'pho restaurant',brazilian:'steakhouse',vegan:'vegetarian restaurant',vegetarian:'healthy restaurant'};
+                const altMap = (ps.cuisineFallbackQueries && typeof ps.cuisineFallbackQueries === 'object')
+                  ? {...DEFAULT_CUISINE_FALLBACK, ...ps.cuisineFallbackQueries}
+                  : DEFAULT_CUISINE_FALLBACK;
+                const altQuery = altMap[ct];
+                if (altQuery && !queries.some((q) => q.toLowerCase().includes(altQuery.split(' ')[0]))) {
+                  queries.push(altQuery);
+                }
+              }
               // Add canonical category query if we have one for extra coverage
               if (searchAllTypes && extractedIntent.googleCategory) {
                 const catKey = normalizeCategory(extractedIntent.googleCategory);
@@ -1681,6 +1775,45 @@ Return JSON with these fields:
       const locationOverrideInstruction = placesLocationOverridden && extractedIntent && extractedIntent.locationMention
         ? `\n\nIMPORTANT — LOCATION OVERRIDE: The user mentioned "${extractedIntent.locationMention}" in their message. The REAL PLACES listed below are from "${extractedIntent.locationMention}", NOT the user's current GPS location. Your reply MUST reference "${extractedIntent.locationMention}" as the location for these suggestions. Do NOT say your recommendations are limited to the user's current city — these places ARE in "${extractedIntent.locationMention}".`
         : '';
+      // Cuisine-specific instruction for Gemini when a specific cuisine type is detected
+      // Handles 3 scenarios: many results, few results, zero results
+      const cuisineType = extractedIntent && extractedIntent.cuisineType;
+      // Cuisine alternatives — RC-configurable via coach_config.placeSearch.cuisineAlternatives
+      const DEFAULT_CUISINE_ALTERNATIVES = {
+        arabic: 'turkish, lebanese, mediterranean, middle eastern',
+        chinese: 'asian, japanese, korean, vietnamese, thai',
+        italian: 'mediterranean, french, spanish, pizza',
+        mexican: 'latin american, tex-mex, peruvian, colombian',
+        japanese: 'asian, korean, chinese, sushi',
+        thai: 'asian, vietnamese, chinese, indian',
+        indian: 'thai, middle eastern, pakistani, nepalese',
+        peruvian: 'latin american, mexican, japanese-peruvian (nikkei), ceviche',
+        korean: 'asian, japanese, chinese, bbq',
+        french: 'mediterranean, italian, european, bistro',
+        greek: 'mediterranean, turkish, lebanese',
+        turkish: 'arabic, lebanese, mediterranean, middle eastern',
+        vietnamese: 'asian, thai, chinese, pho',
+        brazilian: 'latin american, steakhouse, churrasco',
+        mediterranean: 'greek, italian, turkish, lebanese',
+        asian: 'chinese, japanese, thai, korean, vietnamese',
+        vegan: 'vegetarian, organic, healthy, plant-based',
+        vegetarian: 'vegan, organic, healthy, salad',
+        fusion: 'contemporary, creative, international, eclectic',
+      };
+      const cuisineAlternatives = (ps.cuisineAlternatives && typeof ps.cuisineAlternatives === 'object')
+        ? {...DEFAULT_CUISINE_ALTERNATIVES, ...ps.cuisineAlternatives}
+        : DEFAULT_CUISINE_ALTERNATIVES;
+      const altCuisines = cuisineType ? (cuisineAlternatives[cuisineType.toLowerCase()] || 'international, fusion, contemporary') : '';
+      const cuisineInstruction = cuisineType
+        ? `\n7. CUISINE FOCUS — "${cuisineType}" cuisine:
+   a) BEST CASE (${cuisineType} places found in REAL PLACES list): Prioritize them at the top of activitySuggestions. In your "reply", mention a popular ${cuisineType} dish perfect for a date and any dining etiquette tip.
+   b) FEW RESULTS (1-2 ${cuisineType} places): Include them first, then fill with similar cuisines (${altCuisines}). In your "reply", acknowledge the limited options and explain why the alternatives are great choices too.
+   c) ZERO ${cuisineType.toUpperCase()} RESULTS: You MUST still generate activitySuggestions — DO NOT return an empty array or apologize without suggestions. Instead:
+      - Select the closest cuisine alternatives from REAL PLACES: ${altCuisines}
+      - In your "reply", say something like: "I couldn't find ${cuisineType} restaurants nearby, but here are some amazing alternatives with similar flavors that would be perfect for a date"
+      - Include a brief ${cuisineType} cuisine tip anyway (dishes, etiquette) so the user feels their question was valued
+      - NEVER say "sorry I can't help" — ALWAYS provide alternatives with enthusiasm`
+        : '';
       const placeSearchInstruction = isUserPlaceSearch
         ? `\n\nCRITICAL — USER IS SEARCHING FOR PLACES OR PRODUCTS:
 The user is explicitly asking about places, venues, locations, shops, or products to buy (gifts, food, drinks, etc.).
@@ -1689,7 +1822,12 @@ The user is explicitly asking about places, venues, locations, shops, or product
 3. Select places from the REAL PLACES list provided. Use their EXACT names.
 4. This is NOT optional — if you omit activitySuggestions, the response is INVALID.
 5. NEVER respond with only text. The activitySuggestions array is the PRIORITY.
-6. For PRODUCT searches (chocolates, flowers, wine, gifts, jewelry, perfume, pizza, cake, etc.), suggest SHOPS and STORES where they can buy those products — prioritize specialty stores over generic venues.${locationOverrideInstruction}`
+6. For PRODUCT/SHOPPING searches (chocolates, flowers, wine, gifts, jewelry, perfume, cake, etc.):
+   - Suggest SPECIALTY SHOPS and STORES, NOT restaurants
+   - Use categories "bakery" for sweets/chocolates/pasteles, "shopping_mall" for gifts/flowers/jewelry/perfume/clothing
+   - In your "reply", include a brief romantic tip about the product (e.g., "dark chocolate pairs beautifully with a handwritten note", "red roses are classic, but sunflowers show creativity")
+   - Prioritize: specialty stores > department stores > generic venues
+   - If no specialty stores found, suggest bakeries for sweets or malls/boutiques for gifts${cuisineInstruction}${locationOverrideInstruction}`
         : '';
 
       // Build activity block — use real Google Maps places when available
@@ -2369,7 +2507,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
             returnedPlaceIds,
             dominantCategory,
             lastRadiusUsed: placesLastRadiusUsed,
-            ...(extractedIntent ? {intent: {placeType: extractedIntent.placeType || null, googleCategory: extractedIntent.googleCategory || null, locationMention: extractedIntent.locationMention || null}} : {}),
+            ...(extractedIntent ? {intent: {placeType: extractedIntent.placeType || null, googleCategory: extractedIntent.googleCategory || null, locationMention: extractedIntent.locationMention || null, cuisineType: extractedIntent.cuisineType || null, searchType: extractedIntent.searchType || null}} : {}),
             ...(placesLocationOverridden && placesCenter ? {overrideLat: placesCenter.latitude, overrideLng: placesCenter.longitude} : {}),
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),

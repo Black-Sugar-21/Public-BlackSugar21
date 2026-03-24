@@ -576,6 +576,21 @@ a:hover {
     font-family: 'Outfit', sans-serif;
 }
 
+/* Hero Screenshot */
+.hero-screenshot {
+    margin-top: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
+}
+
+.hero-screenshot-img {
+    max-width: 420px;
+    width: 100%;
+    height: auto;
+    border-radius: 24px;
+    filter: drop-shadow(0 20px 60px rgba(0, 0, 0, 0.5));
+}
+
 /* Animations */
 @keyframes fadeInUp {
     from {
@@ -1037,6 +1052,15 @@ a:hover {
         height: 52px;
         width: auto;
         max-width: 100%;
+    }
+
+    .hero-screenshot {
+        margin-top: var(--spacing-md);
+    }
+
+    .hero-screenshot-img {
+        max-width: 320px;
+        border-radius: 18px;
     }
 
     /* Footer */
