@@ -145,30 +145,151 @@ exports.analyzeProfileWithAI = onCall(
  * Homologado: iOS SafetyScoreService.calculateSafetyScore
  */
 exports.calculateSafetyScore = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {messages} = request.data || {};
-    const flags = [];
-    let score = 100;
+    const {matchId, userId, userLanguage, targetUserId} = request.data || {};
+    const apiKey = process.env.GEMINI_API_KEY;
+    const db = admin.firestore();
 
-    if (Array.isArray(messages)) {
-      const redTerms = ['address', 'where do you live', 'send money', 'venmo', 'paypal', 'onlyfans'];
-      messages.forEach((msg) => {
-        const text = (typeof msg === 'string' ? msg : msg.message || '').toLowerCase();
-        redTerms.forEach((term) => {
-          if (text.includes(term)) {
-            flags.push(term);
-            score -= 15;
-          }
+    const rawLang = userLanguage || 'en';
+    const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+
+    // Default safe response
+    const safeFallback = {success: true, score: 85, safetyScore: 85, riskLevel: 'low', flags: [], concerns: [], warnings: [], badges: ['active_account']};
+
+    try {
+      // Mode 1: Analyze match conversation (when matchId provided)
+      if (matchId && apiKey) {
+        // Read last 15 messages
+        let messages = [];
+        try {
+          const msgSnap = await db.collection('matches').doc(matchId).collection('messages')
+            .orderBy('timestamp', 'desc').limit(15).get();
+          messages = msgSnap.docs.reverse().map((d) => {
+            const data = d.data();
+            if (data.type === 'place' || data.isEphemeral) return null;
+            return {sender: data.senderId === userId ? 'me' : 'them', text: (data.message || '').substring(0, 200)};
+          }).filter(Boolean);
+        } catch (e) {
+          logger.info(`[calculateSafetyScore] Cannot read messages: ${e.message}`);
+        }
+
+        if (messages.length < 3) {
+          return {...safeFallback, score: 90, safetyScore: 90};
+        }
+
+        const theirMessages = messages.filter((m) => m.sender === 'them').map((m) => m.text);
+        const conversation = messages.map((m) => `${m.sender}: ${m.text}`).join('\n');
+
+        // Quick check: known red flag patterns (no AI needed)
+        const quickFlags = [];
+        const combined = theirMessages.join(' ').toLowerCase();
+        const redPatterns = [
+          {pattern: /venmo|cashapp|paypal|zelle|bizum|western\s*union|crypto|bitcoin|wire\s*transfer/i, flag: 'financial_request'},
+          {pattern: /whatsapp|telegram|snapchat|instagram\s*@|line\s*id|wechat|kakao/i, flag: 'platform_redirect'},
+          {pattern: /send\s*(me\s*)?(money|cash|gift\s*card)|envía(me)?\s*(dinero|plata)|manda(me)?\s*dinero/i, flag: 'money_solicitation'},
+          {pattern: /onlyfans|premium\s*snap|subscribe|suscríbete|mi\s*pack|link\s*in\s*bio/i, flag: 'promotion_spam'},
+          {pattern: /your\s*(home\s*)?address|tu\s*dirección|where\s*do\s*you\s*live\s*exactly|dónde\s*vives\s*exactamente/i, flag: 'personal_info_request'},
+          {pattern: /i\s*love\s*you|te\s*amo|marry\s*me|cásate\s*conmigo/i, flag: 'love_bombing'},
+        ];
+        for (const {pattern, flag} of redPatterns) {
+          if (pattern.test(combined)) quickFlags.push(flag);
+        }
+
+        // If quick check found flags, add AI analysis
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
+
+        const prompt = `Analyze this dating chat for safety concerns. Focus on messages from "them" (the other person).
+
+Conversation:
+${conversation}
+
+Check for these RED FLAGS:
+1. FINANCIAL: Asking for money, gift cards, crypto, payment apps
+2. PLATFORM_REDIRECT: Pressuring to move to WhatsApp/Telegram/Instagram (suspicious if too early)
+3. PERSONAL_INFO: Asking for exact address, workplace details, financial info
+4. LOVE_BOMBING: Excessive declarations of love too early (within first few messages)
+5. MANIPULATION: Guilt-tripping, ultimatums, emotional pressure
+6. SCAM_PATTERN: Classic romance scam (quick love → emergency → money request)
+7. INAPPROPRIATE_PRESSURE: Sexual pressure, unsolicited advances
+8. IMPERSONATION: Claims of being military, doctor, or wealthy without proof
+
+Return ONLY a JSON object:
+{
+  "score": 0-100 (100=completely safe, 0=dangerous),
+  "riskLevel": "low"|"medium"|"high",
+  "concerns": ["short description of each concern"],
+  "warnings": [{"type": "flag_type", "message": "user-friendly warning in ${getLanguageInstruction(lang)}", "severity": "low|medium|high"}],
+  "summary": "1-sentence safety assessment in ${getLanguageInstruction(lang)}"
+}`;
+
+        const result = await model.generateContent({
+          contents: [{role: 'user', parts: [{text: prompt}]}],
+          generationConfig: {maxOutputTokens: 512, temperature: 0.1},
         });
-      });
-    }
 
-    score = Math.max(score, 0);
-    const riskLevel = score > 70 ? 'low' : score > 40 ? 'medium' : 'high';
-    logger.info(`[calculateSafetyScore] score=${score}, flags=${flags.length}`);
-    return {score, flags: [...new Set(flags)], riskLevel, success: true};
+        const parsed = parseGeminiJsonResponse(result.response.text());
+
+        if (parsed && typeof parsed.score === 'number') {
+          const allFlags = [...new Set([...quickFlags, ...(parsed.warnings || []).map((w) => w.type)])];
+          const response = {
+            success: true,
+            score: Math.max(0, Math.min(100, parsed.score)),
+            safetyScore: Math.max(0, Math.min(100, parsed.score)),
+            riskLevel: parsed.riskLevel || (parsed.score > 70 ? 'low' : parsed.score > 40 ? 'medium' : 'high'),
+            flags: allFlags,
+            concerns: (parsed.concerns || []).slice(0, 5).map((c) => String(c).substring(0, 150)),
+            warnings: (parsed.warnings || []).slice(0, 3).map((w) => ({
+              type: String(w.type || '').substring(0, 30),
+              message: String(w.message || '').substring(0, 200),
+              severity: ['low', 'medium', 'high'].includes(w.severity) ? w.severity : 'low',
+            })),
+            summary: String(parsed.summary || '').substring(0, 200),
+            badges: parsed.score >= 80 ? ['safe_conversation'] : [],
+          };
+          logger.info(`[calculateSafetyScore] AI analysis: score=${response.score}, flags=${allFlags.length}, risk=${response.riskLevel}`);
+          return response;
+        }
+
+        // AI failed to parse, use quick flags only
+        const quickScore = Math.max(0, 100 - quickFlags.length * 25);
+        return {
+          success: true, score: quickScore, safetyScore: quickScore,
+          riskLevel: quickScore > 70 ? 'low' : quickScore > 40 ? 'medium' : 'high',
+          flags: quickFlags, concerns: quickFlags, warnings: [], badges: quickScore >= 80 ? ['safe_conversation'] : [],
+        };
+      }
+
+      // Mode 2: Profile-based safety (when targetUserId provided, legacy)
+      if (targetUserId) {
+        const userSnap = await db.collection('users').doc(targetUserId).get();
+        const user = userSnap.exists ? userSnap.data() : {};
+        let score = 85;
+        const flags = [];
+        const concerns = [];
+
+        if (!user.pictures || (Array.isArray(user.pictures) && user.pictures.length < 2)) { flags.push('few_photos'); concerns.push('Few profile photos'); score -= 10; }
+        if (!user.bio || user.bio.length < 10) { flags.push('empty_bio'); concerns.push('Incomplete bio'); score -= 10; }
+        if (user.visibilityReduced) { flags.push('previously_reported'); concerns.push('Account has been reported'); score -= 25; }
+        const photos = Array.isArray(user.pictures) ? user.pictures.length : 0;
+        if (photos >= 3 && user.bio && user.bio.length >= 20) score = Math.min(score + 5, 95);
+
+        score = Math.max(0, Math.min(100, score));
+        return {
+          success: true, score, safetyScore: score,
+          riskLevel: score > 70 ? 'low' : score > 40 ? 'medium' : 'high',
+          flags, concerns, warnings: [], badges: score >= 80 ? ['active_account'] : [],
+          breakdown: {profileCompleteness: photos >= 3 ? 90 : 50, photoVerification: 50, accountAge: 70, activityConsistency: 70, communityReports: user.visibilityReduced ? 20 : 90, responseRate: 70, messagingPatterns: 80},
+        };
+      }
+
+      return safeFallback;
+    } catch (err) {
+      logger.warn(`[calculateSafetyScore] Error: ${err.message}, using safe fallback`);
+      return safeFallback;
+    }
   },
 );
 
