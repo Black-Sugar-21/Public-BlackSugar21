@@ -1486,5 +1486,83 @@
     "category": "icebreakers_agegap",
     "language": "multi",
     "text": "Icebreakers for Age Gap Matches: When there's a significant age difference → Focus on shared interests, NOT age. Never mention the age gap directly in the first message. Good: 'I noticed we both love [interest] — what got you into it?' | 'Your taste in [hobby] is great — I'd love to hear your recommendations.' | 'What's something you've been wanting to try lately?' | Bad: 'You look great for your age' or 'I usually don't match with someone older/younger.' Keep the tone respectful, curious, and focused on genuine connection points."
+  },
+  {
+    "id": "icebreakers-travel-es",
+    "category": "icebreakers_travel",
+    "language": "es",
+    "text": "Rompehielos de Viajes: Cuando ambos comparten interés en viajes → '¿Si pudieras despertar mañana en cualquier lugar del mundo, dónde sería?' | '¿Cuál es el destino más subestimado que has visitado?' | '¿Tienda del aeropuerto o duty free — cuál eres tú?' | 'Vi que te encanta viajar — ¿cuál es el lugar que más cambió tu perspectiva?' | Para fotos de viajes: menciona el destino ESPECÍFICO. Evita el genérico 'A mí también me encanta viajar' — en su lugar comparte una mini historia: 'Eso parece [lugar]! Yo estuve ahí en [fecha] y [detalle] me voló la cabeza.'"
+  },
+  {
+    "id": "icebreakers-food-es",
+    "category": "icebreakers_food",
+    "language": "es",
+    "text": "Rompehielos de Comida: Cuando ambos comparten interés en gastronomía → '¿Cuál es tu comida reconfortante en un día lluvioso?' | '¿Si pudieras comer solo una cocina por el resto de tu vida, cuál sería?' | '¿Cocinar en casa o probar restaurantes nuevos — cuál es tu onda?' | '¿Cuál es la combinación de comida más rara que secretamente amas?' | Para cocinas específicas: 'Vi que te gusta la comida [tipo] — ¿has encontrado un buen lugar de [plato] en la ciudad?'"
+  },
+  {
+    "id": "icebreakers-fitness-es",
+    "category": "icebreakers_fitness",
+    "language": "es",
+    "text": "Rompehielos de Fitness: Cuando ambos comparten interés en ejercicio → '¿Ejercicio en la mañana o gym en la noche — de qué equipo eres?' | '¿Cuál es tu forma favorita de mantenerte activo que no se siente como ejercicio?' | '¿Yoga, pesas o cardio — si tuvieras que elegir uno para siempre?' | '¿Cuál es la meta fitness de la que más orgulloso/a estás?' | Para runners: '¿Cuál es tu playlist favorita para correr?'"
+  },
+  {
+    "id": "icebreakers-music-es",
+    "category": "icebreakers_music",
+    "language": "es",
+    "text": "Rompehielos de Música: Cuando ambos comparten interés musical → '¿Cuál fue el último concierto o show en vivo al que fuiste? ¿Valió la pena?' | '¿Cuál es tu canción más escuchada en este momento?' | '¿Si pudieras ver a cualquier artista en vivo, pasado o presente, quién sería?' | '¿Tienes una canción guilty pleasure que nunca admitirías en público?' | Para géneros específicos: 'Vi que te gusta el [género] — ¿has escuchado [álbum reciente]?'"
+  },
+  {
+    "id": "icebreakers-nature-es",
+    "category": "icebreakers_nature",
+    "language": "es",
+    "text": "Rompehielos de Naturaleza: Cuando ambos comparten interés en outdoor → '¿Caminata al amanecer o paseo en la playa al atardecer — cuál te recarga más?' | '¿Cuál es el lugar natural más hermoso que has visitado?' | '¿Camping salvaje o glamping con comodidades — dónde caes tú?' | '¿Si pudieras vivir cerca de montañas, playa o bosque, cuál elegirías?' | '¿Tienes un sendero o parque favorito que sientes como tu escape secreto?'"
+  },
+  {
+    "id": "icebreakers-movies-es",
+    "category": "icebreakers_movies",
+    "language": "es",
+    "text": "Rompehielos de Cine y Series: Cuando ambos comparten interés en cine → '¿Cuál es la película que puedes ver cien veces y nunca te cansas?' | '¿Eres de maratón completo o un capítulo por día?' | '¿Qué serie te tiene obsesionado/a ahora?' | '¿Terror, comedia o drama — cuál es tu género de confort?' | '¿Si tu vida fuera una película, de qué género sería?'"
+  },
+  {
+    "id": "icebreakers-nightlife-es",
+    "category": "icebreakers_nightlife",
+    "language": "es",
+    "text": "Rompehielos de Vida Nocturna: Cuando ambos comparten interés en salir → '¿Bar de cócteles acogedor o pista de baile animada — cuál es tu energía del viernes?' | '¿Cuál es el mejor bar o club al que has ido últimamente?' | '¿Tienes un trago favorito o siempre pruebas algo nuevo?' | '¿Noche de karaoke — eres el/la estrella o el público que apoya?' | '¿Cuál es la noche más memorable que has tenido?'"
+  },
+  {
+    "id": "icebreakers-gaming-multi",
+    "category": "icebreakers_gaming",
+    "language": "multi",
+    "text": "Gaming & Technology Icebreakers: When both share gaming/tech interests → 'What game are you currently obsessed with?' | 'Console, PC, or mobile — what's your gaming platform?' | 'What's the game that got you into gaming?' | 'Co-op or competitive — what's your play style?' | 'If you could live in any video game world, which would it be?' | For tech lovers: 'What's the last piece of tech that genuinely excited you?' | 'Are you an early adopter or do you wait for reviews?'"
+  },
+  {
+    "id": "icebreakers-books-multi",
+    "category": "icebreakers_books",
+    "language": "multi",
+    "text": "Books & Reading Icebreakers: When both share reading interests → 'What book changed the way you think about something?' | 'Physical books, e-reader, or audiobooks — what's your preferred format?' | 'What's the last book that kept you up past your bedtime?' | 'Fiction or non-fiction person?' | 'If you could have coffee with any author, dead or alive, who would it be?' | 'What genre do you gravitate towards when you need an escape?'"
+  },
+  {
+    "id": "icebreakers-photography-multi",
+    "category": "icebreakers_photography",
+    "language": "multi",
+    "text": "Photography & Creative Icebreakers: When profiles show creative interests → 'Your photos have a really cool aesthetic — is photography a hobby or something more?' | 'What inspires you to capture a moment?' | 'Phone camera or dedicated camera — which do you prefer?' | 'What's the photo you're most proud of taking?' | 'Golden hour or blue hour — which lighting do you prefer?' | 'Do you edit your photos or keep them raw?'"
+  },
+  {
+    "id": "icebreakers-entrepreneurship-multi",
+    "category": "icebreakers_business",
+    "language": "multi",
+    "text": "Business & Entrepreneurship Icebreakers: When both share business/networking interests → 'What's the most interesting project you're working on right now?' | 'If you could start any business tomorrow with unlimited funding, what would it be?' | 'What's the best career advice you've ever received?' | 'Do you have a morning routine that sets up your day for success?' | 'What podcast or book has most influenced your professional life?' | Keep it light — don't make it feel like a networking event."
+  },
+  {
+    "id": "icebreakers-luxury-multi",
+    "category": "icebreakers_luxury",
+    "language": "multi",
+    "text": "Luxury & Lifestyle Icebreakers: For premium lifestyle matches → 'What's the most memorable experience you've treated yourself to?' | 'Fine dining or hidden gem restaurant — which excites you more?' | 'What's on your bucket list that you haven't done yet?' | 'Do you prefer exploring a new city independently or with a local guide?' | 'What's your idea of a perfect weekend escape?' | Keep the tone aspirational but genuine — avoid sounding materialistic or boastful."
+  },
+  {
+    "id": "icebreakers-wellness-multi",
+    "category": "icebreakers_wellness",
+    "language": "multi",
+    "text": "Spa & Wellness Icebreakers: When both share wellness/relaxation interests → 'What's your go-to way to unwind after a stressful week?' | 'Meditation, massage, or hot bath — what's your ultimate relaxation?' | 'Have you ever tried a wellness retreat? Would you?' | 'Morning person or night owl — and are you happy about it?' | 'What's your self-care non-negotiable?' | 'Tea ceremony, sound bath, or aromatherapy — which intrigues you most?'"
   }
 ]
