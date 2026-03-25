@@ -3,7 +3,7 @@ const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
 const { calcAge } = require('./geo');
 const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 
@@ -1412,7 +1412,7 @@ Respond ONLY with valid JSON:
  * Response: { success, blueprint: { title, totalDuration, estimatedBudget, steps[], icebreaker, dresscode } }
  */
 exports.generateDateBlueprint = onCall(
-  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey, placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {matchId, userLanguage, duration, preferences} = request.data || {};
