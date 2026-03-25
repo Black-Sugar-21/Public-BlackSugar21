@@ -2740,9 +2740,9 @@ exports.getRealtimeCoachTips = onCall(
       if (messages.length < 3) {
         return {
           success: true,
-          chemistryScore: 50,
-          chemistryTrend: 'stable',
-          engagementLevel: 'low',
+          chemistryScore: 55, // Generous default for new conversations
+          chemistryTrend: 'rising',
+          engagementLevel: 'medium',
           tips: [],
           preDateDetected: false,
           suggestedAction: null,
@@ -2751,8 +2751,13 @@ exports.getRealtimeCoachTips = onCall(
 
       // 4. Build conversation transcript
       const transcript = messages
-        .filter((m) => m.type === 'text')
-        .map((m) => `${m.sender === 'user' ? userName : matchName}: ${m.text}`)
+        .map((m) => {
+          if (m.type === 'place') return `${m.sender === 'user' ? userName : matchName}: [shared a place suggestion 📍]`;
+          if (m.type === 'date_blueprint') return `${m.sender === 'user' ? userName : matchName}: [shared a date plan ✨]`;
+          if (m.type === 'text' || !m.type) return `${m.sender === 'user' ? userName : matchName}: ${m.text}`;
+          return null;
+        })
+        .filter(Boolean)
         .join('\n');
 
       // 5. Build Gemini prompt
@@ -2780,13 +2785,27 @@ Respond ONLY with a valid JSON object (no markdown, no extra text):
   "suggestedAction": {"type": "<ask_question|compliment|suggest_date|change_topic|be_playful>", "text": "<specific suggested message the user could send>"}
 }
 
+IMPORTANT SCORING GUIDELINES:
+- chemistryScore MUST be GENEROUS and ENCOURAGING — this is a dating app, we want to motivate users
+- Score ranges:
+  * 70-100: Great chemistry — conversation flows naturally, both engaged, humor/flirting present
+  * 55-69: Good chemistry — decent back-and-forth, some connection signals
+  * 40-54: Developing — conversation just started or is warming up (DEFAULT for active chats)
+  * 25-39: Needs work — one-sided or awkward (ONLY if clearly struggling)
+  * 0-24: NEVER use unless conversation is hostile or dead
+- If both people are actively messaging, the MINIMUM score should be 45
+- If there's ANY humor, flirting, or personal questions, score should be 60+
+- Consider that early conversations naturally have lower depth — don't penalize for that
+- Place shares, date planning, and questions about meeting count as HIGH engagement
+
 Rules:
 - Give 1-3 tips maximum, each specific to THIS conversation (not generic)
 - The suggestedAction text should be a concrete message the user could copy and send
-- chemistryScore should reflect genuine connection signals (not just message count)
+- chemistryScore should be encouraging — err on the HIGHER side when in doubt
 - Set preDateDetected=true ONLY if there are clear signals of planning to meet
 - Tips should reference specific things said in the conversation
-- Be encouraging but honest — if engagement is low, say so constructively`;
+- Be optimistic and supportive — focus on positives and growth opportunities
+- NEVER give a score below 35 for an active conversation with mutual replies`;
 
       // 6. Call Gemini
       const apiKey = process.env.GEMINI_API_KEY;
@@ -2828,7 +2847,7 @@ Rules:
       logger.info(`[getRealtimeCoachTips] matchId=${matchId}, score=${parsed.chemistryScore}, tips=${tips.length}`);
       return {
         success: true,
-        chemistryScore: Math.max(0, Math.min(100, parseInt(parsed.chemistryScore) || 50)),
+        chemistryScore: Math.max(35, Math.min(100, parseInt(parsed.chemistryScore) || 55)),
         chemistryTrend: ['rising', 'falling', 'stable'].includes(parsed.chemistryTrend) ? parsed.chemistryTrend : 'stable',
         engagementLevel: ['high', 'medium', 'low'].includes(parsed.engagementLevel) ? parsed.engagementLevel : 'medium',
         tips,
