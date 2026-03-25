@@ -635,6 +635,59 @@ exports.generateIcebreakers = onCall(
       const shared = (user2.interests || []).filter((i) => set1.has(i.toLowerCase()));
       if (shared.length > 0) contextParts.push(`- Shared interests: ${shared.join(', ')}`);
 
+      // User types for context-aware icebreakers
+      const user1Type = user1.userType || '';
+      const user2Type = user2.userType || '';
+      if (user1Type && user2Type) contextParts.push(`- ${user1Name} is ${user1Type}, ${user2Name} is ${user2Type}`);
+
+      // Age context if available
+      const user1Age = user1.birthDate ? calcAge(user1.birthDate) : null;
+      const user2Age = user2.birthDate ? calcAge(user2.birthDate) : null;
+      if (user1Age && user2Age) contextParts.push(`- Ages: ${user1Name} is ${user1Age}, ${user2Name} is ${user2Age}`);
+
+      // --- RAG: Retrieve expert icebreaker knowledge ---
+      let ragContext = '';
+      try {
+        const ragQuery = shared.length > 0
+          ? `icebreaker conversation starter for people who like ${shared.join(' and ')}`
+          : `best first message dating icebreaker ${user2Bio || 'new match'}`;
+
+        const genAIEmbed = new GoogleGenerativeAI(apiKey);
+        const embeddingModel = genAIEmbed.getGenerativeModel({model: 'gemini-embedding-001'});
+        const embedResult = await Promise.race([
+          embeddingModel.embedContent({
+            content: {parts: [{text: ragQuery.substring(0, 500)}]},
+            taskType: 'RETRIEVAL_QUERY',
+            outputDimensionality: 768,
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RAG timeout')), 4000)),
+        ]);
+
+        const queryVector = embedResult.embedding.values;
+        const ragSnap = await db.collection('coachKnowledge')
+          .findNearest('embedding', queryVector, {limit: 4, distanceMeasure: 'COSINE', distanceResultField: '_distance'})
+          .get();
+
+        if (!ragSnap.empty) {
+          const chunks = ragSnap.docs
+            .map((d) => {const data = d.data(); return {text: (data.text || '').substring(0, 800), category: data.category || '', language: data.language || 'en', similarity: 1 - (data._distance ?? 1)};})
+            .filter((d) => d.similarity >= 0.3 && d.text.length > 0);
+
+          // Prefer user language, then multi/en
+          const langChunks = chunks.filter((d) => d.language === lang);
+          const otherChunks = chunks.filter((d) => d.language !== lang);
+          const ranked = [...langChunks, ...otherChunks].slice(0, 2);
+
+          if (ranked.length > 0) {
+            ragContext = '\n\nExpert dating advice to inspire your icebreakers:\n' +
+              ranked.map((d) => `- (${d.category}): ${d.text}`).join('\n');
+            logger.info(`[generateIcebreakers] RAG: ${ranked.length} chunks retrieved (${ranked.map((d) => d.category).join(', ')})`);
+          }
+        }
+      } catch (ragErr) {
+        logger.info(`[generateIcebreakers] RAG skipped (${ragErr.message})`);
+      }
+
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
 
@@ -642,6 +695,7 @@ exports.generateIcebreakers = onCall(
 
 Context:
 ${contextParts.join('\n')}
+${ragContext}
 
 Rules:
 - ${getLanguageInstruction(lang)}
@@ -651,6 +705,8 @@ Rules:
 - Make them feel personal, NOT generic
 - Avoid cliché pickup lines
 - If limited profile data, use creative open-ended questions
+- Use the expert dating advice above as inspiration but DO NOT copy it verbatim
+- Vary the style: 1 playful/fun, 1 thoughtful/genuine, 1 creative/unique
 
 Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning": "why this works", "emoji": "🎯"}]`;
 

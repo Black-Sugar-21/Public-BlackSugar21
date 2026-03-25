@@ -1420,5 +1420,71 @@
     "category": "takeaway_gift",
     "language": "id",
     "text": "Makanan sebagai Hadiah untuk Kencan: SUSHI: Set sushi premium delivery. CHINESE: Dim sum atau dumpling set — bagus untuk berbagi di rumah. KUE: Cookies artisan, macaron, atau cupcake — manis dan personal. NASI KOTAK: Nasi kotak premium dari restoran favorit — khas Indonesia. MARTABAK: Martabak manis spesial — comfort food yang disukai semua orang. PIZZA: Pizza gourmet oven kayu. Tips: Sajikan cantik — pakai piring sungguhan, tambah lilin. Perhatikan preferensi diet. Kartu tulisan tangan menambah kesan istimewa."
+  },
+  {
+    "id": "icebreakers-travel-multi",
+    "category": "icebreakers_travel",
+    "language": "multi",
+    "text": "Travel Icebreakers: When both share travel interests → 'If you could wake up tomorrow anywhere in the world, where would it be and why?' | 'What's the most underrated destination you've been to?' | 'Airport bookshop or duty-free shopping — which one are you?' | 'I noticed you love travel — what's the one place that completely changed your perspective?' | For travel photos: reference the SPECIFIC destination in their photo. Avoid generic 'I love travel too' — instead share a quick story: 'That looks like [place]! I was there last [time] and the [detail] blew my mind.'"
+  },
+  {
+    "id": "icebreakers-food-multi",
+    "category": "icebreakers_food",
+    "language": "multi",
+    "text": "Food & Cuisine Icebreakers: When both share food/cooking interests → 'What's your go-to comfort food on a rainy day?' | 'If you could only eat one cuisine for the rest of your life, which would it be?' | 'Cooking at home or trying new restaurants — what's your vibe?' | 'What's the weirdest food combo you secretly love?' | For specific cuisine interests: 'I see you're into [cuisine] — have you found a good [dish] spot in the city?' | For cooking lovers: 'What's the last recipe you nailed?'"
+  },
+  {
+    "id": "icebreakers-fitness-multi",
+    "category": "icebreakers_fitness",
+    "language": "multi",
+    "text": "Fitness & Wellness Icebreakers: When both share fitness/wellness interests → 'Morning workout or evening gym session — which team are you on?' | 'What's your favorite way to stay active that doesn't feel like exercise?' | 'Yoga, weights, or cardio — if you had to pick one forever?' | 'What's the fitness goal you're most proud of achieving?' | For runners: 'What's your go-to running playlist?' | For yoga: 'How did you get into yoga? I'm curious about starting.'"
+  },
+  {
+    "id": "icebreakers-music-multi",
+    "category": "icebreakers_music",
+    "language": "multi",
+    "text": "Music & Entertainment Icebreakers: When both share music/concert interests → 'What's the last concert or live show you went to? Was it worth it?' | 'Your music taste says a lot about you — what's your most-played song right now?' | 'If you could see any artist perform live, past or present, who would it be?' | 'Do you have a guilty pleasure song that you'd never admit to in public?' | For specific genres: 'I noticed you're into [genre] — have you heard [recent album]?'"
+  },
+  {
+    "id": "icebreakers-culture-multi",
+    "category": "icebreakers_culture",
+    "language": "multi",
+    "text": "Art & Culture Icebreakers: When both share art/culture interests → 'What's the last exhibition or museum that genuinely surprised you?' | 'Do you have a favorite artist or art movement that resonates with you?' | 'Books, podcasts, or documentaries — what's your preferred way to learn something new?' | 'If you could have dinner with any historical figure, who and why?' | For photography lovers: 'Your eye for photography is great — is that something you do professionally or just for fun?'"
+  },
+  {
+    "id": "icebreakers-nature-multi",
+    "category": "icebreakers_nature",
+    "language": "multi",
+    "text": "Nature & Outdoors Icebreakers: When both share nature/outdoor interests → 'Sunrise hike or sunset beach walk — which recharges you more?' | 'What's the most beautiful natural place you've ever visited?' | 'Camping in the wild or glamping with comfort — where do you fall?' | 'If you could live near mountains, beach, or forest, which would you choose?' | 'Do you have a favorite trail or park that feels like your secret escape?'"
+  },
+  {
+    "id": "icebreakers-movies-multi",
+    "category": "icebreakers_movies",
+    "language": "multi",
+    "text": "Movies & Series Icebreakers: When both share cinema/TV interests → 'What's a movie you can rewatch a hundred times and never get tired of?' | 'Are you a binge-watcher or a one-episode-per-day person?' | 'What show are you currently obsessed with?' | 'Horror, comedy, or drama — what's your comfort genre?' | 'If your life was a movie, what genre would it be?' | For specific shows: 'I saw you like [show] — who's your favorite character and why?'"
+  },
+  {
+    "id": "icebreakers-nightlife-multi",
+    "category": "icebreakers_nightlife",
+    "language": "multi",
+    "text": "Nightlife & Social Icebreakers: When both share nightlife/dancing interests → 'Cozy cocktail bar or lively dance floor — what's your Friday night energy?' | 'What's the best bar or club you've been to recently?' | 'Do you have a go-to drink order or do you always try something new?' | 'Karaoke night — are you the star performer or the supportive audience?' | 'What's the most memorable night out you've had?'"
+  },
+  {
+    "id": "icebreakers-pets-multi",
+    "category": "icebreakers_pets",
+    "language": "multi",
+    "text": "Pet & Animal Icebreakers: When profiles show pets or animal interests → 'Your [dog/cat] looks like a character — what's the funniest thing they've done?' | 'Dog person or cat person? Or secretly both?' | 'What's your pet's name and does it have a backstory?' | 'If your pet could talk, what would they say about you?' | 'I'd love to hear more about your furry friend — they look adorable in your photos!' | Always reference the SPECIFIC pet visible in their photos."
+  },
+  {
+    "id": "icebreakers-empty-profile-multi",
+    "category": "icebreakers_sparse",
+    "language": "multi",
+    "text": "Icebreakers for Sparse/Empty Profiles: When the match has minimal bio and few interests → 'Your photos give off great energy — what do you enjoy doing on weekends?' | 'I'm curious about the story behind your [photo detail] — care to share?' | 'What's something you're passionate about that doesn't fit in a dating profile?' | 'If you had to describe yourself in three emojis, which would you choose?' | Key: DON'T point out their empty profile. Instead, use open-ended questions that invite them to share naturally. Show you're genuinely interested without being demanding."
+  },
+  {
+    "id": "icebreakers-age-gap-multi",
+    "category": "icebreakers_agegap",
+    "language": "multi",
+    "text": "Icebreakers for Age Gap Matches: When there's a significant age difference → Focus on shared interests, NOT age. Never mention the age gap directly in the first message. Good: 'I noticed we both love [interest] — what got you into it?' | 'Your taste in [hobby] is great — I'd love to hear your recommendations.' | 'What's something you've been wanting to try lately?' | Bad: 'You look great for your age' or 'I usually don't match with someone older/younger.' Keep the tone respectful, curious, and focused on genuine connection points."
   }
 ]
