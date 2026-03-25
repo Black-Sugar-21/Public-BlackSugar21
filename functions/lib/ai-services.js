@@ -5,6 +5,7 @@ const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
 const { calcAge } = require('./geo');
+const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 
 exports.generateInterestSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
@@ -1402,5 +1403,262 @@ Respond ONLY with valid JSON:
     const elapsed = Date.now() - startTime;
     logger.info(`[AIChemistry] ${pairId}: score=${result.score} confidence=${confidence} algo=${Math.round(algorithmicScore * 100)} ai=${Math.round(aiScore * 100)} rag=${ragChunksUsed} data=${Math.round(dataPoints)} ${elapsed}ms`);
     return result;
+  },
+);
+
+/**
+ * Callable: AI Date Blueprint — generates a personalized first date itinerary.
+ * Payload: { matchId, userLanguage, duration?, preferences? }
+ * Response: { success, blueprint: { title, totalDuration, estimatedBudget, steps[], icebreaker, dresscode } }
+ */
+exports.generateDateBlueprint = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {matchId, userLanguage, duration, preferences} = request.data || {};
+    if (!matchId) throw new Error('matchId is required');
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    const db = admin.firestore();
+    const userId = request.auth.uid;
+
+    const rawLang = userLanguage || 'en';
+    const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+    const durationPreset = duration || 'standard'; // quick | standard | full
+
+    const fallback = {
+      success: true,
+      blueprint: {
+        title: lang === 'es' ? 'Plan de cita sugerido' : 'Suggested date plan',
+        totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
+        estimatedBudget: '$30-60',
+        steps: [],
+        icebreaker: '',
+        dresscode: 'casual',
+      },
+    };
+
+    try {
+      // 1. Read match + validate user belongs to it
+      const matchDoc = await db.collection('matches').doc(matchId).get();
+      if (!matchDoc.exists) return fallback;
+      const matchData = matchDoc.data() || {};
+      const usersMatched = matchData.usersMatched || [];
+      if (!usersMatched.includes(userId)) return fallback;
+      const otherUserId = usersMatched.find((u) => u !== userId) || '';
+
+      // 2. Read both profiles
+      const [mySnap, theirSnap] = await Promise.all([
+        db.collection('users').doc(userId).get(),
+        otherUserId ? db.collection('users').doc(otherUserId).get() : Promise.resolve({exists: false, data: () => ({})}),
+      ]);
+      const myProfile = mySnap.exists ? mySnap.data() : {};
+      const theirProfile = theirSnap.exists ? theirSnap.data() : {};
+      const myName = myProfile.name || 'User';
+      const theirName = theirProfile.name || 'Match';
+
+      // 3. Read last 20 chat messages for context
+      let chatContext = '';
+      try {
+        const msgSnap = await db.collection('matches').doc(matchId).collection('messages')
+          .orderBy('timestamp', 'desc').limit(20).get();
+        const msgs = msgSnap.docs.reverse()
+          .map((d) => {
+            const data = d.data();
+            if (data.type === 'place' || data.isEphemeral) return null;
+            const text = (data.message || '').substring(0, 200);
+            if (!text) return null;
+            return `${data.senderId === userId ? myName : theirName}: ${text}`;
+          })
+          .filter(Boolean);
+        if (msgs.length > 0) chatContext = 'Recent conversation:\n' + msgs.join('\n');
+      } catch (e) {
+        logger.info(`[DateBlueprint] Could not read messages: ${e.message}`);
+      }
+
+      // 4. Get locations + midpoint
+      let midLat = myProfile.latitude || 0;
+      let midLng = myProfile.longitude || 0;
+      let distanceBetween = 0;
+      if (myProfile.latitude && theirProfile.latitude) {
+        const mid = calculateMidpoint(myProfile.latitude, myProfile.longitude, theirProfile.latitude, theirProfile.longitude);
+        midLat = mid.latitude;
+        midLng = mid.longitude;
+        distanceBetween = haversineKm(myProfile.latitude, myProfile.longitude, theirProfile.latitude, theirProfile.longitude);
+      }
+
+      if (!midLat || !midLng) {
+        logger.warn('[DateBlueprint] No location data available');
+        return fallback;
+      }
+
+      // 5. Fetch real places near midpoint (3 diverse queries)
+      const placesConfig = await getPlacesSearchConfig();
+      const radius = Math.max(5000, Math.min(distanceBetween * 1000 + 5000, 30000));
+      const queries = durationPreset === 'quick'
+        ? ['café acogedor', 'parque bonito']
+        : durationPreset === 'full'
+          ? ['café brunch', 'museo galería', 'restaurante cena', 'bar cocktail']
+          : ['café', 'actividad cultural', 'restaurante cena'];
+
+      const placeResults = [];
+      for (const query of queries) {
+        try {
+          const results = await placesTextSearch(query, {latitude: midLat, longitude: midLng}, radius, lang, null, 5, true);
+          if (results && results.places) {
+            for (const p of results.places.slice(0, 3)) {
+              placeResults.push(transformPlaceToSuggestion(p, myProfile, theirProfile, apiKey, placesConfig));
+            }
+          }
+        } catch (e) {
+          logger.info(`[DateBlueprint] Place search "${query}" failed: ${e.message}`);
+        }
+      }
+
+      if (placeResults.length === 0) {
+        logger.warn('[DateBlueprint] No places found near midpoint');
+        return fallback;
+      }
+
+      // 6. Build context
+      const myInterests = Array.isArray(myProfile.interests) ? myProfile.interests.join(', ') : '';
+      const theirInterests = Array.isArray(theirProfile.interests) ? theirProfile.interests.join(', ') : '';
+      const mySet = new Set((myProfile.interests || []).map((i) => String(i).toLowerCase()));
+      const shared = (theirProfile.interests || []).filter((i) => mySet.has(String(i).toLowerCase()));
+
+      const placesDescription = placeResults.slice(0, 10).map((p, i) =>
+        `${i + 1}. ${p.name} (${p.category || 'general'}) — rating: ${p.rating || 'N/A'}, address: ${p.address || 'N/A'}, travelTime: ~${p.travelTimeUser1 || '?'}min/${p.travelTimeUser2 || '?'}min`,
+      ).join('\n');
+
+      const prefsText = preferences ? `Budget: ${preferences.budget || 'flexible'}, Dietary: ${preferences.dietary || 'none'}, Mood: ${preferences.mood || 'romantic'}` : 'No specific preferences';
+      const durationText = durationPreset === 'quick' ? '1-2 hours (coffee + walk)' : durationPreset === 'full' ? '5+ hours (full day date)' : '3-4 hours (activity + dinner)';
+
+      // 7. RAG: retrieve date planning advice
+      let ragContext = '';
+      try {
+        const ragQuery = `first date plan ${shared.length > 0 ? shared.join(' ') : 'romantic'} ${durationPreset}`;
+        const genAIEmbed = new GoogleGenerativeAI(apiKey);
+        const embModel = genAIEmbed.getGenerativeModel({model: 'gemini-embedding-001'});
+        const embedResult = await Promise.race([
+          embModel.embedContent({content: {parts: [{text: ragQuery.substring(0, 300)}]}, taskType: 'RETRIEVAL_QUERY', outputDimensionality: 768}),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RAG timeout')), 4000)),
+        ]);
+        const ragSnap = await db.collection('coachKnowledge')
+          .findNearest('embedding', embedResult.embedding.values, {limit: 3, distanceMeasure: 'COSINE', distanceResultField: '_distance'})
+          .get();
+        if (!ragSnap.empty) {
+          const chunks = ragSnap.docs
+            .map((d) => ({text: (d.data().text || '').substring(0, 500), similarity: 1 - (d.data()._distance ?? 1)}))
+            .filter((d) => d.similarity >= 0.3);
+          if (chunks.length > 0) ragContext = '\n\nExpert dating advice:\n' + chunks.slice(0, 2).map((d) => `- ${d.text}`).join('\n');
+        }
+      } catch (ragErr) {
+        logger.info(`[DateBlueprint] RAG skipped: ${ragErr.message}`);
+      }
+
+      // 8. Generate itinerary with Gemini
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
+
+      const now = new Date();
+      const hour = now.getHours();
+      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+
+      const prompt = `You are an expert date planner. Create a personalized first date itinerary for ${myName} and ${theirName}.
+
+PROFILES:
+- ${myName}'s interests: ${myInterests || 'not specified'}
+- ${theirName}'s interests: ${theirInterests || 'not specified'}
+- Shared interests: ${shared.length > 0 ? shared.join(', ') : 'none identified yet'}
+- Distance between them: ${Math.round(distanceBetween)} km
+
+${chatContext ? chatContext + '\n' : ''}
+PREFERENCES: ${prefsText}
+DURATION: ${durationText}
+CURRENT: ${dayOfWeek}, ~${hour}:00
+${ragContext}
+
+REAL PLACES AVAILABLE (use ONLY these — they are real venues near both users):
+${placesDescription}
+
+RULES:
+- ${getLanguageInstruction(lang)}
+- Select ${durationPreset === 'quick' ? '2' : durationPreset === 'full' ? '3-4' : '2-3'} places from the list above
+- Create a logical sequence with realistic timing
+- Each step: explain WHY this place fits their shared interests or conversation topics
+- Add a specific tip for each venue (what to order, what to see, etc.)
+- Include one conversation icebreaker for the date
+- Suggest a dresscode
+- Reference specific things from their chat or profiles when possible
+- Make the plan feel PERSONAL, not generic
+- Be specific with times (e.g., "17:30" not "afternoon")
+
+Return ONLY a JSON object:
+{
+  "title": "creative plan name",
+  "totalDuration": "X hours",
+  "estimatedBudget": "$XX-YY",
+  "steps": [
+    {
+      "order": 1,
+      "time": "HH:MM",
+      "duration": "XX min",
+      "activity": "what to do",
+      "placeName": "exact place name from list",
+      "placeIndex": 0,
+      "tip": "specific venue tip",
+      "whyThisPlace": "why it fits their interests/chat",
+      "travelTimeToNext": "X min walk/drive"
+    }
+  ],
+  "icebreaker": "conversation starter for the date",
+  "dresscode": "suggested dress style"
+}`;
+
+      const result = await model.generateContent({
+        contents: [{role: 'user', parts: [{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 1024, temperature: 0.85},
+      });
+
+      const parsed = parseGeminiJsonResponse(result.response.text());
+
+      if (parsed && Array.isArray(parsed.steps) && parsed.steps.length >= 2) {
+        // Enrich steps with real place data
+        const enrichedSteps = parsed.steps.map((step) => {
+          const placeIdx = typeof step.placeIndex === 'number' ? step.placeIndex : -1;
+          const matchedPlace = placeIdx >= 0 && placeIdx < placeResults.length
+            ? placeResults[placeIdx]
+            : placeResults.find((p) => p.name && step.placeName && p.name.toLowerCase().includes(step.placeName.toLowerCase().substring(0, 10)));
+          return {
+            order: step.order || 1,
+            time: String(step.time || '').substring(0, 5),
+            duration: String(step.duration || '').substring(0, 20),
+            activity: String(step.activity || '').substring(0, 100),
+            tip: String(step.tip || '').substring(0, 200),
+            whyThisPlace: String(step.whyThisPlace || '').substring(0, 200),
+            travelTimeToNext: String(step.travelTimeToNext || '').substring(0, 30),
+            place: matchedPlace || null,
+          };
+        });
+
+        const blueprint = {
+          title: String(parsed.title || '').substring(0, 100),
+          totalDuration: String(parsed.totalDuration || durationText).substring(0, 20),
+          estimatedBudget: String(parsed.estimatedBudget || '$30-60').substring(0, 20),
+          steps: enrichedSteps,
+          icebreaker: String(parsed.icebreaker || '').substring(0, 200),
+          dresscode: String(parsed.dresscode || 'casual').substring(0, 50),
+        };
+
+        logger.info(`[DateBlueprint] Generated ${blueprint.steps.length}-step itinerary (${lang}) for ${myName}→${theirName}`);
+        return {success: true, blueprint};
+      }
+
+      logger.warn('[DateBlueprint] AI returned invalid format');
+      return fallback;
+    } catch (err) {
+      logger.warn(`[DateBlueprint] Error: ${err.message}`);
+      return fallback;
+    }
   },
 );
