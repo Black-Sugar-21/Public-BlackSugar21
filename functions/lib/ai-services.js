@@ -156,8 +156,25 @@ exports.calculateSafetyScore = onCall(
     const rawLang = userLanguage || 'en';
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
 
+    // Read safety config from Remote Config (coach_config.safetyScore)
+    let safetyConfig = {};
+    try {
+      const rc = admin.remoteConfig();
+      const template = await rc.getTemplate();
+      const coachConfigStr = template.parameters?.coach_config?.defaultValue?.value;
+      if (coachConfigStr) {
+        const parsed = JSON.parse(coachConfigStr);
+        safetyConfig = parsed.safetyScore || {};
+      }
+    } catch (_) { /* use defaults */ }
+
+    const fallbackScore = safetyConfig.fallbackScore || 85;
+    const riskLow = safetyConfig.riskThresholdLow || 70;
+    const riskMed = safetyConfig.riskThresholdMedium || 40;
+    const flagPenalty = safetyConfig.quickFlagPenalty || 25;
+
     // Default safe response
-    const safeFallback = {success: true, score: 85, safetyScore: 85, riskLevel: 'low', flags: [], concerns: [], warnings: [], badges: ['active_account']};
+    const safeFallback = {success: true, score: fallbackScore, safetyScore: fallbackScore, riskLevel: 'low', flags: [], concerns: [], warnings: [], badges: ['active_account']};
 
     try {
       // Mode 1: Analyze match conversation (when matchId provided)
@@ -1668,7 +1685,7 @@ Return ONLY a JSON object:
         const topPlaces = placeResults.slice(0, durationPreset === 'quick' ? 2 : 3);
         const baseHour = hour >= 18 ? 19 : hour >= 12 ? 14 : 10;
         parsed = {
-          title: lang === 'es' ? `Cita con ${theirName}` : `Date with ${theirName}`,
+          title: lang === 'es' ? `Plan con ${theirName}` : `Plan with ${theirName}`,
           totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
           estimatedBudget: '$25-50',
           steps: topPlaces.map((p, i) => ({

@@ -188,6 +188,44 @@ async function getCoachConfig() {
     additionalGuidelines: '',
     edgeCaseExtensions: '',
     learningEnabled: true,
+    coachTips: {
+      cacheTtlMs: 300000, // 5 min
+      geminiCallThreshold: 10, // new messages before calling Gemini again
+      scoreDeltaThreshold: 15, // score change to force Gemini
+      maxOutputTokens: 1024,
+      messageWindow: 20,
+      tipsLimit: 3,
+      algorithmicWeights: {
+        reciprocity: 25,
+        volume: 20,
+        messageLength: 15,
+        questions: 15,
+        emojis: 10,
+        specialMessages: 15,
+      },
+      baseScore: 35,
+      scoreMin: 40,
+      scoreMax: 95,
+      engagementHigh: 70,
+      engagementMedium: 50,
+      trendRisingFactor: 1.2,
+      trendFallingFactor: 0.7,
+      scoringGuidelines: {
+        minimumActive: 45,
+        minimumWithHumor: 60,
+        absoluteMinimum: 35,
+      },
+    },
+    safetyScore: {
+      temperature: 0.1,
+      maxOutputTokens: 512,
+      fallbackScore: 85,
+      riskThresholdLow: 70,
+      riskThresholdMedium: 40,
+      quickFlagPenalty: 25,
+      minScore: 0,
+      maxScore: 100,
+    },
     placeSearch: {
       enableWithoutLocation: true,
       minActivitiesForPlaceSearch: 6,
@@ -2696,41 +2734,46 @@ exports.deleteCoachMessage = onCall(
  * Algorithmic chemistry score calculator — no AI, instant, free.
  * Uses message patterns to compute a baseline score.
  */
-function calculateAlgorithmicChemistry(messages, userId) {
+function calculateAlgorithmicChemistry(messages, userId, weightsConfig = {}) {
   if (!messages || messages.length === 0) return {score: 55, trend: 'stable', engagement: 'low'};
+
+  const w = {
+    reciprocity: weightsConfig.reciprocity || 25,
+    volume: weightsConfig.volume || 20,
+    messageLength: weightsConfig.messageLength || 15,
+    questions: weightsConfig.questions || 15,
+    emojis: weightsConfig.emojis || 10,
+    specialMessages: weightsConfig.specialMessages || 15,
+  };
+  const baseScore = weightsConfig.baseScore || 35;
+  const scoreMin = weightsConfig.scoreMin || 40;
+  const scoreMax = weightsConfig.scoreMax || 95;
 
   const textMsgs = messages.filter((m) => m.type === 'text' || !m.type);
   const userMsgs = textMsgs.filter((m) => m.sender === 'user');
   const matchMsgs = textMsgs.filter((m) => m.sender === 'match');
   const totalText = textMsgs.length;
 
-  // 1. Reciprocity (0-25 points): both sides participating equally
   const ratio = totalText > 0 ? Math.min(userMsgs.length, matchMsgs.length) / Math.max(userMsgs.length, matchMsgs.length, 1) : 0;
-  const reciprocityScore = Math.round(ratio * 25);
+  const reciprocityScore = Math.round(ratio * w.reciprocity);
 
-  // 2. Volume (0-20 points): more messages = more engagement
-  const volumeScore = Math.min(20, Math.round(totalText * 1.5));
+  const volumeScore = Math.min(w.volume, Math.round(totalText * 1.5));
 
-  // 3. Message length (0-15 points): longer messages = more investment
   const avgLength = textMsgs.reduce((sum, m) => sum + (m.text || '').length, 0) / Math.max(textMsgs.length, 1);
-  const lengthScore = Math.min(15, Math.round(avgLength / 10));
+  const lengthScore = Math.min(w.messageLength, Math.round(avgLength / 10));
 
-  // 4. Questions (0-15 points): questions show interest
   const questionCount = textMsgs.filter((m) => (m.text || '').includes('?')).length;
-  const questionScore = Math.min(15, questionCount * 3);
+  const questionScore = Math.min(w.questions, questionCount * 3);
 
-  // 5. Emojis/enthusiasm (0-10 points): emotional expression
   const emojiPattern = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
   const emojiCount = textMsgs.filter((m) => emojiPattern.test(m.text || '')).length;
-  const emojiScore = Math.min(10, emojiCount * 2);
+  const emojiScore = Math.min(w.emojis, emojiCount * 2);
 
-  // 6. Place/blueprint shares (0-15 points): date planning = high engagement
   const specialMsgs = messages.filter((m) => m.type === 'place' || m.type === 'date_blueprint').length;
-  const specialScore = Math.min(15, specialMsgs * 8);
+  const specialScore = Math.min(w.specialMessages, specialMsgs * 8);
 
-  // Base score with generous floor
-  const rawScore = 35 + reciprocityScore + volumeScore + lengthScore + questionScore + emojiScore + specialScore;
-  const score = Math.min(95, Math.max(40, rawScore));
+  const rawScore = baseScore + reciprocityScore + volumeScore + lengthScore + questionScore + emojiScore + specialScore;
+  const score = Math.min(scoreMax, Math.max(scoreMin, rawScore));
 
   // Trend: compare first half vs second half engagement
   const half = Math.floor(textMsgs.length / 2);
@@ -2738,9 +2781,13 @@ function calculateAlgorithmicChemistry(messages, userId) {
   const secondHalf = textMsgs.slice(half);
   const firstAvg = firstHalf.reduce((s, m) => s + (m.text || '').length, 0) / Math.max(firstHalf.length, 1);
   const secondAvg = secondHalf.reduce((s, m) => s + (m.text || '').length, 0) / Math.max(secondHalf.length, 1);
-  const trend = secondAvg > firstAvg * 1.2 ? 'rising' : secondAvg < firstAvg * 0.7 ? 'falling' : 'stable';
+  const risingFactor = weightsConfig.trendRisingFactor || 1.2;
+  const fallingFactor = weightsConfig.trendFallingFactor || 0.7;
+  const trend = secondAvg > firstAvg * risingFactor ? 'rising' : secondAvg < firstAvg * fallingFactor ? 'falling' : 'stable';
 
-  const engagement = score >= 70 ? 'high' : score >= 50 ? 'medium' : 'low';
+  const engHigh = weightsConfig.engagementHigh || 70;
+  const engMed = weightsConfig.engagementMedium || 50;
+  const engagement = score >= engHigh ? 'high' : score >= engMed ? 'medium' : 'low';
 
   return {score, trend, engagement};
 }
@@ -2757,6 +2804,13 @@ exports.getRealtimeCoachTips = onCall(
     const db = admin.firestore();
 
     try {
+      // 0. Read RC config for tuning
+      const config = await getCoachConfig();
+      const tipsConfig = config.coachTips || {};
+      const cacheTtl = tipsConfig.cacheTtlMs || 300000;
+      const geminiThreshold = tipsConfig.geminiCallThreshold || 10;
+      const deltaThreshold = tipsConfig.scoreDeltaThreshold || 15;
+
       // 1. Check cache first (avoid Gemini calls)
       const cacheRef = db.collection('coachTipsCache').doc(matchId);
       const cacheDoc = await cacheRef.get();
@@ -2765,8 +2819,8 @@ exports.getRealtimeCoachTips = onCall(
         const cacheAge = Date.now() - (cached.updatedAt?.toMillis?.() || 0);
         const msgCount = cached.messageCount || 0;
 
-        // Use cache if: less than 5 min old AND message count hasn't changed significantly
-        if (cacheAge < 300000) { // 5 minutes
+        // Use cache if within TTL
+        if (cacheAge < cacheTtl) {
           logger.info(`[getRealtimeCoachTips] Cache hit (${Math.round(cacheAge / 1000)}s old) for ${matchId}`);
           return {
             success: true,
@@ -2826,7 +2880,8 @@ exports.getRealtimeCoachTips = onCall(
       }
 
       // 4. Calculate algorithmic score (instant, free, always available)
-      const algoResult = calculateAlgorithmicChemistry(messages, userId);
+      const algoWeights = {...(tipsConfig.algorithmicWeights || {}), baseScore: tipsConfig.baseScore, scoreMin: tipsConfig.scoreMin, scoreMax: tipsConfig.scoreMax, trendRisingFactor: tipsConfig.trendRisingFactor, trendFallingFactor: tipsConfig.trendFallingFactor, engagementHigh: tipsConfig.engagementHigh, engagementMedium: tipsConfig.engagementMedium};
+      const algoResult = calculateAlgorithmicChemistry(messages, userId, algoWeights);
       logger.info(`[getRealtimeCoachTips] Algorithmic score: ${algoResult.score}, trend: ${algoResult.trend}`);
 
       // 5. Decide whether to call Gemini AI or use algorithmic score only
@@ -2837,8 +2892,8 @@ exports.getRealtimeCoachTips = onCall(
       const prevScore = prevCache?.chemistryScore || 55;
       const scoreDelta = Math.abs(algoResult.score - prevScore);
 
-      // Gemini conditions: first time, every 10+ new messages, or significant score change (>15)
-      const shouldCallGemini = !prevCache || newMsgsSinceLast >= 10 || scoreDelta > 15;
+      // Gemini conditions: first time, every N new messages, or significant score change
+      const shouldCallGemini = !prevCache || newMsgsSinceLast >= geminiThreshold || scoreDelta > deltaThreshold;
 
       if (!shouldCallGemini) {
         // Use algorithmic score + cached tips (saves Gemini cost)
