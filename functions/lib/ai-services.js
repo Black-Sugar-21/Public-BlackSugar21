@@ -1578,7 +1578,10 @@ exports.generateDateBlueprint = onCall(
       // 7. RAG: retrieve date planning advice
       let ragContext = '';
       try {
-        const ragQuery = `first date plan ${shared.length > 0 ? shared.join(' ') : 'romantic'} ${durationPreset}`;
+        // Build specific RAG query based on context
+        const interestContext = shared.length > 0 ? shared.slice(0, 3).join(' ') : (theirInterests.split(',')[0] || 'romantic');
+        const timeContext = hour >= 18 ? 'evening dinner' : hour >= 12 ? 'afternoon' : 'morning brunch';
+        const ragQuery = `date blueprint flow venue selection ${interestContext} ${durationPreset} ${timeContext}`;
         const genAIEmbed = new GoogleGenerativeAI(apiKey);
         const embModel = genAIEmbed.getGenerativeModel({model: 'gemini-embedding-001'});
         const embedResult = await Promise.race([
@@ -1592,7 +1595,7 @@ exports.generateDateBlueprint = onCall(
           const chunks = ragSnap.docs
             .map((d) => ({text: (d.data().text || '').substring(0, 500), similarity: 1 - (d.data()._distance ?? 1)}))
             .filter((d) => d.similarity >= 0.3);
-          if (chunks.length > 0) ragContext = '\n\nExpert dating advice:\n' + chunks.slice(0, 2).map((d) => `- ${d.text}`).join('\n');
+          if (chunks.length > 0) ragContext = '\n\nExpert dating advice (use this to structure the date):\n' + chunks.slice(0, 3).map((d) => `- [${d.category || 'general'}]: ${d.text}`).join('\n\n');
         }
       } catch (ragErr) {
         logger.info(`[DateBlueprint] RAG skipped: ${ragErr.message}`);

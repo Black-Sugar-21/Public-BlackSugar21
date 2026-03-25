@@ -1564,5 +1564,47 @@
     "category": "icebreakers_wellness",
     "language": "multi",
     "text": "Spa & Wellness Icebreakers: When both share wellness/relaxation interests → 'What's your go-to way to unwind after a stressful week?' | 'Meditation, massage, or hot bath — what's your ultimate relaxation?' | 'Have you ever tried a wellness retreat? Would you?' | 'Morning person or night owl — and are you happy about it?' | 'What's your self-care non-negotiable?' | 'Tea ceremony, sound bath, or aromatherapy — which intrigues you most?'"
+  },
+  {
+    "id": "date-blueprint-flow-en",
+    "category": "date_blueprint",
+    "language": "en",
+    "text": "Perfect Date Flow Architecture: A great date follows a NARRATIVE ARC with rising intimacy. OPENING (30-60min): Start somewhere low-pressure where conversation flows naturally — a specialty coffee shop, a bookstore café, or a park with a view. The goal is to break the ice without performance pressure. BUILDING (60-90min): Move to a shared EXPERIENCE — art gallery, street market, cooking class, mini golf, museum, or neighborhood walk. Activities create natural conversation topics and shared memories. You're building comfort and finding what makes them laugh. DEEPENING (60-90min): Transition to a more intimate setting — a restaurant with good ambiance (not too loud), a wine bar, or a rooftop with a view. This is where real conversation happens. Ask about dreams, passions, funny stories. OPTIONAL EXTENSION: If the chemistry is strong, suggest something spontaneous — live music, a dessert spot, a nightcap at a cocktail bar. Never force it; the best dates end on a high note where both want more."
+  },
+  {
+    "id": "date-blueprint-flow-es",
+    "category": "date_blueprint",
+    "language": "es",
+    "text": "Arquitectura del Flujo Perfecto de Cita: Una gran cita sigue un ARCO NARRATIVO de intimidad creciente. APERTURA (30-60min): Comenzar en un lugar de baja presión donde la conversación fluya — una cafetería de especialidad, una librería-café, o un parque con vista. El objetivo: romper el hielo sin presión. CONSTRUCCIÓN (60-90min): Moverse a una EXPERIENCIA compartida — galería de arte, mercado callejero, clase de cocina, mini golf, museo, caminata por el barrio. Las actividades crean temas de conversación y recuerdos compartidos. PROFUNDIZACIÓN (60-90min): Transición a un lugar más íntimo — restaurante con buen ambiente (no muy ruidoso), bar de vinos, o terraza con vista. Aquí ocurre la conversación real. Preguntar sobre sueños, pasiones, historias divertidas. EXTENSIÓN OPCIONAL: Si la química es fuerte, sugerir algo espontáneo — música en vivo, postre, un cocktail. Nunca forzar; las mejores citas terminan en un punto alto donde ambos quieren más."
+  },
+  {
+    "id": "date-blueprint-venues-multi",
+    "category": "date_blueprint_venues",
+    "language": "multi",
+    "text": "Venue Selection Guide by Date Stage: STAGE 1 (Opening - Low Pressure): Coffee shops (specialty/artisan preferred), tea houses, juice bars, parks with benches, botanical gardens, bookstores with café, bakeries. Look for: natural light, comfortable seating, moderate noise level, easy parking/transit. STAGE 2 (Building - Shared Experience): Art galleries, museums (interactive > traditional), street markets/flea markets, cooking/pottery classes, escape rooms, bowling, mini golf, city walking tours, viewpoints, record shops, vintage stores. Look for: things to react to together, movement, discovery. STAGE 3 (Deepening - Intimate): Restaurants (farm-to-table, hidden gems > chains), wine bars, cocktail lounges, rooftop bars, tapas/small plates restaurants, izakayas, speakeasies. Look for: dim lighting, comfortable booths/corners, good acoustics for conversation, interesting menu to discuss. STAGE 4 (Extension - Spontaneous): Live music venues, jazz clubs, dessert bars, ice cream shops, night markets, comedy clubs, karaoke (private rooms). Look for: fun energy, shared laughter, memorable moments."
+  },
+  {
+    "id": "date-blueprint-budget-multi",
+    "category": "date_blueprint_budget",
+    "language": "multi",
+    "text": "Date Planning by Budget: BUDGET ($10-25): Park picnic with takeout coffee + street market browse + sunset viewpoint. Free museum day + bakery treat. Bookstore browse + café. MODERATE ($25-50): Specialty café + gallery/museum + casual restaurant. Cooking class + wine bar. Brunch + botanical garden. UPSCALE ($50-100): Cocktail bar + fine dining. Wine tasting + sunset rooftop dinner. Spa morning + lunch at hidden gem. LUXURY ($100+): Chef's table experience + jazz club. Art auction preview + champagne dinner. Helicopter tour + waterfront dining. TIP: The best dates aren't about money — they're about thoughtfulness. A $15 date at a park with homemade sandwiches can be more romantic than a $200 dinner if it shows you listened to what they enjoy."
+  },
+  {
+    "id": "date-blueprint-timing-multi",
+    "category": "date_blueprint_timing",
+    "language": "multi",
+    "text": "Optimal Date Timing Guide: MORNING (9-12): Best for: brunch, farmers market, hiking, beach walk, yoga class. Vibe: fresh energy, health-conscious, active. Works well for outdoor lovers and early birds. AFTERNOON (12-17): Best for: lunch, museum/gallery, shopping district walk, coffee + dessert, park hangout, cooking class. Vibe: relaxed, no pressure, natural light. The SAFEST choice for first dates. EVENING (17-21): Best for: dinner, sunset drinks, rooftop bar, wine tasting, concert. Vibe: romantic, intimate, dressed up slightly. The CLASSIC date time. NIGHT (21+): Best for: cocktail bar, live music, comedy show, late-night food. Vibe: fun, spontaneous, party energy. Better for established connections than first dates. WEEKDAY vs WEEKEND: Weekday dates feel more special (you're making time). Weekend dates allow more flexibility. Friday evening is the sweet spot."
+  },
+  {
+    "id": "date-blueprint-seasonal-multi",
+    "category": "date_blueprint_seasonal",
+    "language": "multi",
+    "text": "Seasonal Date Planning: SPRING: Cherry blossom/flower viewing + café, outdoor farmers market, botanical garden, picnic in park, bike ride along river, rooftop brunch. SUMMER: Beach sunset + seafood dinner, outdoor cinema, ice cream walk, kayaking/paddle boarding, night market, rooftop bar, festival/concert. AUTUMN: Apple picking/pumpkin patch, cozy café + bookstore, wine tasting, scenic drive with foliage, Halloween event, hot chocolate walk. WINTER: Christmas market, ice skating + hot chocolate, cozy fireplace restaurant, museum + warm soup, cookie baking at home, New Year's event. RAINY DAY: Indoor market, cooking class, board game café, art gallery, aquarium, escape room, pottery class. KEY INSIGHT: Seasonal activities create built-in conversation topics and photo opportunities. 'Let's go see the cherry blossoms' is a much better invitation than 'Let's hang out.'"
+  },
+  {
+    "id": "date-blueprint-interests-multi",
+    "category": "date_blueprint_interests",
+    "language": "multi",
+    "text": "Date Plans by Shared Interest: FOODIES: Street food tour → hidden gem restaurant → dessert bar. ADVENTURERS: Hiking trail → waterfall picnic → craft brewery. ART LOVERS: Gallery opening → artist café → live music venue. BOOKWORMS: Independent bookstore → literary café → poetry reading. FITNESS: Morning yoga → açaí bowl → sunset beach walk. TECH/GAMING: VR arcade → ramen shop → retro game bar. MUSIC: Record shop browse → live band venue → late-night diner. NATURE: Botanical garden → farm-to-table lunch → sunset viewpoint. PHOTOGRAPHY: Photo walk through historic district → café review → rooftop sunset. WINE/SPIRITS: Vineyard tour → cheese pairing → jazz bar. The key: build the date around what BOTH people enjoy, not just one person's interests."
   }
 ]
