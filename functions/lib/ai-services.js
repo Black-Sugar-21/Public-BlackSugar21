@@ -235,27 +235,43 @@ exports.generateSmartReply = onCall(
     const fallback = FALLBACK[lang] || FALLBACK.en;
 
     try {
-      if (!apiKey || !matchId) {
+      if (!apiKey || !matchId || !userId) {
+        logger.info(`[generateSmartReply] Missing required param (apiKey=${!!apiKey}, matchId=${!!matchId}, userId=${!!userId}), using fallback`);
         return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
       }
 
-      // 1. Read last 8 messages from the match conversation
+      // 1. Read last 8 text messages from the match conversation (skip place/ephemeral)
       let chatHistory = [];
       try {
         const msgSnap = await db.collection('matches').doc(matchId).collection('messages')
-          .orderBy('timestamp', 'desc').limit(8).get();
-        chatHistory = msgSnap.docs.reverse().map((d) => {
-          const data = d.data();
-          return {sender: data.senderId === userId ? 'me' : 'them', text: data.message || ''};
-        }).filter((m) => m.text && m.text.length > 0);
+          .orderBy('timestamp', 'desc').limit(15).get(); // fetch more to filter non-text
+        chatHistory = msgSnap.docs.reverse()
+          .map((d) => {
+            const data = d.data();
+            // Skip place shares, ephemeral photos, and system messages
+            if (data.type === 'place' || data.type === 'ephemeral_photo' || data.isEphemeral) return null;
+            const text = (data.message || '').substring(0, 300); // truncate long messages
+            if (!text) return null;
+            return {sender: data.senderId === userId ? 'me' : 'them', text};
+          })
+          .filter(Boolean)
+          .slice(-8); // keep last 8 text messages
       } catch (msgErr) {
         logger.info(`[generateSmartReply] Could not read messages: ${msgErr.message}`);
       }
 
       // 2. Read both user profiles
       const matchDoc = await db.collection('matches').doc(matchId).get();
-      const matchData = matchDoc.exists ? matchDoc.data() : {};
+      if (!matchDoc.exists) {
+        logger.info(`[generateSmartReply] Match ${matchId} not found, using fallback`);
+        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+      }
+      const matchData = matchDoc.data() || {};
       const usersMatched = matchData.usersMatched || [];
+      if (!usersMatched.includes(userId)) {
+        logger.warn(`[generateSmartReply] User ${userId} not in match ${matchId}`);
+        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+      }
       const otherUserId = usersMatched.find((uid) => uid !== userId) || '';
 
       let myProfile = {};
@@ -300,13 +316,25 @@ exports.generateSmartReply = onCall(
       }
 
       // 4. Build conversation context
-      const chatContext = chatHistory.length > 0
-        ? 'Recent conversation:\n' + chatHistory.map((m) => `${m.sender === 'me' ? myName : theirName}: ${m.text}`).join('\n')
-        : `No messages yet. ${theirName}'s last message: "${lastMessage || 'none'}"`;
+      let chatContext;
+      if (chatHistory.length > 0) {
+        chatContext = 'Recent conversation:\n' + chatHistory.map((m) => `${m.sender === 'me' ? myName : theirName}: ${m.text}`).join('\n');
+      } else if (lastMessage) {
+        chatContext = `First message received from ${theirName}: "${lastMessage.substring(0, 300)}"`;
+      } else {
+        chatContext = `New match — no messages exchanged yet. Generate conversation OPENERS (not replies).`;
+      }
 
       const profileContext = [];
-      if (theirProfile.bio) profileContext.push(`${theirName}'s bio: "${theirProfile.bio}"`);
-      if (Array.isArray(theirProfile.interests) && theirProfile.interests.length > 0) profileContext.push(`${theirName}'s interests: ${theirProfile.interests.join(', ')}`);
+      if (theirProfile.bio) profileContext.push(`${theirName}'s bio: "${String(theirProfile.bio).substring(0, 200)}"`);
+      if (myProfile.bio) profileContext.push(`${myName}'s bio: "${String(myProfile.bio).substring(0, 200)}"`);
+      const myInterests = Array.isArray(myProfile.interests) ? myProfile.interests : [];
+      const theirInterests = Array.isArray(theirProfile.interests) ? theirProfile.interests : [];
+      if (theirInterests.length > 0) profileContext.push(`${theirName}'s interests: ${theirInterests.join(', ')}`);
+      // Shared interests
+      const mySet = new Set(myInterests.map((i) => String(i).toLowerCase()));
+      const sharedInterests = theirInterests.filter((i) => mySet.has(String(i).toLowerCase()));
+      if (sharedInterests.length > 0) profileContext.push(`Shared interests: ${sharedInterests.join(', ')}`);
 
       // 5. Generate with Gemini
       const genAI = new GoogleGenerativeAI(apiKey);
