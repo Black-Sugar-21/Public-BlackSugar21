@@ -2692,6 +2692,59 @@ exports.deleteCoachMessage = onCall(
  */
 
 // --- Realtime coach tips ---
+/**
+ * Algorithmic chemistry score calculator — no AI, instant, free.
+ * Uses message patterns to compute a baseline score.
+ */
+function calculateAlgorithmicChemistry(messages, userId) {
+  if (!messages || messages.length === 0) return {score: 55, trend: 'stable', engagement: 'low'};
+
+  const textMsgs = messages.filter((m) => m.type === 'text' || !m.type);
+  const userMsgs = textMsgs.filter((m) => m.sender === 'user');
+  const matchMsgs = textMsgs.filter((m) => m.sender === 'match');
+  const totalText = textMsgs.length;
+
+  // 1. Reciprocity (0-25 points): both sides participating equally
+  const ratio = totalText > 0 ? Math.min(userMsgs.length, matchMsgs.length) / Math.max(userMsgs.length, matchMsgs.length, 1) : 0;
+  const reciprocityScore = Math.round(ratio * 25);
+
+  // 2. Volume (0-20 points): more messages = more engagement
+  const volumeScore = Math.min(20, Math.round(totalText * 1.5));
+
+  // 3. Message length (0-15 points): longer messages = more investment
+  const avgLength = textMsgs.reduce((sum, m) => sum + (m.text || '').length, 0) / Math.max(textMsgs.length, 1);
+  const lengthScore = Math.min(15, Math.round(avgLength / 10));
+
+  // 4. Questions (0-15 points): questions show interest
+  const questionCount = textMsgs.filter((m) => (m.text || '').includes('?')).length;
+  const questionScore = Math.min(15, questionCount * 3);
+
+  // 5. Emojis/enthusiasm (0-10 points): emotional expression
+  const emojiPattern = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+  const emojiCount = textMsgs.filter((m) => emojiPattern.test(m.text || '')).length;
+  const emojiScore = Math.min(10, emojiCount * 2);
+
+  // 6. Place/blueprint shares (0-15 points): date planning = high engagement
+  const specialMsgs = messages.filter((m) => m.type === 'place' || m.type === 'date_blueprint').length;
+  const specialScore = Math.min(15, specialMsgs * 8);
+
+  // Base score with generous floor
+  const rawScore = 35 + reciprocityScore + volumeScore + lengthScore + questionScore + emojiScore + specialScore;
+  const score = Math.min(95, Math.max(40, rawScore));
+
+  // Trend: compare first half vs second half engagement
+  const half = Math.floor(textMsgs.length / 2);
+  const firstHalf = textMsgs.slice(0, half);
+  const secondHalf = textMsgs.slice(half);
+  const firstAvg = firstHalf.reduce((s, m) => s + (m.text || '').length, 0) / Math.max(firstHalf.length, 1);
+  const secondAvg = secondHalf.reduce((s, m) => s + (m.text || '').length, 0) / Math.max(secondHalf.length, 1);
+  const trend = secondAvg > firstAvg * 1.2 ? 'rising' : secondAvg < firstAvg * 0.7 ? 'falling' : 'stable';
+
+  const engagement = score >= 70 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+  return {score, trend, engagement};
+}
+
 exports.getRealtimeCoachTips = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
@@ -2704,7 +2757,30 @@ exports.getRealtimeCoachTips = onCall(
     const db = admin.firestore();
 
     try {
-      // 1. Read match and verify participant
+      // 1. Check cache first (avoid Gemini calls)
+      const cacheRef = db.collection('coachTipsCache').doc(matchId);
+      const cacheDoc = await cacheRef.get();
+      if (cacheDoc.exists) {
+        const cached = cacheDoc.data();
+        const cacheAge = Date.now() - (cached.updatedAt?.toMillis?.() || 0);
+        const msgCount = cached.messageCount || 0;
+
+        // Use cache if: less than 5 min old AND message count hasn't changed significantly
+        if (cacheAge < 300000) { // 5 minutes
+          logger.info(`[getRealtimeCoachTips] Cache hit (${Math.round(cacheAge / 1000)}s old) for ${matchId}`);
+          return {
+            success: true,
+            chemistryScore: cached.chemistryScore || 55,
+            chemistryTrend: cached.chemistryTrend || 'stable',
+            engagementLevel: cached.engagementLevel || 'medium',
+            tips: cached.tips || [],
+            preDateDetected: cached.preDateDetected || false,
+            suggestedAction: cached.suggestedAction || null,
+          };
+        }
+      }
+
+      // 2. Read match and verify participant
       const matchDoc = await db.collection('matches').doc(matchId).get();
       if (!matchDoc.exists) throw new Error('Match not found');
       const matchData = matchDoc.data();
@@ -2740,7 +2816,7 @@ exports.getRealtimeCoachTips = onCall(
       if (messages.length < 3) {
         return {
           success: true,
-          chemistryScore: 55, // Generous default for new conversations
+          chemistryScore: 55,
           chemistryTrend: 'rising',
           engagementLevel: 'medium',
           tips: [],
@@ -2749,7 +2825,47 @@ exports.getRealtimeCoachTips = onCall(
         };
       }
 
-      // 4. Build conversation transcript
+      // 4. Calculate algorithmic score (instant, free, always available)
+      const algoResult = calculateAlgorithmicChemistry(messages, userId);
+      logger.info(`[getRealtimeCoachTips] Algorithmic score: ${algoResult.score}, trend: ${algoResult.trend}`);
+
+      // 5. Decide whether to call Gemini AI or use algorithmic score only
+      // Call Gemini only every 3rd invocation or when score changed significantly
+      const prevCache = cacheDoc.exists ? cacheDoc.data() : null;
+      const prevMsgCount = prevCache?.messageCount || 0;
+      const newMsgsSinceLast = messages.length - prevMsgCount;
+      const prevScore = prevCache?.chemistryScore || 55;
+      const scoreDelta = Math.abs(algoResult.score - prevScore);
+
+      // Gemini conditions: first time, every 10+ new messages, or significant score change (>15)
+      const shouldCallGemini = !prevCache || newMsgsSinceLast >= 10 || scoreDelta > 15;
+
+      if (!shouldCallGemini) {
+        // Use algorithmic score + cached tips (saves Gemini cost)
+        const cached = prevCache || {};
+        const result = {
+          success: true,
+          chemistryScore: algoResult.score,
+          chemistryTrend: algoResult.trend,
+          engagementLevel: algoResult.engagement,
+          tips: cached.tips || [],
+          preDateDetected: cached.preDateDetected || false,
+          suggestedAction: cached.suggestedAction || null,
+        };
+
+        // Update cache with new algorithmic score
+        await cacheRef.set({
+          ...result,
+          messageCount: messages.length,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          source: 'algorithmic',
+        }, {merge: true});
+
+        logger.info(`[getRealtimeCoachTips] ALGORITHMIC ONLY (saved Gemini call): matchId=${matchId}, score=${algoResult.score}`);
+        return result;
+      }
+
+      // 6. Build conversation transcript (only when calling Gemini)
       const transcript = messages
         .map((m) => {
           if (m.type === 'place') return `${m.sender === 'user' ? userName : matchName}: [shared a place suggestion 📍]`;
@@ -2844,19 +2960,54 @@ Rules:
         text: (parsed.suggestedAction.text || '').substring(0, 200),
       } : null;
 
-      logger.info(`[getRealtimeCoachTips] matchId=${matchId}, score=${parsed.chemistryScore}, tips=${tips.length}`);
-      return {
+      // Blend: use MAX of algorithmic and Gemini score (generous)
+      const geminiScore = Math.max(35, Math.min(100, parseInt(parsed.chemistryScore) || 55));
+      const blendedScore = Math.max(geminiScore, algoResult.score);
+
+      const coachResult = {
         success: true,
-        chemistryScore: Math.max(35, Math.min(100, parseInt(parsed.chemistryScore) || 55)),
-        chemistryTrend: ['rising', 'falling', 'stable'].includes(parsed.chemistryTrend) ? parsed.chemistryTrend : 'stable',
-        engagementLevel: ['high', 'medium', 'low'].includes(parsed.engagementLevel) ? parsed.engagementLevel : 'medium',
+        chemistryScore: blendedScore,
+        chemistryTrend: ['rising', 'falling', 'stable'].includes(parsed.chemistryTrend) ? parsed.chemistryTrend : algoResult.trend,
+        engagementLevel: ['high', 'medium', 'low'].includes(parsed.engagementLevel) ? parsed.engagementLevel : algoResult.engagement,
         tips,
         preDateDetected: !!parsed.preDateDetected,
         suggestedAction,
       };
+
+      // Cache the Gemini result for future requests
+      await cacheRef.set({
+        ...coachResult,
+        messageCount: messages.length,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'gemini',
+        algoScore: algoResult.score,
+        geminiScore,
+      });
+
+      logger.info(`[getRealtimeCoachTips] GEMINI: matchId=${matchId}, algo=${algoResult.score}, gemini=${geminiScore}, blended=${blendedScore}, tips=${tips.length}`);
+      return coachResult;
     } catch (error) {
-      logger.error(`[getRealtimeCoachTips] Error: ${error.message}`);
-      throw new Error(`Coach analysis unavailable: ${error.message}`);
+      // On Gemini failure, fallback to algorithmic score
+      logger.warn(`[getRealtimeCoachTips] Gemini failed (${error.message}), using algorithmic fallback`);
+      const fallbackMessages = [];
+      try {
+        const snap = await db.collection('matches').doc(matchId).collection('messages')
+          .orderBy('timestamp', 'desc').limit(20).get();
+        snap.docs.forEach((d) => {
+          const m = d.data();
+          fallbackMessages.push({sender: m.senderId === userId ? 'user' : 'match', text: m.message || '', type: m.type || 'text'});
+        });
+      } catch (_) { /* ignore */ }
+      const algoFallback = calculateAlgorithmicChemistry(fallbackMessages.reverse(), userId);
+      return {
+        success: true,
+        chemistryScore: algoFallback.score,
+        chemistryTrend: algoFallback.trend,
+        engagementLevel: algoFallback.engagement,
+        tips: [],
+        preDateDetected: false,
+        suggestedAction: null,
+      };
     }
   },
 );
