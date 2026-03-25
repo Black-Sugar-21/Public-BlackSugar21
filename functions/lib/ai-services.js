@@ -207,27 +207,157 @@ exports.analyzeConversationChemistry = onCall(
  * Homologado: iOS AIWingmanService.generateSmartReply
  */
 exports.generateSmartReply = onCall(
-  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {messages} = request.data || {};
+    const startTime = Date.now();
+    const {matchId, lastMessage, userId, userLanguage} = request.data || {};
+    const apiKey = process.env.GEMINI_API_KEY;
+    const db = admin.firestore();
 
-    // En producción usar Vertex AI / Gemini API
-    const lastMessage = Array.isArray(messages) && messages.length > 0
-      ? (typeof messages[messages.length - 1] === 'string' ? messages[messages.length - 1] : messages[messages.length - 1].message || '')
-      : '';
+    // Normalize language
+    const rawLang = userLanguage || 'en';
+    const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
 
-    const replies = [
-      '¡Eso suena genial! Cuéntame más 😊',
-      '¡Qué interesante! ¿Y tú qué opinas?',
-      'Me encanta cómo piensas 💫',
-      '¡Totalmente de acuerdo!',
-      '¿Cuándo podríamos conocernos en persona? ☕',
-    ];
+    // Multilingual fallback replies
+    const FALLBACK = {
+      es: {playful: '¡Eso suena genial! Cuéntame más 😊', thoughtful: '¡Qué interesante! Me encantaría saber más sobre eso 🤔', casual: '¡Qué buena onda! 👋', tone: 'neutral', engagementTip: 'Haz una pregunta abierta para mantener la conversación'},
+      en: {playful: "That sounds amazing! Tell me more 😊", thoughtful: "That's really interesting! I'd love to hear more about that 🤔", casual: "That's cool! 👋", tone: 'neutral', engagementTip: 'Ask an open-ended question to keep the conversation flowing'},
+      fr: {playful: "Ça a l'air génial ! Raconte-moi 😊", thoughtful: "C'est vraiment intéressant ! J'aimerais en savoir plus 🤔", casual: "Trop bien ! 👋", tone: 'neutral', engagementTip: 'Pose une question ouverte pour continuer la conversation'},
+      de: {playful: 'Das klingt toll! Erzähl mir mehr 😊', thoughtful: 'Das ist wirklich interessant! Ich würde gerne mehr darüber erfahren 🤔', casual: 'Cool! 👋', tone: 'neutral', engagementTip: 'Stelle eine offene Frage, um das Gespräch am Laufen zu halten'},
+      pt: {playful: 'Isso parece incrível! Me conta mais 😊', thoughtful: 'Que interessante! Adoraria saber mais sobre isso 🤔', casual: 'Que legal! 👋', tone: 'neutral', engagementTip: 'Faça uma pergunta aberta para manter a conversa fluindo'},
+      ja: {playful: 'それ素敵ですね！もっと教えて 😊', thoughtful: 'すごく興味深い！もっと聞かせて 🤔', casual: 'いいね！👋', tone: 'neutral', engagementTip: 'オープンな質問をして会話を続けよう'},
+      zh: {playful: '听起来太棒了！跟我多说说 😊', thoughtful: '真有意思！想多了解一下 🤔', casual: '不错哦！👋', tone: 'neutral', engagementTip: '问一个开放性的问题来保持对话'},
+      ru: {playful: 'Звучит здорово! Расскажи подробнее 😊', thoughtful: 'Очень интересно! Хотелось бы узнать больше 🤔', casual: 'Круто! 👋', tone: 'neutral', engagementTip: 'Задай открытый вопрос, чтобы поддержать разговор'},
+      ar: {playful: 'يبدو رائعاً! أخبرني المزيد 😊', thoughtful: 'مثير للاهتمام! أود معرفة المزيد 🤔', casual: '!رائع 👋', tone: 'neutral', engagementTip: 'اطرح سؤالاً مفتوحاً للحفاظ على المحادثة'},
+      id: {playful: 'Kedengarannya seru! Ceritain dong 😊', thoughtful: 'Menarik banget! Pengen tau lebih lanjut 🤔', casual: 'Keren! 👋', tone: 'neutral', engagementTip: 'Ajukan pertanyaan terbuka untuk menjaga percakapan tetap mengalir'},
+    };
+    const fallback = FALLBACK[lang] || FALLBACK.en;
 
-    const reply = replies[Math.floor(Math.random() * replies.length)];
-    logger.info(`[generateSmartReply] Generated reply for user ${request.auth.uid}`);
-    return {success: true, reply, alternatives: replies.filter((r) => r !== reply).slice(0, 3)};
+    try {
+      if (!apiKey || !matchId) {
+        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+      }
+
+      // 1. Read last 8 messages from the match conversation
+      let chatHistory = [];
+      try {
+        const msgSnap = await db.collection('matches').doc(matchId).collection('messages')
+          .orderBy('timestamp', 'desc').limit(8).get();
+        chatHistory = msgSnap.docs.reverse().map((d) => {
+          const data = d.data();
+          return {sender: data.senderId === userId ? 'me' : 'them', text: data.message || ''};
+        }).filter((m) => m.text && m.text.length > 0);
+      } catch (msgErr) {
+        logger.info(`[generateSmartReply] Could not read messages: ${msgErr.message}`);
+      }
+
+      // 2. Read both user profiles
+      const matchDoc = await db.collection('matches').doc(matchId).get();
+      const matchData = matchDoc.exists ? matchDoc.data() : {};
+      const usersMatched = matchData.usersMatched || [];
+      const otherUserId = usersMatched.find((uid) => uid !== userId) || '';
+
+      let myProfile = {};
+      let theirProfile = {};
+      try {
+        const [mySnap, theirSnap] = await Promise.all([
+          userId ? db.collection('users').doc(userId).get() : Promise.resolve({exists: false, data: () => ({})}),
+          otherUserId ? db.collection('users').doc(otherUserId).get() : Promise.resolve({exists: false, data: () => ({})}),
+        ]);
+        myProfile = mySnap.exists ? mySnap.data() : {};
+        theirProfile = theirSnap.exists ? theirSnap.data() : {};
+      } catch (profileErr) {
+        logger.info(`[generateSmartReply] Could not read profiles: ${profileErr.message}`);
+      }
+
+      const myName = myProfile.name || 'Me';
+      const theirName = theirProfile.name || 'Match';
+
+      // 3. RAG: retrieve relevant advice based on last message
+      let ragContext = '';
+      try {
+        const ragQuery = lastMessage || (chatHistory.length > 0 ? chatHistory[chatHistory.length - 1].text : 'dating conversation reply');
+        const genAIEmbed = new GoogleGenerativeAI(apiKey);
+        const embModel = genAIEmbed.getGenerativeModel({model: 'gemini-embedding-001'});
+        const embedResult = await Promise.race([
+          embModel.embedContent({content: {parts: [{text: ragQuery.substring(0, 300)}]}, taskType: 'RETRIEVAL_QUERY', outputDimensionality: 768}),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RAG timeout')), 4000)),
+        ]);
+        const ragSnap = await db.collection('coachKnowledge')
+          .findNearest('embedding', embedResult.embedding.values, {limit: 3, distanceMeasure: 'COSINE', distanceResultField: '_distance'})
+          .get();
+        if (!ragSnap.empty) {
+          const chunks = ragSnap.docs
+            .map((d) => {const data = d.data(); return {text: (data.text || '').substring(0, 500), similarity: 1 - (data._distance ?? 1)};})
+            .filter((d) => d.similarity >= 0.3);
+          if (chunks.length > 0) {
+            ragContext = '\n\nExpert advice:\n' + chunks.slice(0, 2).map((d) => `- ${d.text}`).join('\n');
+          }
+        }
+      } catch (ragErr) {
+        logger.info(`[generateSmartReply] RAG skipped: ${ragErr.message}`);
+      }
+
+      // 4. Build conversation context
+      const chatContext = chatHistory.length > 0
+        ? 'Recent conversation:\n' + chatHistory.map((m) => `${m.sender === 'me' ? myName : theirName}: ${m.text}`).join('\n')
+        : `No messages yet. ${theirName}'s last message: "${lastMessage || 'none'}"`;
+
+      const profileContext = [];
+      if (theirProfile.bio) profileContext.push(`${theirName}'s bio: "${theirProfile.bio}"`);
+      if (Array.isArray(theirProfile.interests) && theirProfile.interests.length > 0) profileContext.push(`${theirName}'s interests: ${theirProfile.interests.join(', ')}`);
+
+      // 5. Generate with Gemini
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
+
+      const prompt = `You are a dating conversation assistant. Generate 3 reply suggestions for ${myName} to respond to ${theirName}.
+
+${chatContext}
+${profileContext.length > 0 ? '\nProfile info:\n' + profileContext.join('\n') : ''}
+${ragContext}
+
+Rules:
+- ${getLanguageInstruction(lang)}
+- Generate 3 distinct reply styles:
+  * "playful": Fun, light, maybe teasing — with an emoji
+  * "thoughtful": Genuine, deeper, shows interest — with an emoji
+  * "casual": Relaxed, easy-going, natural — with an emoji
+- Each reply: 1-2 sentences max, natural conversational tone
+- Reference the conversation context — DON'T be generic
+- Detect the conversation "tone": "neutral", "flirty", or "serious"
+- Write a short "engagementTip": 1-sentence advice on what to do next
+- If no messages yet, generate conversation openers instead of replies
+
+Return ONLY a JSON object: {"playful": "...", "thoughtful": "...", "casual": "...", "tone": "neutral|flirty|serious", "engagementTip": "..."}`;
+
+      const result = await model.generateContent({
+        contents: [{role: 'user', parts: [{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 512, temperature: 0.85},
+      });
+
+      const text = result.response.text();
+      const parsed = parseGeminiJsonResponse(text);
+
+      if (parsed && parsed.playful && parsed.thoughtful && parsed.casual) {
+        const suggestions = {
+          playful: String(parsed.playful).substring(0, 150),
+          thoughtful: String(parsed.thoughtful).substring(0, 150),
+          casual: String(parsed.casual).substring(0, 150),
+          tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
+          engagementTip: String(parsed.engagementTip || '').substring(0, 200),
+        };
+        logger.info(`[generateSmartReply] Generated contextual replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs context]`);
+        return {success: true, suggestions, executionTime: Date.now() - startTime};
+      }
+
+      logger.warn('[generateSmartReply] AI returned invalid format, using fallback');
+      return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+    } catch (err) {
+      logger.warn(`[generateSmartReply] AI failed (${err.message}), using fallback`);
+      return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+    }
   },
 );
 
