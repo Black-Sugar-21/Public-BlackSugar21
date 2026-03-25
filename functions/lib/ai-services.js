@@ -1615,12 +1615,53 @@ Return ONLY a JSON object:
   "dresscode": "suggested dress style"
 }`;
 
-      const result = await model.generateContent({
-        contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: 1024, temperature: 0.85},
-      });
+      // Attempt 1: with JSON response mode for reliable parsing
+      let parsed = null;
+      try {
+        const result = await model.generateContent({
+          contents: [{role: 'user', parts: [{text: prompt}]}],
+          generationConfig: {maxOutputTokens: 1024, temperature: 0.85, responseMimeType: 'application/json'},
+        });
+        const rawText = result.response.text();
+        parsed = JSON.parse(rawText);
+      } catch (jsonErr) {
+        logger.info(`[DateBlueprint] JSON mode failed (${jsonErr.message}), retrying with text mode`);
+        // Attempt 2: text mode with manual parsing
+        try {
+          const result2 = await model.generateContent({
+            contents: [{role: 'user', parts: [{text: prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no code blocks.'}]}],
+            generationConfig: {maxOutputTokens: 1024, temperature: 0.7},
+          });
+          parsed = parseGeminiJsonResponse(result2.response.text());
+        } catch (retryErr) {
+          logger.warn(`[DateBlueprint] Both JSON attempts failed: ${retryErr.message}`);
+        }
+      }
 
-      const parsed = parseGeminiJsonResponse(result.response.text());
+      // Attempt 3: if parsing failed, build a simple plan from places data
+      if (!parsed && placeResults.length >= 2) {
+        logger.info('[DateBlueprint] Building fallback plan from places data');
+        const topPlaces = placeResults.slice(0, durationPreset === 'quick' ? 2 : 3);
+        const baseHour = hour >= 18 ? 19 : hour >= 12 ? 14 : 10;
+        parsed = {
+          title: lang === 'es' ? `Cita con ${theirName}` : `Date with ${theirName}`,
+          totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
+          estimatedBudget: '$25-50',
+          steps: topPlaces.map((p, i) => ({
+            order: i + 1,
+            time: `${baseHour + i * (durationPreset === 'quick' ? 1 : 2)}:00`,
+            duration: durationPreset === 'quick' ? '45 min' : '1h 15min',
+            activity: p.name || 'Visit',
+            placeName: p.name || '',
+            placeIndex: i,
+            tip: p.description ? String(p.description).substring(0, 100) : '',
+            whyThisPlace: shared.length > 0 ? `Shared interest: ${shared[0]}` : '',
+            travelTimeToNext: i < topPlaces.length - 1 ? '10 min' : '',
+          })),
+          icebreaker: lang === 'es' ? '¿Qué es lo que más te gusta hacer un fin de semana?' : 'What do you enjoy most on weekends?',
+          dresscode: 'casual',
+        };
+      }
 
       if (parsed && Array.isArray(parsed.steps) && parsed.steps.length >= 2) {
         // Enrich steps with real place data
