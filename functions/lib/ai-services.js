@@ -1406,6 +1406,30 @@ Respond ONLY with valid JSON:
   },
 );
 
+/** Sanitize place object: replace NaN/undefined/Infinity with safe defaults */
+function sanitizePlaceForJson(place) {
+  if (!place || typeof place !== 'object') return null;
+  const clean = {};
+  for (const [key, value] of Object.entries(place)) {
+    if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+      clean[key] = 0;
+    } else if (value === undefined) {
+      clean[key] = null;
+    } else if (Array.isArray(value)) {
+      clean[key] = value.map((item) => {
+        if (typeof item === 'object' && item !== null) return sanitizePlaceForJson(item);
+        if (typeof item === 'number' && (isNaN(item) || !isFinite(item))) return 0;
+        return item;
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      clean[key] = sanitizePlaceForJson(value);
+    } else {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
 /**
  * Callable: AI Date Blueprint — generates a personalized first date itinerary.
  * Payload: { matchId, userLanguage, duration?, preferences? }
@@ -1620,7 +1644,7 @@ Return ONLY a JSON object:
       try {
         const result = await model.generateContent({
           contents: [{role: 'user', parts: [{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 1024, temperature: 0.85, responseMimeType: 'application/json'},
+          generationConfig: {maxOutputTokens: 2048, temperature: 0.85, responseMimeType: 'application/json'},
         });
         const rawText = result.response.text();
         parsed = JSON.parse(rawText);
@@ -1630,7 +1654,7 @@ Return ONLY a JSON object:
         try {
           const result2 = await model.generateContent({
             contents: [{role: 'user', parts: [{text: prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no code blocks.'}]}],
-            generationConfig: {maxOutputTokens: 1024, temperature: 0.7},
+            generationConfig: {maxOutputTokens: 2048, temperature: 0.7},
           });
           parsed = parseGeminiJsonResponse(result2.response.text());
         } catch (retryErr) {
@@ -1678,7 +1702,7 @@ Return ONLY a JSON object:
             tip: String(step.tip || '').substring(0, 200),
             whyThisPlace: String(step.whyThisPlace || '').substring(0, 200),
             travelTimeToNext: String(step.travelTimeToNext || '').substring(0, 30),
-            place: matchedPlace || null,
+            place: matchedPlace ? sanitizePlaceForJson(matchedPlace) : null,
           };
         });
 
