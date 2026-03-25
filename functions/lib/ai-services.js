@@ -1536,11 +1536,12 @@ exports.generateDateBlueprint = onCall(
       // 5. Fetch real places near midpoint (3 diverse queries)
       const placesConfig = await getPlacesSearchConfig();
       const radius = Math.max(5000, Math.min(distanceBetween * 1000 + 5000, 30000));
+      // Diverse queries by duration — varied categories to avoid repeating same type
       const queries = durationPreset === 'quick'
-        ? ['café acogedor', 'parque bonito']
+        ? ['café coffee shop', 'park garden viewpoint']
         : durationPreset === 'full'
-          ? ['café brunch', 'museo galería', 'restaurante cena', 'bar cocktail']
-          : ['café', 'actividad cultural', 'restaurante cena'];
+          ? ['café brunch breakfast', 'museum art gallery cultural center', 'restaurant dinner', 'bar cocktail lounge', 'park viewpoint']
+          : ['café coffee shop', 'restaurant lunch dinner', 'park museum art gallery bar'];
 
       const placeResults = [];
       for (const query of queries) {
@@ -1625,13 +1626,22 @@ ${placesDescription}
 RULES:
 - ${getLanguageInstruction(lang)}
 - Select ${durationPreset === 'quick' ? '2' : durationPreset === 'full' ? '3-4' : '2-3'} places from the list above
-- Create a logical sequence with realistic timing
-- Each step: explain WHY this place fits their shared interests or conversation topics
+- IMPORTANT: Each step MUST be a DIFFERENT type of venue (don't repeat cafés, don't repeat restaurants)
+  * Good flow: café → park/museum → restaurant → bar
+  * Bad flow: café → café → café
+- Create a NARRATIVE arc for the date:
+  * Step 1: Low-pressure start (café, park, bookstore) — get comfortable
+  * Step 2: Shared activity (museum, gallery, market, viewpoint) — create memories
+  * Step 3: Deeper connection (restaurant, wine bar) — intimate conversation
+  * Step 4 (if full day): Fun/nightlife (bar, cocktail lounge, live music)
+- Give the plan a CREATIVE title that captures the vibe (not just "Plan con X")
+- Each step needs a clear "activity" description (not just the venue name)
+  * Good: "Explorar el arte local mientras toman café"
+  * Bad: "Café El Picaflor"
 - Add a specific tip for each venue (what to order, what to see, etc.)
 - Include one conversation icebreaker for the date
 - Suggest a dresscode
 - Reference specific things from their chat or profiles when possible
-- Make the plan feel PERSONAL, not generic
 - Be specific with times (e.g., "17:30" not "afternoon")
 
 Return ONLY a JSON object:
@@ -1685,7 +1695,7 @@ Return ONLY a JSON object:
         const topPlaces = placeResults.slice(0, durationPreset === 'quick' ? 2 : 3);
         const baseHour = hour >= 18 ? 19 : hour >= 12 ? 14 : 10;
         parsed = {
-          title: lang === 'es' ? `Plan con ${theirName}` : `Plan with ${theirName}`,
+          title: lang === 'es' ? `Aventura con ${theirName}` : `Adventure with ${theirName}`,
           totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
           estimatedBudget: '$25-50',
           steps: topPlaces.map((p, i) => ({
