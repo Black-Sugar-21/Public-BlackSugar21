@@ -575,15 +575,22 @@ exports.generateIcebreakers = onCall(
     const db = admin.firestore();
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // Fallback starters if AI fails
-    const fallbackStarters = [
-      {message: '¿Cuál es tu hobby secreto que pocas personas conocen? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'},
-      {message: '¿Cuál fue la última vez que intentaste algo nuevo? 🌟', reasoning: 'Shows openness', emoji: '🌟'},
-      {message: '¿Café ☕ o té 🍵? ¿Y por qué?', reasoning: 'Light and fun', emoji: '☕'},
-    ];
+    // Multilingual fallback starters (10 languages)
+    const FALLBACK_BY_LANG = {
+      es: [{message: '¿Cuál es tu hobby secreto que pocas personas conocen? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: '¿Cuál fue la última vez que intentaste algo nuevo? 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: '¿Café ☕ o té 🍵? ¿Y por qué?', reasoning: 'Light and fun', emoji: '☕'}],
+      en: [{message: "What's a hobby you have that most people don't know about? 🤫", reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: "What's the last new thing you tried? 🌟", reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Coffee ☕ or tea 🍵? And why?', reasoning: 'Light and fun', emoji: '☕'}],
+      fr: [{message: 'Quel est ton hobby secret que peu de gens connaissent ? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: "Quelle est la dernière chose nouvelle que tu as essayée ? 🌟", reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Café ☕ ou thé 🍵 ? Et pourquoi ?', reasoning: 'Light and fun', emoji: '☕'}],
+      de: [{message: 'Was ist dein geheimes Hobby, von dem die wenigsten wissen? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: 'Was war das Letzte, was du Neues ausprobiert hast? 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Kaffee ☕ oder Tee 🍵? Und warum?', reasoning: 'Light and fun', emoji: '☕'}],
+      pt: [{message: 'Qual é o seu hobby secreto que poucas pessoas conhecem? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: 'Qual foi a última coisa nova que você experimentou? 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Café ☕ ou chá 🍵? E por quê?', reasoning: 'Light and fun', emoji: '☕'}],
+      ja: [{message: '他の人が知らない秘密の趣味は何ですか？🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: '最近初めて挑戦したことは何ですか？🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'コーヒー☕ それとも紅茶🍵？理由も教えて！', reasoning: 'Light and fun', emoji: '☕'}],
+      zh: [{message: '你有什么别人不知道的小爱好吗？🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: '你最近尝试的新事物是什么？🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: '咖啡☕还是茶🍵？为什么呢？', reasoning: 'Light and fun', emoji: '☕'}],
+      ru: [{message: 'Какое у тебя тайное хобби, о котором мало кто знает? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: 'Что новое ты недавно попробовал(а)? 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Кофе ☕ или чай 🍵? И почему?', reasoning: 'Light and fun', emoji: '☕'}],
+      ar: [{message: 'ما هي هوايتك السرية التي لا يعرفها الكثيرون؟ 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: 'ما آخر شيء جديد جربته؟ 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'قهوة ☕ أم شاي 🍵؟ ولماذا؟', reasoning: 'Light and fun', emoji: '☕'}],
+      id: [{message: 'Apa hobi rahasiamu yang sedikit orang tahu? 🤫', reasoning: 'Reveals hidden personality', emoji: '🤫'}, {message: 'Hal baru terakhir apa yang kamu coba? 🌟', reasoning: 'Shows openness', emoji: '🌟'}, {message: 'Kopi ☕ atau teh 🍵? Dan kenapa?', reasoning: 'Light and fun', emoji: '☕'}],
+    };
 
     try {
-      // Read both user profiles
+      // Read both user profiles (handle non-existent docs)
       const [user1Snap, user2Snap] = await Promise.all([
         db.collection('users').doc(userId1).get(),
         db.collection('users').doc(userId2).get(),
@@ -592,13 +599,41 @@ exports.generateIcebreakers = onCall(
       const user1 = user1Snap.exists ? user1Snap.data() : {};
       const user2 = user2Snap.exists ? user2Snap.data() : {};
 
+      // Detect language: prefer sender's deviceLanguage, normalize to base code
+      const rawLang = user1.deviceLanguage || user2.deviceLanguage || 'en';
+      const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+      const fallbackStarters = FALLBACK_BY_LANG[lang] || FALLBACK_BY_LANG.en;
+
       const user1Name = user1.name || 'User';
       const user2Name = user2.name || 'Match';
       const user1Bio = user1.bio || '';
       const user2Bio = user2.bio || '';
       const user1Interests = Array.isArray(user1.interests) ? user1.interests.join(', ') : '';
       const user2Interests = Array.isArray(user2.interests) ? user2.interests.join(', ') : '';
-      const lang = user1.deviceLanguage || 'es';
+
+      // Edge case: if both users have no bio AND no interests, use fallback directly
+      if (!user1Bio && !user2Bio && !user1Interests && !user2Interests) {
+        logger.info(`[generateIcebreakers] No profile data for either user, using ${lang} fallback`);
+        return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+      }
+
+      // Edge case: no API key
+      if (!apiKey) {
+        logger.warn('[generateIcebreakers] No GEMINI_API_KEY, using fallback');
+        return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+      }
+
+      // Build context with available data
+      const contextParts = [];
+      if (user1Bio) contextParts.push(`- ${user1Name}'s bio: "${user1Bio}"`);
+      if (user1Interests) contextParts.push(`- ${user1Name}'s interests: ${user1Interests}`);
+      if (user2Bio) contextParts.push(`- ${user2Name}'s bio: "${user2Bio}"`);
+      if (user2Interests) contextParts.push(`- ${user2Name}'s interests: ${user2Interests}`);
+
+      // Find shared interests for better personalization
+      const set1 = new Set((user1.interests || []).map((i) => i.toLowerCase()));
+      const shared = (user2.interests || []).filter((i) => set1.has(i.toLowerCase()));
+      if (shared.length > 0) contextParts.push(`- Shared interests: ${shared.join(', ')}`);
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
@@ -606,19 +641,16 @@ exports.generateIcebreakers = onCall(
       const prompt = `You are a dating conversation expert. Generate exactly 3 personalized icebreaker messages that ${user1Name} can send to ${user2Name} to start a great conversation.
 
 Context:
-- ${user1Name}'s bio: "${user1Bio}"
-- ${user1Name}'s interests: ${user1Interests || 'not specified'}
-- ${user2Name}'s bio: "${user2Bio}"
-- ${user2Name}'s interests: ${user2Interests || 'not specified'}
+${contextParts.join('\n')}
 
 Rules:
-- Messages must be in ${getLanguageInstruction(lang)} language
+- ${getLanguageInstruction(lang)}
 - Each message should be 1-2 sentences max, casual and fun
 - Reference SPECIFIC shared interests or details from their profiles when possible
 - Include one relevant emoji per message
 - Make them feel personal, NOT generic
 - Avoid cliché pickup lines
-- If no shared interests, use creative questions based on their bios
+- If limited profile data, use creative open-ended questions
 
 Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning": "why this works", "emoji": "🎯"}]`;
 
@@ -632,18 +664,24 @@ Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning"
 
       if (Array.isArray(parsed) && parsed.length >= 3) {
         const icebreakers = parsed.slice(0, 3).map((item) => ({
-          message: item.message || item.text || '',
-          reasoning: item.reasoning || '',
-          emoji: item.emoji || '💬',
-        }));
-        logger.info(`[generateIcebreakers] Generated ${icebreakers.length} personalized icebreakers for ${user1Name}→${user2Name}`);
-        return {success: true, icebreakers, starters: icebreakers.map((i) => i.message)};
+          message: String(item.message || item.text || '').substring(0, 200),
+          reasoning: String(item.reasoning || '').substring(0, 100),
+          emoji: String(item.emoji || '💬').substring(0, 4),
+        })).filter((i) => i.message.length > 0);
+
+        if (icebreakers.length >= 2) {
+          logger.info(`[generateIcebreakers] Generated ${icebreakers.length} personalized icebreakers (${lang}) for ${user1Name}→${user2Name}`);
+          return {success: true, icebreakers, starters: icebreakers.map((i) => i.message)};
+        }
       }
 
       logger.warn('[generateIcebreakers] AI returned invalid format, using fallback');
       return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
     } catch (err) {
-      logger.warn(`[generateIcebreakers] AI failed (${err.message}), using fallback`);
+      const rawLang = (request.data || {}).lang || 'en';
+      const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+      const fallbackStarters = FALLBACK_BY_LANG[lang] || FALLBACK_BY_LANG.en;
+      logger.warn(`[generateIcebreakers] AI failed (${err.message}), using ${lang} fallback`);
       return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
     }
   },
