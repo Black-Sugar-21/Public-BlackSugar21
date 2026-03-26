@@ -408,6 +408,10 @@ function isValidCoachInstagramHandle(handle) {
     'perfil', 'pagina', 'cuenta', 'oficial', 'contacto', 'reservas',
     // Portuguese
     'perfil', 'pagina', 'conta', 'oficial', 'contato',
+    // French
+    'profil', 'officiel',
+    // More English false positives
+    'food', 'drinks', 'happy', 'place', 'best', 'good', 'nice', 'local', 'fresh', 'daily', 'special', 'menu', 'open', 'closed', 'hours', 'today',
   ];
   if (genericWords.includes(clean.toLowerCase())) return false;
   // Reject if handle is just numbers (not a real account)
@@ -650,6 +654,18 @@ function isInappropriateVenue(place) {
     'casa noturna adulta', 'dança exótica', 'boate adulta',
     // French
     'cabaret érotique', 'danse exotique',
+    // German
+    'stripclub', 'tabledance', 'nachtclub für erwachsene', 'erotik',
+    // Japanese
+    'ストリップ', 'キャバレー', 'キャバクラ', 'セクシーバー',
+    // Chinese
+    '脱衣舞', '成人夜总会', '色情', '情趣',
+    // Russian
+    'стриптиз', 'кабаре', 'эротик', 'для взрослых',
+    // Arabic
+    'تعري', 'ملهى للكبار', 'كباريه',
+    // Indonesian
+    'striptis', 'klub dewasa', 'hiburan dewasa',
   ];
 
   for (const term of adultTerms) {
