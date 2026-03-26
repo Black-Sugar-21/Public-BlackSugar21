@@ -355,12 +355,13 @@ exports.wingPersonAnalysis = onSchedule(
         const allMatches = [...m1.docs, ...m2.docs];
         if (allMatches.length === 0) continue;
 
-        // Check dedup: don't send for same match within 12h
+        // Check dedup: don't send for same match within configurable window
+        const dedupWindowMs = (config.dedupWindowHours || 12) * MS_PER_HOUR;
         let recentNotifs = new Set();
         try {
           const recentSnap = await db.collection('wingPersonNotifications')
             .where('userId', '==', userId)
-            .where('sentAt', '>', admin.firestore.Timestamp.fromMillis(now - 12 * MS_PER_HOUR))
+            .where('sentAt', '>', admin.firestore.Timestamp.fromMillis(now - dedupWindowMs))
             .get();
           recentSnap.docs.forEach(d => recentNotifs.add(d.data().matchId));
         } catch (e) { /* collection may not exist yet */ }
@@ -390,10 +391,19 @@ exports.wingPersonAnalysis = onSchedule(
         // Generate notification text
         const apiKey = process.env.GEMINI_API_KEY;
         const notifBody = await generateNotificationText(bestSignal, userName, matchName, lang, apiKey);
-        const notifTitle = lang.startsWith('es') ? '💜 Tu Wing-Person' :
-                           lang.startsWith('pt') ? '💜 Seu Wing-Person' :
-                           lang.startsWith('fr') ? '💜 Ton Wing-Person' :
-                           '💜 Your Wing-Person';
+        const titleMap = {
+          es: config.notificationTitles?.es || 'Tu Wing-Person 💫',
+          pt: config.notificationTitles?.pt || 'Seu Wing-Person 💫',
+          fr: config.notificationTitles?.fr || 'Votre Wing-Person 💫',
+          de: config.notificationTitles?.de || 'Dein Wing-Person 💫',
+          ja: config.notificationTitles?.ja || 'あなたのWing-Person 💫',
+          zh: config.notificationTitles?.zh || '你的Wing-Person 💫',
+          ru: config.notificationTitles?.ru || 'Ваш Wing-Person 💫',
+          ar: config.notificationTitles?.ar || 'مساعدك Wing-Person 💫',
+          id: config.notificationTitles?.id || 'Wing-Person Anda 💫',
+          en: config.notificationTitles?.en || 'Your Wing-Person 💫',
+        };
+        const notifTitle = titleMap[lang] || titleMap.en;
 
         // Send push notification
         try {

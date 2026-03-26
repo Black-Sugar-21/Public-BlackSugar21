@@ -34,7 +34,7 @@ async function getEventsConfig() {
 
 // ── Ticketmaster API ─────────────────────────────────────────────────────────
 
-async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults) {
+async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   const apiKey = process.env.TICKETMASTER_API_KEY;
   if (!apiKey) return [];
 
@@ -63,7 +63,7 @@ async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults
     }
 
     const startDate = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-    const endDate = new Date(Date.now() + 14 * 86400000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const endDate = new Date(Date.now() + searchDaysMs).toISOString().replace(/\.\d{3}Z$/, 'Z');
     params.set('startDateTime', startDate);
     params.set('endDateTime', endDate);
 
@@ -122,7 +122,7 @@ function mapTmCategory(classification) {
 
 // ── Eventbrite API ───────────────────────────────────────────────────────────
 
-async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults) {
+async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   const token = process.env.EVENTBRITE_TOKEN;
   if (!token) return [];
 
@@ -132,7 +132,7 @@ async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults) 
       'location.longitude': String(lng),
       'location.within': `${Math.min(radiusKm, 200)}km`,
       'start_date.range_start': new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
-      'start_date.range_end': new Date(Date.now() + 14 * 86400000).toISOString().replace(/\.\d{3}Z$/, 'Z'),
+      'start_date.range_end': new Date(Date.now() + searchDaysMs).toISOString().replace(/\.\d{3}Z$/, 'Z'),
       'expand': 'venue',
       'page_size': String(maxResults),
     });
@@ -185,10 +185,10 @@ async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults) 
 
 // ── Meetup API (via GraphQL — no key needed for public events) ───────────────
 
-async function searchMeetup(lat, lng, radiusKm, lang, category, maxResults) {
+async function searchMeetup(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   try {
     // Meetup's public GraphQL endpoint for event search
-    const endDate = new Date(Date.now() + 14 * 86400000).toISOString();
+    const endDate = new Date(Date.now() + searchDaysMs).toISOString();
     const query = `
       query {
         rankedEvents(filter: {
@@ -319,6 +319,7 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
 
   const radius = radiusKm || config.radiusKm || 30;
   const maxResults = config.maxEventsPerQuery || 10;
+  const searchDaysMs = (config.searchDaysAhead || 14) * 86400000;
 
   // Check cache
   const regionHash = `${Math.round(lat * 10)}_${Math.round(lng * 10)}_${category || 'all'}`;
@@ -337,11 +338,11 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
     // Cache miss — continue to fetch
   }
 
-  // Fetch from ALL sources in parallel (Ticketmaster + Eventbrite + Meetup)
+  // Fetch from ALL sources in parallel
   const [tmEvents, ebEvents, muEvents] = await Promise.all([
-    searchTicketmaster(lat, lng, radius, lang, category, maxResults).catch(() => []),
-    searchEventbrite(lat, lng, radius, lang, category, maxResults).catch(() => []),
-    searchMeetup(lat, lng, radius, lang, category, maxResults).catch(() => []),
+    searchTicketmaster(lat, lng, radius, lang, category, maxResults, searchDaysMs).catch(() => []),
+    searchEventbrite(lat, lng, radius, lang, category, maxResults, searchDaysMs).catch(() => []),
+    searchMeetup(lat, lng, radius, lang, category, maxResults, searchDaysMs).catch(() => []),
   ]);
 
   // Merge + dedup by name similarity
