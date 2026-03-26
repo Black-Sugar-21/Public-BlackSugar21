@@ -22,6 +22,7 @@ const modules = [
   './lib/wingperson',
   './lib/geohash',
   './lib/safety',
+  './lib/events',
 ];
 
 modules.forEach(mod => {

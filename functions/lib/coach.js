@@ -13,6 +13,7 @@ const {
   googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
   placesTextSearch, transformPlaceToSuggestion, CATEGORY_TO_PLACES_TYPE,
 } = require('./places-helpers');
+const { fetchLocalEvents, EVENT_CATEGORY_EMOJI } = require('./events');
 
 // --- Coach infrastructure ---
 const PLACES_CHIP_I18N = {
@@ -1872,13 +1873,17 @@ Return JSON with these fields:
         }
       };
 
-      // 4. Read coach history + fetch real places + RAG knowledge in parallel
+      // 4. Read coach history + fetch real places + events + RAG knowledge in parallel
       const ragConfig = config.rag || {};
-      const [historySnap, fetchedPlaces, ragKnowledge] = await Promise.all([
+      const eventsPromise = (isUserPlaceSearch && hasLocation)
+        ? fetchLocalEvents(searchLat || userLat, searchLng || userLng, searchRadius / 1000, lang, null).catch(() => [])
+        : Promise.resolve([]);
+      const [historySnap, fetchedPlaces, ragKnowledge, localEvents] = await Promise.all([
         db.collection('coachChats').doc(userId)
           .collection('messages').orderBy('timestamp', 'desc').limit(config.historyLimit).get(),
         fetchCoachPlaces(),
         retrieveCoachKnowledge(message, process.env.GEMINI_API_KEY, ragConfig, lang),
+        eventsPromise,
       ]);
 
       // Merge fetched places with cached supplementary places (deduplicate by placeId)
@@ -1926,6 +1931,17 @@ Return JSON with these fields:
           realPlaces.map((p, i) =>
             `${i + 1}. "${p.name}" [placeId:${p.placeId}] — ${p.address}${p.rating ? `, ★${p.rating}` : ''}${p.reviewCount ? ` (${p.reviewCount} reviews)` : ''}${p.priceLevel ? ` ${p.priceLevel}` : ''}${p.category ? ` [${p.category}]` : ''}${p.website ? ` | ${p.website}` : ''}${p.description ? `\n   ${p.description}` : ''}`,
           ).join('\n');
+      }
+
+      // Build local events context for Gemini
+      let eventsContext = '';
+      if (localEvents && localEvents.length > 0) {
+        eventsContext = '\n\nLOCAL EVENTS HAPPENING SOON (suggest these as date ideas when relevant):\n' +
+          localEvents.map((e, i) =>
+            `📅 ${i + 1}. "${e.name}" at ${e.venue} — ${e.date}${e.time ? ' ' + e.time : ''}${e.category ? ` [${e.category}]` : ''}${e.price ? ` ${e.price}` : ' Free'}${e.address ? ` | ${e.address}` : ''}`,
+          ).join('\n') +
+          '\n\nWhen suggesting events, add "isEvent": true to the activity suggestion. Events are GREAT first date ideas because they provide built-in conversation topics!';
+        logger.info(`[dateCoachChat] Injecting ${localEvents.length} local events into prompt`);
       }
 
       // 5. Build system prompt with content guardrails + activity suggestions
@@ -2027,7 +2043,7 @@ You MUST select places from the REAL PLACES list provided below (from Google Map
 
 ${activityFormatSpec}
 
-Only include activitySuggestions when contextually relevant (user discusses dates, asks for ideas, mentions going out, etc.). Do NOT include them for generic profile advice or conversation tips.${realPlacesContext}`
+Only include activitySuggestions when contextually relevant (user discusses dates, asks for ideas, mentions going out, etc.). Do NOT include them for generic profile advice or conversation tips.${realPlacesContext}${eventsContext}`
           : `\nIf the user asks about places to go, things to do, or recommendations, include an "activitySuggestions" array with 8-${targetActivities} great places.
 
 You MUST select places from the REAL PLACES list provided below (from Google Maps). Do NOT invent or hallucinate venue names. Pick the most interesting ones for the user based on their interests (${userInterests || 'none specified'}).
@@ -2035,7 +2051,7 @@ Focus on: MAXIMUM category diversity — select from at least 4-5 DIFFERENT cate
 
 ${activityFormatSpec}
 
-Include activitySuggestions when the user asks about places, things to do, going out, or recommendations.${realPlacesContext}`)
+Include activitySuggestions when the user asks about places, things to do, going out, or recommendations.${realPlacesContext}${eventsContext}`)
         : (hasMatchContext
           ? `\nWhen the context is appropriate (user asks about dates, activities, where to go, what to do, wants suggestions), include an "activitySuggestions" array with 8-${targetActivities} personalized date ideas. Base these on:
 - Both users' shared interests (${sharedInterests || 'none — suggest activities to discover common ground'})
