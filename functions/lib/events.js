@@ -310,7 +310,10 @@ async function enrichWithSocialSignals(events) {
  * @param {string|null} category
  * @returns {Promise<Array>} events sorted by date
  */
-async function fetchLocalEvents(lat, lng, radiusKm, lang, category) {
+let _userEventPrefs = null; // Module-level for sort access
+
+async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
+  _userEventPrefs = userPrefs || null;
   const config = await getEventsConfig();
   if (!config.enabled) return [];
 
@@ -351,8 +354,13 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category) {
     return true;
   });
 
-  // Sort by date (soonest first)
+  // Sort: preferred categories first (if user has prefs), then by date
   unique.sort((a, b) => {
+    // Check if we have user preferences (passed via closure from caller)
+    const prefA = _userEventPrefs ? (_userEventPrefs[a.category] || 0) : 0;
+    const prefB = _userEventPrefs ? (_userEventPrefs[b.category] || 0) : 0;
+    if (prefA !== prefB) return prefB - prefA; // Higher preference first
+    // Then by date (soonest first)
     const dA = `${a.date}T${a.time || '00:00'}`;
     const dB = `${b.date}T${b.time || '00:00'}`;
     return dA.localeCompare(dB);
@@ -437,8 +445,10 @@ exports.searchEvents = onCall(
         return {success: false, error: 'no_location', events: []};
       }
 
-      const events = await fetchLocalEvents(searchLat, searchLng, radiusKm || 30, lang, category || null);
-      return {success: true, events};
+      // Load user's event preferences for personalized sorting
+      const userPrefs = await getUserEventPreferences(userId);
+      const events = await fetchLocalEvents(searchLat, searchLng, radiusKm || 30, lang, category || null, userPrefs);
+      return {success: true, events, hasPreferences: !!userPrefs};
     } catch (err) {
       logger.error(`[searchEvents] Error: ${err.message}`);
       return {success: false, error: err.message, events: []};
@@ -446,12 +456,75 @@ exports.searchEvents = onCall(
   },
 );
 
+/**
+ * Callable: Track user interaction with an event.
+ * Updates event preferences in the user's coach learning profile.
+ * Payload: { eventCategory, interactionType: "view" | "share" | "ticket_click" | "social_click" }
+ */
+exports.trackEventInteraction = onCall(
+  {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {eventCategory, interactionType} = request.data || {};
+    if (!eventCategory || !interactionType) return {success: false};
+
+    const userId = request.auth.uid;
+    const db = admin.firestore();
+
+    // Weight by interaction type (share > ticket > social > view)
+    const weights = {share: 5, ticket_click: 4, social_click: 2, view: 1};
+    const weight = weights[interactionType] || 1;
+
+    try {
+      const prefRef = db.collection('coachChats').doc(userId);
+      const doc = await prefRef.get();
+      const data = doc.exists ? doc.data() : {};
+      const eventPrefs = data.eventPreferences || {};
+
+      // Increment category score
+      eventPrefs[eventCategory] = (eventPrefs[eventCategory] || 0) + weight;
+
+      // Cap individual category at 100 to prevent runaway
+      if (eventPrefs[eventCategory] > 100) eventPrefs[eventCategory] = 100;
+
+      // Track total interactions
+      eventPrefs._totalInteractions = (eventPrefs._totalInteractions || 0) + 1;
+      eventPrefs._lastInteraction = new Date().toISOString();
+
+      await prefRef.set({eventPreferences: eventPrefs}, {merge: true});
+
+      logger.info(`[trackEvent] ${userId.substring(0, 8)}: ${interactionType} on ${eventCategory} (+${weight})`);
+      return {success: true};
+    } catch (err) {
+      logger.warn(`[trackEvent] Error: ${err.message}`);
+      return {success: false};
+    }
+  },
+);
+
+/**
+ * Get user's event category preferences for personalized sorting.
+ * Returns a map of category → score (higher = more preferred).
+ */
+async function getUserEventPreferences(userId) {
+  try {
+    const doc = await admin.firestore().collection('coachChats').doc(userId).get();
+    if (!doc.exists) return null;
+    const prefs = doc.data()?.eventPreferences;
+    if (!prefs || !prefs._totalInteractions || prefs._totalInteractions < 3) return null;
+    return prefs;
+  } catch (e) {
+    return null;
+  }
+}
+
 module.exports = {
-  ...module.exports,
   fetchLocalEvents,
   getEventsConfig,
+  getUserEventPreferences,
   EVENT_CATEGORY_EMOJI,
   ticketmasterApiKey,
   eventbriteToken,
   searchEvents: exports.searchEvents,
+  trackEventInteraction: exports.trackEventInteraction,
 };

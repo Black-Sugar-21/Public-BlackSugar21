@@ -13,7 +13,7 @@ const {
   googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
   placesTextSearch, transformPlaceToSuggestion, CATEGORY_TO_PLACES_TYPE,
 } = require('./places-helpers');
-const { fetchLocalEvents, EVENT_CATEGORY_EMOJI } = require('./events');
+const { fetchLocalEvents, getUserEventPreferences, EVENT_CATEGORY_EMOJI } = require('./events');
 
 // --- Coach infrastructure ---
 const PLACES_CHIP_I18N = {
@@ -1875,8 +1875,9 @@ Return JSON with these fields:
 
       // 4. Read coach history + fetch real places + events + RAG knowledge in parallel
       const ragConfig = config.rag || {};
+      const eventPrefsPromise = getUserEventPreferences(userId).catch(() => null);
       const eventsPromise = (isUserPlaceSearch && hasLocation)
-        ? fetchLocalEvents(searchLat || userLat, searchLng || userLng, searchRadius / 1000, lang, null).catch(() => [])
+        ? eventPrefsPromise.then(prefs => fetchLocalEvents(searchLat || userLat, searchLng || userLng, searchRadius / 1000, lang, null, prefs)).catch(() => [])
         : Promise.resolve([]);
       const [historySnap, fetchedPlaces, ragKnowledge, localEvents] = await Promise.all([
         db.collection('coachChats').doc(userId)
@@ -1942,6 +1943,19 @@ Return JSON with these fields:
           ).join('\n') +
           '\n\nWhen suggesting events, add "isEvent": true to the activity suggestion. Events are GREAT first date ideas because they provide built-in conversation topics!';
         logger.info(`[dateCoachChat] Injecting ${localEvents.length} local events into prompt`);
+      }
+
+      // Inject event preferences context if user has interacted with events before
+      const eventPrefs = await eventPrefsPromise;
+      if (eventPrefs && eventPrefs._totalInteractions >= 3) {
+        const topCategories = Object.entries(eventPrefs)
+          .filter(([k]) => !k.startsWith('_'))
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 3)
+          .map(([cat, score]) => `${cat} (score: ${score})`);
+        if (topCategories.length > 0) {
+          eventsContext += `\n\nUSER EVENT PREFERENCES (from past interactions): Prefers ${topCategories.join(', ')}. Prioritize these event categories when suggesting.`;
+        }
       }
 
       // 5. Build system prompt with content guardrails + activity suggestions
