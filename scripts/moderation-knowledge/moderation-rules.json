@@ -292,5 +292,145 @@
     "category": "classification_guide",
     "language": "en",
     "text": "FALSE POSITIVE PREVENTION — Common scenarios that should NOT be flagged: (1) DATING CONTEXT: 'you're hot/sexy/attractive' is NORMAL flirting in dating apps — not sexual harassment. (2) SUGAR DATING: discussing financial arrangements, allowances, gifts, lifestyle expectations is the CORE PURPOSE of this app. (3) CULTURAL EXPRESSIONS: some expressions sound harsh in translation but are normal ('wey/güey' in Mexican Spanish, 'mate' in Australian English, 'dude' in casual English). (4) SELF-REFERENTIAL: 'I'm crazy' self-description is not concerning. (5) MOVIE/SONG REFERENCES: quoting media that contains strong language. (6) DISCUSSING EXPERIENCES: 'I was harassed at work' is NOT harassment. (7) NUMBERS that look like phone numbers: zip codes, ages ('I'm 25'), dates ('June 15'), prices ('dinner was $50'). (8) LEGITIMATE URLS: Google Maps links, restaurant/venue websites shared in dating context. Quality moderation minimizes false positives while catching real threats."
+  },
+  {
+    "id": "scam-patterns-ar",
+    "category": "scam",
+    "language": "ar",
+    "priority": 1,
+    "text": "MODERATION RULE - SCAM PATTERNS (ARABIC)\n\nأنماط الاحتيال في سياق المواعدة العربية:\n\n1. احتيال الزواج (Marriage scams): شخص يعد بالزواج بسرعة للحصول على أموال أو تأشيرة. علامات تحذيرية: 'سأتزوجك بس ابعثلي فلوس السفر'، 'أبي أجي لعندك بس أحتاج مصاريف التأشيرة'، 'أهلي موافقين بس نحتاج مهر'.\n(Marriage scams: promising quick marriage to extract money or visas. Warning signs: 'I'll marry you but send travel money', 'I want to come to you but need visa expenses', 'My family agrees but we need dowry money'.)\n\n2. احتيال التأشيرة (Visa fraud): طلب المساعدة المالية للهجرة مقابل وعود عاطفية.\n\nExamples of violations:\n- 'حبيبي ابعثلي فلوس التذكرة وبجي لعندك'\n- 'أحتاج مبلغ عشان أطلع التأشيرة وبعدين نتزوج'\n- 'ادفعلي رسوم المعاملة وأنا أكون معك للأبد'\n\nApproved patterns (NOT violations):\n- مناقشة عامة عن خطط المستقبل والزواج بدون طلب مال\n- الحديث عن التأشيرات كموضوع عام دون ربطه بطلب مالي"
+  },
+  {
+    "id": "cultural-context-ar",
+    "category": "context_guidelines",
+    "language": "ar",
+    "priority": 1,
+    "text": "MODERATION RULE - CULTURAL CONTEXT (ARABIC)\n\nسياق ثقافي للمواعدة العربية — معايير المواعدة الحلال وأنماط مشاركة العائلة:\n\nArabic dating culture often involves family in relationship decisions. This is NORMAL and should NOT be flagged.\n\nأنماط مقبولة (APPROVED):\n- 'أهلي لازم يوافقون' (My family needs to approve) — normal cultural pattern\n- 'أبي شي حلال' (I want something halal) — expressing religious values\n- 'ما أقدر أطلع بدون محرم' (I can't go out without a chaperone) — cultural norm\n- مناقشة المهر والشبكة (Discussing mahr/dowry) — standard marriage discussion\n- 'أبي أعرف نيتك' (I want to know your intentions) — direct approach common in Arab dating\n\nعلامات تحذيرية (WARNING signs, not auto-reject):\n- ضغط للزواج السريع جداً مع طلبات مالية\n- ادعاء كونه شخصية مهمة أو ثري بدون دليل\n\nApproved patterns (NOT violations):\n- Discussing family involvement in relationships\n- Mentioning religious values in dating preferences\n- Conservative approach to meeting in person"
+  },
+  {
+    "id": "evasion-tactics-ar",
+    "category": "evasion_detection",
+    "language": "ar",
+    "priority": 1,
+    "text": "MODERATION RULE - EVASION TACTICS (ARABIC)\n\nأساليب التحايل في النص العربي — Arabic Text Evasion Detection:\n\n1. استخدام الأرقام بدل الحروف (Leetspeak Arabic): '3' بدل 'ع' (3arab = عرب)، '7' بدل 'ح' (7abib = حبيب)، '5' بدل 'خ'، '9' بدل 'ق'، '2' بدل 'ء'. هذه شائعة في الكتابة العربية بالحروف اللاتينية (Arabizi) وليست دائماً تحايل — يجب تقييم السياق.\n\n2. فصل الكلمات بنقاط أو فراغات: 'ك.ل.ب.ة' بدل 'كلبة'\n\n3. خلط اللغات: استخدام كلمات إنجليزية للمحتوى المخالف مع بقاء المحادثة بالعربية\n\n4. استخدام التشكيل لكسر الكلمات: إضافة حركات غير ضرورية\n\nExamples of violations:\n- '7mar' (حمار — donkey, used as insult)\n- 'k-l-b' (كلب — dog, used as insult)\n- Switching to English for explicit content mid-Arabic conversation\n\nApproved patterns (NOT violations):\n- Normal Arabizi/Franco-Arabic text (common communication style)\n- Using numbers in dates or quantities\n- Code-switching between Arabic and English naturally"
+  },
+  {
+    "id": "financial-scam-ar",
+    "category": "scam",
+    "language": "ar",
+    "priority": 1,
+    "text": "MODERATION RULE - FINANCIAL SCAM (ARABIC)\n\nاحتيال مالي في المواعدة — Financial Romance Scams in Arabic:\n\nأنماط شائعة:\n1. 'أنا رجل أعمال/أنا طبيب في الخارج' — ادعاء مهنة مرموقة ثم طلب مال\n(Claiming prestigious profession then requesting money)\n\n2. 'عندي مشكلة طارئة وأحتاج تحويل سريع' — حالات طوارئ مفبركة\n(Fabricated emergencies requiring urgent transfers)\n\n3. 'استثمر معي في مشروع مضمون' — عروض استثمار وهمية\n(Fake investment opportunities)\n\n4. 'ابعثلي على ويسترن يونيون/حوالة' — طلب تحويلات لا يمكن تتبعها\n(Requesting untraceable transfers)\n\nExamples of violations:\n- 'حبيبتي أحتاج فلوس عشان أدفع رسوم المستشفى'\n- 'حولي على هالحساب وبرجعلك الضعف'\n- 'أبيك تستثمرين معي في عملات رقمية'\n\nApproved patterns (NOT violations):\n- مناقشة الدعم المالي في سياق sugar dating (mesada/allowance)\n- الحديث عن العمل والمهنة بشكل طبيعي\n- مناقشة تكاليف المواعدة العادية"
+  },
+  {
+    "id": "hate-speech-ar",
+    "category": "hate_speech",
+    "language": "ar",
+    "priority": 1,
+    "text": "MODERATION RULE - HATE SPEECH (ARABIC)\n\nخطاب الكراهية بالعربية — Arabic Hate Speech Detection:\n\nرفض: إهانات عنصرية أو طائفية أو دينية تستهدف مجموعات.\n(REJECT: racist, sectarian, or religious insults targeting groups.)\n\nأمثلة للرفض:\n- إهانات طائفية (رافضي، ناصبي، كافر بسياق تحريضي)\n- إهانات عرقية أو قومية\n- التحريض على العنف ضد أي مجموعة\n- 'ارجع لبلدك' أو 'أنتم ما تستاهلون' بسياق عنصري\n\nExamples of violations:\n- Sectarian slurs targeting religious groups\n- Racial slurs targeting nationalities or ethnicities\n- 'كلكم إرهابيين' (You're all terrorists) — blanket hate\n- Incitement to violence against any group\n\nApproved patterns (NOT violations):\n- التعبير عن تفضيلات شخصية في المواعدة (I prefer someone from my culture)\n- مناقشة الاختلافات الثقافية باحترام\n- الفخر بالهوية الثقافية أو الدينية"
+  },
+  {
+    "id": "scam-patterns-ja",
+    "category": "scam",
+    "language": "ja",
+    "priority": 1,
+    "text": "MODERATION RULE - SCAM PATTERNS (JAPANESE)\n\n日本語の出会い系詐欺パターン:\n\n1. ロマンス詐欺（外国人をターゲット）: 感情的な絆を築いた後、金銭を要求。'急にお金が必要になった'、'家族が入院した'、'ビザ代を払って'。\n(Romance fraud targeting foreigners: building emotional bond then requesting money.)\n\n2. パパ活・ママ活の悪用: パパ活自体は許可だが、前払い要求や保証金詐欺は拒否。\n(Papa-katsu/mama-katsu abuse: the arrangement itself is allowed, but advance payment demands or deposit scams are rejected.)\n\n3. 投資詐欺: '確実に儲かる投資がある'、'仮想通貨で10倍になる'。\n(Investment scams: 'guaranteed profitable investment', 'crypto will 10x'.)\n\nExamples of violations:\n- '会う前に保証金を振り込んで' (Transfer deposit before meeting)\n- '私の口座に送金してくれたら会える' (Send to my account and we can meet)\n- 'このLINEグループで投資の話してるよ' (We discuss investments in this LINE group)\n\nApproved patterns (NOT violations):\n- パパ活・ママ活の一般的な話題 (General papa-katsu discussion)\n- お手当の相場について話すこと (Discussing allowance expectations)\n- デート代について自然に話すこと (Naturally discussing date expenses)"
+  },
+  {
+    "id": "cultural-context-ja",
+    "category": "context_guidelines",
+    "language": "ja",
+    "priority": 1,
+    "text": "MODERATION RULE - CULTURAL CONTEXT (JAPANESE)\n\n日本のデートエチケットと間接的コミュニケーション:\n\nJapanese dating communication tends to be indirect. This should NOT be misinterpreted as evasion or suspicious behavior.\n\n承認パターン (APPROVED):\n- '今度ご飯でもどうですか？' (Would you like to have dinner sometime?) — standard date invitation\n- 'よかったら連絡先交換しませんか？' (Would you like to exchange contact info?) — normal progression\n- 'お互いの時間を大切にしたい' (I want to value each other's time) — indirect reference to arrangement terms\n- '大人の関係' (Adult relationship) — common sugar dating euphemism, NOT explicit content\n- '気が合えば長く続けたい' (If we click, I'd like to continue long-term) — relationship intent\n\n警告サイン (WARNING signs):\n- 過度に早い段階での高額な金銭要求\n- 会う前に何度も送金を求める\n\nApproved patterns (NOT violations):\n- Indirect communication style (not evasion)\n- Using polite/formal language (keigo)\n- 'お手当' (allowance) — standard sugar dating term in Japanese"
+  },
+  {
+    "id": "evasion-tactics-ja",
+    "category": "evasion_detection",
+    "language": "ja",
+    "priority": 1,
+    "text": "MODERATION RULE - EVASION TACTICS (JAPANESE)\n\n日本語テキスト回避検出 — Japanese Text Evasion Detection:\n\n1. カタカナ置換: ひらがなの代わりにカタカナを使う、または逆（'ばか'→'バカ'→'ﾊﾞｶ'）。半角カタカナ（ﾊﾝｶｸ）は特に回避目的で使用されることがある。\n(Katakana substitution: using katakana instead of hiragana or vice versa. Half-width katakana is sometimes used specifically for evasion.)\n\n2. 記号挿入: 'ブ★ス'、'死☆ね'、'キ◯い' — 伏字として使用\n(Symbol insertion: using stars, circles as censoring characters)\n\n3. 当て字・隠語: '氏ね'(死ね)、'タヒ'(死)、'ﾀﾋ'、'香具師'(やつ)\n(Ateji/slang: alternative kanji or katakana representations of prohibited words)\n\n4. ローマ字回避: 日本語の禁止語をローマ字で書く（'shine' = 死ね）\n(Romaji evasion: writing Japanese prohibited words in Roman letters)\n\nExamples of violations:\n- 'ﾀﾋね' (death threat using katakana evasion for 死ね)\n- 'キモ☆い' (disgusting, with symbol insertion)\n- 'shi-ne' (死ね written in romaji)\n\nApproved patterns (NOT violations):\n- Normal katakana usage for loanwords (コーヒー, デート)\n- Standard emoji and emoticon usage (顔文字)\n- Abbreviations common in casual Japanese texting (w, 草)"
+  },
+  {
+    "id": "impersonation-ja",
+    "category": "scam",
+    "language": "ja",
+    "priority": 1,
+    "text": "MODERATION RULE - IMPERSONATION & IDENTITY FRAUD (JAPANESE)\n\nなりすまし・身分詐称の検出 — Japanese Identity Fraud Detection:\n\n1. 有名人・著名人なりすまし: '芸能人です'、'有名な経営者です'と主張し証拠なし\n(Celebrity/notable person impersonation without proof)\n\n2. 職業詐称: '医者です'、'弁護士です'と偽って信頼を得る\n(Profession fraud: falsely claiming to be doctor, lawyer to gain trust)\n\n3. サクラ行為: アプリ内でやり取りを続けさせるための偽プロフィール\n(Sakura behavior: fake profiles designed to keep users engaged)\n\nExamples of violations:\n- '実は有名な俳優なんだけど秘密にして' (I'm actually a famous actor, keep it secret)\n- '会社の社長で年収3億' then asking for small loans (CEO with 300M income, then requesting loans)\n- 他人の写真を使用していることが明らかな場合\n\nApproved patterns (NOT violations):\n- 自分の職業を正直に述べること (Honestly stating one's profession)\n- プライバシーを理由に詳細を控えること (Withholding details for privacy)\n- 'いい仕事してます' のような曖昧な表現 (Vague expressions like 'I have a good job')"
+  },
+  {
+    "id": "spam-external-ja",
+    "category": "spam",
+    "language": "ja",
+    "priority": 1,
+    "text": "MODERATION RULE - SPAM & EXTERNAL DIVERSION (JAPANESE)\n\n日本語スパム・外部誘導検出:\n\n1. LINE誘導: 'LINE交換しよう'は通常のマッチ間では許可。ただし、マッチ直後や最初のメッセージで外部誘導する場合は疑わしい。\n(LINE diversion: 'Let's exchange LINE' is allowed between matches. However, immediate diversion in first message is suspicious.)\n\n2. 出会い系サイトへの誘導: '別のサイトで話そう'、'ここよりいいサイトがある'\n(Diversion to other dating sites)\n\n3. ビジネス勧誘: 'いい副業がある'、'ネットワークビジネス'、'不労所得'\n(Business solicitation: side hustles, MLM, passive income)\n\nExamples of violations:\n- '別のサイトに登録して。URL: ...' (Register on another site)\n- 'LINEグループで投資の情報共有してる' (Sharing investment info in LINE group)\n- '月収100万の副業に興味ない？' (Interested in a side job earning 1M/month?)\n\nApproved patterns (NOT violations):\n- マッチ間でのLINE交換 (LINE exchange between matches)\n- 仕事について自然に話すこと (Naturally talking about work)\n- 趣味のSNSを共有すること (Sharing hobby-related social media)"
+  },
+  {
+    "id": "scam-patterns-zh",
+    "category": "scam",
+    "language": "zh",
+    "priority": 1,
+    "text": "MODERATION RULE - SCAM PATTERNS (CHINESE)\n\n中文约会诈骗模式:\n\n1. 杀猪盘 (Pig butchering scam): 建立感情后引诱投资加密货币或外汇。典型流程：建立信任→展示'成功'投资→邀请受害者投资→卷款消失。\n(Build emotional bond, then lure into crypto/forex investment. Trust→show 'successful' trades→invite victim→disappear with money.)\n\n2. 加密货币恋爱诈骗: '我在做数字货币，收益很好'、'跟我一起投资比特币'、'这个平台稳赚不赔'。\n(Crypto romance scam: 'I trade digital currency with great returns', 'invest in Bitcoin with me'.)\n\n3. 假身份: 使用他人照片、虚假职业、伪造的奢侈生活方式。\n(Fake identity: using others' photos, false profession, fabricated luxury lifestyle.)\n\nExamples of violations:\n- '我带你在这个平台赚钱' (I'll help you make money on this platform)\n- '先充值1000，我帮你操作' (Deposit 1000 first, I'll operate for you)\n- '加我微信，有好项目介绍给你' (Add my WeChat, I have a good project for you)\n\nApproved patterns (NOT violations):\n- 讨论sugar dating的经济期望 (Discussing financial expectations in sugar dating)\n- 分享工作经历 (Sharing work experience)\n- 正常讨论生活方式 (Normal lifestyle discussions)"
+  },
+  {
+    "id": "cultural-context-zh",
+    "category": "context_guidelines",
+    "language": "zh",
+    "priority": 1,
+    "text": "MODERATION RULE - CULTURAL CONTEXT (CHINESE)\n\n中国约会文化背景 — Chinese Dating Cultural Context:\n\n中国约会中家庭压力和婚姻期望是正常话题，不应标记。\n(Family pressure and marriage expectations are normal topics in Chinese dating and should NOT be flagged.)\n\n批准的模式 (APPROVED):\n- '我爸妈催我结婚' (My parents are pressuring me to marry) — common cultural reality\n- '你有房有车吗？' (Do you have a house and car?) — direct but culturally normal question\n- '我想找个条件好的' (I want to find someone with good conditions) — standard preference expression\n- '见家长' (Meeting parents) — milestone discussion\n- '彩礼' (Bride price) discussion — cultural marriage custom\n- '门当户对' (Matching social status) — traditional concept\n\n警告信号 (WARNING signs):\n- 过早要求大额转账\n- 以感情为筹码要求经济支持\n\nApproved patterns (NOT violations):\n- Discussing family expectations openly\n- Asking about partner's economic status (culturally normal)\n- Mentioning marriage timeline expectations"
+  },
+  {
+    "id": "evasion-tactics-zh",
+    "category": "evasion_detection",
+    "language": "zh",
+    "priority": 1,
+    "text": "MODERATION RULE - EVASION TACTICS (CHINESE)\n\n中文文本回避检测 — Chinese Text Evasion Detection:\n\n1. 繁简体互换: 使用繁体字绕过简体过滤器，或反之。例：'幹'(繁)vs'干'(简)、'髒'vs'脏'。\n(Traditional/Simplified swaps: using traditional characters to bypass simplified filters or vice versa.)\n\n2. 拼音替代: 用拼音写禁止词。'cao ni' (操你)、'sb' (傻逼)、'nmsl' (你妈死了)。\n(Pinyin substitution: writing prohibited words in pinyin.)\n\n3. 谐音字: '草'代替'操'、'泥马'代替'你妈'、'河蟹'代替'和谐'、'废物'→'肺物'。\n(Homophone substitution: using characters that sound similar to prohibited words.)\n\n4. 符号分割: '操→c*o'、'死→s*'、在字间插入特殊字符。\n(Symbol splitting: inserting special characters between prohibited words.)\n\n5. 火星文: 使用非标准字符变体，如'莪'代替'我'。\n(Martian text: using non-standard character variants.)\n\nExamples of violations:\n- 'nmsl' (你妈死了 — extreme insult)\n- '你个sb' (你个傻逼 — insult using pinyin initials)\n- '草泥马' (操你妈 — insult using homophones)\n\nApproved patterns (NOT violations):\n- Normal use of both traditional and simplified Chinese\n- Standard pinyin in educational or name contexts\n- Internet slang that is not offensive (233, hhh, awsl)"
+  },
+  {
+    "id": "identity-fraud-zh",
+    "category": "scam",
+    "language": "zh",
+    "priority": 1,
+    "text": "MODERATION RULE - IDENTITY FRAUD (CHINESE)\n\n中文身份欺诈检测 — Chinese Identity Fraud Detection:\n\n1. 富二代/官二代冒充: 声称是富豪或官员子女以获取信任。\n(Impersonating 'rich second generation' or 'official's children' to gain trust.)\n\n2. 海外华人冒充: 声称在海外无法回国，需要经济帮助。\n(Impersonating overseas Chinese who cannot return and need financial help.)\n\n3. 照片盗用: 使用网红或明星照片创建虚假资料。\n(Photo theft: using influencer or celebrity photos for fake profiles.)\n\nExamples of violations:\n- '我是某某集团的继承人' then requesting money (Claiming to be heir then asking for money)\n- '我在国外回不去，你能先帮我付一下吗' (I'm abroad and can't return, can you pay for me first)\n- '我的银行卡被冻结了，能借用你的账户吗' (My bank card is frozen, can I use your account)\n\nApproved patterns (NOT violations):\n- 真实分享自己的生活和工作 (Genuinely sharing one's life and work)\n- 讨论旅行经历 (Discussing travel experiences)\n- Sugar dating中正常的经济讨论 (Normal financial discussions in sugar dating context)"
+  },
+  {
+    "id": "threats-zh",
+    "category": "threats",
+    "language": "zh",
+    "priority": 1,
+    "text": "MODERATION RULE - THREATS & BLACKMAIL (CHINESE)\n\n中文威胁与勒索检测:\n\n1. 裸照勒索 (Sextortion): '把你的照片发给你的朋友'、'不给钱就把聊天记录公开'。\n(Sextortion: 'I'll send your photos to friends', 'Pay or I'll publish our chat'.)\n\n2. 人肉搜索威胁: '我会查出你是谁'、'我已经知道你在哪里了'。\n(Doxxing threats: 'I'll find out who you are', 'I already know where you are'.)\n\n3. 自残威胁作为操控: '你不理我我就去死'。\n(Self-harm threats as manipulation: 'If you ignore me I'll die'.)\n\nExamples of violations:\n- '不转钱就把你的私密照发出去' (Pay or I'll release your intimate photos)\n- '我知道你住哪，小心点' (I know where you live, be careful)\n- '你敢拉黑我？等着瞧' (You dare block me? Just wait)\n\nApproved patterns (NOT violations):\n- 表达失望或沮丧的情绪 (Expressing disappointment or frustration)\n- 开玩笑说'你不回我我就生气了' (Joking 'I'll be upset if you don't reply')\n- 讨论安全话题 (Discussing safety topics)"
+  },
+  {
+    "id": "scam-patterns-id",
+    "category": "scam",
+    "language": "id",
+    "priority": 1,
+    "text": "MODERATION RULE - SCAM PATTERNS (INDONESIAN)\n\nPola penipuan dalam konteks kencan Indonesia:\n\n1. Love scam targeting expats: Membangun hubungan emosional dengan orang asing, lalu meminta uang untuk 'keadaan darurat'. Tanda: 'Ibu saya sakit, butuh biaya rumah sakit', 'Saya butuh uang untuk visa'.\n(Building emotional relationships with foreigners, then requesting money for 'emergencies'.)\n\n2. Profil palsu: Menggunakan foto orang lain, mengaku kaya atau berpendidikan tinggi.\n(Fake profiles: using others' photos, claiming wealth or high education.)\n\n3. Penipuan investasi: 'Saya punya bisnis online yang menguntungkan', 'Ikut trading forex sama saya'.\n(Investment scams: 'I have a profitable online business', 'Join forex trading with me'.)\n\nExamples of violations:\n- 'Transfer dulu baru kita bisa ketemu' (Transfer first then we can meet)\n- 'Tolong pinjam uang, nanti saya ganti' setelah baru kenal (Lend me money, I'll pay back — from new contact)\n- 'Klik link ini untuk investasi yang pasti untung' (Click this link for guaranteed investment)\n\nApproved patterns (NOT violations):\n- Diskusi biasa tentang pekerjaan dan penghasilan (Normal work/income discussions)\n- Membicarakan lifestyle dalam konteks sugar dating (Discussing lifestyle in sugar dating)\n- Berbagi pengalaman bisnis secara natural (Naturally sharing business experience)"
+  },
+  {
+    "id": "cultural-context-id",
+    "category": "context_guidelines",
+    "language": "id",
+    "priority": 1,
+    "text": "MODERATION RULE - CULTURAL CONTEXT (INDONESIAN)\n\nKonteks budaya kencan Indonesia — Indonesian Dating Cultural Context:\n\nKencan di Indonesia sering melibatkan pertimbangan agama dan keluarga. Ini NORMAL dan TIDAK boleh ditandai.\n(Dating in Indonesia often involves religious and family considerations. This is NORMAL and should NOT be flagged.)\n\nPola yang disetujui (APPROVED):\n- 'Saya cari yang seiman' (I'm looking for someone of the same faith) — religious preference\n- 'Keluarga saya harus setuju' (My family must agree) — family involvement norm\n- 'Saya nggak mau pacaran yang nggak jelas' (I don't want an unclear relationship) — directness about intentions\n- 'Mau ta'aruf dulu' (Want to do ta'aruf first) — Islamic courtship process\n- 'Kamu dari suku apa?' (What ethnicity are you?) — common Indonesian question, NOT discrimination\n\nPeringatan (WARNING signs, not auto-reject):\n- Tekanan untuk menikah segera tanpa saling mengenal\n- Klaim identitas palsu untuk mendapatkan kepercayaan\n\nApproved patterns (NOT violations):\n- Discussing religious compatibility\n- Asking about family background\n- Mentioning cultural traditions around dating"
+  },
+  {
+    "id": "evasion-tactics-id",
+    "category": "evasion_detection",
+    "language": "id",
+    "priority": 1,
+    "text": "MODERATION RULE - EVASION TACTICS (INDONESIAN)\n\nDeteksi penghindaran teks Indonesia — Indonesian Text Evasion Detection:\n\n1. Penggantian angka: '4nj1ng' (anjing), 'b4ngsat' (bangsat), 'g0bl0k' (goblok).\n(Number substitution for prohibited words.)\n\n2. Spasi dan simbol: 'a n j i n g', 'b*ngsat', 'g.o.b.l.o.k'.\n(Spaces and symbols between letters of prohibited words.)\n\n3. Bahasa daerah: Menggunakan kata kasar dalam bahasa Jawa, Sunda, Batak, dll. yang mungkin tidak terdeteksi. Contoh: 'asu' (Jawa=anjing), 'bangke' (Sunda=bangkai), 'babi' (Batak=konteks ofensif).\n(Regional languages: using profanity in Javanese, Sundanese, Batak that might evade detection.)\n\n4. Singkatan dan akronim: 'bgst' (bangsat), 'jncok' (jancok), 'kntl' (kontol).\n(Abbreviations and acronyms for prohibited words.)\n\n5. Bahasa gaul/slang: 'anjay' (dari anjing), 'buset' (ekspresi — TIDAK selalu pelanggaran).\n(Youth slang: 'anjay' from anjing, 'buset' expression — NOT always a violation.)\n\nExamples of violations:\n- '4nj1ng lu' (anjing lu — calling someone a dog)\n- 'Dasar bgst' (Dasar bangsat — insult)\n- 'jncok' (jancok — Javanese profanity)\n\nApproved patterns (NOT violations):\n- 'Buset dah' (expression of surprise — not offensive)\n- 'Anjay keren' (exclamation — context dependent, usually OK)\n- Normal use of regional language greetings"
+  },
+  {
+    "id": "threats-id",
+    "category": "threats",
+    "language": "id",
+    "priority": 1,
+    "text": "MODERATION RULE - THREATS & MANIPULATION (INDONESIAN)\n\nDeteksi ancaman dan manipulasi dalam Bahasa Indonesia:\n\n1. Ancaman penyebaran (Sextortion): 'Saya akan sebar foto kamu', 'Bayar atau chat kita saya publish'.\n(Distribution threats: 'I'll spread your photos', 'Pay or I'll publish our chat'.)\n\n2. Ancaman fisik: 'Saya tahu kamu tinggal di mana', 'Awas kamu ya', 'Tunggu pembalasan saya'.\n(Physical threats: 'I know where you live', 'Watch out', 'Wait for my revenge'.)\n\n3. Manipulasi emosional: 'Kalau kamu pergi, saya bunuh diri', 'Kamu yang bikin saya seperti ini'.\n(Emotional manipulation: 'If you leave, I'll kill myself', 'You made me like this'.)\n\n4. Doxing: 'Saya sudah tahu nama asli kamu', 'Saya akan report ke kantor kamu'.\n(Doxxing: 'I know your real name', 'I'll report to your office'.)\n\nExamples of violations:\n- 'Awas ya, saya tahu alamat kamu' (Watch out, I know your address)\n- 'Kalau nggak transfer, foto kamu saya sebar' (If you don't transfer, I'll spread your photos)\n- 'Kamu bakal nyesel udah nolak saya' (You'll regret rejecting me)\n\nApproved patterns (NOT violations):\n- 'Awas jangan lupa makan ya' (Watch out, don't forget to eat — caring)\n- Ekspresi kekecewaan biasa (Normal disappointment expressions)\n- 'Kamu bikin saya kangen' (You make me miss you — affection)"
+  },
+  {
+    "id": "contact-diversion-id",
+    "category": "spam",
+    "language": "id",
+    "priority": 1,
+    "text": "MODERATION RULE - CONTACT DIVERSION & SPAM (INDONESIAN)\n\nDeteksi pengalihan kontak dan spam Indonesia:\n\n1. Pengalihan WhatsApp/Telegram prematur: 'Chat di WA aja yuk' sebagai pesan pertama mencurigakan. Antara match yang sudah berinteraksi — DIPERBOLEHKAN.\n(Premature WA/Telegram diversion: 'Let's chat on WA' as first message is suspicious. Between engaged matches — ALLOWED.)\n\n2. Promosi MLM/bisnis: 'Mau penghasilan tambahan?', 'Bisnis online modal kecil', 'Join grup Telegram saya'.\n(MLM/business promotion: 'Want extra income?', 'Online business with small capital'.)\n\n3. Akun jualan: Menggunakan profil kencan untuk menjual produk atau jasa.\n(Sales accounts: using dating profile to sell products or services.)\n\nExamples of violations:\n- 'Follow IG saya @shop_xxx banyak promo' (Follow my shop IG, many promos)\n- 'Gabung grup WA ini untuk bisnis online' (Join this WA group for online business)\n- 'Saya jual produk kecantikan, mau?' (I sell beauty products, want some?)\n\nApproved patterns (NOT violations):\n- Bertukar WA/IG setelah percakapan yang established (Exchanging WA/IG after established conversation)\n- Menyebut pekerjaan secara natural (Mentioning work naturally)\n- Berbagi akun media sosial pribadi (Sharing personal social media accounts)"
   }
 ]

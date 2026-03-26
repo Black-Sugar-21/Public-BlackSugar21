@@ -83,6 +83,77 @@ function parseGeminiJsonResponse(responseText) {
   return JSON.parse(cleanText);
 }
 
+// ── Shared Embedding Cache ──────────────────────────────────────────
+// In-memory cache for Gemini embeddings to avoid duplicate API calls.
+// Cache key: SHA-256 of normalized query text + dimensions. TTL: 10 minutes. Max: 100 entries.
+const crypto = require('crypto');
+const _embeddingCache = new Map();
+const EMBEDDING_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const EMBEDDING_CACHE_MAX = 100;
+
+function _cleanEmbeddingCache() {
+  const now = Date.now();
+  for (const [key, entry] of _embeddingCache) {
+    if (now - entry.timestamp > EMBEDDING_CACHE_TTL) {
+      _embeddingCache.delete(key);
+    }
+  }
+  // Evict oldest if over max
+  if (_embeddingCache.size > EMBEDDING_CACHE_MAX) {
+    const sorted = [..._embeddingCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+    for (let i = 0; i < sorted.length - EMBEDDING_CACHE_MAX; i++) {
+      _embeddingCache.delete(sorted[i][0]);
+    }
+  }
+}
+
+/**
+ * Get or compute embedding for a text query. Uses in-memory cache to avoid duplicate Gemini calls.
+ * @param {string} text - text to embed
+ * @param {string} apiKey - Gemini API key
+ * @param {object} [options] - optional config
+ * @param {string} [options.model] - embedding model name (default: 'gemini-embedding-001')
+ * @param {number} [options.dimensions] - output dimensionality (default: 768)
+ * @param {number} [options.timeoutMs] - timeout in ms (default: 5000)
+ * @returns {Promise<number[]>} embedding vector
+ */
+async function getCachedEmbedding(text, apiKey, options = {}) {
+  const model = options.model || 'gemini-embedding-001';
+  const dimensions = options.dimensions || 768;
+  const timeoutMs = options.timeoutMs || 5000;
+
+  const normalized = text.toLowerCase().trim().substring(0, 500);
+  const cacheKey = crypto.createHash('sha256')
+    .update(`${normalized}|${model}|${dimensions}`)
+    .digest('hex').substring(0, 16);
+
+  // Check cache
+  const cached = _embeddingCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < EMBEDDING_CACHE_TTL) {
+    return cached.embedding;
+  }
+
+  // Compute embedding
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const embModel = genAI.getGenerativeModel({model});
+  const embedPromise = embModel.embedContent({
+    content: {parts: [{text: normalized}]},
+    taskType: 'RETRIEVAL_QUERY',
+    outputDimensionality: dimensions,
+  });
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Embedding timeout (${timeoutMs}ms)`)), timeoutMs),
+  );
+  const result = await Promise.race([embedPromise, timeoutPromise]);
+  const embedding = result.embedding.values;
+
+  // Store in cache
+  _embeddingCache.set(cacheKey, {embedding, timestamp: Date.now()});
+  _cleanEmbeddingCache();
+
+  return embedding;
+}
+
 module.exports = {
   geminiApiKey,
   placesApiKey,
@@ -93,4 +164,5 @@ module.exports = {
   normalizeCategory,
   categoryEmojiMap,
   parseGeminiJsonResponse,
+  getCachedEmbedding,
 };

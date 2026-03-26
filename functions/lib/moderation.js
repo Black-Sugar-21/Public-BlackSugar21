@@ -5,7 +5,7 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse } = require('./shared');
+const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, getCachedEmbedding } = require('./shared');
 
 // --- Moderation config & RAG ---
 const MOD_RAG_COLLECTION = 'moderationKnowledge';
@@ -83,20 +83,11 @@ async function retrieveModerationKnowledge(textToModerate, apiKey, lang = 'en', 
     if (!textToModerate || typeof textToModerate !== 'string' || textToModerate.trim().length < 3) return '';
     const trimmedQuery = textToModerate.trim().substring(0, RAG_MAX_QUERY_LENGTH);
 
-    // 1. Embed the text being moderated
-    const genai = new GoogleGenerativeAI(apiKey);
-    const embeddingModel = genai.getGenerativeModel({model: RAG_EMBEDDING_MODEL});
-
-    const embedPromise = embeddingModel.embedContent({
-      content: {parts: [{text: trimmedQuery}]},
-      taskType: 'RETRIEVAL_QUERY',
-      outputDimensionality: RAG_DIMENSIONS,
+    // 1. Embed the text being moderated (shared cache avoids duplicate Gemini calls)
+    const queryVector = await getCachedEmbedding(trimmedQuery, apiKey, {
+      model: RAG_EMBEDDING_MODEL,
+      dimensions: RAG_DIMENSIONS,
     });
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Moderation RAG embedding timeout (5s)')), 5000),
-    );
-    const embResult = await Promise.race([embedPromise, timeoutPromise]);
-    const queryVector = embResult.embedding.values;
 
     if (!queryVector || queryVector.length !== RAG_DIMENSIONS) return '';
 
