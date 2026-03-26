@@ -94,8 +94,10 @@ exports.respondToDateCheckIn = onCall(
     const now = admin.firestore.Timestamp.now();
 
     if (response === 'ok') {
-      // Schedule follow-up in 2 hours
-      const followUp = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      // Schedule follow-up (configurable, default 2 hours)
+      const safetyConfig = await db.collection('appConfig').doc('safetyCheckIn').get();
+      const followUpMinutes = (safetyConfig.exists ? safetyConfig.data().followUpDelayMinutes : null) || 120;
+      const followUp = new Date(Date.now() + followUpMinutes * 60 * 1000);
       await docRef.update({
         status: 'ok_responded',
         responseAt: now,
@@ -172,7 +174,8 @@ exports.processDateCheckIns = onSchedule(
     for (const doc of scheduled.docs) {
       const data = doc.data();
       if (!data.fcmToken) continue;
-      if ((data.fcmRetryCount || 0) >= 3) {
+      const MAX_FCM_RETRIES = config.maxFcmRetryCount || 3;
+      if ((data.fcmRetryCount || 0) >= MAX_FCM_RETRIES) {
         await doc.ref.update({status: 'failed', lastUpdatedAt: now});
         continue;
       }

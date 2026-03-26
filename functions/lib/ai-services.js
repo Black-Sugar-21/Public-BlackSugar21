@@ -245,7 +245,7 @@ Return ONLY a JSON object:
 
         const result = await model.generateContent({
           contents: [{role: 'user', parts: [{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 512, temperature: 0.1},
+          generationConfig: {maxOutputTokens: 512, temperature: safetyConfig.temperature || 0.1},
         });
 
         const parsed = parseGeminiJsonResponse(result.response.text());
@@ -272,7 +272,7 @@ Return ONLY a JSON object:
         }
 
         // AI failed to parse, use quick flags only
-        const quickScore = Math.max(0, 100 - quickFlags.length * 25);
+        const quickScore = Math.max(0, 100 - quickFlags.length * flagPenalty);
         return {
           success: true, score: quickScore, safetyScore: quickScore,
           riskLevel: quickScore > 70 ? 'low' : quickScore > 40 ? 'medium' : 'high',

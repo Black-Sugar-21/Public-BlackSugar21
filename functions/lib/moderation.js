@@ -655,16 +655,19 @@ function getMessageHash(message) {
  * Filtros rápidos sin IA para mensajes obviamente seguros o prohibidos.
  * Reduce ~60% de llamadas a Gemini.
  */
-function applyQuickFilters(message) {
+function applyQuickFilters(message, modConfig = {}) {
   const messageLower = message.toLowerCase().trim();
 
   // 1. Mensajes muy cortos → generalmente seguros (emoji, "hola", "ok")
-  if (message.length <= 3) {
+  const safeLenThreshold = modConfig.safeLengthThreshold || 3;
+  if (message.length <= safeLenThreshold) {
     return {isSafe: true, category: 'SAFE', reason: 'Message too short to be harmful'};
   }
 
-  // 2. Blacklist de palabras/frases
-  for (const term of MODERATION_BLACKLIST) {
+  // 2. Blacklist de palabras/frases (base + RC-configurable additions)
+  const additionalTerms = Array.isArray(modConfig.additionalBlacklistTerms) ? modConfig.additionalBlacklistTerms : [];
+  const fullBlacklist = additionalTerms.length > 0 ? [...MODERATION_BLACKLIST, ...additionalTerms] : MODERATION_BLACKLIST;
+  for (const term of fullBlacklist) {
     if (messageLower.includes(term)) {
       let category = 'SPAM';
       let severity = 'HIGH';
@@ -802,8 +805,9 @@ exports.autoModerateMessage = onDocumentCreated(
         return;
       }
 
-      // ── 2. Quick filters (sin IA) ──
-      const quickCheck = applyQuickFilters(message);
+      // ── 2. Quick filters (sin IA) — with RC-configurable blacklist additions ──
+      const modConfig = await getModerationConfig();
+      const quickCheck = applyQuickFilters(message, modConfig);
 
       if (quickCheck.isSafe) {
         await saveModerationToCache(messageHash, {allowed: true, category: 'SAFE', severity: 'NONE', confidence: 100}, db);
@@ -850,10 +854,8 @@ exports.autoModerateMessage = onDocumentCreated(
       // RAG: obtener contexto de moderación + idioma del sender + config en paralelo
       let ragContext = '';
       try {
-        const [senderDoc, modConfig] = await Promise.all([
-          db.collection('users').doc(senderId).get(),
-          getModerationConfig(),
-        ]);
+        const senderDoc = await db.collection('users').doc(senderId).get();
+        // modConfig already loaded before quick filters (reuse cached instance)
         const senderLang = senderDoc.exists ? (senderDoc.data().deviceLanguage || 'en') : 'en';
         ragContext = await retrieveModerationKnowledge(message, apiKey, senderLang, 'message', modConfig.rag || {});
       } catch (ragErr) {
