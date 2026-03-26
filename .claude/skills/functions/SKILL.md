@@ -1,165 +1,290 @@
 ---
 name: functions
-description: Gestion completa de Firebase Cloud Functions de BlackSugar21. 38 callable + 8 scheduled + 6 triggers + 1 alias en us-central1. Arquitectura modular en functions/lib/. Modelos Gemini duales, Coach RAG, Moderation RAG, autoModerateMessage pipeline. Usar cuando se trabaje con Cloud Functions, deploy, debug, logs o testing de CFs.
-globs:
-  - "functions/**/*.js"
-  - "functions/package.json"
-  - "firebase.json"
+description: Gestión de Firebase Cloud Functions de BlackSugar21. Deploy, logs, debug y monitoreo — 46 callable + 11 scheduled + 7 triggers + 1 alias en us-central1. Modelos Gemini duales, RC server-side, Moderation RAG, Coach RAG/Learning. Usar cuando se quiera desplegar, debuggear, monitorear o testear Cloud Functions.
+disable-model-invocation: true
+argument-hint: "[nombre-funcion | all | logs | monitor]"
 ---
 
-# Firebase Cloud Functions — BlackSugar21
+Eres el **Firebase Functions Manager de Black Sugar 21**. Gestionas las Cloud Functions del proyecto.
 
 ## Proyecto
 
 - **Firebase Project**: `black-sugar21`
-- **Region**: `us-central1`
-- **Runtime**: Node.js 20 / Firebase Functions v2 (Gen 2)
-- **Directorio**: `/Users/daniel/IdeaProjects/Public-BlackSugar21/functions/`
-- **Entry point**: `functions/index.js` (27 lineas — re-exporta modulos de `lib/`)
+- **Región**: `us-central1`
+- **Archivo principal**: `/Users/daniel/IdeaProjects/Public-BlackSugar21/functions/index.js`
+- **Directorio**: `/Users/daniel/IdeaProjects/Public-BlackSugar21`
 
-## Arquitectura modular
+## Estado actual
 
-`index.js` importa y re-exporta 12 modulos de `functions/lib/`:
+### Branch activo
+!`cd /Users/daniel/IdeaProjects/Public-BlackSugar21 && git branch --show-current`
 
-| Modulo | Archivo | CFs exportadas |
-|---|---|---|
-| Discovery | `lib/discovery.js` | `getCompatibleProfileIds` (L27) |
-| Matches | `lib/matches.js` | `onMatchCreated` (L7), `onMessageCreated` (L155) |
-| Notifications | `lib/notifications.js` | `sendTestNotification` (L7), `updateFCMToken` (L69), `testSuperLikesResetNotification` (L120), `testDailyLikesResetNotification` (L155), `handlePendingNotification` (L190), `sendTestNotificationToUser` (L286) |
-| Storage | `lib/storage.js` | `generateProfileThumbnail` (L11), `generateMissingThumbnails` (L125) |
-| Users | `lib/users.js` | `unmatchUser` (L8), `reportUser` (L66), `blockUser` (L274), `deleteUserData` (L349) |
-| Batch | `lib/batch.js` | `getBatchPhotoUrls` (L6), `getMatchesWithMetadata` (L83), `getBatchCompatibilityScores` (L181) |
-| Stories | `lib/stories.js` | `createStory` (L9), `markStoryAsViewed` (L57), `deleteStory` (L81), `getBatchStoryStatus` (L110), `getBatchPersonalStories` (L161), `cleanupExpiredStories` (L246) |
-| Moderation | `lib/moderation.js` | `validateProfileImage` (L489), `moderateProfileImage` (L520), `moderateMessage` (L585), `autoModerateMessage` (L773) |
-| AI Services | `lib/ai-services.js` | `generateInterestSuggestions` (L9), `analyzePhotoBeforeUpload` (L80), `analyzeProfileWithAI` (L101), `calculateSafetyScore` (L147), `analyzeConversationChemistry` (L181), `generateSmartReply` (L209), `analyzePersonalityCompatibility` (L240), `predictMatchSuccess` (L290), `generateConversationStarter` (L345), `optimizeProfilePhotos` (L375), `findSimilarProfiles` (L405), `getEnhancedCompatibilityScore` (L470), `detectProfileRedFlags` (L521), `generateIcebreakers` (L568), `predictOptimalMessageTime` (L590), `getDatingAdvice` (L615) |
-| Coach | `lib/coach.js` | `dateCoachChat` (L520), `getCoachHistory` (L2223), `deleteCoachMessage` (L2279), `getRealtimeCoachTips` (L2321) |
-| Places | `lib/places.js` | `getDateSuggestions` (L13), `searchPlaces` (L156) |
-| Scheduled | `lib/scheduled.js` | `resetDailyLikes` (L6), `resetSuperLikes` (L115), `resetCoachMessages` (L235), `checkMutualLikesAndCreateMatch` (L346), `scheduledCheckMutualLikes` (L410 — alias), `processScheduledDeletions` (L412) |
-| Geohash | `lib/geohash.js` | `validateGeohashOnUpdate` (L8), `updategeohashesscheduled` (L35), `monitorGeohashHealth` (L71) |
-| Places Helpers | `lib/places-helpers.js` | No exporta CFs — helpers internos: `haversineKm` (L26), `fuzzyMatchPlace` (L99), `placesTextSearch` (L413) |
-| Shared | `lib/shared.js` | Utilidades compartidas (no exporta CFs) |
-| Geo | `lib/geo.js` | Utilidades geo (no exporta CFs) |
+### Cambios pendientes en functions/
+!`cd /Users/daniel/IdeaProjects/Public-BlackSugar21 && git diff --stat HEAD -- functions/`
 
-## Conteo total
+## Grupos de CFs por feature
 
-- **38 callable** (produccion)
-- **6 utilidades admin/test** (`sendTestNotification`, `sendTestNotificationToUser`, `testDailyLikesResetNotification`, `testSuperLikesResetNotification`, `updateFCMToken`, `generateMissingThumbnails`)
-- **8 scheduled** (timezone-aware via `timezoneOffset`)
-- **6 triggers** (Firestore + Storage events)
-- **1 alias** (`scheduledCheckMutualLikes` -> `checkMutualLikesAndCreateMatch`)
+### AI Date Coach (5 CFs)
+```
+dateCoachChat, getCoachHistory, deleteCoachMessage, resetCoachMessages, getRealtimeCoachTips
+```
 
-## Modelos Gemini (Arquitectura Dual)
+### AI Date Blueprint (1 CF)
+```
+generateDateBlueprint  // {matchId, userLanguage, duration} → {success, blueprint: {title, totalDuration, estimatedBudget, dresscode, icebreaker, steps: [{order, time, duration, activity, place: {name, photos:[{url,width,height}], googleMapsUrl, placeId, address, rating}, tip, whyThisPlace, travelTimeToNext}]}}
+// ⚠️ Fotos usan GOOGLE_PLACES_API_KEY (no GEMINI_API_KEY). Título elegante sin nombre del match (max 5 palabras)
+```
 
-| Modelo | Constante | Uso |
-|---|---|---|
-| `gemini-2.5-flash` | `AI_MODEL_NAME` | CFs pesadas: `dateCoachChat`, `analyzeProfileWithAI`, `analyzePersonalityCompatibility`, `generateConversationStarter`, `predictMatchSuccess`, etc. |
-| `gemini-2.5-flash-lite` | `AI_MODEL_LITE` | CFs ligeras: `autoModerateMessage`, `moderateMessage`, `moderateProfileImage`, `reportUser`, `generateInterestSuggestions`, `getRealtimeCoachTips` |
+### AI Features (18 CFs)
+```
+generateSmartReply, trackSmartReplyToneChoice, analyzeConversationChemistry, analyzePersonalityCompatibility,
+analyzePhotoBeforeUpload, analyzeProfileWithAI, calculateSafetyScore,
+detectProfileRedFlags, findSimilarProfiles, generateConversationStarter,
+generateIcebreakers, getBatchCompatibilityScores, getEnhancedCompatibilityScore,
+optimizeProfilePhotos, predictMatchSuccess, predictOptimalMessageTime,
+requestDateDebrief, getPhotoCoachAnalysis
+```
 
-**Secrets**: `GEMINI_API_KEY`, `GOOGLE_PLACES_API_KEY`
-**Embedding**: `gemini-embedding-001` (768 dims, COSINE) — usado por RAG systems
+### Safety Check-In (3 CFs)
+```
+scheduleDateCheckIn, cancelDateCheckIn, respondToDateCheckIn
+```
 
-Los clientes iOS/Android NO ejecutan Gemini localmente — TODA la IA es server-side.
+### Core / Moderación (8 CFs)
+```
+blockUser, reportUser, unmatchUser, deleteUserData,
+moderateMessage, moderateProfileImage, validateProfileImage, searchPlaces
+```
 
-## Coach RAG System
+### Stories / Matches / Misc (5+ CFs)
+```
+createStory, deleteStory, markStoryAsViewed, getBatchPersonalStories, getBatchStoryStatus,
+getBatchPhotoUrls, getBatchCompatibilityScores, getCompatibleProfileIds,
+getMatchesWithMetadata, getDateSuggestions, getDatingAdvice
+```
 
-- **Coleccion**: `coachKnowledge`
-- **368 chunks** (antes 256), 18+ categorias, 12+ idiomas (en/es/fr/de/pt/ar/id/ja/ru/zh/ko/tr/it)
-- Enriquece respuestas de `dateCoachChat` con dating advice curado
-- Embedding: `gemini-embedding-001` (768 dims, COSINE)
-- Configurable via RC: `coach_config.rag`
-- Script de indexacion: `scripts/index-coach-knowledge.js` (`--clean`, `--dry-run`)
+### AI Chemistry (1 CF)
+```
+calculateAIChemistry
+```
 
-### Coach Learning System
+## calculateAIChemistry (NEW)
 
-`analyzeUserMessage()` -> `buildLearningContext()` -> `updateCoachLearning()`
+**File**: `functions/lib/ai-services.js` (line ~642)
+**Type**: Callable, 512MiB, 30s timeout, requires GEMINI_API_KEY secret
+**Payload**: `{ targetUserId }`
+**Response**: `{ success, score (48-92), reasons[], tip, factors{algorithmic, ai, sharedInterests, ragChunksUsed}, cached }`
 
-Almacena en:
-- `coachChats/{userId}.learningProfile` — perfil individual
-- `coachInsights/global` — insights globales
+### Algorithm (3 layers)
+1. **Client-side** (instant): 6-factor weighted algorithm in HomeViewModel
+   - Interests (25), Age (15), Geo (15), Type (15), Range (10), Completeness (5)
+   - Score range: 45-92% (generous for new app)
+2. **Server AI** (~3s): RAG vector search + Gemini flash-lite analysis
+   - Blend: 40% algorithmic + 60% AI
+   - RAG queries coachKnowledge (397 chunks) for compatibility advice
+3. **Cache**: Firestore `chemistryCache/{pairId}` (TTL 7 days)
+   - pairId = sorted(userId1, userId2) to avoid duplicates
 
-Config: `coach_config.learningEnabled`
+### Firestore Collection: chemistryCache
+- `{pairId}`: score, reasons[], tip, factors{}, calculatedAt (Timestamp)
+- TTL: 7 days, auto-refreshed on next request
 
-## Moderation RAG System
+## calculateSafetyScore — AI Safety Shield
 
-- **Coleccion**: `moderationKnowledge`
-- **73 chunks**, 13 categorias, 10 idiomas
-- Distribucion: EN:31, ES:17, FR:4, DE:3, PT:3, AR:3, JA:3, RU:3, ZH:3, ID:3
-- 13 categorias: `harassment`, `sexual`, `spam`, `threats`, `hate_speech`, `scam`, `contact_info`, `personal_info`, `evasion_tactics`, `payment_solicitation`, `context_guidelines`, `bio_moderation`, `classification_guide`
-- Configurable via RC: `moderation_config.rag`
-- Script de indexacion: `scripts/index-moderation-knowledge.js` (`--clean`, `--dry-run`)
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable, 256MiB, 60s timeout, GEMINI_API_KEY secret
 
-## autoModerateMessage — Pipeline de 9 pasos
+### Dual Mode
+- **Mode 1 (Chat Safety)**: `{matchId, userId, userLanguage}` → reads last 15 messages, quick regex (6 patterns × 10 langs) + Gemini AI deep analysis (temperature 0.1). Detects: financial requests, platform redirects, money solicitation, love bombing, manipulation, scam patterns, inappropriate pressure, impersonation.
+- **Mode 2 (Profile Safety)**: `{targetUserId}` → profile-based scoring with breakdown (photos, bio, reports).
 
-Trigger: `onDocumentCreated` en `matches/{matchId}/messages/{messageId}`
-Solo procesa `type:"text"` — ignora `ephemeral_photo` y `place`.
+### Response: `{success, score, safetyScore, riskLevel, flags[], concerns[], warnings[{type, message, severity}], summary, badges[], breakdown?}`
 
-1. **BLACKLIST** — ~100+ terminos EN/ES/PT/FR/DE + variantes con simbolos
-2. **SHA-256 cache** — coleccion `moderationCache`, TTL 1h, VERSION=3
-3. **Quick filters** — URLs (`t.me/`, `wa.me/`), telefonos, emails, caracteres repetitivos
-4. **RAG context** — lee `deviceLanguage` del sender + `getModerationConfig()` en paralelo
-5. **Gemini** `gemini-2.5-flash-lite` -> JSON `{approved, category, severity, confidence, reason}`
-6. **Cache write** — escribe resultado en `moderationCache`
-7. **Message marking** — marca mensaje si flaggeado
-8. **Auto-report** — genera reporte en `reports` si severity `"high"`
-9. **Audit trail** — escribe en `moderatedMessages`
+### UI Integration
+- **iOS**: `SafetyShieldBanner.swift` in ChatView — color-coded (red/orange/yellow), expandable, dismiss
+- **Android**: `SafetyShieldBanner.kt` in ChatView — same design, Material3 icons
+- Both: triggered every 10 new messages, `Dispatchers.IO`/`Task.detached`, non-blocking UI
 
-## Payloads de CFs criticas
+## generateSmartReply — Contextual AI Smart Replies (3-Tone)
 
-| CF | Input | Output |
-|---|---|---|
-| `dateCoachChat` | `{message, matchId?, userLanguage?, loadMoreActivities?, category?, excludePlaceIds?, loadCount?}` | `{success, reply, suggestions?, activitySuggestions?, userMessageId?, coachMessageId?, coachMessagesRemaining?, dominantCategory?}` |
-| `getCoachHistory` | `{limit?, beforeTimestamp?}` | `{success, messages: [{id, message, sender, timestamp, matchId?, suggestions?, activitySuggestions?}], hasMore, coachMessagesRemaining}` |
-| `deleteCoachMessage` | `{messageId}` | `{success: true}` (idempotente) |
-| `getRealtimeCoachTips` | `{matchId, userLanguage?}` | `{success, chemistryScore, chemistryTrend, engagementLevel, tips, preDateDetected, suggestedAction?}` |
-| `searchPlaces` | `{matchId, query, userLanguage?, pageToken?, loadCount?, excludePlaceIds?}` | `{success, suggestions: [PlaceSuggestion], hasMore, nextPageToken?}` |
-| `getDateSuggestions` | `{matchId, userLanguage?, category?, pageToken?, loadCount?, excludePlaceIds?}` | `{success, suggestions: [PlaceSuggestion], hasMore, nextPageToken?}` |
-| `reportUser` | `{reportedUserId, reason, matchId, description?}` | `{success, action, reportId, uniqueReportCount, totalReportCount}` |
-| `moderateMessage` | `{message, language?, type?, matchId?}` | `{approved, reason, category, confidence}` |
-| `moderateProfileImage` | `{imageBase64, expectedGender?, userLanguage?, isStory?}` | `{approved, reason, confidence, categories, category}` |
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable, 256MiB, 60s timeout, GEMINI_API_KEY secret
+**Payload**: `{matchId, lastMessage, userId, userLanguage}`
+**Response**: `{success, replies: [{text, tone, explanation}], suggestions: {playful, thoughtful, casual, tone, engagementTip}, executionTime}`
 
-## Scheduled CFs (timezone-aware)
+`replies` is the new 3-tone format; `suggestions` is kept for backward compatibility with older clients.
+Reads user tone preference from `users/{userId}/aiPreferences/smartReply` (field `preferredTone`).
 
-| CF | Schedule | Logica |
-|---|---|---|
-| `resetDailyLikes` | every 1h | `(UTCHour + timezoneOffset) % 24 === 0` -> reset a 100 |
-| `resetSuperLikes` | every 1h | misma logica timezone -> reset a 5 |
-| `resetCoachMessages` | every 1h | lee `coach_config.dailyCredits` de RC -> reset creditos |
-| `cleanupExpiredStories` | every 1h | elimina Firestore + Storage de stories >24h |
-| `checkMutualLikesAndCreateMatch` | every 5min | deteccion de matches mutuos |
-| `processScheduledDeletions` | every 1h | procesa eliminaciones programadas |
-| `updategeohashesscheduled` | every 24h | actualiza geohashes |
-| `monitorGeohashHealth` | every 6h | monitoreo de salud |
+### Pipeline
+1. Read last 8 text messages (skip place/ephemeral), truncate to 300 chars each
+2. Read both user profiles (bio, interests, shared interests)
+3. Read user tone preference from `aiPreferences/smartReply` (if exists)
+4. RAG: embed lastMessage → top 2 chunks from coachKnowledge (4s timeout)
+5. Gemini `AI_MODEL_LITE`: generate 3 tone-categorized replies (casual/flirty/deep) in user's language, weighted by preference
+6. Sanitize (150 chars), validate tone (neutral/flirty/serious)
+7. Build both `replies` (new) and `suggestions` (legacy) response formats
+8. 10-language fallback if Gemini fails
 
-## Triggers (6)
+## trackSmartReplyToneChoice — Smart Reply Tone Tracking
 
-| Trigger | Archivo | Evento | Proposito |
-|---|---|---|---|
-| `onMatchCreated` | matches.js:L7 | DocumentCreated en `matches/` | Push de nuevo match |
-| `onMessageCreated` | matches.js:L155 | DocumentCreated en `messages/` | Procesa nuevo mensaje |
-| `generateProfileThumbnail` | storage.js:L11 | ObjectFinalized en Storage | Thumbnail automatico |
-| `handlePendingNotification` | notifications.js:L190 | DocumentCreated en `pendingNotifications/` | Envia push |
-| `autoModerateMessage` | moderation.js:L773 | DocumentCreated en `messages/` | Moderacion automatica 9 pasos |
-| `validateGeohashOnUpdate` | geohash.js:L8 | DocumentUpdated en `users/` | Valida geohash al actualizar ubicacion |
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable
+**Payload**: `{matchId, tone}`
+**Response**: `{success}`
+
+Tracks user's preferred reply tone. Writes to `users/{userId}/aiPreferences/smartReply`:
+- Appends to `toneHistory` array: `{tone, timestamp, matchId}`
+- Increments `toneCounts.{tone}` (casual/flirty/deep)
+- Recalculates `preferredTone` based on highest count
+- Sets `updatedAt`
+
+## wingPersonAnalysis — Proactive Wing-Person Notifications
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Scheduled every 4h, 1GiB memory, GEMINI_API_KEY secret
+
+Analyzes matches and sends proactive push notifications via Gemini. Server-side only.
+
+### Signal Types (5)
+Detects 5 signal types across user's active matches to generate contextual nudges.
+
+### Rate Limiting
+- Max 2 notifications per user per day
+- Quiet hours: 22:00-09:00 local time
+- Tracks via user fields: `wingPersonLastNotifiedAt`, `wingPersonNotifCountToday`, `wingPersonLastResetDate`
+- Opt-out via `wingPersonOptOut` (boolean) on user doc
+- Fallback: 10 languages
+
+### Output
+Writes to `wingPersonNotifications/{id}`: `{userId, matchId, signalType, notificationBody, sentAt, language, metadata}`
+
+## onBlueprintShared — Date Blueprint Trigger
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Firestore trigger on `matches/{matchId}/messages/{messageId}`
+
+Detects messages with `type:"date_blueprint"` and writes to `pendingDebriefs/{id}`:
+`{matchId, messageId, usersMatched, blueprintTimestamp, status:"pending", createdAt}`
+
+## triggerDateDebriefs — Scheduled Debrief Processor
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Scheduled every 6h, GEMINI_API_KEY secret
+
+Processes pending debriefs 24-48h after blueprint was shared:
+1. Queries `pendingDebriefs` where `status == "pending"` and `createdAt` is 24-48h ago
+2. Generates coach debrief message via Gemini
+3. Writes coach message with `type: "debrief_prompt"` to coach chat
+4. Updates `pendingDebriefs` status to `"triggered"`, sets `triggeredAt`
+5. Creates/updates `coachChats/{userId}/debriefs/{matchId}`: `{blueprintMessageId, triggeredAt, status, matchName}`
+
+## requestDateDebrief — Manual Debrief Trigger
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable
+**Payload**: `{matchId}`
+**Response**: `{success}`
+
+Manually triggers a date debrief in the coach chat for the authenticated user. Bypasses the 24-48h wait of `triggerDateDebriefs`.
+
+## getPhotoCoachAnalysis — AI Photo Coach
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable, 512MiB, 60s timeout, GEMINI_API_KEY secret
+**Payload**: `{photoUrl, userId, userLanguage}`
+**Response**: `{success, analysis: {overallScore (1-10), strengths[], improvements[], tips[], categoryScores: {lighting, composition, background, expression, quality}}}`
+
+Analyzes a user's photo using Gemini vision and provides actionable feedback for dating profile optimization. Uses RAG context from `coachKnowledge` for dating-specific photo advice.
+
+## scheduleDateCheckIn — Safety Check-In: Schedule
+
+**File**: `functions/lib/safety.js`
+**Type**: Callable, 256MiB, 30s timeout
+**Payload**: `{matchId, scheduledTime (ISO8601), emergencyContactPhone?, userName}`
+**Response**: `{success, checkInId}`
+
+Creates a `dateCheckIns/{id}` doc with status `"scheduled"`. Stores FCM token from caller's `users/{userId}.fcmToken`. Both iOS and Android MUST send identical payloads.
+
+## cancelDateCheckIn — Safety Check-In: Cancel
+
+**File**: `functions/lib/safety.js`
+**Type**: Callable, 256MiB, 30s timeout
+**Payload**: `{checkInId}`
+**Response**: `{success}`
+
+Sets status to `"cancelled"` if current status is `"scheduled"` or `"check_in_sent"`. Rejects if already responded/alerted.
+
+## respondToDateCheckIn — Safety Check-In: Respond
+
+**File**: `functions/lib/safety.js`
+**Type**: Callable, 256MiB, 30s timeout
+**Payload**: `{checkInId, response ("ok"|"sos")}`
+**Response**: `{success}`
+
+Updates status to `"ok_responded"` or `"sos_responded"`. If SOS: immediately creates `pendingEmergencyAlerts/{id}` for emergency contact notification. Both iOS and Android MUST send identical payloads.
+
+## processDateCheckIns — Safety Check-In: Scheduled Processor
+
+**File**: `functions/lib/safety.js`
+**Type**: Scheduled every 5 min, 512MiB, 120s timeout
+
+Processes the check-in lifecycle:
+1. Finds `dateCheckIns` where `status == "scheduled"` and `scheduledTime <= now` → sends FCM push, sets status `"check_in_sent"`
+2. Finds `status == "check_in_sent"` past reminder threshold → sends reminder FCM, sets status `"follow_up_sent"`
+3. Finds `status == "follow_up_sent"` past emergency threshold → creates `pendingEmergencyAlerts`, sets status `"emergency_alerted"`
+
+Thresholds configurable via `appConfig/safetyCheckIn`: `reminderDelayMinutes` (default 15), `emergencyDelayMinutes` (default 30), `batchLimit` (default 50).
+
+## generateIcebreakers — RAG-enhanced AI Icebreakers
+
+**File**: `functions/lib/ai-services.js`
+**Type**: Callable, 256MiB, 60s timeout, GEMINI_API_KEY secret
+**Payload**: `{ userId1, userId2 }`
+**Response**: `{ success, icebreakers: [{message, reasoning, emoji}], starters: [String] }`
+
+### Pipeline
+1. Read both user profiles from Firestore (name, bio, interests, userType, age, deviceLanguage)
+2. Normalize language (`es-CL` → `es`), detect shared interests
+3. **Edge cases**: no bio + no interests → multilingual fallback; no API key → fallback
+4. **RAG retrieval**: embed query based on shared interests → `coachKnowledge` vector search → top 2 chunks
+   - Travel interests → `icebreakers_travel` chunk
+   - Food interests → `icebreakers_food` chunk
+   - Empty profiles → `icebreakers_sparse` chunk
+   - Age gap → `icebreakers_agegap` chunk
+5. Gemini `AI_MODEL_LITE` generates 3 icebreakers with RAG context + profile data
+6. Style variation: 1 playful, 1 thoughtful, 1 creative
+7. Sanitize: truncate message 200 chars, emoji 4 chars, filter empty
+8. Fallback: 10-language starters if AI fails
+
+### RAG Icebreaker Categories (11 specialized)
+`icebreakers` (10 langs), `icebreakers_travel`, `icebreakers_food`, `icebreakers_fitness`, `icebreakers_music`, `icebreakers_culture`, `icebreakers_nature`, `icebreakers_movies`, `icebreakers_nightlife`, `icebreakers_pets`, `icebreakers_sparse`, `icebreakers_agegap`
+
+### UI Integration
+- **Android**: `NewMatchView.kt` shows 3 icebreaker chips in NewMatchDialog (shimmer → fade-in)
+- **iOS**: `NewMatchIcebreakersView.swift` fullscreen cover with gold/purple gradient, 3 icebreaker buttons
+- Both: tapping icebreaker → opens chat with message pre-filled
+
+## Workflow según argumento `$ARGUMENTS`
+
+- **nombre-funcion**: deploy solo esa CF → `firebase deploy --only functions:<nombre> --force`
+- **all**: deploy TODAS las CFs → `firebase deploy --only functions --force`
+- **logs**: ver logs de las últimas CFs activas
+- **monitor**: ejecutar health monitor del Coach
+- **(vacío)**: preguntar qué acción realizar
 
 ## Comandos de deploy
 
 ```bash
 cd /Users/daniel/IdeaProjects/Public-BlackSugar21
 
-# Deploy CF especifica (recomendado)
-firebase deploy --only functions:dateCoachChat --force
+# Deploy CFs específicas (recomendado)
+firebase deploy --only functions:dateCoachChat,functions:getCoachHistory --force
 
-# Deploy multiples CFs
-firebase deploy --only functions:dateCoachChat,functions:getCoachHistory,functions:deleteCoachMessage --force
+# Deploy coach completo
+firebase deploy --only functions:dateCoachChat,functions:getCoachHistory,functions:deleteCoachMessage,functions:resetCoachMessages,functions:getRealtimeCoachTips --force
 
 # Deploy todas las CFs
 firebase deploy --only functions --force
-
-# Deploy reglas Firestore
-firebase deploy --only firestore:rules
-
-# Deploy reglas Storage
-firebase deploy --only storage
 ```
 
 ## Logs y debug
@@ -167,33 +292,114 @@ firebase deploy --only storage
 ```bash
 cd /Users/daniel/IdeaProjects/Public-BlackSugar21
 
-# Logs de una CF
+# Logs de una CF específica
 firebase functions:log --only dateCoachChat | tail -50
 
-# Logs filtrados
-firebase functions:log --only dateCoachChat | grep -E "(Merge|Place search|API error|ERROR)"
+# Logs filtrados (errores del Coach)
+firebase functions:log --only dateCoachChat | grep -E "(Merge|Place search|API error|realPlaces|ERROR)"
 
 # Health monitor Coach
 node scripts/coach-health-monitor.js --minutes=60
 node scripts/coach-health-monitor.js --fix
+node scripts/coach-health-monitor.js --dry-run
 ```
 
 ## Reglas
 
-- SIEMPRE usar `--force` en deploys (evita confirmacion interactiva)
-- SIEMPRE especificar CFs por nombre (no `--only functions` a menos que sea necesario)
+- SIEMPRE usar `--force` en los deploys (evita confirmación interactiva)
+- SIEMPRE especificar nombres de CFs explícitamente (no `--only functions` a menos que sea necesario)
 - NUNCA deploy sin verificar el diff primero
-- Verificar build exitoso antes de reportar exito
+- Verificar build exitoso antes de reportar éxito
+- Reportar al final: CFs desplegadas, versión, tiempo
 
-## Troubleshooting
+## CF Count Total
+
+- **46 callable** (producción) + **6 admin/test** (no prod)
+- **11 scheduled** (timezone-aware via `timezoneOffset`)
+- **7 triggers** (Firestore + Storage events)
+- **1 alias**
+
+### Modelos Gemini (Dual Architecture)
+
+| Modelo | Constante | Uso |
+|---|---|---|
+| `gemini-2.5-flash` | `AI_MODEL_NAME` | CFs pesadas: dateCoachChat, analyzeProfileWithAI, analyzePersonalityCompatibility, generateConversationStarter, etc. |
+| `gemini-2.5-flash-lite` | `AI_MODEL_LITE` | CFs ligeras: autoModerateMessage, moderateMessage, moderateProfileImage, reportUser, generateInterestSuggestions, getRealtimeCoachTips, generateSmartReply |
+
+**⚠️ Clientes iOS/Android NO ejecutan Gemini localmente** — TODA la IA es server-side.
+
+### RAG Systems (server-side)
+
+| Sistema | Colección | Chunks | Uso |
+|---|---|---|---|
+| Coach RAG | `coachKnowledge` | 397 chunks (70 categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
+| Moderation RAG | `moderationKnowledge` | 73 chunks (13 categorías, 10 idiomas) | `moderateMessage` + `autoModerateMessage` |
+
+Embedding: `gemini-embedding-001` (768 dims, COSINE). Configurables via RC: `coach_config.rag` y `moderation_config.rag`.
+
+### Coach Learning System
+
+`analyzeUserMessage()` → `buildLearningContext()` → `updateCoachLearning()`. Almacena en `coachChats/{userId}.learningProfile` + `coachInsights/global`. Config: `coach_config.learningEnabled`. Los clientes NO necesitan cambios.
+
+### Scheduled CFs (timezone-aware)
+
+```
+resetDailyLikes         → every 1h, (UTCHour + timezoneOffset) % 24 === 0, siempre 100
+resetSuperLikes         → every 1h, misma lógica timezone, siempre 5 (NOTIFICACIONES DESHABILITADAS — super likes pausados en UI, reemplazados por Coach IA questions)
+cleanupExpiredStories   → every 1h, elimina Firestore + Storage
+checkMutualLikes...     → every 5min
+processScheduledDeletion→ every 1h
+updategeohashesscheduled→ every 24h
+monitorGeohashHealth    → every 6h
+resetCoachMessages      → every 1h, lee coach_config.dailyCredits de RC
+wingPersonAnalysis      → every 4h, analyzes matches, sends proactive push via Gemini. 1GiB. 5 signal types. Rate limit 2/day. Quiet hours 22-9
+triggerDateDebriefs     → every 6h, processes pending debriefs 24-48h after blueprint shared, sends coach message
+processDateCheckIns    → every 5min, 512MiB, 120s. Processes safety check-in lifecycle: send FCM, reminders, emergency alerts. Configurable via appConfig/safetyCheckIn
+```
+
+### Modules
+- `functions/index.js` — main entry, exports all CFs
+- `functions/lib/ai-services.js` — AI callable + scheduled CFs (coach, blueprint, chemistry, smart reply, icebreakers, photo coach, etc.)
+- `functions/lib/safety.js` — Safety Check-In CFs (scheduleDateCheckIn, cancelDateCheckIn, respondToDateCheckIn, processDateCheckIns)
+- `functions/lib/coach.js` — Coach chat pipeline, intent extraction, places search
+- `functions/lib/geo.js` — Geocoding, geohash utilities
+
+### Line Map (index.js)
+
+| CF/función | Línea aprox |
+|---|---|
+| `dateCoachChat` start | L3349 |
+| `fuzzyMatchPlace()` | L4882 |
+| `fetchCoachPlaces()` | ~L3500 |
+| `placesTextSearch()` | ~L3600 |
+
+### Places Search Config (`places_search_config` RC)
+
+21 campos clave: `progressiveRadiusSteps` (default `[15000,30000,60000,120000,200000,300000]`), `minPlacesTarget` (30), `loadMoreExpansionBase` (2), `loadMoreMaxExpansionStep` (4), `maxRadius` (300000), `categoryQueryMap` (14 categorías bilingüe). `computedMinR = haversineKm(u1,u2)/2*1000 + minRadius`.
+
+### autoModerateMessage Pipeline
+
+`type:"text"` SOLO. Ignora `ephemeral_photo` y `place`.
+1. BLACKLIST (~100+ terms EN/ES/PT/FR/DE + variantes con símbolos)
+2. SHA-256 cache (`moderationCache`, TTL 1h, VERSION=3)
+3. Quick filters: URLs (`t.me/`, `wa.me/`), phones, emails, chars repetitivos
+4. RAG context (lee `deviceLanguage` del sender + `getModerationConfig()` en paralelo)
+5. Gemini `gemini-2.5-flash-lite` → JSON `{approved, category, severity, confidence, reason}`
+6. Cache write
+7. Message marking si flaggeado
+8. Auto-report a `reports` si severity `"high"`
+9. Audit trail en `moderatedMessages`
+
+## Troubleshooting común
 
 | Error | Causa | Fix |
-|---|---|---|
+|-------|-------|-----|
 | `locationRestriction circle 400` | Formato incorrecto Places API | Usar bounding box rectangle |
-| Merge 0/N matched | fuzzyMatchPlace insuficiente | Ver `places-helpers.js:L99` |
+| Merge 0/N matched | fuzzyMatchPlace insuficiente | Ver L4882 en index.js |
 | Ghost messages | Gate `coachMessageId` ausente | Verificar client-side gate |
+| `gemini-2.0-flash` deprecated | Modelo obsoleto (Jun 1 2026) | Migrar a `gemini-2.5-flash-lite` |
 | Stories no aparecen | Falta `isPersonal == true` en query | Agregar filtro obligatorio |
-| Coach loadMore sin resultado | `lastRadiusUsed` no en cache | Fallback a `loadMoreDefaultBaseRadius` (60km) |
+| Coach loadMore sin resultado | `lastRadiusUsed` no en caché | Fallback a `loadMoreDefaultBaseRadius` (60km) |
 | `ReferenceError: lmLastRadius is not defined` | `let lmLastRadius` declarado dentro de bloque `try` pero referenciado fuera | Mover declaración al scope padre (antes del `if (placesKey)`) — `coach.js` |
 | `Unexpected end of JSON input` en intent extraction | `maxOutputTokens: 256` muy bajo → Gemini trunca JSON de extracción de intent | Aumentar a `maxOutputTokens: 512` y simplificar prompt de intent — `coach.js` |
 | `forwardGeocode` nunca se llama al mencionar otra ciudad | Intent extraction fallaba (JSON truncado) → no detectaba ciudad mencionada | Fix de maxOutputTokens + regex fallback multilingüe (ES/EN/PT/FR/DE) — `coach.js` |
@@ -211,7 +417,7 @@ Cuando Gemini intent extraction falla, regex detecta patrones de viaje en **55 p
 - **Solo travel:** `"mochilero en Perú"`, `"digital nomad in Bali"`
 - **Contexto de vida:** `"I live in Prague"`, `"trabajo en Miami"`
 
-Filtro anti-falsos-positivos con `skipWords` set. Si detecta ciudad → llama a `forwardGeocode` en `lib/geo.js` → override de coordenadas para Places search.
+Filtro anti-falsos-positivos con `skipWords` set. Si detecta ciudad → llama a `forwardGeocode` en `geo.js` → override de coordenadas para Places search.
 
 ### Suggestion chip — ciudad correcta
 
@@ -228,10 +434,14 @@ Cuando el usuario menciona otra ciudad (ej. "Buenos Aires") y Places search se e
 
 Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`overrideLat`/`overrideLng`) se almacenan en `placesCache` junto con los resultados. El path de `loadMore` lee estas coordenadas del caché para mantener la búsqueda en la ciudad mencionada sin necesidad de re-geocodificar.
 
-## Coach RAG — 368 chunks (actualizado)
+## Coach RAG — 307 chunks, 80+ categorías (actualizado)
 
 - **Colección**: `coachKnowledge`
-- **368 chunks** (antes 256), 18 categorías ampliadas:
+- **307 chunks**, 80+ categorías ampliadas:
+  - **11 icebreaker especializados**: `icebreakers` (10 idiomas genéricos) + `icebreakers_travel`, `icebreakers_food`, `icebreakers_fitness`, `icebreakers_music`, `icebreakers_culture`, `icebreakers_nature`, `icebreakers_movies`, `icebreakers_nightlife`, `icebreakers_pets`, `icebreakers_sparse` (empty profiles), `icebreakers_agegap` (age gap matches) — todos `multi` language
+  - **10 florist**: `florist_guide` (10 idiomas), `date_flowers` (10 idiomas)
+  - **10 liquor**: `liquor_gift` (10 idiomas)
+  - **10 takeaway**: `takeaway_gift` (10 idiomas)
   - `travel_dating` (13 langs), `long_distance` (11), `travel_safety` (12)
   - `expat_dating`, `business_trip_dating`, `study_abroad_dating`, `language_barrier`
   - `festival_dating`, `digital_nomad`, `budget_dating`, `relocation_dating`, `first_time_abroad`
@@ -239,5 +449,66 @@ Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`override
   - `cultural_dating_asia` (JP/KR/CN/IN/TH/SEA), `cultural_dating_mena` (UAE/TR/MA/LB/EG)
   - `cultural_dating_other` (AU/NZ/ZA/KE/NG/GH)
   - `nightlife_dating`, `city_exploration`, `solo_dating`, `visiting_connections`, `match_other_city`
-- **112 chunks nuevos** agregados via 3 scripts de seed: `seed-coach-rag-travel.js`, `v2.js`, `v3.js`
+  - **13 cuisine**: `cuisine_arabic`, `cuisine_chinese`, `cuisine_french`, `cuisine_fusion`, `cuisine_indian`, `cuisine_italian`, `cuisine_japanese`, `cuisine_korean`, `cuisine_mediterranean`, `cuisine_mexican`, `cuisine_peruvian`, `cuisine_thai`, `cuisine_vegan`
+  - **6 gift**: `gift_chocolate`, `gift_flowers`, `gift_jewelry`, `gift_perfume`, `gift_wine`, `gift_general`
+  - **10 date type**: `date_adventure`, `date_bar`, `date_budget`, `date_cafe`, `date_cultural`, `date_nightlife`, `date_outdoor`, `date_seasonal`, `date_spa`, `date_special_occasion`
+- **141 chunks nuevos** agregados via 4 scripts de seed: `seed-coach-rag-travel.js`, `v2.js`, `v3.js`, `seed-coach-rag-cuisine-shopping.js`
 - Embedding: `gemini-embedding-001` (768 dims, COSINE)
+- **Language-aware ranking**: user_lang → en → other, dedup por categoría, top 3
+
+## Coach Search Pipeline — Cocina + Compras + Lugares (actualizado)
+
+### Cuisine Search
+- **placeTypePattern**: +80 términos de cocina en 10 idiomas (árabe, china, italiana, mexicana, japonesa, tailandesa, india, peruana, coreana, francesa, griega, turca, vietnamita, brasileña, mediterránea, asiática, vegana, vegetariana, fusión, criolla, nikkei, tex-mex + platos: dim sum, hot pot, pho, pad thai, curry, tandoori, hummus, shawarma, falafel, kebab, bibimbap, ramen, dumpling, poke bowl)
+- **Intent extraction**: `cuisineType` (59 tipos), mapeo plato→restaurante (shawarma→arabic, pad thai→thai)
+- **cuisineInstruction**: 3 escenarios (muchos/pocos/cero resultados) + `cuisineAlternatives` map (59 cocinas→alternativas similares)
+- **Zero resultados**: NUNCA vacío — sugiere alternativas similares con entusiasmo + tip de cocina
+- **Cuisine fallback queries**: query principal + query alternativa automática (arabic→mediterranean, chinese→asian, etc.)
+- **CATEGORY_TO_PLACES_TYPE.restaurant**: 27 subtipos Google Places
+
+### Shopping/Purchase Search
+- **`searchType`**: nuevo campo intent: `"eat"` (cocina), `"buy"` (compras), `"visit"` (actividades)
+- **Mapeo compras→categoría**: chocolates/dulces→`bakery`, flores/joyas/regalos/perfume→`shopping_mall`
+- **Intent prompt mejorado**: mapeo explícito de 9 tipos de productos→queries de tiendas (chocolatería, florería, joyería, perfumería, vinoteca, pastelería, heladería, boutique, tienda de regalos)
+- **`isBuySearch` flag**: evita agregar queries de restaurante, agrega fallback de tiendas especializadas
+- **Gemini shopping instruction**: priorizar tiendas especializadas > department stores > genéricos + tip romántico sobre el producto
+- **`purchaseVerbs` expandido**: +3 patterns EN (`gift ideas`, `what to buy/get/give`, `best gift`)
+- **Cache**: `searchType` persistido en `placesCache.intent` para loadMore
+
+### Shared
+- **Cache completo**: `placesCache.intent = {placeType, googleCategory, locationMention, cuisineType, searchType}`
+- **loadMore hereda**: cuisine, searchType, location override del cache
+- **RC extensible**: `coach_config.placeSearch.purchaseExtraTerms` — agregar términos sin redeploy
+
+### Cobertura por idioma (10)
+| Idioma | Purchase verbs | Products | Cuisine patterns |
+|--------|---------------|----------|------------------|
+| ES | comprar, regalar, buscar | chocolates, flores, helados | comida árabe/china/italiana... |
+| EN | buy, shop, gift, purchase | chocolate, flowers, ice cream | arabic/chinese/italian food |
+| FR | acheter, offrir, chercher | chocolat, bouquet | cuisine arabe/chinoise... |
+| DE | kaufen, schenken, besorgen | Schokolade, Rosen | arabisches/chinesisches Essen |
+| PT | comprar, presentear | brigadeiro, açaí | comida árabe/chinesa... |
+| JA | 買う, プレゼント, 贈る | チョコ, ケーキ | アラブ料理, 中華料理... |
+| ZH | 买, 送礼, 想买 | 巧克力, 蛋糕 | 阿拉伯菜, 中餐... |
+| RU | купить, подарить | шоколад, мороженое | арабская/китайская кухня |
+| AR | اشتري, شراء, هدية | شوكولاتة, كنافة | مطعم عربي/صيني... |
+| ID | beli, membeli, hadiah | cokelat, kue | makanan arab/cina... |
+
+### Remote Config — Nuevas claves coach_config.placeSearch (sin redeploy)
+
+| RC Key | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `cuisineAlternatives` | Object | 59 cocinas→alternativas | Merge con defaults, agregar cocinas nuevas sin deploy |
+| `cuisineFallbackQueries` | Object | 59 cocinas→query fallback | Merge con defaults (arabic→"mediterranean restaurant") |
+| `shopFallbacks` | Object | 14 categories×10 langs (792 queries) | Agregar tiendas especializadas por región |
+| `purchaseExtraTerms` | String | "" | Regex extra para detectar compras (append a patterns) |
+
+### Remote Config — Nuevas claves coach_config.intentExtraction
+
+| RC Key | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `temperature` | Number | 0.1 | Temperature del modelo de intent extraction |
+| `maxTokens` | Number | 512 | Max output tokens del intent extraction |
+
+### Patrón RC en código
+Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/sobreescribe pero nunca elimina defaults.

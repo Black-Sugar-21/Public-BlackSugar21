@@ -7,7 +7,7 @@ const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
   fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,
   googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
-  placesTextSearch, transformPlaceToSuggestion,
+  placesTextSearch, transformPlaceToSuggestion, detectBrandType,
 } = require('./places-helpers');
 
 exports.getDateSuggestions = onCall(
@@ -215,6 +215,14 @@ exports.searchPlaces = onCall(
         return result;
       }
 
+      // Brand/franchise detection: prioritize correct place type for known brands
+      const brandMatch = detectBrandType(query);
+      let brandIncludedType = null;
+      if (brandMatch) {
+        brandIncludedType = brandMatch.type;
+        logger.info(`[searchPlaces] Brand detected: "${query}" → type="${brandIncludedType}"`);
+      }
+
       // Multi-query search: user query + related category + supplementary queries
       const queries = [query];
 
@@ -236,12 +244,14 @@ exports.searchPlaces = onCall(
         }
       }
 
-      // Add 1-2 random different categories for variety
-      const usedCats = new Set(matchedCategories);
-      const availableCats = Object.keys(catQueryMap).filter((c) => !usedCats.has(c));
-      const shuffled = [...availableCats].sort(() => Math.random() - 0.5);
-      const extraCount = matchedCategories.length > 0 ? 1 : 2;
-      queries.push(...shuffled.slice(0, extraCount).map((k) => catQueryMap[k]));
+      // Add 1-2 random different categories for variety — but NOT when searching for a specific brand
+      if (!brandMatch) {
+        const usedCats = new Set(matchedCategories);
+        const availableCats = Object.keys(catQueryMap).filter((c) => !usedCats.has(c));
+        const shuffled = [...availableCats].sort(() => Math.random() - 0.5);
+        const extraCount = matchedCategories.length > 0 ? 1 : 2;
+        queries.push(...shuffled.slice(0, extraCount).map((k) => catQueryMap[k]));
+      }
 
       // Progressive radius strategy (same as Coach IA — configurable via RC places_search_config):
       const progressiveSteps = Array.isArray(config.progressiveRadiusSteps) && config.progressiveRadiusSteps.length > 0
@@ -268,7 +278,10 @@ exports.searchPlaces = onCall(
           const radiusM = Math.min(maxR, stepRadius);
           lastRadiusUsed = radiusM;
           const results = await Promise.all(
-            queries.map((q) => placesTextSearch(q, searchCenter, radiusM, lang, null, maxResults, effectiveUseRestriction).catch(() => ({places: []}))),
+            queries.map((q) => placesTextSearch(
+              q, searchCenter, radiusM, lang, null, maxResults, effectiveUseRestriction,
+              q === query && brandIncludedType ? [brandIncludedType] : null,
+            ).catch(() => ({places: []}))),
           );
           const newPlaces = results.flatMap((r) => r.places).filter((p) => {
             if (!p.id || allUniqueIds.has(p.id)) return false;
@@ -289,7 +302,10 @@ exports.searchPlaces = onCall(
         lastRadiusUsed = lmRadius;
 
         const results = await Promise.all(
-          queries.map((q) => placesTextSearch(q, searchCenter, lmRadius, lang, null, maxResults, effectiveUseRestriction).catch(() => ({places: []}))),
+          queries.map((q) => placesTextSearch(
+            q, searchCenter, lmRadius, lang, null, maxResults, effectiveUseRestriction,
+            q === query && brandIncludedType ? [brandIncludedType] : null,
+          ).catch(() => ({places: []}))),
         );
         const seen = new Set();
         unique = results.flatMap((r) => r.places).filter((p) => {

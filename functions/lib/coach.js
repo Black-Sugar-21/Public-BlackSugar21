@@ -1,5 +1,7 @@
 'use strict';
 const { onCall } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -1289,6 +1291,15 @@ Return JSON with these fields:
   * Cuisine types → "restaurante [cuisine]" (e.g. "comida árabe"→"restaurante árabe")
   * Specific dishes → restaurant type (sushi→sushi restaurant, shawarma→arabic restaurant)
   * Generic food → restaurant (comer, cenar, almorzar→restaurante)
+  * BRAND/FRANCHISE NAMES: When user mentions a specific brand or franchise name (e.g., "Dunkin", "Starbucks", "McDonald's", "KFC", "Pizza Hut", "Subway", "Krispy Kreme", "Tim Hortons", "Baskin Robbins", "Chili's", "Outback"), ALWAYS:
+    1. Keep the EXACT brand name as the first placeQuery (e.g., "Dunkin Donuts", "Starbucks Coffee")
+    2. Add the full official name variant as second query (e.g., "Dunkin" → ["Dunkin Donuts", "Dunkin' Donuts"])
+    3. Set googleCategory to the appropriate type:
+       - Coffee/donut chains (Dunkin, Starbucks, Tim Hortons, Costa) → "cafe"
+       - Donut/pastry chains (Krispy Kreme, Cinnabon, Mister Donut) → "bakery"
+       - Fast food/casual dining (McDonald's, KFC, Burger King, Subway, etc.) → "restaurant"
+       - Ice cream chains (Baskin Robbins, Cold Stone, Häagen-Dazs) → "bakery"
+    4. NEVER return null googleCategory for recognized brand names
   * GIFT intent (regalar, para mi cita, for my date, as a gift): when the user wants to BUY food/drinks AS A GIFT, use shop/store queries NOT restaurant. Example: "comprar sushi para regalar" → sushi delivery/takeaway, "champagne para mi cita" → vinoteca/wine shop
 - "locationMention": city/area/country mentioned or null. Extract the location even from indirect references:
   * Travel: "voy a Buenos Aires", "going to Paris", "viajo a Madrid"
@@ -1311,7 +1322,8 @@ Return JSON with these fields:
   * Buy beer/craft beer (to TAKE HOME) → "liquor_store"
   * Massage/wellness/beauty → "spa"
   * NEVER use "restaurant" for buying products — use "bakery", "florist", "liquor_store", or "shopping_mall" instead
-  * NEVER use "bar" for buying alcohol to take home — use "liquor_store" instead`;
+  * NEVER use "bar" for buying alcohol to take home — use "liquor_store" instead
+  * When the query is a short brand name (1-2 words), add " near me" or the equivalent in user's language to placeQueries for better Google Places results`;
             const intentResult = await intentModel.generateContent(intentPrompt);
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
@@ -3064,6 +3076,197 @@ Rules:
         suggestedAction: null,
       };
     }
+  },
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATE DEBRIEF — Post-date proactive coaching
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Firestore trigger: When a blueprint message is created, schedule a debrief.
+ * Writes to pendingDebriefs collection for later processing.
+ */
+exports.onBlueprintShared = onDocumentCreated(
+  {document: 'matches/{matchId}/messages/{messageId}', region: 'us-central1'},
+  async (event) => {
+    const data = event.data?.data();
+    if (!data || data.type !== 'date_blueprint') return;
+
+    const matchId = event.params.matchId;
+    const messageId = event.params.messageId;
+    const db = admin.firestore();
+
+    try {
+      const matchDoc = await db.collection('matches').doc(matchId).get();
+      if (!matchDoc.exists) return;
+      const usersMatched = matchDoc.data().usersMatched || [];
+
+      await db.collection('pendingDebriefs').add({
+        matchId,
+        messageId,
+        usersMatched,
+        blueprintTimestamp: data.timestamp || admin.firestore.FieldValue.serverTimestamp(),
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      logger.info(`[DateDebrief] Scheduled debrief for match ${matchId}`);
+    } catch (e) {
+      logger.warn(`[DateDebrief] onBlueprintShared error: ${e.message}`);
+    }
+  },
+);
+
+/**
+ * Scheduled: Process pending debriefs 24-48h after blueprint was shared.
+ * Sends a proactive coach message asking how the date went.
+ */
+exports.triggerDateDebriefs = onSchedule(
+  {schedule: 'every 6 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const now = Date.now();
+    const MS_24H = 24 * 3600000;
+    const MS_48H = 48 * 3600000;
+
+    try {
+      const pending = await db.collection('pendingDebriefs')
+        .where('status', '==', 'pending')
+        .limit(50)
+        .get();
+
+      if (pending.empty) {
+        logger.info('[DateDebrief] No pending debriefs');
+        return;
+      }
+
+      let triggered = 0;
+      const batch = db.batch();
+
+      for (const doc of pending.docs) {
+        const data = doc.data();
+        const bpTs = data.blueprintTimestamp?.toDate?.()?.getTime() || data.createdAt?.toDate?.()?.getTime() || 0;
+        const hoursSince = (now - bpTs) / 3600000;
+
+        // Only trigger between 24-48h
+        if (hoursSince < 24 || hoursSince > 48) continue;
+
+        const usersMatched = data.usersMatched || [];
+        const matchId = data.matchId;
+
+        // Get match name for each user
+        for (const userId of usersMatched) {
+          const otherUserId = usersMatched.find(u => u !== userId);
+          let matchName = 'tu match';
+          let lang = 'es';
+          try {
+            const [userDoc, otherDoc] = await Promise.all([
+              db.collection('users').doc(userId).get(),
+              otherUserId ? db.collection('users').doc(otherUserId).get() : Promise.resolve({exists: false, data: () => ({})}),
+            ]);
+            if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
+            if (userDoc.exists) lang = (userDoc.data().deviceLanguage || 'es').split('-')[0].split('_')[0].toLowerCase();
+          } catch (_) {}
+
+          // Generate personalized debrief prompt
+          const debriefMessages = {
+            es: `¡Hey! Ayer tenías un plan con ${matchName}. ¿Cómo te fue? Cuéntame todo 💫`,
+            en: `Hey! You had a date plan with ${matchName} yesterday. How did it go? Tell me everything 💫`,
+            fr: `Hey ! Tu avais un plan avec ${matchName} hier. Comment ça s'est passé ? Raconte-moi 💫`,
+            de: `Hey! Du hattest gestern ein Date mit ${matchName}. Wie war es? Erzähl mir alles 💫`,
+            pt: `Hey! Ontem você tinha um plano com ${matchName}. Como foi? Me conta tudo 💫`,
+          };
+          const debriefText = debriefMessages[lang] || debriefMessages.en;
+
+          // Write proactive coach message
+          const coachMsgRef = db.collection('coachChats').doc(userId).collection('messages').doc();
+          batch.set(coachMsgRef, {
+            message: debriefText,
+            sender: 'coach',
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            matchId: matchId,
+            type: 'debrief_prompt',
+            blueprintMessageId: data.messageId,
+          });
+
+          // Track debrief
+          const debriefRef = db.collection('coachChats').doc(userId).collection('debriefs').doc(matchId);
+          batch.set(debriefRef, {
+            blueprintMessageId: data.messageId,
+            triggeredAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'pending',
+            matchName,
+          });
+
+          triggered++;
+        }
+
+        // Mark as triggered
+        batch.update(doc.ref, {status: 'triggered', triggeredAt: admin.firestore.FieldValue.serverTimestamp()});
+      }
+
+      if (triggered > 0) await batch.commit();
+      logger.info(`[DateDebrief] Triggered ${triggered} debrief messages from ${pending.size} pending`);
+    } catch (e) {
+      logger.warn(`[DateDebrief] Error: ${e.message}`);
+    }
+  },
+);
+
+/**
+ * Callable: User manually requests a date debrief for a specific match.
+ * Finds the most recent blueprint and inserts a debrief prompt.
+ */
+exports.requestDateDebrief = onCall(
+  {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {matchId} = request.data || {};
+    if (!matchId) throw new Error('matchId is required');
+
+    const db = admin.firestore();
+
+    // Find most recent blueprint in this match
+    const bpSnap = await db.collection('matches').doc(matchId).collection('messages')
+      .where('type', '==', 'date_blueprint')
+      .orderBy('timestamp', 'desc').limit(1).get();
+
+    // Get match name
+    const matchDoc = await db.collection('matches').doc(matchId).get();
+    const usersMatched = matchDoc.data()?.usersMatched || [];
+    const otherUserId = usersMatched.find(u => u !== userId);
+    let matchName = 'tu match';
+    if (otherUserId) {
+      const otherDoc = await db.collection('users').doc(otherUserId).get();
+      if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
+    }
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const lang = ((userDoc.data()?.deviceLanguage || 'en').split('-')[0]).toLowerCase();
+
+    const hasBp = !bpSnap.empty;
+    const messages = {
+      es: hasBp
+        ? `¿Cómo te fue en tu cita con ${matchName}? Cuéntame los detalles 💫`
+        : `¿Tuviste alguna cita con ${matchName} últimamente? Cuéntame cómo fue 💬`,
+      en: hasBp
+        ? `How did your date with ${matchName} go? Tell me the details 💫`
+        : `Did you go on a date with ${matchName} recently? Tell me how it went 💬`,
+    };
+
+    const debriefText = messages[lang] || messages.en;
+    const msgRef = await db.collection('coachChats').doc(userId).collection('messages').add({
+      message: debriefText,
+      sender: 'coach',
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      matchId,
+      type: 'debrief_prompt',
+      blueprintMessageId: hasBp ? bpSnap.docs[0].id : null,
+    });
+
+    return {success: true, messageId: msgRef.id, message: debriefText};
   },
 );
 

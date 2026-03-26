@@ -117,6 +117,10 @@ exports.updateFCMToken = onCall(async (request) => {
  *   - Thumb ya existente (idempotente)
  */
 
+// TODO: Notificaciones de super likes deshabilitadas por cambio de estrategia.
+// Super likes ya no se usan en el UI — reemplazados por Coach IA questions.
+// Descomentar cuando se reactive la feature de super likes.
+/*
 exports.testSuperLikesResetNotification = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
@@ -146,6 +150,7 @@ exports.testSuperLikesResetNotification = onCall(
     return {success: true, messageId: response};
   },
 );
+*/
 
 /**
  * Callable: Probar notificación de reset de likes diarios.

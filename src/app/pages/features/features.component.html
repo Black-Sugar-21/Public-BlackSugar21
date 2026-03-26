@@ -1,0 +1,122 @@
+<div class="legal-page-container">
+  <div class="legal-header">
+    <div class="logo-small">
+      <img src="logo-21.png" alt="Black Sugar 21" width="50" height="50" />
+    </div>
+    <a routerLink="/" class="back-link">&larr; {{ t('footer.home') }}</a>
+    <div class="language-selector">
+      <select (change)="changeLanguage($event)" [value]="translate.currentLanguage()">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+        <option value="pt">PT</option>
+        <option value="fr">FR</option>
+        <option value="de">DE</option>
+        <option value="ja">JA</option>
+        <option value="zh">ZH</option>
+        <option value="ru">RU</option>
+        <option value="ar">AR</option>
+        <option value="id">ID</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="legal-content glass-panel">
+    <h1>{{ t('features.title') }}</h1>
+    <p class="intro-text">{{ t('features.intro') }}</p>
+
+    <div class="legal-section">
+      <!-- AI Features overview -->
+      <div class="policy-block highlight">
+        <h3>
+          <span class="icon">🤖</span>
+          {{ t('features.aiPowered') }}
+        </h3>
+        <p>{{ t('features.aiPoweredText') }}</p>
+      </div>
+
+      <!-- Photo Coach -->
+      <div class="policy-block">
+        <h3>
+          <span class="icon">📸</span>
+          {{ t('features.photoCoach') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('features.photoCoachText') }}</p>
+        <ul class="safety-list">
+          <li>{{ t('features.photoCoach1') }}</li>
+          <li>{{ t('features.photoCoach2') }}</li>
+          <li>{{ t('features.photoCoach3') }}</li>
+        </ul>
+      </div>
+
+      <!-- Safety Check-In -->
+      <div class="policy-block info">
+        <h3>
+          <span class="icon">🛡️</span>
+          {{ t('features.safetyCheckIn') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('features.safetyCheckInText') }}</p>
+        <ul class="safety-list">
+          <li>{{ t('features.safety1') }}</li>
+          <li>{{ t('features.safety2') }}</li>
+          <li>{{ t('features.safety3') }}</li>
+          <li>{{ t('features.safety4') }}</li>
+        </ul>
+      </div>
+
+      <!-- AI Date Coach -->
+      <div class="policy-block">
+        <h3>
+          <span class="icon">💬</span>
+          {{ t('features.dateCoach') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('features.dateCoachText') }}</p>
+        <ul class="safety-list">
+          <li>{{ t('features.coach1') }}</li>
+          <li>{{ t('features.coach2') }}</li>
+          <li>{{ t('features.coach3') }}</li>
+        </ul>
+      </div>
+
+      <!-- AI Date Blueprint -->
+      <div class="policy-block">
+        <h3>
+          <span class="icon">🗺️</span>
+          {{ t('features.dateBlueprint') }}
+        </h3>
+        <p style="margin-bottom: 1.5rem;">{{ t('features.dateBlueprintText') }}</p>
+        <ul class="safety-list">
+          <li>{{ t('features.blueprint1') }}</li>
+          <li>{{ t('features.blueprint2') }}</li>
+          <li>{{ t('features.blueprint3') }}</li>
+        </ul>
+      </div>
+
+      <!-- Smart Reply -->
+      <div class="policy-block">
+        <h3>
+          <span class="icon">💡</span>
+          {{ t('features.smartReply') }}
+        </h3>
+        <p>{{ t('features.smartReplyText') }}</p>
+      </div>
+
+      <!-- Wing-Person -->
+      <div class="policy-block">
+        <h3>
+          <span class="icon">🦸</span>
+          {{ t('features.wingPerson') }}
+        </h3>
+        <p>{{ t('features.wingPersonText') }}</p>
+      </div>
+
+      <!-- Chemistry Score -->
+      <div class="policy-block highlight">
+        <h3>
+          <span class="icon">✨</span>
+          {{ t('features.chemistry') }}
+        </h3>
+        <p>{{ t('features.chemistryText') }}</p>
+      </div>
+    </div>
+  </div>
+</div>

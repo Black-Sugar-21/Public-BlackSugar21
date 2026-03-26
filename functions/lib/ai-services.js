@@ -372,11 +372,16 @@ exports.generateSmartReply = onCall(
       id: {playful: 'Kedengarannya seru! Ceritain dong 😊', thoughtful: 'Menarik banget! Pengen tau lebih lanjut 🤔', casual: 'Keren! 👋', tone: 'neutral', engagementTip: 'Ajukan pertanyaan terbuka untuk menjaga percakapan tetap mengalir'},
     };
     const fallback = FALLBACK[lang] || FALLBACK.en;
+    const fallbackReplies = [
+      {text: fallback.casual, tone: 'casual', explanation: ''},
+      {text: fallback.playful, tone: 'flirty', explanation: ''},
+      {text: fallback.thoughtful, tone: 'deep', explanation: ''},
+    ];
 
     try {
       if (!apiKey || !matchId || !userId) {
         logger.info(`[generateSmartReply] Missing required param (apiKey=${!!apiKey}, matchId=${!!matchId}, userId=${!!userId}), using fallback`);
-        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
       }
 
       // 1. Read last 8 text messages from the match conversation (skip place/ephemeral)
@@ -403,13 +408,13 @@ exports.generateSmartReply = onCall(
       const matchDoc = await db.collection('matches').doc(matchId).get();
       if (!matchDoc.exists) {
         logger.info(`[generateSmartReply] Match ${matchId} not found, using fallback`);
-        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
       }
       const matchData = matchDoc.data() || {};
       const usersMatched = matchData.usersMatched || [];
       if (!usersMatched.includes(userId)) {
         logger.warn(`[generateSmartReply] User ${userId} not in match ${matchId}`);
-        return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
       }
       const otherUserId = usersMatched.find((uid) => uid !== userId) || '';
 
@@ -479,6 +484,15 @@ exports.generateSmartReply = onCall(
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
 
+      // Read user's tone preference if available
+      let preferredTone = null;
+      try {
+        const prefDoc = await db.collection('users').doc(userId).collection('aiPreferences').doc('smartReply').get();
+        if (prefDoc.exists) preferredTone = prefDoc.data().preferredTone || null;
+      } catch (_) {}
+
+      const toneHint = preferredTone ? `\nThe user tends to prefer "${preferredTone}" replies — put that tone FIRST in the replies array, but still generate all 3.` : '';
+
       const prompt = `You are a dating conversation assistant. Generate 3 reply suggestions for ${myName} to respond to ${theirName}.
 
 ${chatContext}
@@ -487,17 +501,28 @@ ${ragContext}
 
 Rules:
 - ${getLanguageInstruction(lang)}
-- Generate 3 distinct reply styles:
-  * "playful": Fun, light, maybe teasing — with an emoji
-  * "thoughtful": Genuine, deeper, shows interest — with an emoji
-  * "casual": Relaxed, easy-going, natural — with an emoji
-- Each reply: 1-2 sentences max, natural conversational tone
+- Generate 3 replies with DIFFERENT tones. Each reply is a JSON object with "text", "tone", and "explanation":
+  * tone "casual": Relaxed, easy-going, natural — with an emoji
+  * tone "flirty": Fun, playful, subtly teasing — with an emoji
+  * tone "deep": Genuine, curious, meaningful — with an emoji
+- "explanation": ONE short sentence (max 60 chars) explaining WHY this reply works (e.g., "Shows interest without being pushy")
+- Each reply text: 1-2 sentences max, natural conversational tone
 - Reference the conversation context — DON'T be generic
-- Detect the conversation "tone": "neutral", "flirty", or "serious"
+- Detect the overall conversation "tone": "neutral", "flirty", or "serious"
 - Write a short "engagementTip": 1-sentence advice on what to do next
 - If no messages yet, generate conversation openers instead of replies
+${toneHint}
 
-Return ONLY a JSON object: {"playful": "...", "thoughtful": "...", "casual": "...", "tone": "neutral|flirty|serious", "engagementTip": "..."}`;
+Return ONLY a JSON object:
+{
+  "replies": [
+    {"text": "...", "tone": "casual", "explanation": "..."},
+    {"text": "...", "tone": "flirty", "explanation": "..."},
+    {"text": "...", "tone": "deep", "explanation": "..."}
+  ],
+  "tone": "neutral|flirty|serious",
+  "engagementTip": "..."
+}`;
 
       const result = await model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
@@ -507,6 +532,27 @@ Return ONLY a JSON object: {"playful": "...", "thoughtful": "...", "casual": "..
       const text = result.response.text();
       const parsed = parseGeminiJsonResponse(text);
 
+      // New format: replies array with tone + explanation
+      if (parsed && Array.isArray(parsed.replies) && parsed.replies.length >= 3) {
+        const replies = parsed.replies.slice(0, 3).map((r) => ({
+          text: String(r.text || '').substring(0, 150),
+          tone: ['casual', 'flirty', 'deep'].includes(r.tone) ? r.tone : 'casual',
+          explanation: String(r.explanation || '').substring(0, 100),
+        }));
+        // Legacy backward compat: map flirty→playful, deep→thoughtful
+        const findByTone = (t) => replies.find((r) => r.tone === t)?.text || replies[0]?.text || '';
+        const suggestions = {
+          playful: findByTone('flirty'),
+          thoughtful: findByTone('deep'),
+          casual: findByTone('casual'),
+          tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
+          engagementTip: String(parsed.engagementTip || '').substring(0, 200),
+        };
+        logger.info(`[generateSmartReply] Generated 3-tone replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs]`);
+        return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
+      }
+
+      // Legacy format fallback (old prompt format)
       if (parsed && parsed.playful && parsed.thoughtful && parsed.casual) {
         const suggestions = {
           playful: String(parsed.playful).substring(0, 150),
@@ -515,15 +561,63 @@ Return ONLY a JSON object: {"playful": "...", "thoughtful": "...", "casual": "..
           tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
           engagementTip: String(parsed.engagementTip || '').substring(0, 200),
         };
-        logger.info(`[generateSmartReply] Generated contextual replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs context]`);
-        return {success: true, suggestions, executionTime: Date.now() - startTime};
+        // Build replies from legacy format
+        const replies = [
+          {text: suggestions.casual, tone: 'casual', explanation: ''},
+          {text: suggestions.playful, tone: 'flirty', explanation: ''},
+          {text: suggestions.thoughtful, tone: 'deep', explanation: ''},
+        ];
+        logger.info(`[generateSmartReply] Generated legacy replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs]`);
+        return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
       }
 
       logger.warn('[generateSmartReply] AI returned invalid format, using fallback');
-      return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
     } catch (err) {
       logger.warn(`[generateSmartReply] AI failed (${err.message}), using fallback`);
-      return {success: true, suggestions: fallback, executionTime: Date.now() - startTime};
+      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+    }
+  },
+);
+
+/**
+ * Callable: Track which smart reply tone the user selected.
+ * Payload: { matchId, tone }
+ * Writes to users/{userId}/aiPreferences/smartReply to learn user's preferred tone over time.
+ */
+exports.trackSmartReplyToneChoice = onCall(
+  {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const {matchId, tone} = request.data || {};
+    if (!tone || !['casual', 'flirty', 'deep'].includes(tone)) return {success: false};
+
+    const db = admin.firestore();
+    const prefRef = db.collection('users').doc(userId).collection('aiPreferences').doc('smartReply');
+
+    try {
+      await db.runTransaction(async (tx) => {
+        const doc = await tx.get(prefRef);
+        const data = doc.exists ? doc.data() : {toneHistory: [], toneCounts: {casual: 0, flirty: 0, deep: 0}};
+
+        // Append to history (keep last 50)
+        const history = (data.toneHistory || []).slice(-49);
+        history.push({tone, timestamp: admin.firestore.Timestamp.now(), matchId: matchId || ''});
+
+        // Update counts
+        const counts = data.toneCounts || {casual: 0, flirty: 0, deep: 0};
+        counts[tone] = (counts[tone] || 0) + 1;
+
+        // Compute preferred tone (most selected)
+        const preferredTone = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+
+        tx.set(prefRef, {toneHistory: history, toneCounts: counts, preferredTone, updatedAt: admin.firestore.Timestamp.now()});
+      });
+      return {success: true};
+    } catch (e) {
+      logger.info(`[trackToneChoice] Error: ${e.message}`);
+      return {success: false};
     }
   },
 );
@@ -1460,6 +1554,7 @@ exports.generateDateBlueprint = onCall(
     if (!matchId) throw new Error('matchId is required');
 
     const apiKey = process.env.GEMINI_API_KEY;
+    const placesKey = process.env.GOOGLE_PLACES_API_KEY || apiKey;
     const db = admin.firestore();
     const userId = request.auth.uid;
 
@@ -1549,7 +1644,7 @@ exports.generateDateBlueprint = onCall(
           const results = await placesTextSearch(query, {latitude: midLat, longitude: midLng}, radius, lang, null, 5, true);
           if (results && results.places) {
             for (const p of results.places.slice(0, 3)) {
-              placeResults.push(transformPlaceToSuggestion(p, myProfile, theirProfile, apiKey, placesConfig));
+              placeResults.push(transformPlaceToSuggestion(p, myProfile, theirProfile, placesKey, placesConfig));
             }
           }
         } catch (e) {
@@ -1637,7 +1732,7 @@ RULES:
   * Step 2: Shared activity (museum, gallery, market, viewpoint) — create memories
   * Step 3: Deeper connection (restaurant, wine bar) — intimate conversation
   * Step 4 (if full day): Fun/nightlife (bar, cocktail lounge, live music)
-- Give the plan a CREATIVE title that captures the vibe (not just "Plan con X")
+- Give the plan a SHORT, ELEGANT title that evokes the MOOD of the date (max 4-5 words). Do NOT include anyone's name. Do NOT use "Aventura con", "Plan con", "Cita con" or similar patterns. Good examples: "Sunset & Coffee Vibes", "Arte, Café y Buena Charla", "Tarde de Sabores", "Golden Hour Downtown". The title should feel like a curated experience name, not a description
 - Each step needs a clear "activity" description (not just the venue name)
   * Good: "Explorar el arte local mientras toman café"
   * Bad: "Café El Picaflor"
@@ -1698,7 +1793,7 @@ Return ONLY a JSON object:
         const topPlaces = placeResults.slice(0, durationPreset === 'quick' ? 2 : 3);
         const baseHour = hour >= 18 ? 19 : hour >= 12 ? 14 : 10;
         parsed = {
-          title: lang === 'es' ? `Aventura con ${theirName}` : `Adventure with ${theirName}`,
+          title: lang === 'es' ? 'Plan de cita sugerido' : 'Suggested date plan',
           totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
           estimatedBudget: '$25-50',
           steps: topPlaces.map((p, i) => ({
@@ -1754,6 +1849,131 @@ Return ONLY a JSON object:
     } catch (err) {
       logger.warn(`[DateBlueprint] Error: ${err.message}`);
       return fallback;
+    }
+  },
+);
+
+/**
+ * Callable: Analyze all dating profile photos using Gemini Vision.
+ * Reads user's pictureNames from Firestore, downloads each from Storage,
+ * sends all to Gemini in a single multi-image request for analysis.
+ * Returns structured scoring, categorization, and recommendations.
+ */
+exports.getPhotoCoachAnalysis = onCall(
+  {region: 'us-central1', memory: '1GiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+
+    try {
+      const storage = admin.storage().bucket();
+      const db = admin.firestore();
+
+      const uid = request.auth.uid;
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (!userDoc.exists) return {success: false, error: 'user_not_found'};
+
+      const pictureNames = userDoc.data().pictureNames || userDoc.data().pictures || [];
+      if (pictureNames.length === 0) return {success: false, error: 'no_photos'};
+
+      const userLanguage = request.data?.userLanguage || userDoc.data().deviceLanguage || 'en';
+
+      // Download each photo as base64 (in parallel)
+      const downloadResults = await Promise.allSettled(
+        pictureNames.map(async (name) => {
+          const file = storage.file(`users/${uid}/${name}`);
+          const [buffer] = await file.download();
+          return {name, buffer};
+        }),
+      );
+      const photoParts = [];
+      const validNames = [];
+      for (const result of downloadResults) {
+        if (result.status === 'fulfilled') {
+          photoParts.push({
+            inlineData: {mimeType: 'image/jpeg', data: result.value.buffer.toString('base64')},
+          });
+          validNames.push(result.value.name);
+        }
+      }
+
+      if (photoParts.length === 0) return {success: false, error: 'no_valid_photos'};
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        logger.error('[getPhotoCoachAnalysis] GEMINI_API_KEY not configured');
+        return {success: false, error: 'config_error'};
+      }
+
+      const prompt = `You are an expert dating profile photo coach. Analyze these ${photoParts.length} dating profile photos.
+
+For EACH photo (in order), provide:
+- score (1-100): overall quality for a dating profile
+- category: one of [selfie, portrait, full_body, activity, group, landscape, pet, food, other]
+- strengths: array of strengths from [good_lighting, clear_face, smile, natural_pose, interesting_background, shows_personality, good_composition, professional_quality, shows_hobbies, warm_expression]
+- issues: array of issues from [dark_lighting, blurry, sunglasses_covering_eyes, group_photo_unclear_who, no_face_visible, too_far_away, mirror_selfie, bathroom_selfie, too_filtered, low_resolution, cluttered_background]
+- suggestion: one short actionable tip (max 15 words)
+
+Also provide:
+- overallScore: average quality (1-100) of the full profile
+- missingCategories: what types of photos are missing that would improve the profile (from [full_body, activity, portrait, smile, with_friends, travel, hobby])
+- recommendations: top 3 most impactful tips to improve this dating profile (each max 20 words)
+- suggestedOrder: 0-based indexes of photos in optimal display order (best photo first)
+
+${getLanguageInstruction(userLanguage)}
+
+Return ONLY valid JSON with this structure:
+{
+  "overallScore": number,
+  "photos": [{"score": number, "category": string, "strengths": [string], "issues": [string], "suggestion": string}],
+  "missingCategories": [string],
+  "recommendations": [string],
+  "suggestedOrder": [number]  // 0-based indexes of photos in optimal display order
+}`;
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_NAME,
+        generationConfig: {responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 4096},
+      });
+
+      const contents = [{role: 'user', parts: [...photoParts, {text: prompt}]}];
+      const result = await model.generateContent({contents});
+      const text = result.response.text();
+      const analysis = parseGeminiJsonResponse(text);
+
+      if (!analysis || typeof analysis !== 'object') {
+        logger.warn('[getPhotoCoachAnalysis] Gemini returned invalid JSON');
+        return {success: false, error: 'parse_error'};
+      }
+
+      // Map suggestedOrder indexes back to filenames
+      const suggestedOrder = (analysis.suggestedOrder || []).map((idx) => {
+        if (typeof idx === 'number') return validNames[idx];
+        if (typeof idx === 'string' && validNames.includes(idx)) return idx;
+        return null;
+      }).filter(Boolean);
+      // If Gemini didn't return valid order, keep original
+      const finalOrder = suggestedOrder.length === validNames.length ? suggestedOrder : validNames;
+
+      // Map photo analysis to include filenames
+      const photos = (analysis.photos || []).map((p, i) => ({
+        ...p,
+        filename: validNames[i] || `photo_${i}`,
+      }));
+
+      logger.info(`[getPhotoCoachAnalysis] Analyzed ${photos.length} photos for uid=${uid}, overallScore=${analysis.overallScore}`);
+
+      return {
+        success: true,
+        overallScore: analysis.overallScore || 50,
+        photos,
+        missingCategories: analysis.missingCategories || [],
+        recommendations: analysis.recommendations || [],
+        suggestedOrder: finalOrder,
+      };
+    } catch (error) {
+      logger.error(`[getPhotoCoachAnalysis] Error: ${error.message}`);
+      return {success: false, error: 'analysis_failed'};
     }
   },
 );

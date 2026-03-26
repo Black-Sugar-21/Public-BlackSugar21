@@ -19,7 +19,9 @@ const modules = [
   './lib/coach',
   './lib/places',
   './lib/scheduled',
+  './lib/wingperson',
   './lib/geohash',
+  './lib/safety',
 ];
 
 modules.forEach(mod => {

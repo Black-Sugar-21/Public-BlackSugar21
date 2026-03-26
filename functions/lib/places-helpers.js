@@ -255,8 +255,10 @@ async function getPlacesSearchConfig() {
  */
 const DEFAULT_CATEGORY_QUERY_MAP = {
   cafe: 'café coffee shop cafetería coffeehouse specialty coffee ' +
+    'starbucks dunkin tim hortons costa coffee peets ' +
     'koffie kafe kaffee caffè kafeterya 咖啡 カフェ مقهى',
   restaurant: 'restaurant restaurante bistro trattoria steakhouse ' +
+    'mcdonalds burger king kfc subway pizza hut dominos wendys taco bell chipotle ' +
     'restaurante bistrô ristorante Restaurant churrascaria ' +
     'レストラン 餐厅 مطعم warung rumah makan',
   bar: 'bar pub cervecería brewery cocktail lounge wine bar taproom ' +
@@ -281,6 +283,7 @@ const DEFAULT_CATEGORY_QUERY_MAP = {
     "galerie d'art Kunstgalerie galleria d'arte pinacoteca " +
     '美術館 艺术画廊 معرض فني galeri seni',
   bakery: 'bakery panadería pastelería patisserie confitería repostería ' +
+    'krispy kreme cinnabon mister donut dunkin donuts ' +
     'boulangerie Bäckerei panificio toko roti donut pastry shop ' +
     'ベーカリー 面包店 مخبز kue',
   shopping_mall: 'shopping mall centro comercial outlet department store ' +
@@ -397,6 +400,91 @@ function sanitizeWebsiteUrl(raw) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Maps well-known franchise/brand names to their Google Places API type.
+ * Used to ensure brand searches return correct place types.
+ * Case-insensitive matching via lowercase keys.
+ */
+const BRAND_TYPE_MAP = {
+  // ── Coffee & Donuts ──
+  'dunkin': 'cafe', 'dunkin donuts': 'cafe', "dunkin'": 'cafe',
+  'starbucks': 'cafe', 'costa coffee': 'cafe', 'tim hortons': 'cafe',
+  'peet\'s': 'cafe', 'peets': 'cafe', 'blue bottle': 'cafe',
+  'intelligentsia': 'cafe', 'lavazza': 'cafe', 'illy': 'cafe',
+  'juan valdez': 'cafe', 'café de colombia': 'cafe',
+  'doutor': 'cafe', 'tully\'s': 'cafe', 'caribou': 'cafe',
+  'krispy kreme': 'bakery', 'mister donut': 'bakery',
+
+  // ── Fast Food ──
+  'mcdonalds': 'restaurant', "mcdonald's": 'restaurant', 'mcd': 'restaurant',
+  'burger king': 'restaurant', 'bk': 'restaurant',
+  'wendy\'s': 'restaurant', 'wendys': 'restaurant',
+  'kfc': 'restaurant', 'kentucky': 'restaurant',
+  'popeyes': 'restaurant', 'chick-fil-a': 'restaurant', 'chickfila': 'restaurant',
+  'taco bell': 'restaurant', 'chipotle': 'restaurant',
+  'subway': 'restaurant', 'five guys': 'restaurant',
+  'in-n-out': 'restaurant', 'shake shack': 'restaurant',
+  'whataburger': 'restaurant', 'jack in the box': 'restaurant',
+  'carl\'s jr': 'restaurant', 'carls jr': 'restaurant',
+  'hardees': 'restaurant', "hardee's": 'restaurant',
+  'sonic': 'restaurant', 'arby\'s': 'restaurant', 'arbys': 'restaurant',
+  'panda express': 'restaurant', 'wingstop': 'restaurant',
+  'papa johns': 'restaurant', "papa john's": 'restaurant',
+  'dominos': 'restaurant', "domino's": 'restaurant', 'pizza hut': 'restaurant',
+  'little caesars': 'restaurant', "little caesar's": 'restaurant',
+
+  // ── Latin America chains ──
+  'telepizza': 'restaurant', 'mostaza': 'restaurant',
+  'presto': 'restaurant', 'el corral': 'restaurant',
+  'bembos': 'restaurant', 'jollibee': 'restaurant',
+  'church\'s chicken': 'restaurant', 'churchs': 'restaurant',
+  'wok': 'restaurant', 'fridays': 'restaurant', 'tgi fridays': 'restaurant',
+  'applebees': 'restaurant', "applebee's": 'restaurant',
+  'chilis': 'restaurant', "chili's": 'restaurant',
+  'outback': 'restaurant', 'dennys': 'restaurant', "denny's": 'restaurant',
+  'ihop': 'restaurant', 'hooters': 'restaurant',
+  'sushi itto': 'restaurant', 'itamae': 'restaurant',
+
+  // ── Ice Cream & Desserts ──
+  'baskin robbins': 'bakery', 'baskin-robbins': 'bakery',
+  'cold stone': 'bakery', 'dairy queen': 'restaurant', 'dq': 'restaurant',
+  'haagen dazs': 'bakery', 'häagen-dazs': 'bakery',
+  'ben & jerry': 'bakery', "ben & jerry's": 'bakery',
+  'cinnabon': 'bakery', 'auntie anne': 'bakery', "auntie anne's": 'bakery',
+
+  // ── Asian chains ──
+  'yoshinoya': 'restaurant', 'sukiya': 'restaurant',
+  'coco': 'cafe', 'coco ichibanya': 'restaurant',
+  'mos burger': 'restaurant', 'lotteria': 'restaurant',
+  'haidilao': 'restaurant', 'din tai fung': 'restaurant',
+
+  // ── European chains ──
+  'nandos': 'restaurant', "nando's": 'restaurant',
+  'wagamama': 'restaurant', 'itsu': 'restaurant',
+  'paul': 'bakery', 'le pain quotidien': 'bakery',
+  'pret a manger': 'cafe', 'pret': 'cafe',
+  'greggs': 'bakery', 'nero': 'cafe', 'caffe nero': 'cafe',
+};
+
+/**
+ * Detects if a search query matches a known brand/franchise and returns the appropriate Places API type.
+ * @param {string} query - user search query
+ * @returns {{ brandName: string, type: string } | null}
+ */
+function detectBrandType(query) {
+  if (!query) return null;
+  const q = query.toLowerCase().trim();
+  // Exact match first
+  if (BRAND_TYPE_MAP[q]) return { brandName: q, type: BRAND_TYPE_MAP[q] };
+  // Partial match: check if query starts with or contains a brand name
+  for (const [brand, type] of Object.entries(BRAND_TYPE_MAP)) {
+    if (brand.length >= 3 && (q.includes(brand) || brand.includes(q))) {
+      return { brandName: brand, type };
+    }
+  }
+  return null;
 }
 
 /**
@@ -562,4 +650,5 @@ module.exports = {
   placesTextSearch,
   transformPlaceToSuggestion,
   CATEGORY_TO_PLACES_TYPE,
+  detectBrandType,
 };

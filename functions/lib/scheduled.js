@@ -184,7 +184,10 @@ exports.resetSuperLikes = onSchedule(
       if (usersSnap.docs.length < 500) break;
     }
 
-    // Enviar notificaciones push en batches de 500 (límite FCM)
+    // TODO: Notificaciones de super likes deshabilitadas por cambio de estrategia.
+    // Super likes ya no se usan en el UI — reemplazados por Coach IA questions.
+    // Descomentar cuando se reactive la feature de super likes.
+    /*
     for (let i = 0; i < tokensToNotify.length; i += 500) {
       const tokenBatch = tokensToNotify.slice(i, i + 500);
       try {
@@ -204,8 +207,9 @@ exports.resetSuperLikes = onSchedule(
         logger.error(`[resetSuperLikes] Notification batch error:`, err);
       }
     }
+    */
 
-    logger.info(`[resetSuperLikes] UTC hour=${currentUTCHour}, reset=${resetCount}, notified=${notifCount}, skippedFull=${skippedFull}`);
+    logger.info(`[resetSuperLikes] UTC hour=${currentUTCHour}, reset=${resetCount}, skippedFull=${skippedFull}`);
   },
 );
 

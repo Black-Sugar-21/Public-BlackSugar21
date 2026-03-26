@@ -35,5 +35,10 @@ export const routes: Routes = [
     path: 'safety-standards',
     component: SafetyStandardsComponent,
     title: 'Estándares de Seguridad Infantil - Black Sugar 21'
+  },
+  {
+    path: 'features',
+    loadComponent: () => import('./pages/features/features.component').then(m => m.FeaturesComponent),
+    title: 'AI Features - Black Sugar 21'
   }
 ];
