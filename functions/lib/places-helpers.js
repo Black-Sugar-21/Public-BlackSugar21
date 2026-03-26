@@ -103,6 +103,7 @@ function fuzzyMatchPlace(title, geminiPlaceId, byIdLookup, byNameLookup, allPlac
   const key = (title || '').toLowerCase().trim();
   if (key && byNameLookup.has(key)) return byNameLookup.get(key);
   // 3. Partial name match: title contains place name or vice versa
+  let matched = null;
   if (key && key.length >= 3) {
     for (const rp of allPlaces) {
       const rpName = (rp.name || '').toLowerCase().trim();
@@ -110,7 +111,36 @@ function fuzzyMatchPlace(title, geminiPlaceId, byIdLookup, byNameLookup, allPlac
       if (key.includes(rpName) || rpName.includes(key)) return rp;
     }
   }
-  return null;
+  // 4. Word-level overlap (Jaccard similarity > 0.5)
+  if (!matched) {
+    const titleWords = new Set(key.split(/\s+/).filter((w) => w.length > 2));
+    for (const rp of allPlaces) {
+      const rpWords = new Set((rp.name || '').toLowerCase().split(/\s+/).filter((w) => w.length > 2));
+      if (titleWords.size === 0 || rpWords.size === 0) continue;
+      const intersection = [...titleWords].filter((w) => rpWords.has(w));
+      const union = new Set([...titleWords, ...rpWords]);
+      const jaccard = intersection.length / union.size;
+      if (jaccard > 0.5) {
+        matched = rp;
+        break;
+      }
+    }
+  }
+  // 5. Strip common suffixes and retry containment
+  if (!matched) {
+    const suffixes = /\b(restaurant|restaurante|café|cafe|coffee|bar|pub|shop|store|tienda|club|lounge|grill|bistro|pizzeria|bakery|panadería)\b/gi;
+    const cleanTitle = key.replace(suffixes, '').trim();
+    if (cleanTitle.length >= 3) {
+      for (const rp of allPlaces) {
+        const cleanRp = (rp.name || '').replace(suffixes, '').trim().toLowerCase();
+        if (cleanRp.length >= 3 && (cleanTitle.includes(cleanRp) || cleanRp.includes(cleanTitle))) {
+          matched = rp;
+          break;
+        }
+      }
+    }
+  }
+  return matched;
 }
 
 /**

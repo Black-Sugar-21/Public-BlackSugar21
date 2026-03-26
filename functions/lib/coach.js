@@ -446,10 +446,10 @@ async function updateCoachLearning(db, userId, analysis, geminiTopics) {
 const RAG_COLLECTION = 'coachKnowledge';
 const RAG_EMBEDDING_MODEL = 'gemini-embedding-001';
 const RAG_DIMENSIONS = 768;
-const RAG_DEFAULT_TOP_K = 3;
-const RAG_MIN_SCORE = 0.3; // minimum cosine similarity to include results
+const RAG_DEFAULT_TOP_K = 5;
+const RAG_MIN_SCORE = 0.25; // minimum cosine similarity to include results
 const RAG_MAX_QUERY_LENGTH = 500;
-const RAG_FETCH_MULTIPLIER = 2;
+const RAG_FETCH_MULTIPLIER = 3;
 const RAG_MAX_CHUNK_LENGTH = 1500;
 
 // ─── Moderation RAG: Retrieve moderation rules from moderationKnowledge ──────
@@ -1728,15 +1728,22 @@ Return JSON with these fields:
           const allUniqueIds = new Set();
           let allRawPlaces = [];
           let lastRadius = 0;
+          let totalApiCalls = 0;
+          let radiusIterations = 0;
+          const MAX_RADIUS_ITERATIONS = 2;
 
           for (const stepRadius of effectiveSteps) {
+            if (radiusIterations >= MAX_RADIUS_ITERATIONS) break;
+            radiusIterations++;
             const radiusMeters = stepRadius ? Math.min(maxR, stepRadius) : null;
             lastRadius = stepRadius || 0;
 
-            // Build (query × type) pairs; cap at 12 to avoid API quota bursts
+            // Build (query × type) pairs; cap queries to 4 max, then cap pairs at 12
+            const cappedQueries = queries.slice(0, 4); // Max 4 parallel queries
             const mainPairs = searchAllTypes
-              ? queries.flatMap((q) => searchAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
-              : queries.map((q) => ({q, t: null}));
+              ? cappedQueries.flatMap((q) => searchAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
+              : cappedQueries.map((q) => ({q, t: null}));
+            totalApiCalls += mainPairs.length;
             const results = await Promise.all(
               mainPairs.map(({q, t}) => placesTextSearch(q, center, radiusMeters, lang, null, perQuery, useRestriction, t).catch(() => ({places: []}))),
             );
@@ -1753,6 +1760,7 @@ Return JSON with these fields:
             if (allRawPlaces.length >= minTarget) break;
           }
 
+          logger.info(`[dateCoachChat] Places API calls made: ${totalApiCalls} (${radiusIterations} radius iterations)`);
           placesLastRadiusUsed = lastRadius;
           const unique = allRawPlaces.slice(0, maxIntermediate);
 
@@ -2317,13 +2325,25 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         ? `${systemPrompt}\n\nConversation history:\n${history}\n\nUser: ${message.substring(0, config.maxMessageLength)}`
         : `${systemPrompt}\n\nUser: ${message.substring(0, config.maxMessageLength)}`;
 
+      // Retry with exponential backoff for rate limits
       const result = await (async () => {
-        try {
-          return await model.generateContent(conversationPrompt);
-        } catch (e) {
-          logger.warn(`[dateCoachChat] Gemini call failed, retrying in 1s: ${e.message}`);
-          await new Promise((r) => setTimeout(r, 1000));
-          return await model.generateContent(conversationPrompt);
+        let geminiResult = null;
+        const MAX_RETRIES = 3;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            geminiResult = await model.generateContent(conversationPrompt);
+            return geminiResult;
+          } catch (geminiErr) {
+            const isRetryable = geminiErr.status === 429 || geminiErr.status === 503 ||
+                          geminiErr.message?.includes('429') || geminiErr.message?.includes('503') ||
+                          geminiErr.message?.includes('RESOURCE_EXHAUSTED');
+            if (!isRetryable || attempt === MAX_RETRIES) {
+              throw geminiErr;
+            }
+            const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+            logger.warn(`[dateCoachChat] Gemini ${geminiErr.status || 'error'}, retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
+            await new Promise((r) => setTimeout(r, delay));
+          }
         }
       })();
       const responseText = result.response.text();
