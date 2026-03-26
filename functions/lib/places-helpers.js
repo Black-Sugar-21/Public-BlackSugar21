@@ -294,9 +294,10 @@ const DEFAULT_CATEGORY_QUERY_MAP = {
   bar: 'bar pub cervecería brewery cocktail lounge wine bar taproom ' +
     'brasserie Kneipe birreria taberna pivo bar sake bar ' +
     'バー 酒吧 حانة warung bir',
-  night_club: 'nightclub discoteca boate club nocturno dance club karaoke ' +
-    'boîte de nuit Nachtclub discoteca malam klub malam ' +
-    'ナイトクラブ 夜总会 ملهى lilin',
+  night_club: 'nightclub discoteca discotheque dance club electronic music club ' +
+    'dance floor DJ night spot live music venue karaoke club nocturno boate ' +
+    'boîte de nuit Nachtclub tanzclub malam klub malam ' +
+    'ナイトクラブ 夜总会 ملهى ليلي',
   movie_theater: 'movie theater cinema cine multiplex sala de cine ' +
     'cinéma Kino cinematografo bioscoop sinema ' +
     '映画館 电影院 سينما',
@@ -388,12 +389,31 @@ function isValidCoachInstagramHandle(handle) {
   if (!/^[a-zA-Z0-9._]+$/.test(clean)) return false;
   // Must contain at least one letter
   if (!/[a-zA-Z]/.test(clean)) return false;
-  // Reject generic/hallucinated words
-  const genericWords = ['instagram', 'insta', 'follow', 'ig', 'like', 'photo', 'pic',
-    'foodie', 'love', 'this', 'here', 'comida', 'bar', 'restaurante', 'cafe',
-    'restaurant', 'unknown', 'null', 'none', 'na', 'n_a', 'not_available',
-    'no_instagram', 'no_ig', 'handle', 'username', 'example'];
+  // Reject generic/hallucinated words (expanded blocklist)
+  const genericWords = [
+    // English generic
+    'instagram', 'insta', 'follow', 'ig', 'like', 'photo', 'pic', 'foodie', 'love',
+    'this', 'here', 'official', 'page', 'profile', 'account', 'contact', 'info',
+    'website', 'visit', 'menu', 'book', 'reserve', 'order', 'delivery',
+    // Place types (Gemini hallucinates these as handles)
+    'bar', 'pub', 'cafe', 'coffee', 'restaurant', 'restaurante', 'comida',
+    'bistro', 'grill', 'lounge', 'club', 'disco', 'nightclub', 'spa',
+    'hotel', 'hostel', 'store', 'shop', 'market', 'mall', 'plaza',
+    'bakery', 'pizzeria', 'sushi', 'burger', 'tacos', 'ramen',
+    // Null/invalid
+    'unknown', 'null', 'none', 'na', 'n_a', 'not_available', 'unavailable',
+    'no_instagram', 'no_ig', 'handle', 'username', 'example', 'test',
+    'pending', 'coming_soon', 'soon', 'tbd', 'not_found',
+    // Spanish generic
+    'perfil', 'pagina', 'cuenta', 'oficial', 'contacto', 'reservas',
+    // Portuguese
+    'perfil', 'pagina', 'conta', 'oficial', 'contato',
+  ];
   if (genericWords.includes(clean.toLowerCase())) return false;
+  // Reject if handle is just numbers (not a real account)
+  if (/^\d+$/.test(clean)) return false;
+  // Reject if handle matches common city/country names (Gemini confuses these)
+  if (clean.length <= 4 && /^[a-z]+$/i.test(clean)) return false; // Too short and generic
   return true;
 }
 
@@ -608,7 +628,44 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
  * Transforma un lugar de la API de Google Places (New) a nuestro formato PlaceSuggestion.
  * @param {Object} placesConfig - optional config from getPlacesSearchConfig() for photoMaxHeightPx, photosPerPlace, travelSpeedKmH
  */
+/**
+ * Filter out inappropriate venues (cabarets, strip clubs, adult entertainment).
+ * Keeps legitimate nightclubs and discotecas.
+ */
+function isInappropriateVenue(place) {
+  const name = (place.displayName?.text || '').toLowerCase();
+  const desc = (place.editorialSummary?.text || '').toLowerCase();
+  const types = (place.types || []).map(t => t.toLowerCase());
+  const combined = `${name} ${desc}`;
+
+  // Blocklist terms that indicate adult entertainment
+  const adultTerms = [
+    'strip', 'cabaret', 'gentlemen', 'gentleman', 'adult entertainment',
+    'table dance', 'tabledance', 'topless', 'exotic dance', 'lap dance',
+    'go-go', 'gogo', 'burlesque', 'showgirl',
+    // Spanish
+    'cabaretera', 'cabaré', 'table dance', 'baile exótico',
+    'entretenimiento adulto', 'desnudista',
+    // Portuguese
+    'casa noturna adulta', 'dança exótica', 'boate adulta',
+    // French
+    'cabaret érotique', 'danse exotique',
+  ];
+
+  for (const term of adultTerms) {
+    if (combined.includes(term)) return true;
+  }
+
+  // Check Google Places types for adult-only signals
+  if (types.includes('adult_entertainment') || types.includes('strip_club')) return true;
+
+  return false;
+}
+
 function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig) {
+  // Filter out inappropriate venues before transforming
+  if (isInappropriateVenue(place)) return null;
+
   const lat = place.location?.latitude || 0;
   const lng = place.location?.longitude || 0;
   const distUser1 = haversineKm(currentUser.lat, currentUser.lng, lat, lng);

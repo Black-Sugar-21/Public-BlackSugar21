@@ -1688,7 +1688,8 @@ exports.generateDateBlueprint = onCall(
           const results = await placesTextSearch(query, {latitude: midLat, longitude: midLng}, radius, lang, null, 5, true);
           if (results && results.places) {
             for (const p of results.places.slice(0, 3)) {
-              placeResults.push(transformPlaceToSuggestion(p, myProfile, theirProfile, placesKey, placesConfig));
+              const suggestion = transformPlaceToSuggestion(p, myProfile, theirProfile, placesKey, placesConfig);
+              if (suggestion) placeResults.push(suggestion);
             }
           }
         } catch (e) {

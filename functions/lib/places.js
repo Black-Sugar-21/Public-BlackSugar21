@@ -49,7 +49,7 @@ exports.getDateSuggestions = onCall(
         const {places, nextPageToken: npt} = await placesTextSearch(
           catQuery, midpoint, radiusMeters, lang, pageToken, maxResults,
         );
-        const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config));
+        const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config)).filter(Boolean);
         suggestions.sort((a, b) => b.score - a.score);
         const result = {success: true, suggestions, hasMore: !!npt || stepIndex < radiusSteps.length - 1};
         if (npt) result.nextPageToken = npt;
@@ -131,7 +131,7 @@ exports.getDateSuggestions = onCall(
         }).slice(0, maxPlaces);
       }
 
-      const suggestions = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config));
+      const suggestions = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config)).filter(Boolean);
       suggestions.sort((a, b) => b.score - a.score);
 
       const hasMore = lastRadiusUsed < maxR;
@@ -208,7 +208,7 @@ exports.searchPlaces = onCall(
         const {places, nextPageToken: npt} = await placesTextSearch(
           query || '', searchCenter, radiusMeters, lang, pageToken, maxResults, effectiveUseRestriction,
         );
-        const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config));
+        const suggestions = places.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config)).filter(Boolean);
         suggestions.sort((a, b) => b.score - a.score);
         const result = {success: true, places: suggestions, hasMore: !!npt || stepIndex < radiusSteps.length - 1};
         if (npt) result.nextPageToken = npt;
@@ -315,7 +315,7 @@ exports.searchPlaces = onCall(
         }).slice(0, maxPlaces);
       }
 
-      const suggestions = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config));
+      const suggestions = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config)).filter(Boolean);
       suggestions.sort((a, b) => b.score - a.score);
 
       const hasMore = lastRadiusUsed < maxR;
