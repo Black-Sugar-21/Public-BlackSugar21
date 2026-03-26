@@ -350,7 +350,7 @@ const MODERATION_BLACKLIST = [
   'fuck me', 'wanna fuck', 'lets fuck', 'down to fuck', 'dtf',
   'suck my', 'blow me', 'cum on', 'blow job', 'blowjob', 'hand job', 'handjob',
   'so horny', 'im horny', 'feeling horny', 'jerk off', 'jack off',
-  'get naked', 'strip for', 'show me your',
+  'get naked', 'strip for',
 
   // ── Contenido sexual explícito (ES) ──
   'fotos desnuda', 'fotos desnudo', 'fotos íntimas', 'manda nudes', 'envía nudes',
@@ -370,6 +370,31 @@ const MODERATION_BLACKLIST = [
   // ── Contenido sexual explícito (DE) ──
   'nacktfotos', 'fick mich', 'blas mir', 'ich bin geil',
 
+  // ── Contenido sexual explícito / scams (AR) ──
+  'صور عارية', 'ارسلي صور', 'ابعثلي صور', 'فيديو اباحي', 'نيكني',
+  'ارسل فلوس', 'حوالة بنكية', 'حساب بنكي', 'بطاقة ائتمان',
+  'فرصة استثمار', 'اربح فلوس', 'كازينو', 'يانصيب',
+
+  // ── Contenido sexual explícito / scams (JA) ──
+  'ヌード送って', '裸の写真', 'エロ動画', 'セックスしよう', 'やらせて',
+  '口座番号', 'クレジットカード', '振り込んで', '送金して',
+  '投資チャンス', '簡単に稼げる', 'カジノ', '宝くじ',
+
+  // ── Contenido sexual explícito / scams (RU) ──
+  'пришли фото голой', 'голые фото', 'интим фото', 'порно видео', 'трахни меня',
+  'отсоси', 'переведи деньги', 'банковский счёт', 'кредитная карта',
+  'номер карты', 'инвестиция', 'лёгкие деньги', 'казино', 'лотерея',
+
+  // ── Contenido sexual explícito / scams (ZH) ──
+  '发裸照', '发裸体照片', '色情视频', '做爱吧', '约炮',
+  '汇款', '银行账户', '信用卡号', '转账给我',
+  '投资机会', '轻松赚钱', '赌场', '彩票中奖',
+
+  // ── Contenido sexual explícito / scams (ID) ──
+  'kirim foto bugil', 'foto telanjang', 'video porno', 'mau ngentot',
+  'transfer uang', 'rekening bank', 'kartu kredit', 'nomor rekening',
+  'peluang investasi', 'uang mudah', 'kasino', 'lotere',
+
   // ── Variaciones con números/símbolos ──
   's3x', 's3xo', 'f*ck', 'f**k', 'p0rn', 'pr0n', 'n00ds', 'n00des',
   'c0ger', 'f0llar', 'f0der', 'tr4nsar',
@@ -378,7 +403,7 @@ const MODERATION_BLACKLIST = [
 /** Términos de la blacklist que son explícitamente sexuales (para categorización) */
 const SEXUAL_BLACKLIST_TERMS = [
   'nudes', 'nude', 'dick', 'pussy', 'sex pics', 'porn', 'xxx', 'sextape', 'onlyfans',
-  'only fans', 'fotos desnuda', 'fotos íntimas', 'desnudos', 'pack', 'video porno',
+  'only fans', 'fotos desnuda', 'fotos íntimas', 'desnudos', 'tu pack', 'mi pack', 'video porno',
   'coger', 'follar', 'culear', 'mamar', 'chupar', 'fotos nua', 'nus', 'pornô',
   'fuck', 'suck', 'lick', 'cum', 'blow job', 'hand job', 'dtf', 'horny',
   'baise', 'suce', 'fick', 'blas', 'geil', 'foder', 'tesão',

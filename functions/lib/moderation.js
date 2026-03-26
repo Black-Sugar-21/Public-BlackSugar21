@@ -680,32 +680,33 @@ function applyQuickFilters(message) {
     }
   }
 
-  // 3. URLs externas sospechosas
+  // 3. URLs sospechosas (whitelisted: Google Maps, Maps app, Yelp, TripAdvisor)
+  const SAFE_URL_DOMAINS = /google\.com\/maps|maps\.google|maps\.app\.goo\.gl|goo\.gl\/maps|yelp\.com|tripadvisor|booking\.com|airbnb\.com/i;
   if (/(https?:\/\/|www\.|bit\.ly|tinyurl|shorturl|t\.me\/|wa\.me\/)/i.test(message)) {
+    if (!SAFE_URL_DOMAINS.test(message)) {
+      return {
+        isSafe: false, allowed: false, category: 'SCAM', severity: 'MEDIUM',
+        reason: 'Suspicious external URL detected', confidence: 85,
+      };
+    }
+    // Safe URL (Maps, venues) — pass to AI for context check
+  }
+
+  // 4. Shortened/redirect URLs (always suspicious, no whitelist)
+  if (/\b(bit\.ly|tinyurl|shorturl|t\.me\/|wa\.me\/|is\.gd|ow\.ly|buff\.ly)\b/i.test(message)) {
     return {
       isSafe: false, allowed: false, category: 'SCAM', severity: 'MEDIUM',
-      reason: 'External URL detected', confidence: 85,
+      reason: 'Shortened/redirect URL detected', confidence: 90,
     };
   }
 
-  // 4. Números de teléfono (internacional)
-  if (/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(message)) {
-    return {
-      isSafe: false, allowed: false, category: 'PERSONAL_INFO', severity: 'MEDIUM',
-      reason: 'Phone number detected', confidence: 90,
-    };
-  }
+  // 5. Phone numbers and emails — ONLY flag in bios, NOT in chat between matched users
+  // autoModerateMessage runs on chat messages where sharing contact info is normal
+  // The 'type' context is checked by the caller; here we let AI handle it
+  // (phone/email detection moved to AI analysis with proper context)
 
-  // 5. Emails
-  if (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(message)) {
-    return {
-      isSafe: false, allowed: false, category: 'PERSONAL_INFO', severity: 'LOW',
-      reason: 'Email address detected', confidence: 95,
-    };
-  }
-
-  // 6. Caracteres repetitivos (spam)
-  if (/(.)\1{4,}/.test(message)) {
+  // 6. Caracteres repetitivos (spam) — threshold 8+ (dating chat uses "heyyyy", "jajaja")
+  if (/(.)\1{7,}/.test(message)) {
     return {
       isSafe: false, allowed: false, category: 'SPAM', severity: 'LOW',
       reason: 'Repetitive characters detected', confidence: 80,

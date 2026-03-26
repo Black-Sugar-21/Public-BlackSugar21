@@ -885,8 +885,8 @@ exports.dateCoachChat = onCall(
         const genAI = new GoogleGenerativeAI(apiKey);
         const lmTokenBudget = lmPsConfig.maxOutputTokensBudget || 8192;
         const lmModel = genAI.getGenerativeModel({
-          model: AI_MODEL_NAME,
-          generationConfig: {temperature: config.temperature, maxOutputTokens: Math.max(config.maxTokens, lmTokenBudget), responseMimeType: 'application/json'},
+          model: AI_MODEL_LITE,
+          generationConfig: {temperature: 0.5, maxOutputTokens: Math.min(Math.max(config.maxTokens, lmTokenBudget), 4096), responseMimeType: 'application/json'},
         });
         let lmText = null;
         try {
@@ -1263,7 +1263,7 @@ exports.dateCoachChat = onCall(
             // Intent extraction config — RC-configurable via coach_config.intentExtraction
             const ieConfig = config.intentExtraction || {};
             const intentModel = intentAI.getGenerativeModel({
-              model: AI_MODEL_NAME,
+              model: AI_MODEL_LITE,
               generationConfig: {temperature: ieConfig.temperature || 0.1, maxOutputTokens: ieConfig.maxTokens || 512, responseMimeType: 'application/json'},
             });
             const intentPrompt = `Extract search intent from this message. User language: "${lang}".
