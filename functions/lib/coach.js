@@ -338,6 +338,48 @@ function analyzeUserMessage(msg) {
 }
 
 /**
+ * Detect the user's communication style from their coach chat messages.
+ * Returns verbosity, emoji usage, question frequency, and energy level.
+ */
+function detectCommunicationStyle(userMessages) {
+  if (!userMessages || userMessages.length < 3) return null;
+  const texts = userMessages.map((m) => m.message || '').filter(Boolean);
+  if (texts.length < 3) return null;
+
+  const avgLength = texts.reduce((s, t) => s + t.length, 0) / texts.length;
+  const emojiCount = texts.join('').match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu)?.length || 0;
+  const questionCount = texts.filter((t) => t.includes('?')).length;
+  const exclamationCount = texts.filter((t) => t.includes('!')).length;
+
+  return {
+    verbosity: avgLength > 120 ? 'detailed' : avgLength > 40 ? 'moderate' : 'concise',
+    emojiStyle: emojiCount > texts.length * 1.5 ? 'heavy' : emojiCount > 0 ? 'light' : 'none',
+    questionFreq: questionCount / texts.length > 0.3 ? 'inquisitive' : 'assertive',
+    energy: exclamationCount / texts.length > 0.3 ? 'high' : 'calm',
+  };
+}
+
+/**
+ * Get cultural context guidance for a given language code.
+ */
+function getCulturalContext(lang) {
+  const cultures = {
+    ja: 'Indirect, respectful. Use polite suggestions, not direct commands. Avoid overly casual language.',
+    ko: 'Respectful hierarchy-aware. Use polite forms. Be encouraging but not pushy.',
+    zh: 'Practical, relationship-focused. Give concrete advice. Respect face/dignity.',
+    ar: 'Formal initially, warm once comfortable. Respect cultural boundaries around dating.',
+    de: 'Direct, factual, efficient. Skip small talk, get to actionable advice.',
+    fr: 'Elegant, witty. Appreciate nuance and charm in dating advice.',
+    pt: 'Warm, emotional, expressive. Emphasize connection and feelings.',
+    es: 'Warm, enthusiastic, emotionally supportive. Use humor freely.',
+    ru: 'Direct but thoughtful. Practical advice with emotional depth.',
+    id: 'Polite, community-oriented. Consider family/social context in dating advice.',
+    en: 'Balanced — adapt to user\'s detected style.',
+  };
+  return cultures[lang] || cultures['en'];
+}
+
+/**
  * Build a personalized context string from the user's learning profile.
  * Injected into the system prompt so Gemini can tailor responses.
  */
@@ -1862,6 +1904,21 @@ Return JSON with these fields:
         return `${m.sender === 'user' ? 'User' : 'Coach'}: ${(m.message || '').substring(0, 300)}`;
       }).join('\n');
 
+      // Detect user's communication style from coach chat history
+      const coachUserMessages = historySnap.docs.reverse().map((d) => d.data()).filter((m) => m.sender === 'user');
+      const commStyle = detectCommunicationStyle(coachUserMessages);
+      const culturalCtx = getCulturalContext(lang);
+
+      let adaptivePrompt = '';
+      if (commStyle) {
+        adaptivePrompt = `\n\nADAPT YOUR RESPONSE STYLE to mirror the user:
+- Length: ${commStyle.verbosity} (${commStyle.verbosity === 'concise' ? 'keep replies short, max 2 paragraphs' : commStyle.verbosity === 'detailed' ? 'give thorough explanations' : 'moderate length, 2-3 paragraphs'})
+- Emoji: ${commStyle.emojiStyle} (${commStyle.emojiStyle === 'heavy' ? 'use emojis freely' : commStyle.emojiStyle === 'none' ? 'avoid emojis' : 'occasional emojis'})
+- Interaction: ${commStyle.questionFreq} (${commStyle.questionFreq === 'inquisitive' ? 'ask questions back' : 'give direct advice'})
+- Energy: ${commStyle.energy} (${commStyle.energy === 'high' ? 'match their enthusiasm!' : 'calm, thoughtful tone'})`;
+      }
+      adaptivePrompt += `\n\nCULTURAL CONTEXT (user language: ${lang}): ${culturalCtx}`;
+
       // Build real places context for Gemini
       let realPlacesContext = '';
       if (realPlaces.length > 0) {
@@ -2189,6 +2246,8 @@ ${userTypeSpec ? `   ${userTypeSpec}` : `   - SUGAR_BABY: Focus on authenticity,
    - SUGAR_DADDY: Focus on genuine connection beyond material things, creating unique experiences, showing authentic interest, and making their personality shine. Help them stand out through thoughtfulness
    - SUGAR_MOMMY: Focus on confidence, authentic connections, creative and memorable date ideas, and expressing genuine interest. Help them leverage their experience and sophistication`}
 
+${adaptivePrompt}
+
 6. RESPONSE QUALITY STANDARDS:
    - Be ${config.personalityTone}
    - Every response must be ACTIONABLE — include at least one specific thing the user can do RIGHT NOW
@@ -2347,7 +2406,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
 
               if (matched) {
                 // Enrich with real Google Maps data (use conditional spread to avoid undefined — Firestore rejects undefined values)
-                return {
+                const enriched = {
                   ...base,
                   ...(matched.rating != null ? {rating: matched.rating} : (a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {})),
                   ...(matched.reviewCount ? {reviewCount: matched.reviewCount} : {}),
@@ -2359,7 +2418,13 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
                   ...(matched.longitude != null ? {longitude: matched.longitude} : {}),
                   ...(matched.placeId ? {placeId: matched.placeId} : {}),
                   ...(matched.photos && matched.photos.length > 0 ? {photos: matched.photos} : {}),
+                  ...(matched.isOpenNow != null ? {isOpenNow: matched.isOpenNow} : {}),
                 };
+                // Calculate distance from user if coordinates available
+                if (userLat && userLng && matched.latitude != null && matched.longitude != null) {
+                  enriched.distanceKm = Math.round(haversineKm(userLat, userLng, matched.latitude, matched.longitude) * 10) / 10;
+                }
+                return enriched;
               } else {
                 // No real place match — use Gemini's output with validation
                 return {
@@ -2392,23 +2457,30 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       // place cards when they search for places, regardless of Gemini's output.
       if (isUserPlaceSearch && (!activitySuggestions || activitySuggestions.length === 0) && realPlaces.length > 0) {
         logger.info(`[dateCoachChat] Gemini omitted activitySuggestions — building fallback from ${realPlaces.length} Google Places`);
-        activitySuggestions = realPlaces.slice(0, config.maxActivities).map((rp) => ({
-          emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
-          title: (rp.name || 'Place').substring(0, 50),
-          description: (rp.description || rp.address || '').substring(0, 120),
-          category: normalizeCategory(rp.category),
-          bestFor: 'fun',
-          ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
-          ...(rp.rating != null ? {rating: rp.rating} : {}),
-          ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
-          ...(rp.website ? {website: rp.website} : {}),
-          ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
-          ...(rp.address ? {address: rp.address} : {}),
-          ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
-          ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
-          ...(rp.placeId ? {placeId: rp.placeId} : {}),
-          ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
-        }));
+        activitySuggestions = realPlaces.slice(0, config.maxActivities).map((rp) => {
+          const activity = {
+            emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+            title: (rp.name || 'Place').substring(0, 50),
+            description: (rp.description || rp.address || '').substring(0, 120),
+            category: normalizeCategory(rp.category),
+            bestFor: 'fun',
+            ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+            ...(rp.rating != null ? {rating: rp.rating} : {}),
+            ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+            ...(rp.website ? {website: rp.website} : {}),
+            ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+            ...(rp.address ? {address: rp.address} : {}),
+            ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+            ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+            ...(rp.placeId ? {placeId: rp.placeId} : {}),
+            ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+            ...(rp.isOpenNow != null ? {isOpenNow: rp.isOpenNow} : {}),
+          };
+          if (userLat && userLng && rp.latitude != null && rp.longitude != null) {
+            activity.distanceKm = Math.round(haversineKm(userLat, userLng, rp.latitude, rp.longitude) * 10) / 10;
+          }
+          return activity;
+        });
       }
 
       // Supplement: add remaining Google Places to reach 30 total activities
@@ -2417,23 +2489,30 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         const usedPlaceIds = new Set(activitySuggestions.filter((a) => a.placeId).map((a) => a.placeId));
         const unusedPlaces = realPlaces.filter((rp) => rp.placeId && !usedPlaceIds.has(rp.placeId));
         const supplementNeeded = MAX_INITIAL_ACTIVITIES - activitySuggestions.length;
-        const supplementActivities = unusedPlaces.slice(0, supplementNeeded).map((rp) => ({
-          emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
-          title: (rp.name || 'Place').substring(0, 50),
-          description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
-          category: normalizeCategory(rp.category),
-          bestFor: 'fun',
-          ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
-          ...(rp.rating != null ? {rating: rp.rating} : {}),
-          ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
-          ...(rp.website ? {website: rp.website} : {}),
-          ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
-          ...(rp.address ? {address: rp.address} : {}),
-          ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
-          ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
-          ...(rp.placeId ? {placeId: rp.placeId} : {}),
-          ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
-        }));
+        const supplementActivities = unusedPlaces.slice(0, supplementNeeded).map((rp) => {
+          const activity = {
+            emoji: categoryEmojiMap[normalizeCategory(rp.category)] || '📍',
+            title: (rp.name || 'Place').substring(0, 50),
+            description: (rp.description || rp.address || '').replace(/\$+/g, '').trim().substring(0, 120),
+            category: normalizeCategory(rp.category),
+            bestFor: 'fun',
+            ...(rp.priceLevel ? {priceLevel: rp.priceLevel} : {}),
+            ...(rp.rating != null ? {rating: rp.rating} : {}),
+            ...(rp.reviewCount ? {reviewCount: rp.reviewCount} : {}),
+            ...(rp.website ? {website: rp.website} : {}),
+            ...(rp.googleMapsUrl ? {googleMapsUrl: rp.googleMapsUrl} : {}),
+            ...(rp.address ? {address: rp.address} : {}),
+            ...(rp.latitude != null ? {latitude: rp.latitude} : {}),
+            ...(rp.longitude != null ? {longitude: rp.longitude} : {}),
+            ...(rp.placeId ? {placeId: rp.placeId} : {}),
+            ...(rp.photos && rp.photos.length > 0 ? {photos: rp.photos} : {}),
+            ...(rp.isOpenNow != null ? {isOpenNow: rp.isOpenNow} : {}),
+          };
+          if (userLat && userLng && rp.latitude != null && rp.longitude != null) {
+            activity.distanceKm = Math.round(haversineKm(userLat, userLng, rp.latitude, rp.longitude) * 10) / 10;
+          }
+          return activity;
+        });
         if (supplementActivities.length > 0) {
           activitySuggestions = [...activitySuggestions, ...supplementActivities];
           logger.info(`[dateCoachChat] Supplemented with ${supplementActivities.length} direct Google Places (total: ${activitySuggestions.length})`);
@@ -2763,6 +2842,100 @@ function calculateAlgorithmicChemistry(messages, userId, weightsConfig = {}) {
   return {score, trend, engagement};
 }
 
+/**
+ * Analyze conversation patterns between user and match.
+ * Returns behavioral metrics (effort ratio, response times, initiative balance, engagement trend).
+ */
+function analyzeConversationPatterns(messages, currentUserId) {
+  if (!messages || messages.length < 4) return null;
+
+  const sorted = [...messages].sort((a, b) => {
+    const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
+    const tB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
+    return tA - tB;
+  });
+
+  const userMsgs = sorted.filter((m) => m.senderId === currentUserId);
+  const matchMsgs = sorted.filter((m) => m.senderId !== currentUserId);
+
+  if (userMsgs.length === 0 || matchMsgs.length === 0) return null;
+
+  // 1. Effort ratio (avg word count)
+  const userAvgWords = userMsgs.reduce((s, m) => s + (m.message || '').split(/\s+/).length, 0) / userMsgs.length;
+  const matchAvgWords = matchMsgs.reduce((s, m) => s + (m.message || '').split(/\s+/).length, 0) / matchMsgs.length;
+  const effortRatio = matchAvgWords > 0 ? Math.round((userAvgWords / matchAvgWords) * 10) / 10 : 99;
+
+  // 2. Response time asymmetry (avg minutes between consecutive msgs from different senders)
+  const userResponseTimes = [];
+  const matchResponseTimes = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    if (prev.senderId === curr.senderId) continue; // same sender, skip
+    const prevT = prev.timestamp?.toMillis ? prev.timestamp.toMillis() : 0;
+    const currT = curr.timestamp?.toMillis ? curr.timestamp.toMillis() : 0;
+    const diffMin = (currT - prevT) / 60000;
+    if (diffMin > 1440) continue; // skip gaps > 24h (different conversation sessions)
+    if (curr.senderId === currentUserId) {
+      userResponseTimes.push(diffMin);
+    } else {
+      matchResponseTimes.push(diffMin);
+    }
+  }
+  const userAvgResponse = userResponseTimes.length > 0 ? Math.round(userResponseTimes.reduce((a, b) => a + b, 0) / userResponseTimes.length) : 0;
+  const matchAvgResponse = matchResponseTimes.length > 0 ? Math.round(matchResponseTimes.reduce((a, b) => a + b, 0) / matchResponseTimes.length) : 0;
+
+  // 3. Initiative balance (who sends first message after 4h+ gap)
+  let userInitiatives = 0;
+  let matchInitiatives = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const prevT = prev.timestamp?.toMillis ? prev.timestamp.toMillis() : 0;
+    const currT = curr.timestamp?.toMillis ? curr.timestamp.toMillis() : 0;
+    if ((currT - prevT) > 4 * 3600000) { // 4h gap = new conversation
+      if (curr.senderId === currentUserId) userInitiatives++;
+      else matchInitiatives++;
+    }
+  }
+  const totalInitiatives = userInitiatives + matchInitiatives;
+  const initiativeBalance = totalInitiatives > 0 ? Math.round((userInitiatives / totalInitiatives) * 100) : 50;
+
+  // 4. Engagement trend (compare first half vs second half message frequency)
+  const midpoint = Math.floor(sorted.length / 2);
+  const firstHalf = sorted.slice(0, midpoint);
+  const secondHalf = sorted.slice(midpoint);
+  const firstHalfDays = firstHalf.length > 1 ? ((firstHalf[firstHalf.length - 1].timestamp?.toMillis?.() || 0) - (firstHalf[0].timestamp?.toMillis?.() || 0)) / 86400000 : 1;
+  const secondHalfDays = secondHalf.length > 1 ? ((secondHalf[secondHalf.length - 1].timestamp?.toMillis?.() || 0) - (secondHalf[0].timestamp?.toMillis?.() || 0)) / 86400000 : 1;
+  const firstRate = firstHalf.length / Math.max(firstHalfDays, 0.5);
+  const secondRate = secondHalf.length / Math.max(secondHalfDays, 0.5);
+  let engagementTrend = 'stable';
+  if (secondRate > firstRate * 1.3) engagementTrend = 'rising';
+  else if (secondRate < firstRate * 0.5) engagementTrend = 'ghosting';
+  else if (secondRate < firstRate * 0.7) engagementTrend = 'declining';
+
+  // 5. Detect flags
+  const flags = [];
+  if (effortRatio > 3) flags.push('one_sided_effort');
+  if (engagementTrend === 'ghosting') flags.push('ghosting_risk');
+  if (initiativeBalance > 80) flags.push('user_always_initiates');
+  if (matchAvgResponse > 0 && userAvgResponse > 0 && matchAvgResponse > userAvgResponse * 5) flags.push('slow_responder');
+
+  return {
+    initiativeBalance,
+    userAvgResponseMin: userAvgResponse,
+    matchAvgResponseMin: matchAvgResponse,
+    userAvgWords: Math.round(userAvgWords),
+    matchAvgWords: Math.round(matchAvgWords),
+    effortRatio,
+    engagementTrend,
+    flags,
+    messageCount: sorted.length,
+    userMsgCount: userMsgs.length,
+    matchMsgCount: matchMsgs.length,
+  };
+}
+
 exports.getRealtimeCoachTips = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
@@ -2828,6 +3001,9 @@ exports.getRealtimeCoachTips = onCall(
       const userInterests = (userData.interests || []).slice(0, 8).join(', ');
       const matchInterests = (otherData.interests || []).slice(0, 8).join(', ');
 
+      // Extract raw messages for behavioral pattern analysis
+      const messagesRaw = messagesSnap.docs.map((d) => d.data());
+
       const messages = messagesSnap.docs.map((d) => {
         const m = d.data();
         return {
@@ -2836,6 +3012,21 @@ exports.getRealtimeCoachTips = onCall(
           type: m.type || 'text',
         };
       }).reverse();
+
+      // Behavioral pattern analysis
+      const patterns = analyzeConversationPatterns(messagesRaw, userId);
+      let behavioralContext = '';
+      if (patterns) {
+        behavioralContext = `\n\nBEHAVIORAL ANALYSIS (factual, from message data):
+- Messages: ${patterns.userMsgCount} from user, ${patterns.matchMsgCount} from match
+- Effort: User avg ${patterns.userAvgWords} words/msg, match avg ${patterns.matchAvgWords} words/msg (ratio: ${patterns.effortRatio}x)
+- Response times: User avg ${patterns.userAvgResponseMin}min, match avg ${patterns.matchAvgResponseMin}min
+- Initiative: User starts ${patterns.initiativeBalance}% of conversations
+- Engagement trend: ${patterns.engagementTrend}
+${patterns.flags.length > 0 ? `- ⚠️ Flags: ${patterns.flags.join(', ')}` : '- No concerning patterns detected'}
+
+Use this behavioral data to generate SPECIFIC, DATA-DRIVEN tips. If flags exist, address them honestly but constructively.`;
+      }
 
       // 3. If too few messages, return basic response
       if (messages.length < 3) {
@@ -2965,7 +3156,7 @@ Rules:
 - Set preDateDetected=true ONLY if there are clear signals of planning to meet
 - Tips should reference specific things said in the conversation
 - Be optimistic and supportive — focus on positives and growth opportunities
-- NEVER give a score below 35 for an active conversation with mutual replies`;
+- NEVER give a score below 35 for an active conversation with mutual replies${behavioralContext}`;
 
       // 6. Call Gemini
       const apiKey = process.env.GEMINI_API_KEY;
