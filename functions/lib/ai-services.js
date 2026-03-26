@@ -1542,6 +1542,50 @@ function sanitizePlaceForJson(place) {
 }
 
 /**
+ * Sanitize blueprint title: remove names, forbidden patterns, ensure elegance.
+ */
+function sanitizeBlueprintTitle(rawTitle, myName, theirName) {
+  if (!rawTitle) return 'Plan de Salida';
+  let title = rawTitle.substring(0, 100).trim();
+
+  // Remove names from title (case-insensitive)
+  const names = [myName, theirName].filter(Boolean);
+  for (const name of names) {
+    if (!name) continue;
+    const nameRegex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    title = title.replace(nameRegex, '').trim();
+  }
+
+  // Remove forbidden patterns — match ANYWHERE in the title, not just prefix
+  const forbiddenPatterns = [
+    /(aventura|plan|cita|salida|noche|tarde|día)\s+(con|para)\s+\w+/gi,    // ES: "Aventura con Angelica"
+    /(adventure|date|outing|night|evening|day)\s+(with|for)\s+\w+/gi,      // EN: "Adventure with Maria"
+    /(aventure|rendez-vous|sortie|soirée)\s+(avec|pour)\s+\w+/gi,          // FR
+    /(abenteuer|date|ausflug|abend)\s+(mit|für)\s+\w+/gi,                  // DE
+    /(aventura|encontro|saída|noite)\s+(com|para)\s+\w+/gi,                // PT
+    /(приключение|свидание|прогулка|вечер)\s+(с|для)\s+\w+/gi,             // RU
+    /(مغامرة|موعد|خروج|ليلة)\s+(مع|لـ)\s+\w+/gi,                         // AR
+    /(petualangan|kencan|jalan-jalan|malam)\s+(dengan|untuk)\s+\w+/gi,     // ID
+    /^(aventura|plan|cita|salida)\s+(con|para)\s*/i,                       // ES prefix only
+    /^(adventure|date|outing)\s+(with|for)\s*/i,                           // EN prefix only
+  ];
+  for (const pattern of forbiddenPatterns) {
+    title = title.replace(pattern, '').trim();
+  }
+
+  // Remove leading/trailing punctuation and extra spaces
+  title = title.replace(/^[\s,\-—–:]+|[\s,\-—–:]+$/g, '').replace(/\s+/g, ' ').trim();
+
+  // If title is now empty or too short, generate a generic elegant one
+  if (!title || title.length < 3) {
+    const fallbacks = ['Café y Buena Charla', 'Sunset Vibes', 'Tarde de Sabores', 'Golden Hour', 'Arte y Risas'];
+    title = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
+  return title;
+}
+
+/**
  * Callable: AI Date Blueprint — generates a personalized first date itinerary.
  * Payload: { matchId, userLanguage, duration?, preferences? }
  * Response: { success, blueprint: { title, totalDuration, estimatedBudget, steps[], icebreaker, dresscode } }
@@ -1732,7 +1776,7 @@ RULES:
   * Step 2: Shared activity (museum, gallery, market, viewpoint) — create memories
   * Step 3: Deeper connection (restaurant, wine bar) — intimate conversation
   * Step 4 (if full day): Fun/nightlife (bar, cocktail lounge, live music)
-- Give the plan a SHORT, ELEGANT title that evokes the MOOD of the date (max 4-5 words). Do NOT include anyone's name. Do NOT use "Aventura con", "Plan con", "Cita con" or similar patterns. Good examples: "Sunset & Coffee Vibes", "Arte, Café y Buena Charla", "Tarde de Sabores", "Golden Hour Downtown". The title should feel like a curated experience name, not a description
+- CRITICAL TITLE RULE: The plan title MUST be a SHORT, ELEGANT mood-based name (max 4 words). STRICTLY FORBIDDEN patterns: "Aventura con [name]", "Plan con [name]", "Cita con [name]", "Salida con [name]", or ANY pattern that includes a person's name. The title describes the EXPERIENCE, not the people. Good: "Sunset & Coffee Vibes", "Arte y Buena Charla", "Tarde de Sabores", "Golden Hour Downtown", "Café, Arte y Risas". Bad: "Aventura con Maria", "Plan con Daniel", "Cita romántica con Ana"
 - Each step needs a clear "activity" description (not just the venue name)
   * Good: "Explorar el arte local mientras toman café"
   * Bad: "Café El Picaflor"
@@ -1832,7 +1876,7 @@ Return ONLY a JSON object:
         });
 
         const blueprint = {
-          title: String(parsed.title || '').substring(0, 100),
+          title: sanitizeBlueprintTitle(String(parsed.title || ''), myName, theirName),
           totalDuration: String(parsed.totalDuration || durationText).substring(0, 20),
           estimatedBudget: String(parsed.estimatedBudget || '$30-60').substring(0, 20),
           steps: enrichedSteps,
