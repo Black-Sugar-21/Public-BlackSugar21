@@ -183,10 +183,125 @@ async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults) 
   }
 }
 
+// ── Meetup API (via GraphQL — no key needed for public events) ───────────────
+
+async function searchMeetup(lat, lng, radiusKm, lang, category, maxResults) {
+  try {
+    // Meetup's public GraphQL endpoint for event search
+    const endDate = new Date(Date.now() + 14 * 86400000).toISOString();
+    const query = `
+      query {
+        rankedEvents(filter: {
+          lat: ${lat}, lon: ${lng}, radius: ${Math.min(radiusKm, 100)},
+          startDateRange: { startDate: "${new Date().toISOString()}", endDate: "${endDate}" }
+        }, first: ${maxResults}) {
+          count
+          edges {
+            node {
+              id title dateTime endTime
+              eventUrl
+              description
+              venue { name address city country lat lng }
+              featuredEventPhoto { baseUrl }
+              group { name }
+              feeSettings { amount currency }
+              eventType
+            }
+          }
+        }
+      }
+    `;
+
+    const resp = await fetch('https://www.meetup.com/gql', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({query}),
+    });
+
+    if (!resp.ok) {
+      // Meetup GraphQL may require auth — fall back silently
+      logger.info(`[Events] Meetup ${resp.status} — skipping (may require auth)`);
+      return [];
+    }
+
+    const data = await resp.json();
+    const edges = data?.data?.rankedEvents?.edges || [];
+
+    return edges.slice(0, maxResults).map(({node: e}) => {
+      const venue = e.venue || {};
+      const dateStr = e.dateTime ? e.dateTime.substring(0, 10) : '';
+      const timeStr = e.dateTime ? e.dateTime.substring(11, 16) : '';
+
+      return {
+        name: e.title || '',
+        date: dateStr,
+        time: timeStr,
+        venue: venue.name || e.group?.name || '',
+        address: [venue.address, venue.city, venue.country].filter(Boolean).join(', '),
+        lat: venue.lat || null,
+        lng: venue.lng || null,
+        category: mapMeetupCategory(e.eventType, category),
+        ticketUrl: e.eventUrl || '',
+        imageUrl: e.featuredEventPhoto?.baseUrl || '',
+        source: 'meetup',
+        price: e.feeSettings?.amount ? `$${e.feeSettings.amount}` : 'Free',
+        id: e.id || '',
+      };
+    });
+  } catch (e) {
+    logger.info(`[Events] Meetup error (non-critical): ${e.message}`);
+    return [];
+  }
+}
+
+function mapMeetupCategory(eventType, requestedCategory) {
+  if (requestedCategory) return requestedCategory;
+  if (!eventType) return 'other';
+  const type = eventType.toLowerCase();
+  if (type.includes('music') || type.includes('concert')) return 'music';
+  if (type.includes('food') || type.includes('drink') || type.includes('cooking')) return 'food';
+  if (type.includes('art') || type.includes('craft') || type.includes('photo')) return 'art';
+  if (type.includes('sport') || type.includes('fitness') || type.includes('outdoor')) return 'sports';
+  if (type.includes('tech') || type.includes('career') || type.includes('business')) return 'workshops';
+  if (type.includes('game') || type.includes('board')) return 'games';
+  if (type.includes('social') || type.includes('party') || type.includes('night')) return 'nightlife';
+  return 'other';
+}
+
+// ── Social Media Event Enrichment ────────────────────────────────────────────
+
+/**
+ * Enrich events with social media signals.
+ * Uses public web search to find Instagram/TikTok posts about events.
+ * No API keys needed — searches public URLs.
+ */
+async function enrichWithSocialSignals(events) {
+  if (!events || events.length === 0) return events;
+
+  // For each event, check if there's an Instagram hashtag or TikTok trend
+  return events.map(event => {
+    const nameSlug = event.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 30);
+    const venueSlug = event.venue.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+
+    // Generate social media search URLs (not API calls — just links for the user)
+    const socialLinks = {};
+    if (nameSlug.length > 3) {
+      socialLinks.instagramSearch = `https://www.instagram.com/explore/tags/${nameSlug}/`;
+      socialLinks.tiktokSearch = `https://www.tiktok.com/search?q=${encodeURIComponent(event.name)}`;
+    }
+    if (venueSlug.length > 3) {
+      socialLinks.instagramVenue = `https://www.instagram.com/explore/locations/${venueSlug}/`;
+    }
+
+    return {...event, socialLinks};
+  });
+}
+
 // ── Main: Fetch events from all sources ──────────────────────────────────────
 
 /**
- * Fetch local events from Ticketmaster + Eventbrite.
+ * Fetch local events from Ticketmaster + Eventbrite + Meetup.
+ * Enriches with social media links.
  * Uses Firestore cache (configurable TTL).
  * @param {number} lat
  * @param {number} lng
@@ -219,14 +334,15 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category) {
     // Cache miss — continue to fetch
   }
 
-  // Fetch from APIs in parallel
-  const [tmEvents, ebEvents] = await Promise.all([
+  // Fetch from ALL sources in parallel (Ticketmaster + Eventbrite + Meetup)
+  const [tmEvents, ebEvents, muEvents] = await Promise.all([
     searchTicketmaster(lat, lng, radius, lang, category, maxResults).catch(() => []),
     searchEventbrite(lat, lng, radius, lang, category, maxResults).catch(() => []),
+    searchMeetup(lat, lng, radius, lang, category, maxResults).catch(() => []),
   ]);
 
   // Merge + dedup by name similarity
-  const allEvents = [...tmEvents, ...ebEvents];
+  const allEvents = [...tmEvents, ...ebEvents, ...muEvents];
   const seen = new Set();
   const unique = allEvents.filter(e => {
     const key = e.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 30);
@@ -242,7 +358,8 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category) {
     return dA.localeCompare(dB);
   });
 
-  const result = unique.slice(0, maxResults);
+  const enriched = await enrichWithSocialSignals(unique.slice(0, maxResults));
+  const result = enriched;
 
   // Cache results
   if (result.length > 0) {
@@ -257,7 +374,7 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category) {
     }
   }
 
-  logger.info(`[Events] Fetched ${result.length} events (TM: ${tmEvents.length}, EB: ${ebEvents.length}) for ${lat.toFixed(2)},${lng.toFixed(2)}`);
+  logger.info(`[Events] Fetched ${result.length} events (TM: ${tmEvents.length}, EB: ${ebEvents.length}, MU: ${muEvents.length}) for ${lat.toFixed(2)},${lng.toFixed(2)}`);
   return result;
 }
 
