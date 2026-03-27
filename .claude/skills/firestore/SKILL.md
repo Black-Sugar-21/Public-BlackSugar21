@@ -145,7 +145,7 @@ places, lastRadiusUsed, timestamp (TTL 15min)
 
 ### `moderationKnowledge/{chunkId}`
 
-73 chunks multilingües (EN:31, ES:17, FR:4...). 13 categorías. Embedding 768 dims `gemini-embedding-001`.
+93 chunks multilingües (EN:39, ES:21, FR:5, DE:4, PT:5, AR:4, JA:4, RU:4, ZH:4, ID:3). 13 categorías. Embedding 768 dims `gemini-embedding-001`.
 
 ### `moderationCache/{hash}`
 
@@ -493,6 +493,16 @@ eventPreferences: {
 }
 ```
 Stored on the `coachChats/{userId}` root document alongside `learningProfile`.
+
+### `testerSignups/{id}` collection
+
+```
+email: String
+platform: String           // "ios"|"android"|"both"
+optInTimestamp: Timestamp
+source: String             // "web_modal"|"landing_page"
+```
+Written by web tester auto-enrollment modal. Used for beta tester management.
 
 ### `dateCheckIns` collection — updated fields
 

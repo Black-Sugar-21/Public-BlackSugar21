@@ -132,7 +132,7 @@ Sistema server-side que enriquece la moderacion con conocimiento curado de regla
 
 - **Embedding model:** `gemini-embedding-001` (768 dimensiones)
 - **Vector search:** Firestore native `findNearest()` con distancia COSINE
-- **Coleccion:** `moderationKnowledge` — 73 chunks multilingues
+- **Coleccion:** `moderationKnowledge` — 93 chunks multilingues
 - **Indice Firestore:** Vector index en `moderationKnowledge.embedding` (768 dims, flat, COSINE)
 
 ### Distribucion por idioma
@@ -149,6 +149,23 @@ Sistema server-side que enriquece la moderacion con conocimiento curado de regla
 | RU | 3 |
 | ZH | 3 |
 | ID | 3 |
+
+### Safety Shield — Pet Name False Positive Fix
+
+- Common pet names in dating context no longer trigger moderation flags
+- Whitelisted terms: "bb", "amor", "bebe", "cariño", "mi vida", "corazón", "tesoro", "schatz", "chéri(e)", "amore"
+- Applied in `autoModerateMessage` quick filters before AI analysis
+- Reduces false positives in romantic conversations across 10 languages
+
+### Blacklist Expansion — +60 Terms (AR/JA/RU/ZH/ID)
+
+- **60+ new blacklist terms** added for underserved languages:
+  - AR (Arabic): sexual solicitation, scam patterns, contact evasion
+  - JA (Japanese): explicit content, compensated dating, scam patterns
+  - RU (Russian): explicit content, financial scam patterns
+  - ZH (Chinese): explicit content, scam patterns, contact evasion
+  - ID (Indonesian): explicit content, scam patterns
+- Total MODERATION_BLACKLIST now ~160+ terms across EN/ES/PT/FR/DE/AR/JA/RU/ZH/ID
 
 ### 13 Categorias
 

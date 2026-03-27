@@ -333,7 +333,7 @@ node scripts/coach-health-monitor.js --dry-run
 | Sistema | Colección | Chunks | Uso |
 |---|---|---|---|
 | Coach RAG | `coachKnowledge` | 397 chunks (70 categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
-| Moderation RAG | `moderationKnowledge` | 73 chunks (13 categorías, 10 idiomas) | `moderateMessage` + `autoModerateMessage` |
+| Moderation RAG | `moderationKnowledge` | 93 chunks (13 categorías, 10 idiomas) | `moderateMessage` + `autoModerateMessage` |
 
 Embedding: `gemini-embedding-001` (768 dims, COSINE). Configurables via RC: `coach_config.rag` y `moderation_config.rag`.
 
@@ -607,3 +607,75 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - Detects self-deprecating messages in coaching context
 - Responds with empathetic encouragement rather than generic advice
 - Pattern detection: "I'm not good enough", "nobody likes me", "I always mess up" (10 languages)
+
+### Cabaret → Nightclub Mapping (LatAm)
+- "cabaret" queries from LatAm users now map to `night_club` Google Places type
+- Prevents routing to adult entertainment venues in countries where "cabaret" means nightclub
+- Applied in intent extraction + `CATEGORY_TO_PLACES_TYPE` mapping
+
+## Coach System Improvements (Session 2026-03-26)
+
+### Stalled Stage Detection
+- `getRealtimeCoachTips` detects "stalled" conversations (7+ days inactive)
+- Provides re-engagement strategies and conversation starters
+- Triggers more proactive coaching when relationship momentum is fading
+
+### System Prompt Compacted 38%
+- Coach system prompt reduced by 38% in token count
+- Same instructions, fewer tokens → lower Gemini costs + faster responses
+- Applied in `dateCoachChat` system prompt builder
+
+### Places Cache Cross-Message
+- `placesCache` now persists across multiple coach messages (not just current request)
+- Stored in `coachChats/{userId}/placesCache/latest` (TTL 15min)
+- Prevents redundant Places API calls when user asks follow-up questions about same area
+- `loadMore` reads from cache including overrideLat/overrideLng
+
+### RAG in getRealtimeCoachTips
+- `getRealtimeCoachTips` now uses RAG from `coachKnowledge` collection
+- Enriches coaching tips with curated dating advice based on conversation context
+- Same embedding pipeline as `dateCoachChat` (gemini-embedding-001, COSINE)
+
+### Shared Embedding Cache (LRU 100 entries)
+- In-memory LRU cache for embedding vectors (100 entries max)
+- Shared across `dateCoachChat`, `getRealtimeCoachTips`, `generateSmartReply`, moderation RAG
+- Reduces duplicate Gemini embedding API calls within same CF instance lifecycle
+
+### P0 Bug Fixes
+- **flagPenalty**: Fixed incorrect penalty calculation in moderation scoring
+- **temperature RC**: Coach temperature now correctly read from `coach_config.temperature` RC key (was hardcoded)
+
+### Tester Auto-Enrollment Modal (Web)
+- Web landing page shows auto-enrollment modal for new testers
+- Writes to `testerSignups` Firestore collection
+- Captures email, platform preference, and opt-in timestamp
+
+## Slash Commands (Session 2026-03-26)
+
+### /audit-alignment
+- Read-only auditor that checks iOS/Android parity
+- Compares Firestore models, CF calls, strings, colors, features
+- Reports divergences without making changes
+
+### /events-discovery
+- Specialist agent for AI Events Discovery feature
+- Integrates Ticketmaster, Eventbrite, Meetup APIs
+- Creates event-based date suggestions
+
+### /improve-moderation
+- Specialist for improving moderation system
+- Diagnosis, RAG optimization, false positive/negative reduction
+- Blacklist improvements, threshold tuning, Safety Shield
+
+### /improve-agents — Expanded (41 scenarios)
+- Meta-agent covering ALL dating scenarios + edge cases
+- 41 test scenarios for Coach IA quality validation
+- Covers: first dates, long-distance, cultural differences, budget constraints, accessibility, etc.
+
+### SessionStart Hook
+- Automatically runs alignment check on session start
+- Validates iOS/Android parity for recently changed files
+
+### PostToolUse Hook
+- Automatically syncs skills after CF deploy
+- Triggers skill file update when functions are deployed
