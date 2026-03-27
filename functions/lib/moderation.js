@@ -1,5 +1,6 @@
 'use strict';
 const { onCall } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
@@ -924,6 +925,308 @@ Respond ONLY with valid JSON (no markdown):
     } catch (error) {
       // Fail-open: no bloquear mensajes si hay error
       logger.error(`[autoModerate] Error processing ${messageId}:`, error);
+    }
+  },
+);
+
+// ── Moderation Self-Improvement System ───────────────────────────────────────
+
+/**
+ * Callable: Dispute a moderation decision (false positive / too harsh / missed threat).
+ */
+exports.disputeModeration = onCall(
+  {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {messageId, matchId, disputeType, explanation} = request.data || {};
+    if (!messageId || !matchId || !['false_positive', 'too_harsh', 'missed_threat'].includes(disputeType)) {
+      return {success: false, error: 'invalid_params'};
+    }
+
+    const userId = request.auth.uid;
+    const db = admin.firestore();
+    const config = await getModerationConfig();
+
+    // Rate limiting
+    const rateLimitMs = config.disputeRateLimitMs || 10000;
+    const recentDisputes = await db.collection('moderationDisputes')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+    if (!recentDisputes.empty) {
+      const lastTime = recentDisputes.docs[0].data().createdAt?.toMillis?.() || 0;
+      if (Date.now() - lastTime < rateLimitMs) {
+        return {success: false, error: 'too_fast'};
+      }
+    }
+
+    try {
+      // Get the original moderation result
+      const msgRef = db.collection('matches').doc(matchId).collection('messages').doc(messageId);
+      const msgDoc = await msgRef.get();
+      const msgData = msgDoc.exists ? msgDoc.data() : {};
+      const modResult = msgData.moderationResult || {};
+
+      await db.collection('moderationDisputes').add({
+        userId,
+        matchId,
+        messageId,
+        originalCategory: modResult.category || 'unknown',
+        originalSeverity: modResult.severity || 'unknown',
+        originalConfidence: modResult.confidence || 0,
+        disputeType,
+        explanation: (explanation || '').substring(0, 300),
+        messageText: (msgData.message || '').substring(0, 200),
+        language: msgData.deviceLanguage || 'unknown',
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Check if this pattern has multiple disputes
+      const minForPattern = config.qualityAnalysis?.minDisputesForPattern || 3;
+      if (modResult.category) {
+        const similarDisputes = await db.collection('moderationDisputes')
+          .where('originalCategory', '==', modResult.category)
+          .where('disputeType', '==', disputeType)
+          .where('status', '==', 'pending')
+          .limit(minForPattern + 1)
+          .get();
+        if (similarDisputes.size >= minForPattern) {
+          logger.warn(`[disputeModeration] Pattern alert: ${similarDisputes.size} disputes for ${modResult.category}/${disputeType}`);
+        }
+      }
+
+      logger.info(`[disputeModeration] ${userId.substring(0, 8)}: ${disputeType} on ${messageId} (was: ${modResult.category}/${modResult.severity})`);
+      return {success: true};
+    } catch (err) {
+      logger.error(`[disputeModeration] Error: ${err.message}`);
+      return {success: false, error: err.message};
+    }
+  },
+);
+
+/**
+ * Scheduled: Daily moderation quality analysis (2:30 AM).
+ */
+exports.analyzeModerationQuality = onSchedule(
+  {schedule: 'every day 02:30', region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  async () => {
+    const db = admin.firestore();
+    const yesterday = new Date(Date.now() - 86400000);
+    const yesterdayStr = yesterday.toISOString().substring(0, 10);
+    const startMs = new Date(yesterday).setHours(0, 0, 0, 0);
+    const endMs = new Date(yesterday).setHours(23, 59, 59, 999);
+
+    try {
+      // Count flagged messages from yesterday
+      const flagged = await db.collection('moderatedMessages')
+        .orderBy('timestamp', 'desc')
+        .limit(500)
+        .get();
+
+      const categoryCounts = {};
+      let totalFlagged = 0;
+
+      for (const doc of flagged.docs) {
+        const data = doc.data();
+        const ts = data.timestamp?.toMillis?.() || 0;
+        if (ts < startMs || ts > endMs) continue;
+        totalFlagged++;
+        const cat = data.category || 'unknown';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      }
+
+      // Count disputes from yesterday
+      const disputes = await db.collection('moderationDisputes')
+        .orderBy('createdAt', 'desc')
+        .limit(200)
+        .get();
+
+      const categoryDisputes = {};
+      let totalDisputes = 0;
+
+      for (const doc of disputes.docs) {
+        const data = doc.data();
+        const ts = data.createdAt?.toMillis?.() || 0;
+        if (ts < startMs || ts > endMs) continue;
+        totalDisputes++;
+        const cat = data.originalCategory || 'unknown';
+        categoryDisputes[cat] = (categoryDisputes[cat] || 0) + 1;
+      }
+
+      const falsePositiveRate = totalFlagged > 0 ? Math.round((totalDisputes / totalFlagged) * 100) : 0;
+
+      await db.collection('moderationInsights').doc('daily').collection(yesterdayStr).doc('summary').set({
+        date: yesterdayStr,
+        totalFlagged,
+        totalDisputes,
+        falsePositiveRate,
+        categoryCounts,
+        categoryDisputes,
+        analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      const config = await getModerationConfig();
+      const threshold = config.qualityAnalysis?.falsePositiveWarningThreshold || 20;
+      if (falsePositiveRate > threshold) {
+        logger.warn(`[analyzeModerationQuality] HIGH false positive rate: ${falsePositiveRate}% (${totalDisputes}/${totalFlagged})`);
+      } else if (totalFlagged > 0) {
+        logger.info(`[analyzeModerationQuality] FP rate: ${falsePositiveRate}% (${totalDisputes}/${totalFlagged})`);
+      } else {
+        logger.info('[analyzeModerationQuality] No flagged messages yesterday');
+      }
+    } catch (err) {
+      logger.error(`[analyzeModerationQuality] Error: ${err.message}`);
+    }
+  },
+);
+
+/**
+ * Scheduled: Weekly moderation RAG auto-update (Sunday 3:30 AM).
+ */
+exports.updateModerationKnowledge = onSchedule(
+  {schedule: 'every sunday 03:30', region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const config = await getModerationConfig();
+    if (!config.ragAutoUpdate?.enabled) {
+      logger.info('[updateModerationKnowledge] Disabled via config');
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      logger.warn('[updateModerationKnowledge] Missing GEMINI_API_KEY');
+      return;
+    }
+
+    try {
+      // 1. Read accepted disputes from last 7 days (confirmed false positives)
+      const weekAgo = new Date(Date.now() - 7 * 86400000);
+      const disputes = await db.collection('moderationDisputes')
+        .where('status', 'in', ['accepted', 'pending'])
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+
+      const falsePositives = [];
+      const missedThreats = [];
+
+      for (const doc of disputes.docs) {
+        const data = doc.data();
+        const ts = data.createdAt?.toMillis?.() || 0;
+        if (ts < weekAgo.getTime()) continue;
+        if (data.disputeType === 'false_positive' || data.disputeType === 'too_harsh') {
+          falsePositives.push({
+            message: data.messageText || '',
+            category: data.originalCategory || '',
+            explanation: data.explanation || '',
+            language: data.language || 'en',
+          });
+        } else if (data.disputeType === 'missed_threat') {
+          missedThreats.push({
+            message: data.messageText || '',
+            explanation: data.explanation || '',
+            language: data.language || 'en',
+          });
+        }
+      }
+
+      const minDisputes = config.ragAutoUpdate?.minAcceptedDisputes || 3;
+      if (falsePositives.length < minDisputes && missedThreats.length < minDisputes) {
+        logger.info(`[updateModerationKnowledge] Not enough disputes (FP: ${falsePositives.length}, MT: ${missedThreats.length}) — skipping`);
+        return;
+      }
+
+      // 2. Generate new RAG chunks
+      const {GoogleGenerativeAI} = require('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_LITE,
+        generationConfig: {maxOutputTokens: 4096, temperature: 0.3, responseMimeType: 'application/json'},
+      });
+
+      let prompt = 'You are a content moderation knowledge base curator for a sugar dating app.\n\n';
+
+      if (falsePositives.length > 0) {
+        prompt += `These messages were INCORRECTLY flagged as violations (users disputed them):\n`;
+        prompt += falsePositives.slice(0, 10).map((fp, i) =>
+          `${i + 1}. [${fp.category}] "${fp.message}" — User said: "${fp.explanation}"`
+        ).join('\n');
+        prompt += '\n\n';
+      }
+
+      if (missedThreats.length > 0) {
+        prompt += `These messages were MISSED by moderation (users reported them as threats):\n`;
+        prompt += missedThreats.slice(0, 10).map((mt, i) =>
+          `${i + 1}. "${mt.message}" — User said: "${mt.explanation}"`
+        ).join('\n');
+        prompt += '\n\n';
+      }
+
+      prompt += `Generate 2-5 new moderation knowledge chunks to improve accuracy. Each chunk should help reduce false positives OR catch missed threats.
+
+Return JSON:
+{
+  "chunks": [
+    {
+      "category": "context_guidelines|evasion_tactics|classification_guide|false_positive_prevention",
+      "language": "en",
+      "title": "short title",
+      "content": "detailed moderation rule (100-300 words)"
+    }
+  ]
+}`;
+
+      const result = await model.generateContent(prompt);
+      const parsed = parseGeminiJsonResponse(result.response.text());
+
+      if (!parsed || !parsed.chunks || parsed.chunks.length === 0) {
+        logger.warn('[updateModerationKnowledge] Gemini returned no chunks');
+        return;
+      }
+
+      // 3. Embed and store
+      const maxChunks = config.ragAutoUpdate?.maxNewChunksPerWeek || 5;
+      const chunks = parsed.chunks.slice(0, maxChunks);
+      let added = 0;
+
+      for (const chunk of chunks) {
+        try {
+          const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+          const embResult = await embModel.embedContent({
+            content: {parts: [{text: chunk.content}]},
+            taskType: 'RETRIEVAL_DOCUMENT',
+          });
+
+          await db.collection('moderationKnowledge').doc(`auto_mod_${Date.now()}_${added}`).set({
+            category: chunk.category || 'context_guidelines',
+            language: chunk.language || 'en',
+            title: chunk.title || '',
+            content: chunk.content,
+            embedding: embResult.embedding.values,
+            autoGenerated: true,
+            generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            sourceFalsePositives: falsePositives.length,
+            sourceMissedThreats: missedThreats.length,
+          });
+          added++;
+        } catch (embErr) {
+          logger.warn(`[updateModerationKnowledge] Embed error: ${embErr.message}`);
+        }
+      }
+
+      await db.collection('moderationInsights').doc('ragUpdates').set({
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
+        chunksAdded: added,
+        totalFalsePositiveDisputes: falsePositives.length,
+        totalMissedThreatDisputes: missedThreats.length,
+      }, {merge: true});
+
+      logger.info(`[updateModerationKnowledge] Added ${added} chunks from ${falsePositives.length} FP + ${missedThreats.length} MT disputes`);
+    } catch (err) {
+      logger.error(`[updateModerationKnowledge] Error: ${err.message}`);
     }
   },
 );
