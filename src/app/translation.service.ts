@@ -968,9 +968,9 @@ export class TranslationService {
       pt: 'Junte-se ao beta exclusivo',
     },
     'tester.subtitle': {
-      es: 'Ingresa tu correo de Google para acceder a la versión beta de Black Sugar 21 en Android',
-      en: 'Enter your Google email to access the Black Sugar 21 beta on Android',
-      pt: 'Digite seu email do Google para acessar o beta do Black Sugar 21 no Android',
+      es: 'Prueba Black Sugar 21 en Android antes que nadie. Únete a la versión beta exclusiva.',
+      en: 'Try Black Sugar 21 on Android before anyone else. Join the exclusive beta.',
+      pt: 'Experimente o Black Sugar 21 no Android antes de todos. Junte-se ao beta exclusivo.',
     },
     'tester.placeholder': {
       es: 'tu.correo@gmail.com',
@@ -998,9 +998,9 @@ export class TranslationService {
       pt: 'Digite um email válido do Google',
     },
     'tester.footer': {
-      es: 'Tu correo solo se usa para darte acceso a la prueba',
-      en: 'Your email is only used to grant beta access',
-      pt: 'Seu email é usado apenas para dar acesso ao beta',
+      es: 'Disponible solo para Android por ahora',
+      en: 'Available on Android only for now',
+      pt: 'Disponível apenas para Android por enquanto',
     }
   };
 
