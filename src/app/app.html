@@ -331,10 +331,11 @@
         } @else {
           <div class="modal-form">
             <input
+              #testerInput
               type="email"
               [placeholder]="t('tester.placeholder')"
-              [value]="testerEmail()"
-              (input)="testerEmail.set($any($event.target).value)"
+              (input)="testerEmail.set(testerInput.value)"
+              (keyup.enter)="requestBetaAccess()"
               class="modal-input"
               [class.error]="testerStatus() === 'error'"
             />
