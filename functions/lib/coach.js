@@ -442,7 +442,7 @@ function buildLearningContext(learningProfile) {
     parts.push(`⚠️ User marked these topics as unhelpful before: ${lowTopics.join(', ')}. Try a DIFFERENT approach for these — be more specific, give concrete examples, or ask clarifying questions.`);
   }
   const satRate = learningProfile.satisfactionRate;
-  if (typeof satRate === 'number' && satRate < 70 && (learningProfile.feedbackCount || 0) >= 3) {
+  if (typeof satRate === 'number' && satRate < (learningProfile._lowSatThreshold || 70) && (learningProfile.feedbackCount || 0) >= 3) {
     parts.push(`NOTE: User satisfaction is ${satRate}%. Vary your approach — ask if they want more detail, give actionable steps, and avoid generic advice.`);
   }
 
@@ -3511,13 +3511,15 @@ exports.rateCoachResponse = onCall(
     const db = admin.firestore();
 
     try {
-      // 0. Rate limiting — max 1 rating per 5 seconds
+      const config = await getCoachConfig();
+      // 0. Rate limiting — configurable via coach_config.feedbackRateLimitMs (default 5s)
       const profileRef = db.collection('coachChats').doc(userId);
       const profileDoc = await profileRef.get();
       const profile = profileDoc.exists ? profileDoc.data() : {};
       const lp = profile.learningProfile || {};
       const lastFbTime = lp.lastFeedback?.toMillis ? lp.lastFeedback.toMillis() : 0;
-      if (Date.now() - lastFbTime < 5000) {
+      const rateLimitMs = config.feedbackRateLimitMs || 5000;
+      if (Date.now() - lastFbTime < rateLimitMs) {
         return {success: false, error: 'too_fast'};
       }
 
@@ -3657,7 +3659,9 @@ exports.analyzeCoachQuality = onSchedule(
         analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      if (satisfactionRate < 60) {
+      const config = await getCoachConfig();
+      const lowSatisfactionThreshold = config.qualityAnalysis?.lowSatisfactionThreshold || 60;
+      if (satisfactionRate < lowSatisfactionThreshold) {
         logger.warn(`[analyzeCoachQuality] LOW satisfaction: ${satisfactionRate}% (${positive}/${total}). Top issues: ${lowQualityTopics.map((t) => t.topic).join(', ')}`);
       } else {
         logger.info(`[analyzeCoachQuality] Satisfaction: ${satisfactionRate}% (${positive}/${total})`);
@@ -3721,8 +3725,9 @@ exports.updateCoachKnowledge = onSchedule(
         }
       }
 
-      if (negativeExamples.length < 3) {
-        logger.info(`[updateCoachKnowledge] Not enough negative feedback (${negativeExamples.length}) — skipping`);
+      const minNegativeFeedback = config.ragAutoUpdate?.minNegativeFeedback || 3;
+      if (negativeExamples.length < minNegativeFeedback) {
+        logger.info(`[updateCoachKnowledge] Not enough negative feedback (${negativeExamples.length}/${minNegativeFeedback}) — skipping`);
         return;
       }
 
