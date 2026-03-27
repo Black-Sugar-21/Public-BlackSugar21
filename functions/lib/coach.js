@@ -2343,14 +2343,21 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       // JSON with activitySuggestions + reply + suggestions + topics needs high token budget
       const placeTokenBudget = (config.placeSearch || {}).maxOutputTokensBudget || 8192;
       const outputTokens = (isUserPlaceSearch || hasRealPlaces) ? Math.max(config.maxTokens, placeTokenBudget) : config.maxTokens;
-      const model = genAI.getGenerativeModel({
+      // Search Grounding: Gemini busca en Google cuando NO es place search
+      const enableSearchGrounding = config.enableSearchGrounding !== false && !isUserPlaceSearch && !hasRealPlaces;
+      const modelConfig = {
         model: AI_MODEL_NAME,
         generationConfig: {
           temperature: config.temperature,
           maxOutputTokens: outputTokens,
           responseMimeType: 'application/json',
         },
-      });
+      };
+      if (enableSearchGrounding) {
+        modelConfig.tools = [{googleSearch: {}}];
+        logger.info('[dateCoachChat] Search Grounding enabled — Gemini will access Google');
+      }
+      const model = genAI.getGenerativeModel(modelConfig);
 
       const conversationPrompt = history
         ? `${systemPrompt}\n\nConversation history:\n${history}\n\nUser: ${message.substring(0, config.maxMessageLength)}`
@@ -3472,6 +3479,283 @@ exports.requestDateDebrief = onCall(
     });
 
     return {success: true, messageId: msgRef.id, message: debriefText};
+  },
+);
+
+// ── Coach Self-Improvement System ────────────────────────────────────────────
+
+/**
+ * Callable: Rate a coach response as helpful or not helpful.
+ * Feeds into the learning system for self-improvement.
+ */
+exports.rateCoachResponse = onCall(
+  {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {messageId, rating, reason} = request.data || {};
+    if (!messageId || !['helpful', 'not_helpful'].includes(rating)) {
+      return {success: false, error: 'invalid_params'};
+    }
+
+    const userId = request.auth.uid;
+    const db = admin.firestore();
+
+    try {
+      // 1. Save feedback on the message
+      const msgRef = db.collection('coachChats').doc(userId).collection('messages').doc(messageId);
+      const msgDoc = await msgRef.get();
+      if (!msgDoc.exists) return {success: false, error: 'message_not_found'};
+
+      await msgRef.update({
+        feedback: {
+          rating,
+          reason: reason || null,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      });
+
+      // 2. Update learning profile satisfaction
+      const profileRef = db.collection('coachChats').doc(userId);
+      const profileDoc = await profileRef.get();
+      const profile = profileDoc.exists ? profileDoc.data() : {};
+      const lp = profile.learningProfile || {};
+
+      const feedbackCount = (lp.feedbackCount || 0) + 1;
+      const positiveCount = (lp.positiveFeedbackCount || 0) + (rating === 'helpful' ? 1 : 0);
+      const satisfactionRate = Math.round((positiveCount / feedbackCount) * 100);
+
+      // Track low quality topics
+      let lowQualityTopics = lp.lowQualityTopics || [];
+      if (rating === 'not_helpful' && msgDoc.data().topic) {
+        if (!lowQualityTopics.includes(msgDoc.data().topic)) {
+          lowQualityTopics.push(msgDoc.data().topic);
+          if (lowQualityTopics.length > 10) lowQualityTopics = lowQualityTopics.slice(-10);
+        }
+      }
+
+      await profileRef.set({
+        learningProfile: {
+          ...lp,
+          feedbackCount,
+          positiveFeedbackCount: positiveCount,
+          satisfactionRate,
+          lowQualityTopics,
+          lastFeedback: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      }, {merge: true});
+
+      logger.info(`[rateCoachResponse] ${userId.substring(0, 8)}: ${rating} on ${messageId} (satisfaction: ${satisfactionRate}%)`);
+      return {success: true, satisfactionRate};
+    } catch (err) {
+      logger.error(`[rateCoachResponse] Error: ${err.message}`);
+      return {success: false, error: err.message};
+    }
+  },
+);
+
+/**
+ * Scheduled: Daily coach quality analysis.
+ * Aggregates feedback from the previous day and stores metrics.
+ */
+exports.analyzeCoachQuality = onSchedule(
+  {schedule: 'every day 02:00', region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
+  async () => {
+    const db = admin.firestore();
+    const yesterday = new Date(Date.now() - 86400000);
+    const yesterdayStr = yesterday.toISOString().substring(0, 10);
+    const startOfDay = new Date(yesterday.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(yesterday.setHours(23, 59, 59, 999));
+
+    try {
+      // Query all messages with feedback from yesterday
+      const allChats = await db.collection('coachChats').limit(500).get();
+      let positive = 0;
+      let negative = 0;
+      const topicIssues = {};
+
+      for (const chatDoc of allChats.docs) {
+        const msgs = await chatDoc.ref.collection('messages')
+          .where('feedback.timestamp', '>=', admin.firestore.Timestamp.fromDate(startOfDay))
+          .where('feedback.timestamp', '<=', admin.firestore.Timestamp.fromDate(endOfDay))
+          .get();
+
+        for (const msg of msgs.docs) {
+          const fb = msg.data().feedback;
+          if (!fb) continue;
+          if (fb.rating === 'helpful') positive++;
+          else {
+            negative++;
+            const topic = msg.data().topic || 'unknown';
+            topicIssues[topic] = (topicIssues[topic] || 0) + 1;
+          }
+        }
+      }
+
+      const total = positive + negative;
+      if (total === 0) {
+        logger.info('[analyzeCoachQuality] No feedback yesterday');
+        return;
+      }
+
+      const satisfactionRate = Math.round((positive / total) * 100);
+      const lowQualityTopics = Object.entries(topicIssues)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([topic, count]) => ({topic, negativeCount: count}));
+
+      await db.collection('coachInsights').doc('daily').collection(yesterdayStr).doc('summary').set({
+        date: yesterdayStr,
+        totalFeedback: total,
+        positive,
+        negative,
+        satisfactionRate,
+        lowQualityTopics,
+        analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      if (satisfactionRate < 60) {
+        logger.warn(`[analyzeCoachQuality] LOW satisfaction: ${satisfactionRate}% (${positive}/${total}). Top issues: ${lowQualityTopics.map((t) => t.topic).join(', ')}`);
+      } else {
+        logger.info(`[analyzeCoachQuality] Satisfaction: ${satisfactionRate}% (${positive}/${total})`);
+      }
+    } catch (err) {
+      logger.error(`[analyzeCoachQuality] Error: ${err.message}`);
+    }
+  },
+);
+
+/**
+ * Scheduled: Weekly RAG knowledge base auto-update.
+ * Analyzes feedback gaps and generates new knowledge chunks.
+ */
+exports.updateCoachKnowledge = onSchedule(
+  {schedule: 'every sunday 03:00', region: 'us-central1', memory: '1GiB', timeoutSeconds: 300, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const config = await getCoachConfig();
+    if (!config.ragAutoUpdate?.enabled) {
+      logger.info('[updateCoachKnowledge] Disabled via config');
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      logger.warn('[updateCoachKnowledge] Missing GEMINI_API_KEY');
+      return;
+    }
+
+    try {
+      // 1. Read messages with negative feedback from the last 7 days
+      const weekAgo = new Date(Date.now() - 7 * 86400000);
+      const allChats = await db.collection('coachChats').limit(200).get();
+
+      const negativeExamples = [];
+      const positiveExamples = [];
+
+      for (const chatDoc of allChats.docs) {
+        const msgs = await chatDoc.ref.collection('messages')
+          .where('feedback.timestamp', '>=', admin.firestore.Timestamp.fromDate(weekAgo))
+          .orderBy('feedback.timestamp', 'desc')
+          .limit(20)
+          .get();
+
+        for (const msg of msgs.docs) {
+          const data = msg.data();
+          if (!data.feedback) continue;
+          const example = {
+            question: data.userMessage || '',
+            response: (data.message || '').substring(0, 300),
+            topic: data.topic || 'general',
+            rating: data.feedback.rating,
+            reason: data.feedback.reason || '',
+          };
+          if (data.feedback.rating === 'not_helpful') negativeExamples.push(example);
+          else positiveExamples.push(example);
+        }
+      }
+
+      if (negativeExamples.length < 3) {
+        logger.info(`[updateCoachKnowledge] Not enough negative feedback (${negativeExamples.length}) — skipping`);
+        return;
+      }
+
+      // 2. Use Gemini to identify knowledge gaps and generate new chunks
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_LITE,
+        generationConfig: {maxOutputTokens: 4096, temperature: 0.3, responseMimeType: 'application/json'},
+      });
+
+      const gapPrompt = `You are a dating coach knowledge base curator.
+
+These are questions where the coach gave UNHELPFUL responses (users marked them as not helpful):
+${negativeExamples.slice(0, 10).map((e, i) => `${i + 1}. Topic: ${e.topic} | Q: "${e.question}" | Reason: "${e.reason}"`).join('\n')}
+
+Generate 3-5 NEW knowledge chunks that would help the coach answer these types of questions better. Each chunk should be a standalone piece of expert dating advice.
+
+Return JSON:
+{
+  "chunks": [
+    {
+      "category": "topic_category",
+      "language": "en",
+      "title": "short title",
+      "content": "detailed advice (200-400 words)"
+    }
+  ]
+}`;
+
+      const result = await model.generateContent(gapPrompt);
+      const parsed = parseGeminiJsonResponse(result.response.text());
+
+      if (!parsed || !parsed.chunks || parsed.chunks.length === 0) {
+        logger.warn('[updateCoachKnowledge] Gemini returned no chunks');
+        return;
+      }
+
+      // 3. Embed and store each new chunk
+      const maxChunks = config.ragAutoUpdate?.maxNewChunksPerWeek || 10;
+      const chunks = parsed.chunks.slice(0, maxChunks);
+      let added = 0;
+
+      for (const chunk of chunks) {
+        try {
+          const embeddingModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+          const embResult = await embeddingModel.embedContent({
+            content: {parts: [{text: chunk.content}]},
+            taskType: 'RETRIEVAL_DOCUMENT',
+          });
+          const embedding = embResult.embedding.values;
+
+          const docId = `auto_${Date.now()}_${added}`;
+          await db.collection('coachKnowledge').doc(docId).set({
+            category: chunk.category || 'general',
+            language: chunk.language || 'en',
+            title: chunk.title || '',
+            content: chunk.content,
+            embedding,
+            autoGenerated: true,
+            generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            sourceNegativeFeedbackCount: negativeExamples.length,
+          });
+          added++;
+        } catch (embErr) {
+          logger.warn(`[updateCoachKnowledge] Failed to embed chunk: ${embErr.message}`);
+        }
+      }
+
+      // 4. Log the update
+      await db.collection('coachInsights').doc('ragUpdates').set({
+        lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
+        chunksAdded: added,
+        totalNegativeFeedback: negativeExamples.length,
+        totalPositiveFeedback: positiveExamples.length,
+      }, {merge: true});
+
+      logger.info(`[updateCoachKnowledge] Added ${added} new knowledge chunks from ${negativeExamples.length} negative feedback examples`);
+    } catch (err) {
+      logger.error(`[updateCoachKnowledge] Error: ${err.message}`);
+    }
   },
 );
 
