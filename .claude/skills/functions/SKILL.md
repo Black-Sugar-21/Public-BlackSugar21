@@ -1,6 +1,6 @@
 ---
 name: functions
-description: Gestión de Firebase Cloud Functions de BlackSugar21. Deploy, logs, debug y monitoreo — 46 callable + 11 scheduled + 7 triggers + 1 alias en us-central1. Modelos Gemini duales, RC server-side, Moderation RAG, Coach RAG/Learning. Usar cuando se quiera desplegar, debuggear, monitorear o testear Cloud Functions.
+description: Gestión de Firebase Cloud Functions de BlackSugar21. Deploy, logs, debug y monitoreo — 47 callable + 13 scheduled + 8 triggers + 1 alias en us-central1. Modelos Gemini duales, RC server-side, Moderation RAG, Coach RAG/Learning, Coach Auto-Improvement. Usar cuando se quiera desplegar, debuggear, monitorear o testear Cloud Functions.
 disable-model-invocation: true
 argument-hint: "[nombre-funcion | all | logs | monitor]"
 ---
@@ -24,9 +24,9 @@ Eres el **Firebase Functions Manager de Black Sugar 21**. Gestionas las Cloud Fu
 
 ## Grupos de CFs por feature
 
-### AI Date Coach (5 CFs)
+### AI Date Coach (6 CFs)
 ```
-dateCoachChat, getCoachHistory, deleteCoachMessage, resetCoachMessages, getRealtimeCoachTips
+dateCoachChat, getCoachHistory, deleteCoachMessage, resetCoachMessages, getRealtimeCoachTips, rateCoachResponse
 ```
 
 ### AI Date Blueprint (1 CF)
@@ -314,9 +314,9 @@ node scripts/coach-health-monitor.js --dry-run
 
 ## CF Count Total
 
-- **46 callable** (producción) + **6 admin/test** (no prod)
-- **11 scheduled** (timezone-aware via `timezoneOffset`)
-- **7 triggers** (Firestore + Storage events)
+- **47 callable** (producción) + **6 admin/test** (no prod)
+- **13 scheduled** (timezone-aware via `timezoneOffset`)
+- **8 triggers** (Firestore + Storage events)
 - **1 alias**
 
 ### Modelos Gemini (Dual Architecture)
@@ -355,6 +355,8 @@ resetCoachMessages      → every 1h, lee coach_config.dailyCredits de RC
 wingPersonAnalysis      → every 4h, analyzes matches, sends proactive push via Gemini. 1GiB. 5 signal types. Rate limit 2/day. Quiet hours 22-9
 triggerDateDebriefs     → every 6h, processes pending debriefs 24-48h after blueprint shared, sends coach message
 processDateCheckIns    → every 5min, 512MiB, 120s. Processes safety check-in lifecycle: send FCM, reminders, emergency alerts. Configurable via appConfig/safetyCheckIn
+analyzeCoachQuality    → daily 2 AM UTC. Aggregates coach feedback metrics → coachInsights/daily/{date}
+updateCoachKnowledge   → weekly Sunday 3 AM UTC. Auto-generates RAG chunks from negative feedback → coachKnowledge
 ```
 
 ### Modules
@@ -679,3 +681,38 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 ### PostToolUse Hook
 - Automatically syncs skills after CF deploy
 - Triggers skill file update when functions are deployed
+
+## Coach Auto-Improvement System (Session 2026-03-26)
+
+### rateCoachResponse (Callable)
+- **File**: `functions/lib/coach.js`
+- **Payload**: `{messageId, rating ("helpful"|"not_helpful")}`
+- **Response**: `{success}`
+- User rates a coach response. Writes `feedback` field to `coachChats/{userId}/messages/{msgId}`.
+- Updates `coachChats/{userId}.learningProfile`: `satisfactionRate`, `feedbackCount`, `lowQualityTopics`.
+
+### Google Search Grounding in dateCoachChat
+- `dateCoachChat` now uses **Google Search Grounding** via Gemini for non-place queries
+- When user asks general dating questions (not place/venue searches), Gemini accesses Google Search for up-to-date information
+- Place-related queries still use Google Places API pipeline as before
+
+### analyzeCoachQuality (Scheduled — daily 2 AM)
+- **File**: `functions/lib/coach.js`
+- **Schedule**: every day at 2:00 AM UTC
+- Aggregates daily feedback metrics from `coachChats` messages with `feedback` field
+- Writes to `coachInsights/daily/{YYYY-MM-DD}`: satisfaction rate, top negative topics, response quality metrics
+- Used to track Coach IA quality trends over time
+
+### updateCoachKnowledge (Scheduled — weekly Sunday 3 AM)
+- **File**: `functions/lib/coach.js`
+- **Schedule**: every Sunday at 3:00 AM UTC
+- Reads negative feedback patterns from `coachInsights/daily/*` (past week)
+- Auto-generates new RAG chunks from low-quality topics and adds to `coachKnowledge` collection
+- Updates `coachInsights/ragUpdates` doc with last run timestamp and chunks added
+- Self-improving loop: bad feedback → new knowledge → better future responses
+
+### onTesterSignup (Firestore Trigger)
+- **File**: `functions/lib/events.js` (or `index.js`)
+- **Trigger**: `onDocumentCreated` on `testerSignups/{id}`
+- Processes new tester signups from web modal
+- Sends confirmation/welcome notification to tester email

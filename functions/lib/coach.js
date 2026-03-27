@@ -436,6 +436,16 @@ function buildLearningContext(learningProfile) {
     parts.push(`Recently discussed: ${recent.join(', ')}. Reference these for continuity.`);
   }
 
+  // Feedback-driven adjustments
+  const lowTopics = learningProfile.lowQualityTopics || [];
+  if (lowTopics.length > 0) {
+    parts.push(`⚠️ User marked these topics as unhelpful before: ${lowTopics.join(', ')}. Try a DIFFERENT approach for these — be more specific, give concrete examples, or ask clarifying questions.`);
+  }
+  const satRate = learningProfile.satisfactionRate;
+  if (typeof satRate === 'number' && satRate < 70 && (learningProfile.feedbackCount || 0) >= 3) {
+    parts.push(`NOTE: User satisfaction is ${satRate}%. Vary your approach — ask if they want more detail, give actionable steps, and avoid generic advice.`);
+  }
+
   return parts.length > 0
     ? '\n\nUSER LEARNING PROFILE (personalize your response based on this):\n' + parts.join('\n')
     : '';
@@ -3501,24 +3511,51 @@ exports.rateCoachResponse = onCall(
     const db = admin.firestore();
 
     try {
-      // 1. Save feedback on the message
+      // 0. Rate limiting — max 1 rating per 5 seconds
+      const profileRef = db.collection('coachChats').doc(userId);
+      const profileDoc = await profileRef.get();
+      const profile = profileDoc.exists ? profileDoc.data() : {};
+      const lp = profile.learningProfile || {};
+      const lastFbTime = lp.lastFeedback?.toMillis ? lp.lastFeedback.toMillis() : 0;
+      if (Date.now() - lastFbTime < 5000) {
+        return {success: false, error: 'too_fast'};
+      }
+
+      // 1. Save feedback on the message + find original user question
       const msgRef = db.collection('coachChats').doc(userId).collection('messages').doc(messageId);
       const msgDoc = await msgRef.get();
       if (!msgDoc.exists) return {success: false, error: 'message_not_found'};
+
+      // Find the user's question that triggered this coach response
+      let userQuestion = '';
+      try {
+        const prevMsgs = await db.collection('coachChats').doc(userId)
+          .collection('messages')
+          .where('sender', '==', 'user')
+          .orderBy('timestamp', 'desc')
+          .limit(5)
+          .get();
+        // Find the user message closest BEFORE this coach message
+        const coachTimestamp = msgDoc.data().timestamp?.toMillis?.() || Date.now();
+        for (const pm of prevMsgs.docs) {
+          const pmTime = pm.data().timestamp?.toMillis?.() || 0;
+          if (pmTime < coachTimestamp) {
+            userQuestion = (pm.data().message || '').substring(0, 300);
+            break;
+          }
+        }
+      } catch (_) { /* non-critical */ }
 
       await msgRef.update({
         feedback: {
           rating,
           reason: reason || null,
+          userQuestion,
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
         },
       });
 
       // 2. Update learning profile satisfaction
-      const profileRef = db.collection('coachChats').doc(userId);
-      const profileDoc = await profileRef.get();
-      const profile = profileDoc.exists ? profileDoc.data() : {};
-      const lp = profile.learningProfile || {};
 
       const feedbackCount = (lp.feedbackCount || 0) + 1;
       const positiveCount = (lp.positiveFeedbackCount || 0) + (rating === 'helpful' ? 1 : 0);
@@ -3563,30 +3600,36 @@ exports.analyzeCoachQuality = onSchedule(
     const db = admin.firestore();
     const yesterday = new Date(Date.now() - 86400000);
     const yesterdayStr = yesterday.toISOString().substring(0, 10);
-    const startOfDay = new Date(yesterday.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(yesterday.setHours(23, 59, 59, 999));
+    const startMs = new Date(yesterday).setHours(0, 0, 0, 0);
+    const endMs = new Date(yesterday).setHours(23, 59, 59, 999);
 
     try {
-      // Query all messages with feedback from yesterday
+      // Query recent messages and filter feedback by date in code (avoids composite index on nested field)
       const allChats = await db.collection('coachChats').limit(500).get();
       let positive = 0;
       let negative = 0;
       const topicIssues = {};
+      const negativeQuestions = [];
 
       for (const chatDoc of allChats.docs) {
         const msgs = await chatDoc.ref.collection('messages')
-          .where('feedback.timestamp', '>=', admin.firestore.Timestamp.fromDate(startOfDay))
-          .where('feedback.timestamp', '<=', admin.firestore.Timestamp.fromDate(endOfDay))
+          .orderBy('timestamp', 'desc')
+          .limit(50)
           .get();
 
         for (const msg of msgs.docs) {
-          const fb = msg.data().feedback;
-          if (!fb) continue;
+          const data = msg.data();
+          const fb = data.feedback;
+          if (!fb || !fb.timestamp) continue;
+          const fbTime = fb.timestamp.toMillis ? fb.timestamp.toMillis() : 0;
+          if (fbTime < startMs || fbTime > endMs) continue;
+
           if (fb.rating === 'helpful') positive++;
           else {
             negative++;
-            const topic = msg.data().topic || 'unknown';
+            const topic = data.topic || 'unknown';
             topicIssues[topic] = (topicIssues[topic] || 0) + 1;
+            if (fb.userQuestion) negativeQuestions.push(fb.userQuestion.substring(0, 100));
           }
         }
       }
@@ -3610,6 +3653,7 @@ exports.analyzeCoachQuality = onSchedule(
         negative,
         satisfactionRate,
         lowQualityTopics,
+        sampleNegativeQuestions: negativeQuestions.slice(0, 10),
         analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -3652,18 +3696,21 @@ exports.updateCoachKnowledge = onSchedule(
       const negativeExamples = [];
       const positiveExamples = [];
 
+      const weekAgoMs = weekAgo.getTime();
       for (const chatDoc of allChats.docs) {
         const msgs = await chatDoc.ref.collection('messages')
-          .where('feedback.timestamp', '>=', admin.firestore.Timestamp.fromDate(weekAgo))
-          .orderBy('feedback.timestamp', 'desc')
-          .limit(20)
+          .orderBy('timestamp', 'desc')
+          .limit(30)
           .get();
 
         for (const msg of msgs.docs) {
           const data = msg.data();
-          if (!data.feedback) continue;
+          if (!data.feedback || !data.feedback.timestamp) continue;
+          const fbTime = data.feedback.timestamp.toMillis ? data.feedback.timestamp.toMillis() : 0;
+          if (fbTime < weekAgoMs) continue;
+
           const example = {
-            question: data.userMessage || '',
+            question: data.feedback?.userQuestion || data.userMessage || '(no question recorded)',
             response: (data.message || '').substring(0, 300),
             topic: data.topic || 'general',
             rating: data.feedback.rating,
