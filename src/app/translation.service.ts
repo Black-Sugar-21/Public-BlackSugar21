@@ -983,9 +983,14 @@ export class TranslationService {
       pt: 'Solicitar acesso',
     },
     'tester.success': {
-      es: '¡Acceso concedido! En unos minutos podrás instalar la app desde Google Play. Revisa tu correo.',
-      en: 'Access granted! In a few minutes you can install the app from Google Play. Check your email.',
-      pt: 'Acesso concedido! Em alguns minutos você poderá instalar o app no Google Play. Verifique seu email.',
+      es: '¡Registro exitoso! Toca el botón para unirte a la prueba e instalar la app.',
+      en: 'Registration successful! Tap the button to join the test and install the app.',
+      pt: 'Registro bem-sucedido! Toque o botão para entrar no teste e instalar o app.',
+    },
+    'tester.install': {
+      es: '🚀 Instalar desde Google Play',
+      en: '🚀 Install from Google Play',
+      pt: '🚀 Instalar do Google Play',
     },
     'tester.error': {
       es: 'Ingresa un correo válido de Google',
