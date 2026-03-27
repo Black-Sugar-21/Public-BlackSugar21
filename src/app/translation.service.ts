@@ -959,6 +959,43 @@ export class TranslationService {
     'moderation.footer.updated': {
       es: `Última actualización: ${this.currentMonth}`,
       en: `Last updated: ${this.currentMonthEn}`
+    },
+
+    // Tester Signup Modal
+    'tester.title': {
+      es: 'Únete a la prueba exclusiva',
+      en: 'Join the exclusive beta',
+      pt: 'Junte-se ao beta exclusivo',
+    },
+    'tester.subtitle': {
+      es: 'Ingresa tu correo de Google para acceder a la versión beta de Black Sugar 21 en Android',
+      en: 'Enter your Google email to access the Black Sugar 21 beta on Android',
+      pt: 'Digite seu email do Google para acessar o beta do Black Sugar 21 no Android',
+    },
+    'tester.placeholder': {
+      es: 'tu.correo@gmail.com',
+      en: 'your.email@gmail.com',
+      pt: 'seu.email@gmail.com',
+    },
+    'tester.button': {
+      es: 'Solicitar acceso',
+      en: 'Request access',
+      pt: 'Solicitar acesso',
+    },
+    'tester.success': {
+      es: '¡Acceso concedido! En unos minutos podrás instalar la app desde Google Play. Revisa tu correo.',
+      en: 'Access granted! In a few minutes you can install the app from Google Play. Check your email.',
+      pt: 'Acesso concedido! Em alguns minutos você poderá instalar o app no Google Play. Verifique seu email.',
+    },
+    'tester.error': {
+      es: 'Ingresa un correo válido de Google',
+      en: 'Enter a valid Google email',
+      pt: 'Digite um email válido do Google',
+    },
+    'tester.footer': {
+      es: 'Tu correo solo se usa para darte acceso a la prueba',
+      en: 'Your email is only used to grant beta access',
+      pt: 'Seu email é usado apenas para dar acesso ao beta',
     }
   };
 

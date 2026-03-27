@@ -23,6 +23,7 @@ const modules = [
   './lib/geohash',
   './lib/safety',
   './lib/events',
+  './lib/testers',
 ];
 
 modules.forEach(mod => {

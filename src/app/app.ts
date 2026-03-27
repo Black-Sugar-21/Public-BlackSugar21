@@ -18,6 +18,10 @@ export class App implements OnInit {
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
 
+  showTesterModal = signal(false);
+  testerEmail = signal('');
+  testerStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
+
   constructor(
     public translate: TranslationService,
     public firebase: FirebaseService,
@@ -163,6 +167,32 @@ export class App implements OnInit {
    * Detect the user's country from timezone and fetch the legal age
    * from Firebase Remote Config (minimum_age_by_country).
    */
+  async requestBetaAccess() {
+    const email = this.testerEmail().trim();
+    if (!email || !email.includes('@')) {
+      this.testerStatus.set('error');
+      return;
+    }
+
+    this.testerStatus.set('loading');
+
+    try {
+      const { getFirestore, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const db = getFirestore();
+      await addDoc(collection(db, 'testerSignups'), {
+        email,
+        platform: 'android',
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        language: this.translate.currentLanguage(),
+      });
+      this.testerStatus.set('success');
+    } catch (err) {
+      console.error('Tester signup error:', err);
+      this.testerStatus.set('error');
+    }
+  }
+
   private async detectAndSetLegalAge(): Promise<void> {
     const country = this.detectCountryFromTimezone();
 
