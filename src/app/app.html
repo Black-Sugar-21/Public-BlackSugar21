@@ -334,8 +334,8 @@
               #testerInput
               type="email"
               [placeholder]="t('tester.placeholder')"
-              (input)="testerEmail.set(testerInput.value)"
-              (keyup.enter)="requestBetaAccess()"
+              (input)="testerEmail.set(testerInput.value); testerStatus.set('idle')"
+              (keyup.enter)="testerEmail.set(testerInput.value); requestBetaAccess()"
               class="modal-input"
               [class.error]="testerStatus() === 'error'"
             />
@@ -344,7 +344,7 @@
             }
             <button
               class="modal-button"
-              (click)="requestBetaAccess()"
+              (click)="testerEmail.set(testerInput.value); requestBetaAccess()"
               [disabled]="testerStatus() === 'loading'"
             >
               @if (testerStatus() === 'loading') {
