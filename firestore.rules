@@ -234,6 +234,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // --- TESTER SIGNUPS (public write for beta enrollment from web) ---
+    match /testerSignups/{signupId} {
+      // Anyone can create a signup (no auth required — web form)
+      allow create: if request.resource.data.keys().hasAll(['email', 'platform', 'status']) &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 5 &&
+        request.resource.data.email.size() < 100 &&
+        request.resource.data.status == 'pending';
+
+      // No read/update/delete from clients
+      allow read, update, delete: if false;
+    }
+
     // --- DEFAULT ---
     match /{document=**} {
       allow read, write: if false; // Bloquea todo lo demás
