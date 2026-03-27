@@ -10,7 +10,7 @@ La moderacion de contenido opera en 3 capas complementarias:
 
 1. **Client-side (Android/iOS):** `ContentModerationService` comprime imagenes, convierte a base64, y llama CFs. Es un wrapper delgado — toda la IA es server-side.
 2. **Server-side CFs (5 funciones):** Moderacion de imagenes (perfil + stories), texto (mensajes + biografias), auto-moderacion de mensajes, validacion de imagenes, y safety score de conversacion.
-3. **RAG Knowledge Base:** 73 chunks multilingues en Firestore con vector search para enriquecer prompts de moderacion con reglas y patrones culturales.
+3. **RAG Knowledge Base:** 93 chunks multilingues en Firestore con vector search para enriquecer prompts de moderacion con reglas y patrones culturales.
 
 Principios de diseno:
 - **Fail-open para perfil/texto:** si la moderacion falla, se aprueba (no bloquear usuarios por errores)
@@ -499,7 +499,57 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 - `scripts/index-moderation-knowledge.js` — Script de indexacion
 
 ### Firestore Collections
-- `moderationKnowledge/{chunkId}` — RAG chunks (73 docs, vector index)
+- `moderationKnowledge/{chunkId}` — RAG chunks (93 docs, vector index)
 - `moderationCache/{hash}` — Cache de resultados (TTL 1h)
 - `moderatedMessages/{docId}` — Audit trail de mensajes flaggeados
 - `reports/{docId}` — Auto-reportes de severity HIGH
+
+---
+
+## Updates (Session 2026-03-26)
+
+### isInappropriateVenue Filter (NEW)
+
+**File**: `functions/lib/coach.js`
+- Filters adult/inappropriate venues from Coach place suggestions before returning to clients
+- Blocks: strip clubs, adult entertainment venues, massage parlors (non-spa), hookah lounges flagged as adult
+- **10-language keyword matching**: EN/ES/FR/DE/PT/JA/ZH/RU/AR/ID
+- Keywords include: "strip", "adult entertainment", "gentlemen's club", "cabaret adulto", "club de striptease", "adult massage", etc.
+- Applied in `fetchCoachPlaces()` pipeline — venues matching any keyword are silently excluded
+- Does NOT affect user-initiated `searchPlaces` — only Coach AI suggestions
+
+### Instagram Blocklist Expanded (70+ terms)
+
+- Instagram handle detection expanded to 70+ blocked terms
+- Covers: spam accounts, adult content creators, escort services, crypto scam patterns
+- Multi-language patterns: EN/ES/PT/FR/DE
+- Applied in `instagramHandle` field validation when Coach returns venue data
+
+### Blacklist RC-Configurable
+
+- `MODERATION_BLACKLIST` can now be extended via Remote Config without redeploy
+- RC key: `moderation_config.additionalBlacklistTerms` (String, comma-separated)
+- Merge pattern: `[...DEFAULT_BLACKLIST, ...rcTerms]` — RC adds but never removes defaults
+- Allows rapid response to new spam/scam patterns without CF redeployment
+
+### Moderation RAG — 93 Chunks (was 73)
+
+- **20 new chunks** added covering:
+  - Event-related moderation rules (event spam, fake event promotion)
+  - Enhanced evasion tactics detection (Unicode homoglyphs, zero-width chars)
+  - Cultural context rules for new supported regions
+  - Instagram/social media handle evasion patterns
+- Updated distribution:
+
+| Idioma | Chunks |
+|---|---|
+| EN | 39 (was 31) |
+| ES | 21 (was 17) |
+| FR | 5 (was 4) |
+| DE | 4 (was 3) |
+| PT | 5 (was 3) |
+| AR | 4 (was 3) |
+| JA | 4 (was 3) |
+| RU | 4 (was 3) |
+| ZH | 4 (was 3) |
+| ID | 3 |

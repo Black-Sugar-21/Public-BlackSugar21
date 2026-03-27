@@ -428,3 +428,84 @@ sendTestNotification, sendTestNotificationToUser
 testDailyLikesResetNotification, testSuperLikesResetNotification
 updateFCMToken, generateMissingThumbnails
 ```
+
+---
+
+## New Fields & Collections (Session 2026-03-26)
+
+### `replyTo` field in `matches/{matchId}/messages/{messageId}`
+
+```
+replyTo: {
+  messageId: String,      // ID of the original message being replied to
+  senderId: String,       // sender of the original message
+  senderName: String,     // display name of original sender
+  text: String,           // preview text of original message (truncated)
+  type: String            // type of original message: "text"|"place"|"event"|"date_blueprint"
+}
+```
+Optional field. Present only when a message is a reply to another message. Both iOS and Android write identical structure.
+
+### `eventData` field in `matches/{matchId}/messages/{messageId}` (type "event")
+
+```
+type: "event"
+eventData: {
+  title: String,
+  date: String,
+  venue: String,
+  url: String?,
+  imageUrl: String?,
+  source: String?,       // "ticketmaster"|"eventbrite"|"meetup"
+  category: String?,
+  priceRange: String?
+}
+```
+New message type for sharing events in chat. `autoModerateMessage` ignores `type:"event"`. Match list preview: `lastMessage` = event title.
+
+### `eventCache/{id}` collection
+
+```
+events: [{id, title, date, venue, url, imageUrl, source, category, priceRange, lat, lng}]
+latitude: Number, longitude: Number
+radius: Number
+createdAt: Timestamp (TTL 1h)
+```
+Server-side cache for event search results. Written by `fetchLocalEvents` CF. Auto-expires after 1 hour.
+
+### `eventInteractions/{id}` collection
+
+```
+userId: String, eventId: String
+action: String ("view"|"share"|"dismiss")
+matchId: String?, timestamp: Timestamp
+```
+Tracks user interactions with events for recommendation learning.
+
+### `coachChats/{userId}` doc — eventPreferences field
+
+```
+eventPreferences: {
+  preferredCategories: [String],    // "music", "sports", "food", "arts", etc.
+  dislikedCategories: [String],
+  lastEventSearch: Timestamp,
+  interactionCount: Number
+}
+```
+Stored on the `coachChats/{userId}` root document alongside `learningProfile`.
+
+### `dateCheckIns` collection — updated fields
+
+- `userName` field now sanitized server-side (strips special chars)
+- `emergencyContactPhone` normalized with `sanitizePhoneNumber()` before storage
+- No schema changes, just data quality improvements
+
+### Alignment rule 47 — replyTo messages
+```
+47. **replyTo messages**: iOS and Android MUST write identical `replyTo` structure: {messageId, senderId, senderName, text, type}. Field is optional — only present on reply messages. Both platforms must render quoted preview in chat bubbles.
+```
+
+### Alignment rule 48 — event messages
+```
+48. **event messages**: `type:"event"` with `eventData` structured field. `autoModerateMessage` ignores `type:"event"` (like date_blueprint). Both platforms must render EventMessageCard with image, title, date, venue, source badge. `lastMessage` = event title.
+```

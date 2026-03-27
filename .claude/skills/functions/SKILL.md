@@ -512,3 +512,98 @@ Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`override
 
 ### Patrón RC en código
 Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/sobreescribe pero nunca elimina defaults.
+
+## Events Discovery — events.js (NEW)
+
+**File**: `functions/lib/events.js`
+**3 callable CFs**:
+
+### searchEvents
+- **Payload**: `{latitude, longitude, radius?, category?, userLanguage?}`
+- **Response**: `{success, events: [{id, title, date, venue, url, imageUrl, source, category, priceRange, lat, lng}]}`
+- **Sources**: Ticketmaster API + Eventbrite API + Meetup API (parallel fetch, merge + dedup)
+- **Dedup**: by title similarity + venue + date window (`dedupWindowHours` RC-configurable, default 4h)
+- `searchGooglePlacesEvents` removed (was undefined/unused)
+
+### trackEventInteraction
+- **Payload**: `{eventId, action ("view"|"share"|"dismiss"), matchId?}`
+- **Response**: `{success}`
+- Writes to `eventInteractions/{id}` for recommendation learning
+
+### fetchLocalEvents
+- **Payload**: `{latitude, longitude, daysAhead?}`
+- **Response**: `{success, events[]}`
+- `searchDaysAhead` RC-configurable (default 14)
+- Caches results in `eventCache` collection (TTL 1h)
+
+## isInappropriateVenue Filter (NEW)
+
+**File**: `functions/lib/coach.js`
+- Filters adult/inappropriate venues from Coach place suggestions
+- Blocks strip clubs, adult entertainment, massage parlors (non-spa), hookah lounges flagged as adult
+- 10-language keyword matching (EN/ES/FR/DE/PT/JA/ZH/RU/AR/ID)
+- Applied in `fetchCoachPlaces()` pipeline before returning results
+
+## Brand Search — 90+ Franchises (NEW)
+
+**File**: `functions/lib/coach.js`
+- `BRAND_TYPE_MAP`: 90+ franchise names mapped to Google Places types
+- Starbucks, McDonald's, Zara, H&M, Sephora, Nike, etc.
+- When user asks "Starbucks near me", maps to correct Places API type + brand query
+- Improves search accuracy for franchise-specific requests
+
+## Behavioral Pattern Detection in getRealtimeCoachTips (NEW)
+
+**File**: `functions/lib/ai-services.js`
+- `getRealtimeCoachTips` now detects behavioral patterns in conversation:
+  - Message frequency trends (increasing/decreasing engagement)
+  - Response time patterns (quick vs delayed)
+  - Topic diversity (stuck on one topic vs varied conversation)
+  - Emoji/tone evolution over conversation arc
+- Provides more nuanced coaching tips based on conversation dynamics
+
+## Adaptive Personality Tone (NEW)
+
+**File**: `functions/lib/coach.js`
+- `detectCommunicationStyle(messages)`: analyzes user's writing style (formal/casual/playful/emotional)
+- `getCulturalContext(language, country)`: adapts coaching style to cultural norms
+- Coach responses now mirror user's communication style for better engagement
+- Supports all 10 languages with culture-specific dating advice nuances
+
+## sanitizeBlueprintTitle (NEW)
+
+**File**: `functions/lib/ai-services.js`
+- Strips personal names from blueprint titles (privacy protection)
+- Replaces "Romantic Evening with Maria" → "Romantic Evening"
+- Applied in `generateDateBlueprint` before returning to client
+- Max 5 words enforced
+
+## RC-Configurable Values (NEW)
+
+### Events Config (`coach_config.events`)
+| RC Key | Type | Default | Description |
+|--------|------|---------|-------------|
+| `searchDaysAhead` | Number | 14 | Days ahead to search for events |
+| `dedupWindowHours` | Number | 4 | Hours window for event deduplication |
+
+### Notification Titles (10 languages)
+| RC Key | Type | Description |
+|--------|------|-------------|
+| `notificationTitles` | Object | Localized notification titles for events in ES/EN/FR/DE/PT/JA/ZH/RU/AR/ID |
+
+## Coach Quality Improvements (NEW)
+
+### Sports Venue Mapping
+- Maps sport-related queries to correct Google Places types
+- "basketball court" → `sport`, "tennis club" → `sport`, "golf course" → `golf_course`
+- Stadium, arena, field mapping for spectator sports
+
+### Luxury Intent Detection
+- Detects luxury-seeking queries: "upscale", "fine dining", "5-star", "exclusive", "premium"
+- Routes to higher-rated venues (min 4.0 rating) and premium categories
+- 10-language luxury keyword detection
+
+### Self-Deprecation Handling
+- Detects self-deprecating messages in coaching context
+- Responds with empathetic encouragement rather than generic advice
+- Pattern detection: "I'm not good enough", "nobody likes me", "I always mess up" (10 languages)

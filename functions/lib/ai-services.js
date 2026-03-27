@@ -221,25 +221,36 @@ exports.calculateSafetyScore = onCall(
 
         const prompt = `Analyze this dating chat for safety concerns. Focus on messages from "them" (the other person).
 
+IMPORTANT CONTEXT: This is a sugar dating app. Flirtatious language, pet names ("bb", "baby", "amor", "mi vida", "cariño"), and compliments are COMPLETELY NORMAL and should NOT be flagged. Only flag genuinely concerning behavior.
+
 Conversation:
 ${conversation}
 
-Check for these RED FLAGS:
-1. FINANCIAL: Asking for money, gift cards, crypto, payment apps
-2. PLATFORM_REDIRECT: Pressuring to move to WhatsApp/Telegram/Instagram (suspicious if too early)
-3. PERSONAL_INFO: Asking for exact address, workplace details, financial info
-4. LOVE_BOMBING: Excessive declarations of love too early (within first few messages)
-5. MANIPULATION: Guilt-tripping, ultimatums, emotional pressure
+Check for these RED FLAGS (only flag if clearly present, not ambiguous):
+1. FINANCIAL: Explicitly asking for money, gift cards, crypto, bank transfers
+2. PLATFORM_REDIRECT: Pressuring to move to WhatsApp/Telegram (only if insistent, not a casual suggestion)
+3. PERSONAL_INFO: Asking for exact address, SSN, financial account details
+4. LOVE_BOMBING: Extreme declarations of love within first 3 messages + pressure for commitment
+5. MANIPULATION: Guilt-tripping, ultimatums, emotional blackmail
 6. SCAM_PATTERN: Classic romance scam (quick love → emergency → money request)
-7. INAPPROPRIATE_PRESSURE: Sexual pressure, unsolicited advances
-8. IMPERSONATION: Claims of being military, doctor, or wealthy without proof
+7. INAPPROPRIATE_PRESSURE: Explicit sexual demands or unsolicited sexual content (NOT pet names or flirting)
+8. IMPERSONATION: Claims of being military/doctor/wealthy + asking for help
+
+DO NOT FLAG:
+- Pet names (bb, baby, amor, cariño, mi vida, guap@, hermos@)
+- Casual flirting or compliments
+- Normal dating conversation
+- Expressing interest or attraction
+- Using emojis (❤️💋😘)
+
+TONE: Warnings should be subtle, friendly suggestions — NOT alarming. Use phrases like "worth keeping in mind" or "something to be aware of" instead of "IMPORTANT" or "WARNING".
 
 Return ONLY a JSON object:
 {
-  "score": 0-100 (100=completely safe, 0=dangerous),
+  "score": 0-100 (100=completely safe, 0=dangerous. Casual flirting conversations should score 80+),
   "riskLevel": "low"|"medium"|"high",
   "concerns": ["short description of each concern"],
-  "warnings": [{"type": "flag_type", "message": "user-friendly warning in ${getLanguageInstruction(lang)}", "severity": "low|medium|high"}],
+  "warnings": [{"type": "flag_type", "message": "subtle, friendly suggestion in ${getLanguageInstruction(lang)}", "severity": "low|medium|high"}],
   "summary": "1-sentence safety assessment in ${getLanguageInstruction(lang)}"
 }`;
 
