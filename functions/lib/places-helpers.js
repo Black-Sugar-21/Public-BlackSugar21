@@ -1,7 +1,7 @@
 'use strict';
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
-// Helpers: no shared imports needed — all values received as function parameters
+const { AI_MODEL_LITE } = require('./shared');
 
 function calculateMidpoint(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180;
@@ -551,7 +551,7 @@ async function findInstagramViaSearch(placeName, placeAddress, apiKey) {
     const {GoogleGenerativeAI} = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash-lite',
+      model: AI_MODEL_LITE,
       generationConfig: {maxOutputTokens: 100, temperature: 0},
       tools: [{googleSearch: {}}],
     });

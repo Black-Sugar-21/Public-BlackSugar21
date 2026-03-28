@@ -409,6 +409,10 @@ const SEXUAL_BLACKLIST_TERMS = [
   'baise', 'suce', 'fick', 'blas', 'geil', 'foder', 'tesão',
 ];
 
+// Export blacklist constants for use by moderation.js
+exports.MODERATION_BLACKLIST = MODERATION_BLACKLIST;
+exports.SEXUAL_BLACKLIST_TERMS = SEXUAL_BLACKLIST_TERMS;
+
 /**
  * SHA-256 hash del mensaje normalizado (lowercase, trim) — clave de caché.
  */

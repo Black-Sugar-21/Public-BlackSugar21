@@ -3047,8 +3047,8 @@ exports.getRealtimeCoachTips = onCall(
       const config = await getCoachConfig();
       const tipsConfig = config.coachTips || {};
       const cacheTtl = tipsConfig.cacheTtlMs || 300000;
-      const geminiThreshold = tipsConfig.geminiCallThreshold || 10;
-      const deltaThreshold = tipsConfig.scoreDeltaThreshold || 15;
+      const geminiThreshold = tipsConfig.geminiCallThreshold || 5;
+      const deltaThreshold = tipsConfig.scoreDeltaThreshold || 10;
 
       // 1. Check cache first (avoid Gemini calls)
       const cacheRef = db.collection('coachTipsCache').doc(matchId);
@@ -3149,8 +3149,10 @@ Use this behavioral data to generate SPECIFIC, DATA-DRIVEN tips. If flags exist,
       const prevScore = prevCache?.chemistryScore || 55;
       const scoreDelta = Math.abs(algoResult.score - prevScore);
 
-      // Gemini conditions: first time, every N new messages, or significant score change
-      const shouldCallGemini = !prevCache || newMsgsSinceLast >= geminiThreshold || scoreDelta > deltaThreshold;
+      // Gemini conditions: first time, every N new messages, significant score change, or cache too old
+      const cacheAgeMs = prevCache?.updatedAt?.toMillis ? (Date.now() - prevCache.updatedAt.toMillis()) : Infinity;
+      const maxCacheAgeMs = (tipsConfig.maxCacheAgeMinutes || 30) * 60 * 1000;
+      const shouldCallGemini = !prevCache || newMsgsSinceLast >= geminiThreshold || scoreDelta > deltaThreshold || cacheAgeMs > maxCacheAgeMs;
 
       if (!shouldCallGemini) {
         // Use algorithmic score + cached tips (saves Gemini cost)

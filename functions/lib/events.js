@@ -310,10 +310,8 @@ async function enrichWithSocialSignals(events) {
  * @param {string|null} category
  * @returns {Promise<Array>} events sorted by date
  */
-let _userEventPrefs = null; // Module-level for sort access
-
 async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
-  _userEventPrefs = userPrefs || null;
+  const localUserPrefs = userPrefs || null;
   const config = await getEventsConfig();
   if (!config.enabled) return [];
 
@@ -358,8 +356,8 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
   // Sort: preferred categories first (if user has prefs), then by date
   unique.sort((a, b) => {
     // Check if we have user preferences (passed via closure from caller)
-    const prefA = _userEventPrefs ? (_userEventPrefs[a.category] || 0) : 0;
-    const prefB = _userEventPrefs ? (_userEventPrefs[b.category] || 0) : 0;
+    const prefA = localUserPrefs ? (localUserPrefs[a.category] || 0) : 0;
+    const prefB = localUserPrefs ? (localUserPrefs[b.category] || 0) : 0;
     if (prefA !== prefB) return prefB - prefA; // Higher preference first
     // Then by date (soonest first)
     const dA = `${a.date}T${a.time || '00:00'}`;
