@@ -1333,6 +1333,219 @@ Return JSON:
 );
 
 /**
+ * Scheduled: Daily auto-resolution of moderation disputes.
+ * Auto-accepts disputes when clear pattern exists (≥3 same category + high FP rate).
+ * Generates immediate RAG chunk for the resolved pattern.
+ */
+exports.resolveDisputesDaily = onSchedule(
+  {schedule: 'every day 03:00', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const config = await getModerationConfig();
+    const autoResolve = config.autoDisputeResolution || {};
+    if (!autoResolve.enabled) {
+      logger.info('[resolveDisputesDaily] Disabled via config');
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    const minDisputes = autoResolve.minDisputes || 3;
+    const maxFpRate = autoResolve.maxFpRate || 0.25;
+
+    try {
+      // 1. Read all pending disputes
+      const pending = await db.collection('moderationDisputes')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .get();
+
+      if (pending.empty) {
+        logger.info('[resolveDisputesDaily] No pending disputes');
+        return;
+      }
+
+      // 2. Group by category + disputeType
+      const groups = {};
+      for (const doc of pending.docs) {
+        const d = doc.data();
+        const key = `${d.originalCategory}_${d.disputeType}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push({id: doc.id, ref: doc.ref, data: d});
+      }
+
+      let totalResolved = 0;
+      let chunksGenerated = 0;
+
+      // 3. Auto-resolve groups that meet threshold
+      for (const [key, disputes] of Object.entries(groups)) {
+        if (disputes.length < minDisputes) continue;
+
+        const category = disputes[0].data.originalCategory;
+        const disputeType = disputes[0].data.disputeType;
+
+        // Check category FP rate from yesterday's insights
+        const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+        let categoryFpRate = 0;
+        try {
+          const insight = await db.collection('moderationInsights').doc('daily').collection(yesterday).doc('summary').get();
+          if (insight.exists) {
+            const cd = insight.data().categoryDisputes || {};
+            const cc = insight.data().categoryCounts || {};
+            categoryFpRate = cc[category] > 0 ? (cd[category] || 0) / cc[category] : 0;
+          }
+        } catch (_) { /* continue */ }
+
+        if (disputeType === 'false_positive' && categoryFpRate < maxFpRate && disputes.length < minDisputes * 2) {
+          continue; // Not enough evidence
+        }
+
+        // Auto-accept all disputes in this group
+        const batch = db.batch();
+        for (const d of disputes) {
+          batch.update(d.ref, {status: 'auto_accepted', resolvedAt: admin.firestore.FieldValue.serverTimestamp()});
+        }
+        await batch.commit();
+        totalResolved += disputes.length;
+
+        // Log audit trail
+        await db.collection('moderationDisputeReviews').add({
+          category, disputeType,
+          resolution: 'auto_accepted',
+          disputeCount: disputes.length,
+          categoryFpRate,
+          resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Generate RAG chunk for this pattern (if API key available)
+        if (apiKey && autoResolve.autoUpdateRag !== false) {
+          try {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({
+              model: AI_MODEL_LITE,
+              generationConfig: {maxOutputTokens: 512, temperature: 0.2},
+            });
+            const examples = disputes.slice(0, 5).map((d) => `"${d.data.messageText}" (${d.data.explanation || 'no explanation'})`).join('\n');
+            const chunkPrompt = `Create a concise moderation rule (100-200 words) for a sugar dating app.
+
+These ${disputes.length} messages were ${disputeType === 'false_positive' ? 'INCORRECTLY flagged as ' + category : 'MISSED by moderation'}:
+${examples}
+
+Write a clear rule that ${disputeType === 'false_positive' ? 'prevents this type of false positive' : 'catches this type of violation'}.`;
+
+            const chunkResult = await model.generateContent(chunkPrompt);
+            const chunkText = chunkResult.response.text();
+
+            const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+            const embResult = await embModel.embedContent({content: {parts: [{text: chunkText}]}, taskType: 'RETRIEVAL_DOCUMENT'});
+
+            await db.collection('moderationKnowledge').doc(`auto_resolve_${Date.now()}`).set({
+              category: disputeType === 'false_positive' ? 'false_positive_prevention' : 'classification_guide',
+              language: 'en', title: `Auto-resolved: ${category} ${disputeType}`,
+              content: chunkText, embedding: embResult.embedding.values,
+              autoGenerated: true, generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              sourceDisputeCount: disputes.length,
+            });
+            chunksGenerated++;
+          } catch (ragErr) {
+            logger.warn(`[resolveDisputesDaily] RAG chunk generation failed: ${ragErr.message}`);
+          }
+        }
+
+        logger.info(`[resolveDisputesDaily] Auto-resolved ${disputes.length} ${disputeType} disputes for ${category} (FP rate: ${(categoryFpRate * 100).toFixed(1)}%)`);
+      }
+
+      logger.info(`[resolveDisputesDaily] Total: ${totalResolved} resolved, ${chunksGenerated} RAG chunks generated`);
+    } catch (err) {
+      logger.error(`[resolveDisputesDaily] Error: ${err.message}`);
+    }
+  },
+);
+
+/**
+ * Scheduled: Daily micro-update for moderation RAG.
+ * Lightweight version of weekly update — processes yesterday's disputes only.
+ */
+exports.dailyModerationMicroUpdate = onSchedule(
+  {schedule: 'every day 04:30', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const config = await getModerationConfig();
+    const microConfig = config.dailyMicroUpdate || {};
+    if (!microConfig.enabled) {
+      logger.info('[dailyModerationMicroUpdate] Disabled via config');
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return;
+
+    try {
+      const yesterday = new Date(Date.now() - 86400000);
+      const startMs = new Date(yesterday).setHours(0, 0, 0, 0);
+      const endMs = new Date(yesterday).setHours(23, 59, 59, 999);
+
+      // Read yesterday's disputes only
+      const disputes = await db.collection('moderationDisputes')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+
+      const yesterdayDisputes = disputes.docs.filter((d) => {
+        const ts = d.data().createdAt?.toMillis?.() || 0;
+        return ts >= startMs && ts <= endMs;
+      });
+
+      const minDisputes = microConfig.minDisputes || 3;
+      if (yesterdayDisputes.length < minDisputes) {
+        logger.info(`[dailyModerationMicroUpdate] Only ${yesterdayDisputes.length} disputes yesterday (need ${minDisputes})`);
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_LITE,
+        generationConfig: {maxOutputTokens: 1024, temperature: 0.3},
+      });
+
+      const disputeSummary = yesterdayDisputes.slice(0, 10).map((d) => {
+        const data = d.data();
+        return `[${data.disputeType}] Category: ${data.originalCategory} | "${data.messageText}" | Explanation: "${data.explanation || 'none'}"`;
+      }).join('\n');
+
+      const prompt = `Based on yesterday's moderation disputes in a sugar dating app, generate 1-2 targeted moderation rules.
+
+DISPUTES:
+${disputeSummary}
+
+Generate concise rules (100-200 words each) as plain text. Focus on reducing false positives for normal sugar dating conversation.`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+
+      // Simple: store the entire output as one chunk
+      const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+      const embResult = await embModel.embedContent({content: {parts: [{text}]}, taskType: 'RETRIEVAL_DOCUMENT'});
+
+      await db.collection('moderationKnowledge').doc(`daily_micro_${Date.now()}`).set({
+        category: 'false_positive_prevention',
+        language: 'en',
+        title: `Daily micro-update ${yesterday.toISOString().substring(0, 10)}`,
+        content: text,
+        embedding: embResult.embedding.values,
+        autoGenerated: true,
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'daily_micro',
+      });
+
+      logger.info(`[dailyModerationMicroUpdate] Added 1 chunk from ${yesterdayDisputes.length} disputes`);
+    } catch (err) {
+      logger.error(`[dailyModerationMicroUpdate] Error: ${err.message}`);
+    }
+  },
+);
+
+/**
  * Trigger: Validar y auto-reparar geohash cuando se actualiza la ubicación del usuario.
  * Si el usuario tiene lat/lng pero no campo "g" (geohash), lo calcula y escribe automáticamente.
  * Algoritmo encodeGeohash() idéntico al de iOS y Android.

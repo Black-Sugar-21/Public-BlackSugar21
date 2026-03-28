@@ -570,3 +570,28 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 | RU | 4 (was 3) |
 | ZH | 4 (was 3) |
 | ID | 3 |
+
+## Session 2026-03-27 Changes
+
+### CRITICAL FIX: MODERATION_BLACKLIST Import
+- `MODERATION_BLACKLIST` was **not imported** in `moderation.js` — all auto-moderation blacklist checking was completely broken
+- Blacklist terms defined in `notifications.js` were never reaching `autoModerateMessage` pipeline
+- Fixed: proper export from `notifications.js` + import in `moderation.js`
+- Impact: ~160+ blacklist terms are now correctly checked in the quick filters step
+
+### RAG Auto-Update Enabled
+- `moderation_config.rag.ragAutoUpdate` enabled in Remote Config
+- Uses Google Search Grounding to generate new moderation RAG chunks from trending scam/abuse patterns
+- Auto-generates chunks weekly via `updateCoachKnowledge` scheduled CF (shared infrastructure)
+
+### Cross-Learning: Moderation ← Coach
+- Moderation RAG now reads coach insights (`coachInsights/global` trending topics)
+- Reduces false positives on coaching-related terms that appear in normal dating conversations
+- Coach also reads moderation insights to provide safety-aware coaching tips
+
+### 5 New Moderation RAG Chunks
+- **AI catfish detection**: patterns for AI-generated profile detection, deepfake awareness
+- **Pig butchering scams**: romance-to-investment scam escalation patterns
+- **Unicode evasion tactics**: homoglyph substitution, zero-width characters, RTL markers
+- **Crypto scam patterns**: fake exchange links, "guaranteed returns", wallet address sharing
+- **False positive prevention**: expanded whitelist of legitimate dating/arrangement terminology

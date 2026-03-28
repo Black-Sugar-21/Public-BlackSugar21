@@ -716,3 +716,59 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - **Trigger**: `onDocumentCreated` on `testerSignups/{id}`
 - Processes new tester signups from web modal
 - Sends confirmation/welcome notification to tester email
+
+## Session 2026-03-27 Changes
+
+### CRITICAL FIX: MODERATION_BLACKLIST Import
+- `MODERATION_BLACKLIST` was **not imported** in `moderation.js` — all auto-moderation blacklist checking was broken (silent pass-through)
+- Fixed: exported from `notifications.js`, imported in `moderation.js`
+- All blacklist-based filtering now works correctly in `autoModerateMessage` pipeline
+
+### Race Condition Fix: events.js
+- `_userEventPrefs` was a module-level mutable variable in `events.js` — caused race conditions between concurrent CF invocations
+- Replaced with local closure variable scoped to each function call
+
+### Deprecated Model Fix
+- `gemini-2.0-flash-lite` replaced with `gemini-2.5-flash-lite` (uses `AI_MODEL_LITE` constant everywhere)
+
+### Instagram Ranking Pipeline (NEW)
+- **`extractInstagramFromWebsite(url)`**: 4 priority levels for extracting IG handle from venue website
+- **`findInstagramViaSearch(placeName, city)`**: Uses Gemini Search Grounding to find IG handle
+- **`scrapeInstagramMetrics(handle)`**: Extracts followers, posts, lastPostDate, igScore (0-100)
+- **`resolveInstagramHandle(place)`**: Full pipeline with Firestore cache (`placeInstagram/{placeId}`, TTL 30 days)
+
+### Combined Place Ranking: calculatePlaceScore()
+- Google rating: 30% + review count: 25% + igScore: 30% + freshness: 15%
+- Replaces old `rating*0.4 + log10(1+reviewCount)*0.6` formula
+
+### Coach Tips Refresh Tuning
+- `geminiCallThreshold`: 10 → 5 (tips refresh more often)
+- `scoreDeltaThreshold`: 15 → 10 (smaller changes trigger refresh)
+- `maxCacheAgeMinutes`: 30 (new — forces refresh after 30 min)
+
+### RAG Auto-Update Enabled
+- Both `coach_config.rag.ragAutoUpdate` and `moderation_config.rag.ragAutoUpdate` enabled in Remote Config
+- Uses Google Search Grounding to generate new RAG chunks from trending topics
+
+### Cross-Learning: Coach ↔ Moderation
+- Coach reads moderation insights (`moderationKnowledge` top patterns) to improve safety-aware coaching
+- Moderation reads coach insights (`coachInsights/global` trending topics) to reduce false positives on coaching-related terms
+
+### 10 New RAG Chunks
+- **5 coach chunks**: safety awareness, conversation pacing, arrangement discussions, boundary setting, first meeting tips
+- **5 moderation chunks**: AI catfish detection, pig butchering scam patterns, Unicode evasion tactics, crypto scam patterns, false positive prevention
+
+### Notification Dedup/Collapse (matches.js)
+- Added `collapseKey`, `apns-collapse-id`, `thread-id`, `android.notification.tag` per matchId in `handlePendingNotification`
+- Multiple messages from same match → single notification (last replaces previous)
+- Prevents notification spam when match sends rapid messages while user is away
+
+### Tester Signup Flow
+- Firebase App Distribution API + Google Group flow for automated tester enrollment
+- Web modal captures email → writes to `testerSignups` Firestore → redirect to Play Store opt-in
+- `onTesterSignup` trigger processes new signups
+
+### Unused Imports Cleanup
+- `normalizeCategory`/`categoryEmojiMap` removed from `moderation.js`
+- `calculateMidpoint` removed from `events.js`
+- `GoogleGenerativeAI` moved to top-level import in `places-helpers.js`

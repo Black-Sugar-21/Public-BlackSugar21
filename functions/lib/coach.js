@@ -514,7 +514,12 @@ async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en'
 
   // Config from RC with fallback to hardcoded defaults
   const topK = Math.min(Math.max(ragConfig.topK || RAG_DEFAULT_TOP_K, 1), 10);
-  const minScore = Math.min(Math.max(ragConfig.minScore ?? RAG_MIN_SCORE, 0), 1);
+  const baseMinScore = Math.min(Math.max(ragConfig.minScore ?? RAG_MIN_SCORE, 0), 1);
+  // Dynamic threshold: adjust based on query type
+  const lower = query.toLowerCase();
+  const isPlaceQuery = /place|restaurant|bar|cafe|where|venue|location|lugar|restaurante|café|dónde|donde/.test(lower);
+  const isSafetyQuery = /danger|unsafe|harass|stalk|block|report|abuse|scam|peligr|acoso|estafa|segur/.test(lower);
+  const minScore = isSafetyQuery ? Math.min(0.5, baseMinScore + 0.2) : isPlaceQuery ? Math.max(0.15, baseMinScore - 0.15) : baseMinScore;
   const fetchMultiplier = Math.min(Math.max(ragConfig.fetchMultiplier || RAG_FETCH_MULTIPLIER, 1), 5);
   const maxQueryLength = ragConfig.maxQueryLength || RAG_MAX_QUERY_LENGTH;
   const maxChunkLength = ragConfig.maxChunkLength || RAG_MAX_CHUNK_LENGTH;
@@ -2623,6 +2628,35 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         activitySuggestions = activitySuggestions.map(({_igMetrics, ...rest}) => rest);
       }
 
+      // Self-Evaluation Loop: evaluate response quality before returning
+      let selfEvalData = null;
+      const evalConfig = config.selfEvaluation || {};
+      if (evalConfig.enabled && reply && !isOffTopic) {
+        const shouldEval = Math.random() < (evalConfig.sampleRate || 0.3);
+        if (shouldEval) {
+          try {
+            const evalModel = genAI.getGenerativeModel({
+              model: AI_MODEL_LITE,
+              generationConfig: {maxOutputTokens: 256, temperature: 0.1, responseMimeType: 'application/json'},
+            });
+            const evalPrompt = `Rate this dating coach response 1-10.
+
+USER: "${message.substring(0, 200)}"
+COACH: "${reply.substring(0, 600)}"
+
+Score on: specificity (references user situation?), actionability (concrete steps?), empathy (acknowledges emotions?), safety (no harmful advice?).
+Return JSON: {"score":N,"issues":["issue1"]}`;
+
+            const evalResult = await evalModel.generateContent(evalPrompt);
+            const evalParsed = parseGeminiJsonResponse(evalResult.response.text());
+            selfEvalData = {score: evalParsed.score || 5, issues: evalParsed.issues || []};
+            logger.info(`[Self-eval] score: ${selfEvalData.score}, issues: ${(selfEvalData.issues || []).join(', ')}`);
+          } catch (evalErr) {
+            logger.warn(`[Self-eval] failed (non-critical): ${evalErr.message}`);
+          }
+        }
+      }
+
       // Compute dominant category from activity suggestions + intent extraction
       let dominantCategory = null;
       // Priority 1: Use intent-extracted googleCategory if place search was detected
@@ -2732,6 +2766,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
           ...(suggestions ? {suggestions} : {}),
           ...(activitySuggestions ? {activitySuggestions} : {}),
           ...(isOffTopic ? {offTopic: true} : {}),
+          ...(selfEvalData ? {selfEvalScore: selfEvalData.score} : {}),
         });
 
         // 8. Decrement coach messages remaining (atomic increment avoids TOCTOU race)
@@ -2741,6 +2776,17 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         });
 
         await batch.commit();
+
+        // 8b. Log evaluation metrics (non-blocking)
+        if (selfEvalData && config.ragEffectivenessTracking?.enabled !== false) {
+          db.collection('coachEvaluations').add({
+            userId, messageId: coachMsgRef.id,
+            selfEvalScore: selfEvalData.score,
+            selfEvalIssues: selfEvalData.issues || [],
+            topics: geminiTopics,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          }).catch(() => {});
+        }
 
         // 9. Update learning profile (non-critical — failure must not affect response)
         if (config.learningEnabled) {
@@ -3928,6 +3974,146 @@ Return JSON:
       logger.info(`[updateCoachKnowledge] Added ${added} chunks (search: ${enableSearch}, modContext: ${moderationContext.length}, satisfaction: ${latestInsights.satisfactionRate || '?'}%)`);
     } catch (err) {
       logger.error(`[updateCoachKnowledge] Error: ${err.message}`);
+    }
+  },
+);
+
+/**
+ * Scheduled: Daily coach micro-update.
+ * Lightweight version of weekly update — reads only yesterday's feedback,
+ * generates 1-3 focused chunks with Flash-Lite (no Search Grounding).
+ * Also curates exemplars from helpful responses.
+ */
+exports.dailyCoachMicroUpdate = onSchedule(
+  {schedule: 'every day 04:00', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
+  async () => {
+    const db = admin.firestore();
+    const config = await getCoachConfig();
+    const microConfig = config.dailyMicroUpdate || {};
+    if (!microConfig.enabled) {
+      logger.info('[dailyCoachMicroUpdate] Disabled via config');
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return;
+
+    try {
+      // 1. Read yesterday's quality summary
+      const yesterday = new Date(Date.now() - 86400000);
+      const yesterdayStr = yesterday.toISOString().substring(0, 10);
+      const summary = await db.collection('coachInsights').doc('daily').collection(yesterdayStr).doc('summary').get();
+
+      if (!summary.exists) {
+        logger.info('[dailyCoachMicroUpdate] No quality summary for yesterday');
+        return;
+      }
+
+      const data = summary.data();
+      const minFeedback = microConfig.minFeedback || 5;
+      if ((data.negative || 0) < minFeedback && data.satisfactionRate > 80) {
+        logger.info(`[dailyCoachMicroUpdate] Satisfaction ${data.satisfactionRate}% OK, only ${data.negative || 0} negative (need ${minFeedback})`);
+        return;
+      }
+
+      // 2. Generate focused chunks from yesterday's weak topics
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_LITE,
+        generationConfig: {maxOutputTokens: 1024, temperature: 0.3},
+      });
+
+      const weakTopics = (data.lowQualityTopics || []).map((t) => t.topic).join(', ');
+      const sampleQuestions = (data.sampleNegativeQuestions || []).slice(0, 5).join('\n');
+
+      const prompt = `You are a dating coach knowledge curator. Yesterday's coach had ${data.satisfactionRate}% satisfaction.
+
+WEAK TOPICS: ${weakTopics || 'general'}
+SAMPLE FAILED QUESTIONS:
+${sampleQuestions || 'No samples available'}
+
+Generate 1-3 focused knowledge chunks (200-300 words each) that would directly help answer these types of questions better. Be specific and actionable.
+
+Return as plain text, separating chunks with "---".`;
+
+      const result = await model.generateContent(prompt);
+      const chunks = result.response.text().split('---').map((c) => c.trim()).filter((c) => c.length > 50);
+
+      const maxChunks = microConfig.maxChunksPerDay || 3;
+      let added = 0;
+
+      for (const chunk of chunks.slice(0, maxChunks)) {
+        try {
+          const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+          const embResult = await embModel.embedContent({content: {parts: [{text: chunk}]}, taskType: 'RETRIEVAL_DOCUMENT'});
+
+          await db.collection('coachKnowledge').doc(`daily_micro_${Date.now()}_${added}`).set({
+            category: weakTopics.split(',')[0]?.trim() || 'general',
+            language: 'en',
+            title: `Daily micro: ${yesterdayStr}`,
+            content: chunk,
+            embedding: embResult.embedding.values,
+            autoGenerated: true,
+            source: 'daily_micro',
+            generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          added++;
+        } catch (embErr) {
+          logger.warn(`[dailyCoachMicroUpdate] Embed error: ${embErr.message}`);
+        }
+      }
+
+      // 3. Curate exemplars from yesterday's helpful responses
+      let exemplarsCurated = 0;
+      try {
+        const allChats = await db.collection('coachChats').limit(100).get();
+        const startMs = new Date(yesterday).setHours(0, 0, 0, 0);
+        const endMs = new Date(yesterday).setHours(23, 59, 59, 999);
+
+        for (const chatDoc of allChats.docs) {
+          const msgs = await chatDoc.ref.collection('messages')
+            .orderBy('timestamp', 'desc')
+            .limit(20)
+            .get();
+
+          for (const msg of msgs.docs) {
+            const msgData = msg.data();
+            if (!msgData.feedback || msgData.feedback.rating !== 'helpful') continue;
+            const fbTime = msgData.feedback.timestamp?.toMillis?.() || 0;
+            if (fbTime < startMs || fbTime > endMs) continue;
+            if (!msgData.message || msgData.sender !== 'coach') continue;
+
+            // Found a helpful coach response from yesterday — curate as exemplar
+            const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
+            const embResult = await embModel.embedContent({
+              content: {parts: [{text: msgData.message}]},
+              taskType: 'RETRIEVAL_DOCUMENT',
+            });
+
+            await db.collection('coachExemplars').add({
+              category: msgData.topic || 'general',
+              userQuery: msgData.feedback.userQuestion || '',
+              coachResponse: msgData.message.substring(0, 500),
+              language: 'es',
+              score: msgData.selfEvalScore || 7,
+              source: 'auto_curated',
+              embedding: embResult.embedding.values,
+              active: true,
+              usageCount: 0,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            exemplarsCurated++;
+            if (exemplarsCurated >= 3) break;
+          }
+          if (exemplarsCurated >= 3) break;
+        }
+      } catch (exemErr) {
+        logger.warn(`[dailyCoachMicroUpdate] Exemplar curation error: ${exemErr.message}`);
+      }
+
+      logger.info(`[dailyCoachMicroUpdate] Added ${added} chunks + ${exemplarsCurated} exemplars (satisfaction: ${data.satisfactionRate}%)`);
+    } catch (err) {
+      logger.error(`[dailyCoachMicroUpdate] Error: ${err.message}`);
     }
   },
 );

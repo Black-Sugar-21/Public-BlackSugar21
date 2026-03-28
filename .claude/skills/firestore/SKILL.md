@@ -562,3 +562,30 @@ Updated weekly by `updateCoachKnowledge` scheduled CF (Sunday 3 AM UTC). Tracks 
 | Colección | Read | Write |
 |---|---|---|
 | `testerSignups/{id}` | false | create (public — no auth required) |
+
+### `placeInstagram/{placeId}` collection (Session 2026-03-27)
+
+```
+instagramHandle: String
+followers: Number?
+posts: Number?
+lastPostDate: String?
+igScore: Number (0-100)
+source: String ("website"|"search"|"manual")
+resolvedAt: Timestamp
+expiresAt: Timestamp (TTL 30 days)
+```
+Cache for Instagram handle resolution pipeline. Written by `resolveInstagramHandle()` in coach places pipeline. Auto-expires after 30 days.
+
+### `coachTipsCache/{matchId}` collection (Session 2026-03-27)
+
+```
+chemistryScore: Number (0-100)
+chemistryTrend: String ("rising"|"falling"|"stable")
+tips: [String]
+preDateDetected: Boolean
+suggestedAction: String?
+cachedAt: Timestamp
+maxCacheAgeMinutes: Number (30)
+```
+Cache for `getRealtimeCoachTips` results per match. TTL 30 minutes (`maxCacheAgeMinutes`). Prevents redundant Gemini calls when re-opening the same chat.

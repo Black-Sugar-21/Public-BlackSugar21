@@ -256,29 +256,34 @@ exports.onMessageCreated = onDocumentCreated(
     const notification = {
       data: {
         type: 'new_message',
-        action: 'open_chat', // Acción específica: abrir chat
-        screen: 'ChatView', // Pantalla destino
+        action: 'open_chat',
+        screen: 'ChatView',
         matchId: matchId,
-        chatId: matchId, // Redundancia para compatibilidad
+        chatId: matchId,
         messageId: messageId,
         senderId: message.senderId,
-        senderName: senderName, // Nombre del remitente para navegación directa
-        receiverId: receiverId, // ID del receptor
-        navigationPath: 'home/messages/chat', // Ruta de navegación: Home → TabBar Messages → ChatView
+        senderName: senderName,
+        receiverId: receiverId,
+        navigationPath: 'home/messages/chat',
         timestamp: Date.now().toString(),
-        // NO incluir messagePreview por privacidad
       },
       token: fcmToken,
+      // collapseKey: múltiples mensajes del mismo match reemplazan la notificación anterior
+      collapseKey: matchId,
       apns: {
+        headers: {
+          // iOS: reemplaza la notificación anterior del mismo match (no acumula)
+          'apns-collapse-id': matchId,
+        },
         payload: {
           aps: {
             sound: 'default',
             badge: 1,
+            // thread-id: agrupa notificaciones por match en el centro de notificaciones de iOS
+            'thread-id': matchId,
             alert: {
-              // iOS: título localizado con nombre del remitente
               'title-loc-key': 'notification-new-message-title',
               'title-loc-args': [senderName],
-              // Body: mensaje genérico localizado (sin contenido real del mensaje)
               'loc-key': 'notification-new-message-body',
             },
           },
@@ -286,11 +291,13 @@ exports.onMessageCreated = onDocumentCreated(
       },
       android: {
         priority: 'high',
+        // collapseKey: reemplaza la notificación anterior del mismo match
+        collapseKey: matchId,
         notification: {
-          // Android: título localizado con nombre del remitente  
+          // tag: Android usa el tag para reemplazar notificaciones del mismo match
+          tag: matchId,
           titleLocKey: 'notification_new_message_title',
           titleLocArgs: [senderName],
-          // Body: mensaje genérico localizado (sin contenido real del mensaje)
           bodyLocKey: 'notification_new_message_body',
           sound: 'default',
           channelId: 'default_channel',
