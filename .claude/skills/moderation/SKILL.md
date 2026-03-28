@@ -595,3 +595,16 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 - **Unicode evasion tactics**: homoglyph substitution, zero-width characters, RTL markers
 - **Crypto scam patterns**: fake exchange links, "guaranteed returns", wallet address sharing
 - **False positive prevention**: expanded whitelist of legitimate dating/arrangement terminology
+
+## Session 2026-03-28 Changes
+
+### resolveDisputesDaily (3:00 AM UTC)
+- Scheduled CF that auto-accepts moderation disputes with pattern count >=3
+- Generates new RAG chunk from the resolved dispute pattern -> `moderationKnowledge`
+- Tracks in `moderationDisputeReviews` collection
+- Reduces manual review burden for recurring false positive patterns
+
+### dailyModerationMicroUpdate (4:30 AM UTC)
+- Scheduled CF that generates RAG chunks from yesterday's moderation disputes
+- Feeds new knowledge into `moderationKnowledge` collection
+- Continuous improvement of moderation accuracy without manual intervention

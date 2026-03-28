@@ -384,7 +384,7 @@ function googlePriceLevelToString(apiPriceLevel) {
  */
 function isValidCoachInstagramHandle(handle) {
   if (!handle || typeof handle !== 'string') return false;
-  const clean = handle.replace(/^@/, '').trim();
+  const clean = handle.replace(/^@/, '').replace(/\.+$/, '').trim();
   if (clean.length < 2 || clean.length > 30) return false;
   // Must match Instagram's handle format: letters, numbers, dots, underscores
   if (!/^[a-zA-Z0-9._]+$/.test(clean)) return false;
@@ -957,7 +957,7 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
     body.includedType = includedTypes[0];
   }
   if (center && center.latitude != null && center.longitude != null) {
-    const radius = radiusMeters || 100000;
+    const radius = Math.min(radiusMeters || 50000, 50000); // Google Places max: 50000m
     if (useRestriction) {
       // locationRestriction requires rectangle (low/high), NOT circle
       const deltaLat = radius / 111320;

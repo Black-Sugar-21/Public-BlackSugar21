@@ -772,3 +772,62 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - `normalizeCategory`/`categoryEmojiMap` removed from `moderation.js`
 - `calculateMidpoint` removed from `events.js`
 - `GoogleGenerativeAI` moved to top-level import in `places-helpers.js`
+
+## Session 2026-03-28 Changes
+
+### Continuous Improvement System (NEW)
+
+#### Self-Evaluation Loop in dateCoachChat
+- Flash-Lite scores each coach response (1-10) on 4 dimensions: specificity, actionability, empathy, safety
+- `sampleRate: 0.3` — evaluates ~30% of responses to control cost
+- Results logged to `coachEvaluations` Firestore collection
+
+#### Dynamic RAG Retrieval Threshold
+- Context-dependent `minScore` thresholds replace single global value:
+  - Places queries: `0.15` (broader retrieval)
+  - Safety queries: `0.50` (stricter relevance)
+  - Default: `0.30`
+
+#### resolveDisputesDaily (3:00 AM UTC)
+- Auto-accepts moderation disputes that match a pattern seen ≥3 times
+- Generates new RAG chunk from resolved dispute pattern
+- Reduces manual review burden
+
+#### dailyCoachMicroUpdate (4:00 AM UTC)
+- Generates 1-3 focused RAG chunks from yesterday's coach interactions
+- Exemplar auto-curation: high-rated responses → `coachExemplars` collection
+
+#### dailyModerationMicroUpdate (4:30 AM UTC)
+- Generates RAG chunks from yesterday's moderation disputes
+- Feeds into `moderationKnowledge` collection
+
+#### RAG Effectiveness Tracking
+- `coachEvaluations` collection: per-response quality scores
+- `ragEffectiveness` collection: tracks retrieval quality metrics
+
+### AI Analytics System (NEW)
+
+#### trackAICall() in shared.js
+- Tracks every Gemini API call: function name, model, tokens (input/output), cost USD, latency ms, errors
+- `MODEL_PRICING` constants for Gemini 2.5 Flash ($1.25/1M input, $10/1M output) and Flash-Lite ($0.075/1M input, $0.30/1M output)
+
+#### aiAnalytics/{date} Firestore Collection
+- Daily aggregates per function and per model
+- Fields: totalCalls, totalTokens, totalCostUSD, avgLatencyMs, errorCount
+
+#### getAIAnalytics Callable CF
+- Dashboard endpoint returning analytics data for date range
+- Used by web `/analytics` page
+
+#### dailyAIHealthCheck (5:00 AM UTC)
+- Alerts for: error rate >5%, cost spikes >2x previous day, latency >5s average
+- Scheduled CF, sends notifications on anomalies
+
+### Coach Credits: dailyCredits 5 → 3
+- RC `coach_daily_credits` default changed from 5 to 3
+- Updated in: Remote Config, iOS hardcoded default, Android hardcoded default, backend `resetCoachMessages`
+
+### Agent SDK (NEW)
+- `@anthropic-ai/claude-agent-sdk` installed (TypeScript)
+- `/team-audit` command orchestrates parallel agent audits
+- `scripts/agents/`: backend-audit.mjs, coach-quality.mjs, moderation-health.mjs, team-run.mjs, schedule-audit.sh

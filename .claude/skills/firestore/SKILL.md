@@ -22,7 +22,7 @@ fcmToken (camelCase exacto), apnsToken (solo iOS), fcmBuildType (solo Android: "
 timezoneOffset (número), timezone (string), deviceLanguage
 dailyLikesRemaining (100), dailyLikesLimit (100), dailyLikesUsedToday
 superLikesRemaining (5), superLikesUsedToday, lastLikeResetDate, lastSuperLikeResetDate
-coachMessagesRemaining (5), lastCoachResetDate
+coachMessagesRemaining (3), lastCoachResetDate
 liked [String], superLiked [String], passed [String], blocked [String], blockedBy [String]
 isOnline, lastSeen, activeChat, activeChatTimestamp, activeMatchId
 paused, visible, pausedAt — pauseAccount: {paused:true, visible:false, pausedAt:serverTimestamp()}
@@ -288,7 +288,7 @@ Created by `respondToDateCheckIn` (SOS) or `processDateCheckIns` (no response). 
 | `enable_screen_protection` | Boolean | true (solo afecta iOS actualmente) |
 | `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` |
 | `coach_max_input_length` | Number | 2000 |
-| `coach_daily_credits` | Number | 5 |
+| `coach_daily_credits` | Number | 3 |
 
 ### Leídas directamente por UI (no via RemoteConfigManager)
 
@@ -589,3 +589,65 @@ cachedAt: Timestamp
 maxCacheAgeMinutes: Number (30)
 ```
 Cache for `getRealtimeCoachTips` results per match. TTL 30 minutes (`maxCacheAgeMinutes`). Prevents redundant Gemini calls when re-opening the same chat.
+
+### `aiAnalytics/{YYYY-MM-DD}` collection (Session 2026-03-28)
+
+```
+functionName: String
+model: String
+totalCalls: Number
+totalInputTokens: Number
+totalOutputTokens: Number
+totalCostUSD: Number
+avgLatencyMs: Number
+errorCount: Number
+updatedAt: Timestamp
+```
+Daily aggregates of Gemini API usage per function and model. Written by `trackAICall()` in `shared.js`.
+
+### `coachEvaluations/{id}` collection (Session 2026-03-28)
+
+```
+userId: String
+matchId: String?
+scores: {specificity: Number, actionability: Number, empathy: Number, safety: Number}
+overallScore: Number (1-10)
+responseSnippet: String
+evaluatedAt: Timestamp
+```
+Self-evaluation results from Flash-Lite scoring of coach responses. `sampleRate: 0.3`.
+
+### `coachExemplars/{id}` collection (Session 2026-03-28)
+
+```
+responseText: String
+scores: {specificity, actionability, empathy, safety}
+overallScore: Number
+topic: String
+language: String
+curatedAt: Timestamp
+```
+Auto-curated high-quality coach responses for exemplar-based learning. Written by `dailyCoachMicroUpdate`.
+
+### `ragEffectiveness/{id}` collection (Session 2026-03-28)
+
+```
+queryType: String ("coach"|"moderation")
+chunksRetrieved: Number
+avgSimilarity: Number
+responseQuality: Number?
+timestamp: Timestamp
+```
+Tracks RAG retrieval quality metrics for continuous improvement.
+
+### `moderationDisputeReviews/{id}` collection (Session 2026-03-28)
+
+```
+originalMessageId: String
+disputeReason: String
+patternCount: Number
+autoResolved: Boolean
+ragChunkGenerated: Boolean
+resolvedAt: Timestamp
+```
+Tracks moderation dispute resolutions. Written by `resolveDisputesDaily` scheduled CF.

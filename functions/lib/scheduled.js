@@ -227,14 +227,14 @@ async function getCoachConfig() {
   } catch (e) {
     logger.warn(`[getCoachConfig] Failed to read Remote Config: ${e.message}`);
   }
-  return {dailyCredits: 5};
+  return {dailyCredits: 3};
 }
 
 /**
  * Scheduled: Reset de mensajes del AI Date Coach diarios.
  * Corre cada hora. Resetea solo usuarios cuya medianoche local ya pasó (usa timezoneOffset).
  * Siempre restaura a 20 mensajes.
- * Solo notifica si el usuario usó mensajes (coachMessagesRemaining < 5).
+ * Solo notifica si el usuario usó mensajes (coachMessagesRemaining < dailyCredits).
  */
 exports.resetCoachMessages = onSchedule(
   {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
@@ -251,13 +251,13 @@ exports.resetCoachMessages = onSchedule(
     const tokensToNotify = [];
 
     // Read daily credits from coach_config (Remote Config) — same source of truth as client-side coach_daily_credits
-    let DAILY_COACH_MESSAGES = 5;
+    let DAILY_COACH_MESSAGES = 3;
     try {
       const config = await getCoachConfig();
       DAILY_COACH_MESSAGES = typeof config.dailyCredits === 'number' && config.dailyCredits >= 1 && config.dailyCredits <= 100
-        ? config.dailyCredits : 5;
+        ? config.dailyCredits : 3;
     } catch (e) {
-      logger.warn('[resetCoachMessages] Failed to read coach_config, using default 5');
+      logger.warn('[resetCoachMessages] Failed to read coach_config, using default 3');
     }
 
     while (resetCount < BATCH_LIMIT) {

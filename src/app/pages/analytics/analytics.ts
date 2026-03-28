@@ -1,10 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { getAuth, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { initializeApp, getApps } from 'firebase/app';
-
-const ADMIN_EMAILS = ['dverdugo85@gmail.com'];
+import { getAuth, signInWithPopup, GoogleAuthProvider, User, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 interface DailyAnalytics {
   date: string;
@@ -18,16 +15,7 @@ interface DailyAnalytics {
   healthCheck?: { errorRate: number; avgLatencyMs: number; alerts: string[] };
 }
 
-interface AnalyticsSummary {
-  totalCalls: number;
-  totalTokens: number;
-  totalCostUsd: number;
-  totalErrors: number;
-  avgLatencyMs: number;
-  errorRate: number;
-  avgCostPerDay: number;
-  days: number;
-}
+const ADMIN_EMAILS = ['dverdugo85@gmail.com'];
 
 @Component({
   selector: 'app-analytics',
@@ -41,38 +29,80 @@ export class AnalyticsComponent implements OnInit {
   isAdmin = signal(false);
   loading = signal(true);
   error = signal('');
-  summary = signal<AnalyticsSummary | null>(null);
   daily = signal<DailyAnalytics[]>([]);
   days = signal(7);
 
+  totalCalls = signal(0);
+  totalTokens = signal(0);
+  totalCostUsd = signal(0);
+  totalErrors = signal(0);
+  avgLatencyMs = signal(0);
+  errorRate = signal(0);
+  avgCostPerDay = signal(0);
+
   ngOnInit() {
     const auth = getAuth();
-    auth.onAuthStateChanged((u) => {
+    onAuthStateChanged(auth, (u) => {
       this.user.set(u);
       this.isAdmin.set(u ? ADMIN_EMAILS.includes(u.email || '') : false);
-      if (this.isAdmin()) this.loadData();
-      else this.loading.set(false);
+      if (this.isAdmin()) {
+        this.loadData();
+      } else {
+        this.loading.set(false);
+      }
     });
   }
 
   async login() {
-    const auth = getAuth();
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    try {
+      const auth = getAuth();
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      this.error.set(err.message || 'Login failed');
+    }
   }
 
   async loadData() {
     this.loading.set(true);
     this.error.set('');
     try {
-      const functions = getFunctions(undefined, 'us-central1');
-      const getAnalytics = httpsCallable(functions, 'getAIAnalytics');
-      const result: any = await getAnalytics({ days: this.days() });
-      this.summary.set(result.data.summary);
-      this.daily.set(result.data.daily || []);
+      const db = getFirestore();
+      const results: DailyAnalytics[] = [];
+
+      for (let i = 0; i < this.days(); i++) {
+        const date = new Date(Date.now() - i * 86400000).toISOString().substring(0, 10);
+        const snap = await getDoc(doc(db, 'aiAnalytics', date));
+        if (snap.exists()) {
+          results.push({ date, ...snap.data() } as DailyAnalytics);
+        }
+      }
+
+      this.daily.set(results);
+      this.computeSummary(results);
     } catch (err: any) {
       this.error.set(err.message);
     }
     this.loading.set(false);
+  }
+
+  computeSummary(results: DailyAnalytics[]) {
+    let calls = 0, tokens = 0, cost = 0, errors = 0, latency = 0;
+    for (const d of results) {
+      calls += d.totalCalls || 0;
+      tokens += d.totalTokens || 0;
+      cost += d.totalCostUsd || 0;
+      errors += d.totalErrors || 0;
+      latency += d.totalLatencyMs || 0;
+    }
+    this.totalCalls.set(calls);
+    this.totalTokens.set(tokens);
+    this.totalCostUsd.set(cost);
+    this.totalErrors.set(errors);
+    this.avgLatencyMs.set(calls > 0 ? Math.round(latency / calls) : 0);
+    this.errorRate.set(calls > 0 ? Math.round((errors / calls) * 10000) / 100 : 0);
+    this.avgCostPerDay.set(results.length > 0 ? cost / results.length : 0);
   }
 
   setDays(d: number) {
@@ -111,8 +141,18 @@ export class AnalyticsComponent implements OnInit {
   }
 
   formatTokens(n: number): string {
+    if (!n) return '0';
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
     if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-    return String(n || 0);
+    return String(n);
+  }
+
+  calcLatency(day: DailyAnalytics): number {
+    return day.totalCalls > 0 ? Math.round(day.totalLatencyMs / day.totalCalls) : 0;
+  }
+
+  async logout() {
+    const auth = getAuth();
+    await auth.signOut();
   }
 }

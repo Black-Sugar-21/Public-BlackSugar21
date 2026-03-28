@@ -100,7 +100,7 @@ async function getCoachConfig() {
   }
   const defaults = {
     enabled: true,
-    dailyCredits: 5,
+    dailyCredits: 3,
     maxMessageLength: 2000,
     historyLimit: 10,
     maxActivities: 30,
@@ -659,7 +659,7 @@ exports.dateCoachChat = onCall(
       const creditDoc = await userRefForCredits.get();
       const creditData = creditDoc.exists ? creditDoc.data() : {};
       const coachMessagesRemaining = typeof creditData.coachMessagesRemaining === 'number'
-        ? creditData.coachMessagesRemaining : 5;
+        ? creditData.coachMessagesRemaining : (config.dailyCredits || 3);
 
       if (!loadMoreActivities && coachMessagesRemaining <= 0) {
         const noCreditsMsg = {
@@ -2865,10 +2865,11 @@ exports.getCoachHistory = onCall(
       messages.reverse();
 
       const userDocForCredits = await db.collection('users').doc(userId).get();
+      const dailyCreditsDefault = config.dailyCredits || 3;
       const currentCredits = userDocForCredits.exists
         ? (typeof userDocForCredits.data().coachMessagesRemaining === 'number'
-          ? userDocForCredits.data().coachMessagesRemaining : 5)
-        : 5;
+          ? userDocForCredits.data().coachMessagesRemaining : dailyCreditsDefault)
+        : dailyCreditsDefault;
 
       logger.info(`[getCoachHistory] Returned ${messages.length} messages for user ${userId}` +
         (beforeTimestamp ? ` (before ${beforeTimestamp})` : ''));
