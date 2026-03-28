@@ -43,7 +43,9 @@ Return ONLY a JSON array of strings from this list (exact keys):
 ${JSON.stringify(validInterests)}
 Return only the JSON array, no explanation.`;
 
+      const _aiStart = Date.now();
       const result = await model.generateContent(prompt);
+      trackAICall({functionName: 'generateInterestSuggestions', model: AI_MODEL_LITE, operation: 'interests', usage: result.response.usageMetadata, latencyMs: Date.now() - _aiStart});
       const responseText = result.response.text().trim();
       logger.info(`[generateInterestSuggestions] Gemini response: ${responseText.substring(0, 200)}`);
 
@@ -535,10 +537,12 @@ Return ONLY a JSON object:
   "engagementTip": "..."
 }`;
 
+      const _srStart = Date.now();
       const result = await model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
         generationConfig: {maxOutputTokens: 512, temperature: 0.85},
       });
+      trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart});
 
       const text = result.response.text();
       const parsed = parseGeminiJsonResponse(text);

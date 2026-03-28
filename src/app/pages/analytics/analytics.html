@@ -1,0 +1,164 @@
+<div class="analytics-page">
+  <div class="analytics-header">
+    <h1>Black Sugar 21 — AI Analytics</h1>
+    <p class="subtitle">Real-time cost, performance & health monitoring</p>
+  </div>
+
+  @if (!isAdmin()) {
+    <div class="login-card">
+      <h2>Admin Access Required</h2>
+      <button class="btn-gold" (click)="login()">Sign in with Google</button>
+      @if (user() && !isAdmin()) {
+        <p class="error-text">{{ user()?.email }} is not an admin</p>
+      }
+    </div>
+  } @else {
+    <!-- Period selector -->
+    <div class="period-selector">
+      <button [class.active]="days() === 1" (click)="setDays(1)">Today</button>
+      <button [class.active]="days() === 7" (click)="setDays(7)">7 days</button>
+      <button [class.active]="days() === 14" (click)="setDays(14)">14 days</button>
+      <button [class.active]="days() === 30" (click)="setDays(30)">30 days</button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading">Loading analytics...</div>
+    } @else if (error()) {
+      <div class="error-card">{{ error() }}</div>
+    } @else if (summary()) {
+      <!-- Alerts -->
+      @if (getAlerts().length > 0) {
+        <div class="alerts-card">
+          <h3>Alerts</h3>
+          @for (alert of getAlerts(); track alert) {
+            <div class="alert-item">{{ alert }}</div>
+          }
+        </div>
+      }
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value">{{ summary()!.totalCalls }}</div>
+          <div class="kpi-label">Total API Calls</div>
+          <div class="kpi-sub">{{ days() }} day{{ days() > 1 ? 's' : '' }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">{{ formatTokens(summary()!.totalTokens) }}</div>
+          <div class="kpi-label">Tokens Used</div>
+          <div class="kpi-sub">Input + Output</div>
+        </div>
+        <div class="kpi-card cost">
+          <div class="kpi-value">{{ formatCost(summary()!.totalCostUsd) }}</div>
+          <div class="kpi-label">Total Cost</div>
+          <div class="kpi-sub">Avg {{ formatCost(summary()!.avgCostPerDay) }}/day</div>
+        </div>
+        <div class="kpi-card" [class.error]="summary()!.errorRate > 5">
+          <div class="kpi-value">{{ summary()!.errorRate }}%</div>
+          <div class="kpi-label">Error Rate</div>
+          <div class="kpi-sub">{{ summary()!.totalErrors }} errors</div>
+        </div>
+        <div class="kpi-card" [class.warning]="summary()!.avgLatencyMs > 3000">
+          <div class="kpi-value">{{ summary()!.avgLatencyMs }}ms</div>
+          <div class="kpi-label">Avg Latency</div>
+          <div class="kpi-sub">Per API call</div>
+        </div>
+      </div>
+
+      <!-- Daily Trend -->
+      <div class="section-card">
+        <h3>Daily Trend</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Calls</th>
+                <th>Tokens</th>
+                <th>Cost</th>
+                <th>Errors</th>
+                <th>Avg Latency</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (day of daily(); track day.date) {
+                <tr>
+                  <td>{{ day.date }}</td>
+                  <td>{{ day.totalCalls }}</td>
+                  <td>{{ formatTokens(day.totalTokens) }}</td>
+                  <td>{{ formatCost(day.totalCostUsd) }}</td>
+                  <td [class.error-cell]="(day.totalErrors / (day.totalCalls || 1)) > 0.05">{{ day.totalErrors }}</td>
+                  <td>{{ day.totalCalls > 0 ? (day.totalLatencyMs / day.totalCalls | number:'1.0-0') : 0 }}ms</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Per-Function Breakdown (latest day) -->
+      @if (getFunctionNames().length > 0) {
+        <div class="section-card">
+          <h3>Per-Function Breakdown ({{ daily()[0]?.date }})</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Function</th>
+                  <th>Calls</th>
+                  <th>Tokens</th>
+                  <th>Cost</th>
+                  <th>Errors</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fn of getFunctionNames(); track fn) {
+                  <tr>
+                    <td class="fn-name">{{ fn }}</td>
+                    <td>{{ getFunctionData(fn).calls }}</td>
+                    <td>{{ formatTokens(getFunctionData(fn).tokens) }}</td>
+                    <td>{{ formatCost(getFunctionData(fn).costUsd) }}</td>
+                    <td [class.error-cell]="getFunctionData(fn).errors > 0">{{ getFunctionData(fn).errors }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Per-Model Breakdown -->
+      @if (getModelNames().length > 0) {
+        <div class="section-card">
+          <h3>Per-Model Breakdown ({{ daily()[0]?.date }})</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Calls</th>
+                  <th>Tokens</th>
+                  <th>Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of getModelNames(); track m) {
+                  <tr>
+                    <td class="fn-name">{{ m.replace('_', '.') }}</td>
+                    <td>{{ getModelData(m).calls }}</td>
+                    <td>{{ formatTokens(getModelData(m).tokens) }}</td>
+                    <td>{{ formatCost(getModelData(m).costUsd) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  }
+
+  <div class="footer-link">
+    <a href="/">Back to Black Sugar 21</a>
+  </div>
+</div>

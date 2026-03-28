@@ -1,0 +1,259 @@
+.analytics-page {
+  min-height: 100vh;
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Outfit', Arial, sans-serif;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.analytics-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.analytics-header h1 {
+  font-size: 28px;
+  color: #D4AF37;
+  margin: 0;
+}
+
+.subtitle {
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.login-card {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.login-card h2 {
+  color: #D4AF37;
+  margin-bottom: 20px;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #B8860B, #D4AF37);
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-gold:hover {
+  transform: scale(1.02);
+}
+
+.error-text {
+  color: #FF4457;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.period-selector {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.period-selector button {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.period-selector button.active {
+  background: linear-gradient(135deg, #B8860B, #D4AF37);
+  color: white;
+  border-color: #D4AF37;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: rgba(255,255,255,0.5);
+}
+
+.error-card {
+  background: rgba(255,68,87,0.1);
+  border: 1px solid #FF4457;
+  border-radius: 12px;
+  padding: 16px;
+  color: #FF4457;
+  text-align: center;
+}
+
+.alerts-card {
+  background: rgba(255,68,87,0.08);
+  border: 1px solid rgba(255,68,87,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.alerts-card h3 {
+  color: #FF4457;
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+.alert-item {
+  color: #FF8A95;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,68,87,0.1);
+}
+
+.alert-item:last-child {
+  border-bottom: none;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+}
+
+.kpi-card.cost {
+  border-color: rgba(212,175,55,0.3);
+  background: rgba(212,175,55,0.05);
+}
+
+.kpi-card.error {
+  border-color: rgba(255,68,87,0.3);
+  background: rgba(255,68,87,0.05);
+}
+
+.kpi-card.warning {
+  border-color: rgba(255,165,0,0.3);
+  background: rgba(255,165,0,0.05);
+}
+
+.kpi-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #D4AF37;
+  line-height: 1.2;
+}
+
+.kpi-card.error .kpi-value {
+  color: #FF4457;
+}
+
+.kpi-card.warning .kpi-value {
+  color: #FFA500;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
+}
+
+.kpi-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+}
+
+.section-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.section-card h3 {
+  color: #D4AF37;
+  margin: 0 0 16px 0;
+  font-size: 16px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.5);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-weight: 500;
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.8);
+}
+
+tr:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+.fn-name {
+  font-family: monospace;
+  color: #D4AF37;
+  font-size: 12px;
+}
+
+.error-cell {
+  color: #FF4457;
+  font-weight: 600;
+}
+
+.footer-link {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+}
+
+.footer-link a {
+  color: rgba(255,255,255,0.4);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.footer-link a:hover {
+  color: #D4AF37;
+}
+
+@media (max-width: 600px) {
+  .analytics-page {
+    padding: 16px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-value {
+    font-size: 24px;
+  }
+}
