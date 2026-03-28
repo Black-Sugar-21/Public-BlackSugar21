@@ -983,14 +983,39 @@ export class TranslationService {
       pt: 'Solicitar acesso',
     },
     'tester.success': {
-      es: '¡Registro exitoso! Toca el botón para unirte a la prueba e instalar la app.',
-      en: 'Registration successful! Tap the button to join the test and install the app.',
-      pt: 'Registro bem-sucedido! Toque o botão para entrar no teste e instalar o app.',
+      es: '¡Registro exitoso!',
+      en: 'Registration successful!',
+      pt: 'Registro bem-sucedido!',
+    },
+    'tester.instructions': {
+      es: 'Únete al grupo que se abrió en otra pestaña, luego descarga la app aquí.',
+      en: 'Join the group that opened in another tab, then download the app here.',
+      pt: 'Entre no grupo que abriu em outra aba, depois baixe o app aqui.',
+    },
+    'tester.ready': {
+      es: 'Ya puedes descargar la app.',
+      en: 'You can now download the app.',
+      pt: 'Agora você pode baixar o app.',
+    },
+    'tester.step1': {
+      es: 'Únete al grupo de testers (requerido)',
+      en: 'Join the testers group (required)',
+      pt: 'Entre no grupo de testers (obrigatório)',
+    },
+    'tester.joinGroup': {
+      es: '👥 Unirse al grupo de testers',
+      en: '👥 Join the testers group',
+      pt: '👥 Entrar no grupo de testers',
+    },
+    'tester.step2': {
+      es: 'Acepta la invitación y descarga',
+      en: 'Accept the invitation and download',
+      pt: 'Aceite o convite e baixe',
     },
     'tester.install': {
-      es: '🚀 Instalar desde Google Play',
-      en: '🚀 Install from Google Play',
-      pt: '🚀 Instalar do Google Play',
+      es: '🚀 Descargar Black Sugar 21',
+      en: '🚀 Download Black Sugar 21',
+      pt: '🚀 Baixar Black Sugar 21',
     },
     'tester.error': {
       es: 'Ingresa un correo válido de Google',

@@ -21,6 +21,7 @@ export class App implements OnInit {
   showTesterModal = signal(false);
   testerEmail = signal('');
   testerStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
+  testerJoinedGroup = signal(false);
 
   constructor(
     public translate: TranslationService,
@@ -177,6 +178,7 @@ export class App implements OnInit {
     this.testerStatus.set('loading');
 
     try {
+      // 1. Save to Firestore
       const { getFirestore, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
       const db = getFirestore();
       await addDoc(collection(db, 'testerSignups'), {
@@ -186,7 +188,9 @@ export class App implements OnInit {
         createdAt: serverTimestamp(),
         language: this.translate.currentLanguage(),
       });
-      this.testerStatus.set('success');
+
+      // 2. Redirect directly to Play Store testing opt-in
+      window.location.href = 'https://play.google.com/apps/testing/com.black.sugar21';
     } catch (err) {
       console.error('Tester signup error:', err);
       this.testerStatus.set('error');

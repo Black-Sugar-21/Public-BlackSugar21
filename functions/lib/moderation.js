@@ -1180,7 +1180,32 @@ exports.updateModerationKnowledge = onSchedule(
         });
       }
 
-      // 3. Generate new RAG chunks with Search Grounding for latest scam patterns
+      // 3. Cross-learning: read coach insights to understand normal communication patterns
+      const coachContext = [];
+      try {
+        const coachUpdates = await db.collection('coachInsights').doc('ragUpdates').get();
+        if (coachUpdates.exists) {
+          const cd = coachUpdates.data();
+          if (cd.weakestTopics?.length > 0) coachContext.push(`Coach weak topics: ${cd.weakestTopics.join(', ')}`);
+          if (cd.satisfactionRateAtUpdate) coachContext.push(`Coach satisfaction: ${cd.satisfactionRateAtUpdate}%`);
+        }
+        // Read what topics users discuss most (to calibrate what's "normal")
+        const recentCoachMsgs = await db.collectionGroup('messages')
+          .orderBy('timestamp', 'desc')
+          .limit(30)
+          .get();
+        const topicCounts = {};
+        for (const m of recentCoachMsgs.docs) {
+          const topic = m.data().topic;
+          if (topic) topicCounts[topic] = (topicCounts[topic] || 0) + 1;
+        }
+        const topTopics = Object.entries(topicCounts).sort(([, a], [, b]) => b - a).slice(0, 5);
+        if (topTopics.length > 0) coachContext.push(`Most discussed coach topics: ${topTopics.map(([t, c]) => `${t}(${c})`).join(', ')}`);
+      } catch (cErr) {
+        logger.warn(`[updateModerationKnowledge] Could not read coach context: ${cErr.message}`);
+      }
+
+      // 4. Generate new RAG chunks with Search Grounding for latest scam patterns
       const {GoogleGenerativeAI} = require('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -1223,7 +1248,13 @@ exports.updateModerationKnowledge = onSchedule(
         prompt += '\n\n';
       }
 
-      prompt += `Based on all the above data (disputes, user reports, and your knowledge of current online dating scam trends), generate 3-7 new moderation knowledge chunks.
+      if (coachContext.length > 0) {
+        prompt += `COACH CROSS-LEARNING (understand what normal conversations look like):
+${coachContext.join('\n')}
+These topics are NORMAL in sugar dating — do NOT flag them as violations.\n\n`;
+      }
+
+      prompt += `Based on all the above data (disputes, user reports, coach context, and your knowledge of current online dating scam trends), generate 3-7 new moderation knowledge chunks.
 
 Focus on:
 1. REDUCE FALSE POSITIVES — rules that prevent flagging normal sugar dating conversation
@@ -1288,9 +1319,12 @@ Return JSON:
         chunksAdded: added,
         totalFalsePositiveDisputes: falsePositives.length,
         totalMissedThreatDisputes: missedThreats.length,
+        totalUserReports: userReportedPatterns.length,
+        searchGroundingUsed: enableSearch,
+        crossLearningFromCoach: coachContext.length > 0,
       }, {merge: true});
 
-      logger.info(`[updateModerationKnowledge] Added ${added} chunks from ${falsePositives.length} FP + ${missedThreats.length} MT disputes`);
+      logger.info(`[updateModerationKnowledge] Added ${added} chunks (FP: ${falsePositives.length}, MT: ${missedThreats.length}, reports: ${userReportedPatterns.length}, search: ${enableSearch}, coachCtx: ${coachContext.length})`);
     } catch (err) {
       logger.error(`[updateModerationKnowledge] Error: ${err.message}`);
     }

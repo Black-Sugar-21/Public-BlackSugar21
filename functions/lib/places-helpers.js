@@ -438,6 +438,398 @@ function sanitizeInstagramHandle(raw) {
 }
 
 /**
+ * Extract Instagram handle from a venue's website HTML.
+ * Fetches the website and searches for Instagram links.
+ * @param {string} websiteUrl - the venue's website URL
+ * @returns {Promise<string|null>} Instagram handle or null
+ */
+async function extractInstagramFromWebsite(websiteUrl) {
+  if (!websiteUrl || typeof websiteUrl !== 'string') return null;
+  // Skip URLs that are already social media (not a venue website)
+  if (/instagram\.com|facebook\.com|tiktok\.com|twitter\.com|x\.com/i.test(websiteUrl)) {
+    const directMatch = websiteUrl.match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
+    return directMatch ? sanitizeInstagramHandle(directMatch[1]) : null;
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(websiteUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,es;q=0.9',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+
+    // Only read first 100KB to avoid large pages
+    const reader = res.body?.getReader?.();
+    let html = '';
+    if (reader) {
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      while (bytes < 102400) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        html += decoder.decode(value, {stream: true});
+        bytes += value.length;
+      }
+      reader.cancel().catch(() => {});
+    } else {
+      const full = await res.text();
+      html = full.substring(0, 102400);
+    }
+
+    // Priority 1: href links to Instagram (most reliable — actual links in HTML)
+    const hrefPattern = /href=["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:\?[^"']*)?["']/gi;
+    const hrefMatches = [...html.matchAll(hrefPattern)];
+    for (const match of hrefMatches) {
+      const handle = sanitizeInstagramHandle(match[1]);
+      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
+        logger.info(`[Instagram] Found @${handle} via href from: ${websiteUrl}`);
+        return handle;
+      }
+    }
+
+    // Priority 2: Instagram URLs anywhere in HTML (JS variables, data attributes, meta tags)
+    const urlPattern = /instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:[\s"'<?,;)])/gi;
+    const urlMatches = [...html.matchAll(urlPattern)];
+    for (const match of urlMatches) {
+      const handle = sanitizeInstagramHandle(match[1]);
+      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
+        logger.info(`[Instagram] Found @${handle} via URL from: ${websiteUrl}`);
+        return handle;
+      }
+    }
+
+    // Priority 3: og:see_also or meta tags with Instagram
+    const metaPattern = /content=["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?["']/gi;
+    const metaMatches = [...html.matchAll(metaPattern)];
+    for (const match of metaMatches) {
+      const handle = sanitizeInstagramHandle(match[1]);
+      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
+        logger.info(`[Instagram] Found @${handle} via meta from: ${websiteUrl}`);
+        return handle;
+      }
+    }
+
+    // Priority 4: JSON-LD structured data (schema.org sameAs)
+    const jsonLdPattern = /"sameAs"\s*:\s*\[([^\]]*)\]/gi;
+    const jsonLdMatches = [...html.matchAll(jsonLdPattern)];
+    for (const match of jsonLdMatches) {
+      const igInLd = match[1].match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
+      if (igInLd) {
+        const handle = sanitizeInstagramHandle(igInLd[1]);
+        if (handle) {
+          logger.info(`[Instagram] Found @${handle} via JSON-LD from: ${websiteUrl}`);
+          return handle;
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    // Timeout or fetch error — silently return null
+    return null;
+  }
+}
+
+/**
+ * Find Instagram handle via Gemini Search Grounding.
+ * Uses Google Search to find the real Instagram account.
+ * @param {string} placeName - name of the place
+ * @param {string} placeAddress - address for disambiguation
+ * @param {string} apiKey - Gemini API key
+ * @returns {Promise<string|null>} Instagram handle or null
+ */
+async function findInstagramViaSearch(placeName, placeAddress, apiKey) {
+  if (!placeName || !apiKey) return null;
+  try {
+    const {GoogleGenerativeAI} = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite',
+      generationConfig: {maxOutputTokens: 100, temperature: 0},
+      tools: [{googleSearch: {}}],
+    });
+    const prompt = `What is the exact Instagram handle (username) for "${placeName}" located at "${placeAddress}"? Reply with ONLY the handle without @. If you cannot find it, reply with "null".`;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim().replace(/^@/, '');
+    const handle = sanitizeInstagramHandle(text);
+    if (handle) {
+      logger.info(`[Instagram] Found @${handle} via Search Grounding for: ${placeName}`);
+    }
+    return handle;
+  } catch (err) {
+    logger.warn(`[Instagram] Search Grounding error for ${placeName}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Scrape public Instagram profile metrics.
+ * Fetches the profile page and extracts followers, posts, last post date.
+ * Returns metrics for ranking or null if profile is private/unavailable.
+ *
+ * @param {string} handle - Instagram handle (without @)
+ * @returns {Promise<Object|null>} { followers, posts, lastPostDate, isActive, igScore } or null
+ */
+async function scrapeInstagramMetrics(handle) {
+  if (!handle) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const url = `https://www.instagram.com/${handle}/`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+
+    // Read only first 150KB
+    const reader = res.body?.getReader?.();
+    let html = '';
+    if (reader) {
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      while (bytes < 153600) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        html += decoder.decode(value, {stream: true});
+        bytes += value.length;
+      }
+      reader.cancel().catch(() => {});
+    } else {
+      const full = await res.text();
+      html = full.substring(0, 153600);
+    }
+
+    let followers = null;
+    let posts = null;
+    let description = null;
+
+    // Method 1: meta description tag (most reliable on public profiles)
+    // Format: "X Followers, Y Following, Z Posts - See Instagram photos and videos from Name (@handle)"
+    const metaDesc = html.match(/<meta\s+(?:name|property)=["']description["']\s+content=["']([^"']+)["']/i);
+    if (metaDesc) {
+      description = metaDesc[1];
+      // Parse followers: "1.2M Followers" or "12K Followers" or "1,234 Followers"
+      const followersMatch = description.match(/([\d,.]+[KMB]?)\s*Followers/i);
+      if (followersMatch) followers = parseMetricValue(followersMatch[1]);
+      // Parse posts: "Z Posts"
+      const postsMatch = description.match(/([\d,.]+[KMB]?)\s*Posts/i);
+      if (postsMatch) posts = parseMetricValue(postsMatch[1]);
+    }
+
+    // Method 2: og:description (fallback)
+    if (followers === null) {
+      const ogDesc = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
+      if (ogDesc) {
+        const followersMatch = ogDesc[1].match(/([\d,.]+[KMB]?)\s*Followers/i);
+        if (followersMatch) followers = parseMetricValue(followersMatch[1]);
+        const postsMatch = ogDesc[1].match(/([\d,.]+[KMB]?)\s*Posts/i);
+        if (postsMatch) posts = parseMetricValue(postsMatch[1]);
+      }
+    }
+
+    // Method 3: JSON-LD structured data
+    const jsonLdMatch = html.match(/<script\s+type=["']application\/ld\+json["']>([^<]+)<\/script>/i);
+    if (jsonLdMatch) {
+      try {
+        const ld = JSON.parse(jsonLdMatch[1]);
+        if (ld.mainEntityofPage?.interactionStatistic) {
+          for (const stat of ld.mainEntityofPage.interactionStatistic) {
+            if (stat.interactionType === 'http://schema.org/FollowAction') {
+              followers = followers || parseInt(stat.userInteractionCount, 10) || null;
+            }
+          }
+        }
+      } catch (ldErr) { /* ignore parse errors */ }
+    }
+
+    // Method 4: Look for datetime of recent posts
+    let lastPostDate = null;
+    const dateMatch = html.match(/<time[^>]*datetime=["']([^"']+)["']/i);
+    if (dateMatch) {
+      lastPostDate = dateMatch[1];
+    }
+
+    // If we couldn't extract anything, profile is likely private or page structure changed
+    if (followers === null && posts === null) {
+      // Check if it's private
+      const isPrivate = html.includes('"is_private":true') || html.includes('This Account is Private');
+      if (isPrivate) {
+        logger.info(`[Instagram] @${handle} is private`);
+        return {followers: null, posts: null, lastPostDate: null, isActive: null, isPrivate: true, igScore: 0};
+      }
+      return null;
+    }
+
+    // Calculate igScore (0-100) for ranking
+    const now = Date.now();
+    let recencyScore = 50; // default if no date
+    if (lastPostDate) {
+      const daysSincePost = (now - new Date(lastPostDate).getTime()) / 86400000;
+      if (daysSincePost <= 7) recencyScore = 100;
+      else if (daysSincePost <= 30) recencyScore = 80;
+      else if (daysSincePost <= 90) recencyScore = 50;
+      else if (daysSincePost <= 180) recencyScore = 25;
+      else recencyScore = 10;
+    }
+
+    let followersScore = 30; // default
+    if (followers !== null) {
+      if (followers >= 100000) followersScore = 100;
+      else if (followers >= 10000) followersScore = 80;
+      else if (followers >= 1000) followersScore = 60;
+      else if (followers >= 500) followersScore = 40;
+      else if (followers >= 100) followersScore = 20;
+      else followersScore = 10;
+    }
+
+    let postsScore = 30;
+    if (posts !== null) {
+      if (posts >= 500) postsScore = 100;
+      else if (posts >= 100) postsScore = 70;
+      else if (posts >= 30) postsScore = 50;
+      else if (posts >= 10) postsScore = 30;
+      else postsScore = 10;
+    }
+
+    // Weighted: recency 40%, followers 40%, posts 20%
+    const igScore = Math.round(recencyScore * 0.4 + followersScore * 0.4 + postsScore * 0.2);
+
+    const isActive = lastPostDate ? (now - new Date(lastPostDate).getTime()) < 90 * 86400000 : null;
+
+    logger.info(`[Instagram] @${handle}: ${followers || '?'} followers, ${posts || '?'} posts, lastPost: ${lastPostDate || '?'}, igScore: ${igScore}`);
+
+    return {followers, posts, lastPostDate, isActive, isPrivate: false, igScore};
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Parse metric values like "1.2K", "3.4M", "1,234" to integers.
+ */
+function parseMetricValue(str) {
+  if (!str) return null;
+  const clean = str.replace(/,/g, '').trim();
+  const multipliers = {K: 1000, M: 1000000, B: 1000000000};
+  const match = clean.match(/^([\d.]+)([KMB])?$/i);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  const mult = match[2] ? multipliers[match[2].toUpperCase()] : 1;
+  return Math.round(num * mult);
+}
+
+/**
+ * Resolve Instagram handle using a multi-step pipeline:
+ * 1. Cache (Firestore) — if exists and < 30 days, use it
+ * 2. Website scraping — extract from venue's websiteUri
+ * 3. Gemini Search Grounding — search Google for the handle
+ * 4. Gemini guess (existing) — fallback with blocklist validation
+ *
+ * @param {Object} params
+ * @param {string} params.placeId - Google Places ID
+ * @param {string} params.placeName - place name
+ * @param {string} params.placeAddress - place address
+ * @param {string|null} params.websiteUrl - venue website URL
+ * @param {string|null} params.geminiGuess - handle guessed by Gemini (from coach)
+ * @param {string} params.apiKey - Gemini API key
+ * @returns {Promise<{handle: string|null, metrics: Object|null}>} handle + metrics
+ */
+async function resolveInstagramHandle({placeId, placeName, placeAddress, websiteUrl, geminiGuess, apiKey}) {
+  const db = admin.firestore();
+  const CACHE_DAYS = 30;
+
+  // Step 1: Check cache (return handle + cached metrics)
+  if (placeId) {
+    try {
+      const cached = await db.collection('placeInstagram').doc(placeId).get();
+      if (cached.exists) {
+        const data = cached.data();
+        const age = Date.now() - (data.verifiedAt?.toMillis?.() || 0);
+        if (age < CACHE_DAYS * 86400000) {
+          return {
+            handle: data.instagram || null,
+            metrics: data.igScore != null ? {
+              followers: data.followers, posts: data.posts,
+              lastPostDate: data.lastPostDate, isActive: data.isActive,
+              isPrivate: data.isPrivate, igScore: data.igScore,
+            } : null,
+          };
+        }
+      }
+    } catch (cacheErr) {
+      // Cache read failed, continue to other methods
+    }
+  }
+
+  let handle = null;
+  let source = null;
+
+  // Step 2: Try website scraping
+  if (!handle && websiteUrl) {
+    handle = await extractInstagramFromWebsite(websiteUrl);
+    if (handle) source = 'website';
+  }
+
+  // Step 3: Try Gemini Search Grounding
+  if (!handle && apiKey) {
+    handle = await findInstagramViaSearch(placeName, placeAddress || '', apiKey);
+    if (handle) source = 'search';
+  }
+
+  // Step 4: Fallback to Gemini guess (already validated by sanitize)
+  if (!handle && geminiGuess) {
+    handle = sanitizeInstagramHandle(geminiGuess);
+    if (handle) source = 'gemini';
+  }
+
+  // Scrape Instagram metrics for ranking
+  let metrics = null;
+  if (handle) {
+    metrics = await scrapeInstagramMetrics(handle);
+  }
+
+  // Save to cache with metrics
+  if (placeId && handle) {
+    try {
+      await db.collection('placeInstagram').doc(placeId).set({
+        placeId,
+        placeName: placeName || '',
+        instagram: handle,
+        source,
+        verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        websiteUrl: websiteUrl || null,
+        ...(metrics ? {
+          followers: metrics.followers,
+          posts: metrics.posts,
+          lastPostDate: metrics.lastPostDate || null,
+          isActive: metrics.isActive,
+          isPrivate: metrics.isPrivate || false,
+          igScore: metrics.igScore || 0,
+        } : {}),
+      });
+    } catch (saveErr) {
+      logger.warn(`[Instagram] Cache save error: ${saveErr.message}`);
+    }
+  }
+
+  return {handle, metrics};
+}
+
+/**
  * Validate a website URL is well-formed.
  * @param {*} raw - raw value
  * @returns {string|null} valid URL or null
@@ -737,6 +1129,48 @@ function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, place
  * Usa patrón multi-query paralelo (como Coach IA) para obtener más resultados variados.
  */
 
+/**
+ * Combined ranking score for a place using Google Places + Instagram metrics.
+ * Higher = better. Returns 0-100.
+ *
+ * Weights: Google rating 30%, review count 25%, igScore 30%, IG freshness 15%
+ *
+ * @param {Object} params
+ * @param {number|null} params.rating - Google Places rating (0-5)
+ * @param {number|null} params.reviewCount - Google Places total reviews
+ * @param {Object|null} params.igMetrics - from scrapeInstagramMetrics()
+ * @returns {number} 0-100
+ */
+function calculatePlaceScore({rating = null, reviewCount = null, igMetrics = null}) {
+  // Google rating (0-5 → 0-100)
+  const gRating = rating != null ? (rating / 5) * 100 : 0;
+
+  // Google reviews (log-scaled, penalize <5 as unreliable/potentially old)
+  let gReviews = 0;
+  if (reviewCount != null && reviewCount > 0) {
+    gReviews = Math.min(100, (Math.log10(reviewCount) / 3) * 100);
+    if (reviewCount < 5) gReviews *= 0.5;
+  }
+
+  // Instagram igScore (0-100, already computed by scrapeInstagramMetrics)
+  const igScore = igMetrics?.igScore || 0;
+
+  // Instagram freshness: last post date → activity signal
+  let freshness = 0;
+  if (igMetrics && igMetrics.igScore > 0) {
+    freshness = 50; // bonus for having IG at all
+    if (igMetrics.lastPostDate) {
+      const days = (Date.now() - new Date(igMetrics.lastPostDate).getTime()) / 86400000;
+      if (days <= 30) freshness = 100;
+      else if (days <= 90) freshness = 75;
+      else if (days <= 180) freshness = 50;
+      else freshness = 25;
+    }
+  }
+
+  return Math.round(gRating * 0.30 + gReviews * 0.25 + igScore * 0.30 + freshness * 0.15);
+}
+
 // --- Exported helpers (used by coach.js and places.js) ---
 module.exports = {
   calculateMidpoint,
@@ -749,6 +1183,8 @@ module.exports = {
   googlePriceLevelToString,
   isValidCoachInstagramHandle,
   sanitizeInstagramHandle,
+  resolveInstagramHandle,
+  calculatePlaceScore,
   sanitizeWebsiteUrl,
   placesTextSearch,
   transformPlaceToSuggestion,

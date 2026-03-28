@@ -323,9 +323,31 @@
         <h2 class="modal-title">{{ t('tester.title') }}</h2>
         <p class="modal-subtitle">{{ t('tester.subtitle') }}</p>
 
-        <a href="https://play.google.com/apps/testing/com.black.sugar21" target="_blank" class="modal-button" style="display:block; text-decoration:none; margin-top:24px; text-align:center;">
-          {{ t('tester.install') }}
-        </a>
+        @if (testerStatus() === 'success') {
+          <div style="margin-top:20px; text-align:center;">
+            <div style="font-size:48px; margin-bottom:12px;">✅</div>
+            <p class="modal-success-text">{{ t('tester.success') }}</p>
+            <p style="color: rgba(255,255,255,0.6); font-size:13px; margin-top:12px; line-height:1.5;">{{ t('tester.instructions') }}</p>
+
+            <a href="https://play.google.com/apps/testing/com.black.sugar21" target="_blank" class="modal-button" style="display:block; text-decoration:none; margin-top:20px; text-align:center;">
+              {{ t('tester.install') }}
+            </a>
+          </div>
+        } @else {
+          <div style="margin-top:20px;">
+            <input #testerInput type="email" class="modal-input" [placeholder]="t('tester.placeholder')" (input)="testerEmail.set(testerInput.value)" (keydown.enter)="requestBetaAccess()">
+            <button class="modal-button" style="margin-top:12px; width:100%;" [disabled]="testerStatus() === 'loading'" (click)="requestBetaAccess()">
+              @if (testerStatus() === 'loading') {
+                ...
+              } @else {
+                {{ t('tester.button') }}
+              }
+            </button>
+            @if (testerStatus() === 'error') {
+              <p class="modal-error-text">{{ t('tester.error') }}</p>
+            }
+          </div>
+        }
 
         <p class="modal-footer-text">{{ t('tester.footer') }}</p>
       </div>

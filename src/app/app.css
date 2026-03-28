@@ -1691,6 +1691,57 @@ a:hover {
   line-height: 1.6;
 }
 
+.modal-success-text {
+  color: var(--gold, #D4AF37);
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.modal-error-text {
+  color: #FF4457;
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.tester-steps {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.tester-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dark, #B8860B), var(--gold, #D4AF37));
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.modal-button-outline {
+  background: transparent !important;
+  border: 1px solid var(--gold, #D4AF37) !important;
+  color: var(--gold, #D4AF37) !important;
+}
+
 .modal-footer-text {
   color: var(--text-muted, #888);
   font-size: 12px;

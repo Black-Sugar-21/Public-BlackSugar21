@@ -10,7 +10,7 @@ const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo')
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
   fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,
-  googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
+  googlePriceLevelToString, sanitizeInstagramHandle, resolveInstagramHandle, calculatePlaceScore, sanitizeWebsiteUrl,
   placesTextSearch, transformPlaceToSuggestion, CATEGORY_TO_PLACES_TYPE,
 } = require('./places-helpers');
 const { fetchLocalEvents, getUserEventPreferences, EVENT_CATEGORY_EMOJI } = require('./events');
@@ -980,15 +980,15 @@ exports.dateCoachChat = onCall(
               if (rp.placeId) lmLookupById.set(rp.placeId, rp);
               if (rp.name) lmLookupByName.set(rp.name.toLowerCase().trim(), rp);
             }
-            lmActivities = acts.slice(0, config.maxActivities).map((a) => {
+            const rawActivities = acts.slice(0, config.maxActivities).map((a) => {
               const title = (a.title || a.name || '').substring(0, 50);
               const geminiPlaceId = a.placeId || a.place_id || null;
               const matched = fuzzyMatchPlace(title, geminiPlaceId, lmLookupById, lmLookupByName, lmPlaces);
               const rawDesc = (a.description || '').substring(0, 120);
               const cleanDesc = rawDesc.replace(/\$+/g, '').trim();
               const resolvedPriceLevel = (matched && matched.priceLevel) || a.priceLevel || a.price_level || null;
-              const validatedInstagram = sanitizeInstagramHandle(a.instagram || a.instagramHandle || null);
               const validatedWebsite = (matched && matched.website) || sanitizeWebsiteUrl(a.website) || null;
+              const validatedInstagram = sanitizeInstagramHandle(a.instagram || a.instagramHandle || null);
               const base = {
                 emoji: (a.emoji || '📍').substring(0, 4), title,
                 description: cleanDesc || rawDesc,
@@ -1011,6 +1011,25 @@ exports.dateCoachChat = onCall(
               }
               return {...base, ...(a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {})};
             });
+
+            // Async: resolve Instagram handles via pipeline (cache → website → search → gemini)
+            lmActivities = await Promise.all(rawActivities.map(async (activity) => {
+              if (activity.instagram) return activity;
+              try {
+                const resolved = await resolveInstagramHandle({
+                  placeId: activity.placeId || null,
+                  placeName: activity.title || '',
+                  placeAddress: activity.address || '',
+                  websiteUrl: activity.website || null,
+                  geminiGuess: null,
+                  apiKey,
+                });
+                if (resolved && resolved.handle) {
+                  return {...activity, instagram: resolved.handle, _igMetrics: resolved.metrics || null};
+                }
+              } catch (igErr) { /* continue without Instagram */ }
+              return activity;
+            }));
           }
         } catch {
           logger.warn('[dateCoachChat] loadMore JSON parse failed');
@@ -1042,13 +1061,12 @@ exports.dateCoachChat = onCall(
           for (const a of lmActivities) a.category = normalizedReqCat;
         }
 
-        // Sort by popularity: places with more reviews and higher ratings appear first
+        // Sort by combined score: Google Places (rating + reviews) + Instagram (followers + freshness)
         if (lmActivities && lmActivities.length > 1) {
-          lmActivities.sort((a, b) => {
-            const scoreA = (a.rating || 0) * 0.4 + Math.log10(1 + (a.reviewCount || 0)) * 0.6;
-            const scoreB = (b.rating || 0) * 0.4 + Math.log10(1 + (b.reviewCount || 0)) * 0.6;
-            return scoreB - scoreA;
-          });
+          lmActivities.sort((a, b) =>
+            calculatePlaceScore({rating: b.rating, reviewCount: b.reviewCount, igMetrics: b._igMetrics}) -
+            calculatePlaceScore({rating: a.rating, reviewCount: a.reviewCount, igMetrics: a._igMetrics}),
+          );
         }
 
         // Compute dominant category for loadMore results
@@ -1066,7 +1084,7 @@ exports.dateCoachChat = onCall(
 
         return {
           success: true,
-          activitySuggestions: lmActivities || [],
+          activitySuggestions: (lmActivities || []).map(({_igMetrics, ...rest}) => rest),
           coachMessagesRemaining,
           ...(lmDominantCategory ? {dominantCategory: lmDominantCategory} : {}),
         };
@@ -2455,7 +2473,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
                 ...(resolvedPriceLevel ? {priceLevel: resolvedPriceLevel} : {}),
               };
 
-              // Validate instagram from Gemini
+              const resolvedWebsite = matched?.website || sanitizeWebsiteUrl(a.website) || null;
               const validInstagram = sanitizeInstagramHandle(a.instagram || a.instagramHandle || null);
 
               if (matched) {
@@ -2464,7 +2482,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
                   ...base,
                   ...(matched.rating != null ? {rating: matched.rating} : (a.rating ? {rating: Math.min(5, Math.max(0, parseFloat(a.rating) || 0))} : {})),
                   ...(matched.reviewCount ? {reviewCount: matched.reviewCount} : {}),
-                  ...(matched.website ? {website: matched.website} : (sanitizeWebsiteUrl(a.website) ? {website: sanitizeWebsiteUrl(a.website)} : {})),
+                  ...(resolvedWebsite ? {website: resolvedWebsite} : {}),
                   ...(validInstagram ? {instagram: validInstagram} : {}),
                   ...(matched.googleMapsUrl ? {googleMapsUrl: matched.googleMapsUrl} : {}),
                   ...(matched.address ? {address: matched.address} : {}),
@@ -2492,6 +2510,25 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
             // Log merge stats for diagnostics
             const matchedCount = activitySuggestions.filter((s) => s.photos || s.googleMapsUrl).length;
             logger.info(`[dateCoachChat] Merge: ${matchedCount}/${activitySuggestions.length} activities matched with Google Places data`);
+
+            // Async: resolve Instagram handles via pipeline (cache → website → search)
+            activitySuggestions = await Promise.all(activitySuggestions.map(async (activity) => {
+              if (activity.instagram) return activity;
+              try {
+                const resolved = await resolveInstagramHandle({
+                  placeId: activity.placeId || null,
+                  placeName: activity.title || '',
+                  placeAddress: activity.address || '',
+                  websiteUrl: activity.website || null,
+                  geminiGuess: null,
+                  apiKey,
+                });
+                if (resolved && resolved.handle) {
+                  return {...activity, instagram: resolved.handle, _igMetrics: resolved.metrics || null};
+                }
+              } catch (igErr) { /* continue without Instagram */ }
+              return activity;
+            }));
           }
         }
       } catch (parseErr) {
@@ -2573,13 +2610,17 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         }
       }
 
-      // Sort by popularity: places with more reviews and higher ratings appear first
+      // Sort by combined score: Google Places (rating + reviews) + Instagram (followers + freshness)
       if (activitySuggestions && activitySuggestions.length > 1) {
-        activitySuggestions.sort((a, b) => {
-          const scoreA = (a.rating || 0) * 0.4 + Math.log10(1 + (a.reviewCount || 0)) * 0.6;
-          const scoreB = (b.rating || 0) * 0.4 + Math.log10(1 + (b.reviewCount || 0)) * 0.6;
-          return scoreB - scoreA;
-        });
+        activitySuggestions.sort((a, b) =>
+          calculatePlaceScore({rating: b.rating, reviewCount: b.reviewCount, igMetrics: b._igMetrics}) -
+          calculatePlaceScore({rating: a.rating, reviewCount: a.reviewCount, igMetrics: a._igMetrics}),
+        );
+      }
+
+      // Strip internal ranking fields before output
+      if (activitySuggestions) {
+        activitySuggestions = activitySuggestions.map(({_igMetrics, ...rest}) => rest);
       }
 
       // Compute dominant category from activity suggestions + intent extraction
@@ -3731,28 +3772,99 @@ exports.updateCoachKnowledge = onSchedule(
         return;
       }
 
-      // 2. Use Gemini to identify knowledge gaps and generate new chunks
+      // 2. Read latest quality insights to guide knowledge generation
+      const latestInsights = {};
+      try {
+        const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+        const insightDoc = await db.collection('coachInsights').doc('daily').collection(yesterday).doc('summary').get();
+        if (insightDoc.exists) {
+          const data = insightDoc.data();
+          latestInsights.satisfactionRate = data.satisfactionRate || 0;
+          latestInsights.lowQualityTopics = data.lowQualityTopics || [];
+          latestInsights.sampleQuestions = data.sampleNegativeQuestions || [];
+        }
+      } catch (insErr) {
+        logger.warn(`[updateCoachKnowledge] Could not read insights: ${insErr.message}`);
+      }
+
+      // 3. Cross-learning: read moderation insights to understand what users get flagged for
+      const moderationContext = [];
+      try {
+        const modInsight = await db.collection('moderationInsights').doc('ragUpdates').get();
+        if (modInsight.exists) {
+          moderationContext.push(`Moderation stats: ${modInsight.data().totalFalsePositiveDisputes || 0} false positives, ${modInsight.data().totalMissedThreatDisputes || 0} missed threats last week`);
+        }
+        const recentDisputes = await db.collection('moderationDisputes')
+          .where('disputeType', '==', 'false_positive')
+          .orderBy('createdAt', 'desc')
+          .limit(5)
+          .get();
+        for (const d of recentDisputes.docs) {
+          const dd = d.data();
+          if (dd.originalCategory) moderationContext.push(`Users get falsely flagged for: ${dd.originalCategory} — "${(dd.messageText || '').substring(0, 80)}"`);
+        }
+      } catch (modErr) {
+        logger.warn(`[updateCoachKnowledge] Could not read moderation context: ${modErr.message}`);
+      }
+
+      // 4. Use Gemini WITH Search Grounding to generate knowledge chunks
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
+      const enableSearch = config.ragAutoUpdate?.enableSearchGrounding !== false;
+      const modelConfig = {
         model: AI_MODEL_LITE,
         generationConfig: {maxOutputTokens: 4096, temperature: 0.3, responseMimeType: 'application/json'},
-      });
+      };
+      if (enableSearch) {
+        modelConfig.tools = [{googleSearch: {}}];
+        logger.info('[updateCoachKnowledge] Search Grounding enabled — accessing latest dating advice & psychology');
+      }
+      const model = genAI.getGenerativeModel(modelConfig);
 
-      const gapPrompt = `You are a dating coach knowledge base curator.
+      let gapPrompt = `You are a dating coach knowledge base curator for a sugar dating app (sugar daddy/mommy + sugar baby relationships).
 
-These are questions where the coach gave UNHELPFUL responses (users marked them as not helpful):
+UNHELPFUL RESPONSES — users marked these as not helpful:
 ${negativeExamples.slice(0, 10).map((e, i) => `${i + 1}. Topic: ${e.topic} | Q: "${e.question}" | Reason: "${e.reason}"`).join('\n')}
+`;
 
-Generate 3-5 NEW knowledge chunks that would help the coach answer these types of questions better. Each chunk should be a standalone piece of expert dating advice.
+      if (positiveExamples.length > 0) {
+        gapPrompt += `\nHELPFUL RESPONSES — users liked these (reinforce these patterns):
+${positiveExamples.slice(0, 5).map((e, i) => `${i + 1}. Topic: ${e.topic} | Q: "${e.question}"`).join('\n')}
+`;
+      }
+
+      if (latestInsights.lowQualityTopics?.length > 0) {
+        gapPrompt += `\nWEAKEST TOPICS (from daily analytics): ${latestInsights.lowQualityTopics.map((t) => t.topic).join(', ')}
+Overall satisfaction: ${latestInsights.satisfactionRate}%
+`;
+      }
+
+      if (moderationContext.length > 0) {
+        gapPrompt += `\nMODERATION CROSS-LEARNING (teach users to communicate safely):
+${moderationContext.slice(0, 5).join('\n')}
+`;
+      }
+
+      gapPrompt += `
+Search the internet for the LATEST dating advice trends, relationship psychology research, and communication techniques from 2025-2026.
+
+Generate 3-7 NEW knowledge chunks. Focus on:
+1. FILL GAPS — address the unhelpful response topics with expert, actionable advice
+2. REINFORCE SUCCESS — expand on what users found helpful
+3. LATEST TRENDS — new dating psychology, attachment theory applications, communication frameworks
+4. SUGAR DATING CONTEXT — arrangement negotiation, boundary setting, first meeting safety, expectations management
+5. SAFE COMMUNICATION — help users express themselves without triggering content moderation filters
+6. CULTURAL SENSITIVITY — advice that works across cultures (app has users in 10+ languages)
+
+Each chunk should be actionable, specific, and immediately useful (not generic platitudes).
 
 Return JSON:
 {
   "chunks": [
     {
-      "category": "topic_category",
+      "category": "conversation_starters|first_dates|boundaries|safety|arrangement_tips|communication|psychology|cultural_context|confidence|conflict_resolution",
       "language": "en",
       "title": "short title",
-      "content": "detailed advice (200-400 words)"
+      "content": "detailed expert advice (200-400 words)"
     }
   ]
 }`;
@@ -3787,8 +3899,11 @@ Return JSON:
             content: chunk.content,
             embedding,
             autoGenerated: true,
+            searchGrounded: enableSearch,
             generatedAt: admin.firestore.FieldValue.serverTimestamp(),
             sourceNegativeFeedbackCount: negativeExamples.length,
+            sourcePositiveFeedbackCount: positiveExamples.length,
+            satisfactionRateAtGeneration: latestInsights.satisfactionRate || null,
           });
           added++;
         } catch (embErr) {
@@ -3796,15 +3911,19 @@ Return JSON:
         }
       }
 
-      // 4. Log the update
+      // 5. Log the update with rich metrics
       await db.collection('coachInsights').doc('ragUpdates').set({
         lastUpdate: admin.firestore.FieldValue.serverTimestamp(),
         chunksAdded: added,
         totalNegativeFeedback: negativeExamples.length,
         totalPositiveFeedback: positiveExamples.length,
+        searchGroundingUsed: enableSearch,
+        crossLearningFromModeration: moderationContext.length > 0,
+        satisfactionRateAtUpdate: latestInsights.satisfactionRate || null,
+        weakestTopics: latestInsights.lowQualityTopics?.map((t) => t.topic) || [],
       }, {merge: true});
 
-      logger.info(`[updateCoachKnowledge] Added ${added} new knowledge chunks from ${negativeExamples.length} negative feedback examples`);
+      logger.info(`[updateCoachKnowledge] Added ${added} chunks (search: ${enableSearch}, modContext: ${moderationContext.length}, satisfaction: ${latestInsights.satisfactionRate || '?'}%)`);
     } catch (err) {
       logger.error(`[updateCoachKnowledge] Error: ${err.message}`);
     }

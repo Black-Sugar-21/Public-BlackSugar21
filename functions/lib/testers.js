@@ -3,15 +3,47 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
+const PROJECT_NUMBER = '706595096331';
+const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
+
+/**
+ * Add a tester email via Firebase App Distribution API.
+ * This is FREE and works without Google Workspace.
+ */
+async function addTesterViaAppDistribution(email) {
+  const { GoogleAuth } = require('google-auth-library');
+  const auth = new GoogleAuth({
+    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+  });
+  const client = await auth.getClient();
+  const accessToken = (await client.getAccessToken()).token;
+
+  const url = `https://firebaseappdistribution.googleapis.com/v1/projects/${PROJECT_NUMBER}/testers:batchAdd`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ emails: [email] }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.text();
+    throw new Error(`App Distribution API error (${res.status}): ${errData}`);
+  }
+
+  const data = await res.json();
+  return { added: true, testers: data.testers?.length || 0 };
+}
+
 /**
  * Firestore trigger: When a new tester signup is created,
- * mark it as received and log for admin review.
+ * automatically add to Firebase App Distribution + provide Play Console opt-in link.
  *
- * Admin adds testers to Play Console manually from Firestore Console
- * or via: node scripts/export-testers.js
- *
- * Google Groups API requires Google Workspace (not available with free @googlegroups.com).
- * Play Console tester list can be managed directly.
+ * The Google Group (blacksugar21-testers-pro@googlegroups.com) is linked to
+ * Play Console closed testing. Users join the group to become Play Console testers.
+ * Firebase App Distribution handles the tester registry.
  */
 exports.onTesterSignup = onDocumentCreated(
   { document: 'testerSignups/{signupId}', region: 'us-central1' },
@@ -30,31 +62,40 @@ exports.onTesterSignup = onDocumentCreated(
     const db = admin.firestore();
     const existing = await db.collection('testerSignups')
       .where('email', '==', email)
-      .where('status', '==', 'received')
+      .where('status', 'in', ['received', 'added'])
       .limit(1)
       .get();
 
     if (!existing.empty) {
       await snapshot.ref.update({
-        status: 'received',
+        status: 'added',
         note: 'Duplicate signup — already registered',
+        optInUrl: OPT_IN_URL,
       });
       logger.info(`[Testers] Duplicate signup: ${email}`);
       return;
     }
 
-    // Mark as received — admin will add to Play Console
-    await snapshot.ref.update({
-      status: 'received',
-      receivedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Add to Firebase App Distribution automatically
+    try {
+      const result = await addTesterViaAppDistribution(email);
 
-    // Count total pending testers
-    const pendingCount = await db.collection('testerSignups')
-      .where('status', '==', 'received')
-      .count()
-      .get();
+      await snapshot.ref.update({
+        status: 'added',
+        addedAt: admin.firestore.FieldValue.serverTimestamp(),
+        addedAutomatically: true,
+        optInUrl: OPT_IN_URL,
+      });
 
-    logger.info(`[Testers] New signup: ${email} (total pending: ${pendingCount.data().count})`);
+      logger.info(`[Testers] AUTO-ADDED ${email} via App Distribution`);
+    } catch (err) {
+      logger.error(`[Testers] Failed to auto-add ${email}: ${err.message}`);
+      await snapshot.ref.update({
+        status: 'received',
+        receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+        autoAddError: err.message,
+        optInUrl: OPT_IN_URL,
+      });
+    }
   }
 );
