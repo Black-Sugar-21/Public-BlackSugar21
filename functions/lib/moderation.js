@@ -6,7 +6,7 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, getCachedEmbedding } = require('./shared');
+const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding } = require('./shared');
 const { MODERATION_BLACKLIST, SEXUAL_BLACKLIST_TERMS } = require('./notifications');
 
 // --- Moderation config & RAG ---

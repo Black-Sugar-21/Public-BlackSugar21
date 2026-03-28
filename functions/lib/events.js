@@ -417,7 +417,7 @@ exports.searchEvents = onCall(
       // If matchId provided, use midpoint of both users
       if (matchId && (!searchLat || !searchLng)) {
         try {
-          const {getMatchUsersLocations, calculateMidpoint} = require('./places-helpers');
+          const {getMatchUsersLocations} = require('./places-helpers');
           const {currentUser, otherUser, midpoint} = await getMatchUsersLocations(matchId, userId);
           searchLat = midpoint.latitude;
           searchLng = midpoint.longitude;

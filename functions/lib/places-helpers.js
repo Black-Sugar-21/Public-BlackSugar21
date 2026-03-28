@@ -2,6 +2,7 @@
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { AI_MODEL_LITE } = require('./shared');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 function calculateMidpoint(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180;
@@ -548,7 +549,6 @@ async function extractInstagramFromWebsite(websiteUrl) {
 async function findInstagramViaSearch(placeName, placeAddress, apiKey) {
   if (!placeName || !apiKey) return null;
   try {
-    const {GoogleGenerativeAI} = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_LITE,
