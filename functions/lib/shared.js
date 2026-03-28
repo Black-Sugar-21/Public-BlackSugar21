@@ -154,6 +154,109 @@ async function getCachedEmbedding(text, apiKey, options = {}) {
   return embedding;
 }
 
+// ─── AI Analytics & Cost Tracking ───────────────────────────────────────────
+const { logger } = require('firebase-functions/v2');
+const admin = require('firebase-admin');
+
+// Pricing per 1M tokens (Gemini 2.5 Flash / Flash-Lite)
+const MODEL_PRICING = {
+  'gemini-2.5-flash': {input: 0.15, output: 0.60, cachedInput: 0.0375},
+  'gemini-2.5-flash-lite': {input: 0.075, output: 0.30, cachedInput: 0.01875},
+  'gemini-embedding-001': {input: 0.00, output: 0.00}, // Free tier
+};
+
+/**
+ * Track a Gemini API call: tokens, cost, latency, errors.
+ * Non-blocking — fire-and-forget to Firestore.
+ *
+ * @param {Object} params
+ * @param {string} params.functionName - CF name (e.g., 'dateCoachChat')
+ * @param {string} params.model - model used
+ * @param {string} params.operation - what was done (e.g., 'chat', 'moderation', 'embedding')
+ * @param {Object} [params.usage] - Gemini response.usageMetadata {promptTokenCount, candidatesTokenCount, totalTokenCount}
+ * @param {number} [params.latencyMs] - response time in ms
+ * @param {string} [params.error] - error message if failed
+ * @param {string} [params.userId] - user who triggered the call
+ */
+function trackAICall({functionName, model, operation, usage, latencyMs, error, userId}) {
+  try {
+    const pricing = MODEL_PRICING[model] || MODEL_PRICING['gemini-2.5-flash-lite'];
+    const inputTokens = usage?.promptTokenCount || 0;
+    const outputTokens = usage?.candidatesTokenCount || 0;
+    const totalTokens = usage?.totalTokenCount || inputTokens + outputTokens;
+    const cachedTokens = usage?.cachedContentTokenCount || 0;
+
+    const costUsd = ((inputTokens - cachedTokens) * pricing.input + cachedTokens * (pricing.cachedInput || pricing.input) + outputTokens * pricing.output) / 1_000_000;
+
+    // Log structured for Cloud Logging queries
+    logger.info(`[AI-ANALYTICS] ${functionName}/${operation}: ${totalTokens} tokens, $${costUsd.toFixed(6)}, ${latencyMs || '?'}ms${error ? ' ERROR: ' + error : ''}`);
+
+    // Write to Firestore (non-blocking, fire-and-forget)
+    const db = admin.firestore();
+    const today = new Date().toISOString().substring(0, 10);
+
+    // Atomic increment on daily aggregate
+    db.collection('aiAnalytics').doc(today).set({
+      date: today,
+      totalCalls: admin.firestore.FieldValue.increment(1),
+      totalTokens: admin.firestore.FieldValue.increment(totalTokens),
+      totalInputTokens: admin.firestore.FieldValue.increment(inputTokens),
+      totalOutputTokens: admin.firestore.FieldValue.increment(outputTokens),
+      totalCostUsd: admin.firestore.FieldValue.increment(costUsd),
+      totalErrors: admin.firestore.FieldValue.increment(error ? 1 : 0),
+      totalLatencyMs: admin.firestore.FieldValue.increment(latencyMs || 0),
+      // Per-function breakdown
+      [`functions.${functionName}.calls`]: admin.firestore.FieldValue.increment(1),
+      [`functions.${functionName}.tokens`]: admin.firestore.FieldValue.increment(totalTokens),
+      [`functions.${functionName}.costUsd`]: admin.firestore.FieldValue.increment(costUsd),
+      [`functions.${functionName}.errors`]: admin.firestore.FieldValue.increment(error ? 1 : 0),
+      // Per-model breakdown
+      [`models.${model.replace(/\./g, '_')}.calls`]: admin.firestore.FieldValue.increment(1),
+      [`models.${model.replace(/\./g, '_')}.tokens`]: admin.firestore.FieldValue.increment(totalTokens),
+      [`models.${model.replace(/\./g, '_')}.costUsd`]: admin.firestore.FieldValue.increment(costUsd),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, {merge: true}).catch(() => {});
+
+    // Per-operation detail (sampled to avoid Firestore overload)
+    if (Math.random() < 0.2 || error) { // 20% sample + all errors
+      db.collection('aiAnalytics').doc(today).collection('calls').add({
+        functionName, model, operation,
+        inputTokens, outputTokens, totalTokens, cachedTokens,
+        costUsd, latencyMs: latencyMs || null,
+        error: error || null,
+        userId: userId || null,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {});
+    }
+  } catch (_) {
+    // Analytics must NEVER crash the main function
+  }
+}
+
+/**
+ * Wrap a Gemini generateContent call with automatic analytics tracking.
+ *
+ * @param {Object} model - Gemini GenerativeModel instance
+ * @param {string|Array} prompt - content to generate
+ * @param {Object} trackingInfo - {functionName, operation, userId}
+ * @returns {Promise<Object>} Gemini result
+ */
+async function trackedGenerateContent(model, prompt, {functionName, operation, userId} = {}) {
+  const start = Date.now();
+  const modelName = model.model || AI_MODEL_LITE;
+  try {
+    const result = await model.generateContent(prompt);
+    const latencyMs = Date.now() - start;
+    const usage = result.response.usageMetadata || {};
+    trackAICall({functionName: functionName || 'unknown', model: modelName, operation: operation || 'generate', usage, latencyMs, userId});
+    return result;
+  } catch (err) {
+    const latencyMs = Date.now() - start;
+    trackAICall({functionName: functionName || 'unknown', model: modelName, operation: operation || 'generate', latencyMs, error: err.message, userId});
+    throw err;
+  }
+}
+
 module.exports = {
   geminiApiKey,
   placesApiKey,
@@ -165,4 +268,7 @@ module.exports = {
   categoryEmojiMap,
   parseGeminiJsonResponse,
   getCachedEmbedding,
+  trackAICall,
+  trackedGenerateContent,
+  MODEL_PRICING,
 };

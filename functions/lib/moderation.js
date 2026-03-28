@@ -6,7 +6,7 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding } = require('./shared');
+const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding, trackAICall } = require('./shared');
 const { MODERATION_BLACKLIST, SEXUAL_BLACKLIST_TERMS } = require('./notifications');
 
 // --- Moderation config & RAG ---
@@ -880,7 +880,9 @@ Severity (only if NOT SAFE):
 Respond ONLY with valid JSON (no markdown):
 {"category":"SAFE|SPAM|SCAM|INAPPROPRIATE|PERSONAL_INFO","severity":"NONE|LOW|MEDIUM|HIGH","confidence":0-100,"reason":"brief explanation"}`;
 
+      const modStart = Date.now();
       const result = await model.generateContent(prompt);
+      trackAICall({functionName: 'autoModerateMessage', model: AI_MODEL_LITE, operation: 'classify', usage: result.response.usageMetadata, latencyMs: Date.now() - modStart});
       const responseText = result.response.text().trim();
       const cleanText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const analysis = JSON.parse(cleanText);

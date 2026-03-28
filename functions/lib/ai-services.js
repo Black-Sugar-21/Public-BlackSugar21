@@ -3,7 +3,7 @@ const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, trackAICall } = require('./shared');
 const { calcAge } = require('./geo');
 const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 

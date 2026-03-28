@@ -5,7 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, getCachedEmbedding } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, getCachedEmbedding, trackAICall } = require('./shared');
 const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
@@ -2418,6 +2418,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         }
       })();
       const responseText = result.response.text();
+      trackAICall({functionName: 'dateCoachChat', model: AI_MODEL_NAME, operation: 'chat', usage: result.response.usageMetadata, latencyMs: Date.now() - (result._startTime || Date.now()), userId});
 
       let reply;
       let suggestions;

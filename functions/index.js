@@ -24,6 +24,7 @@ const modules = [
   './lib/safety',
   './lib/events',
   './lib/testers',
+  './lib/analytics',
 ];
 
 modules.forEach(mod => {
