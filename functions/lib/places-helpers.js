@@ -167,7 +167,6 @@ const CATEGORY_TO_PLACES_TYPE = {
   ],
   bar: [
     'bar', 'wine_bar', 'cocktail_bar', 'pub',
-    'sake_bar', 'whiskey_bar', 'beer_garden', 'beer_hall', 'tapas_bar',
   ],
   night_club: [
     'night_club',
@@ -953,8 +952,31 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
     languageCode: languageCode || 'es',
     maxResultCount: maxResults,
   };
+  // Validate includedType against Google Places API v2 supported types
+  // Only set if the type is known-valid to avoid 400 errors
+  const VALID_PLACE_TYPES = new Set([
+    'restaurant', 'american_restaurant', 'brazilian_restaurant', 'chinese_restaurant',
+    'french_restaurant', 'greek_restaurant', 'indian_restaurant', 'indonesian_restaurant',
+    'italian_restaurant', 'japanese_restaurant', 'korean_restaurant', 'latin_american_restaurant',
+    'lebanese_restaurant', 'mediterranean_restaurant', 'mexican_restaurant',
+    'middle_eastern_restaurant', 'pizza_restaurant', 'ramen_restaurant', 'sandwich_shop',
+    'seafood_restaurant', 'spanish_restaurant', 'steak_house', 'sushi_restaurant',
+    'thai_restaurant', 'turkish_restaurant', 'vietnamese_restaurant', 'hamburger_restaurant',
+    'brunch_restaurant', 'fast_food_restaurant', 'vegan_restaurant', 'vegetarian_restaurant',
+    'cafe', 'coffee_shop', 'bar', 'wine_bar', 'pub',
+    'bakery', 'ice_cream_shop', 'shopping_mall', 'supermarket', 'book_store',
+    'clothing_store', 'jewelry_store', 'florist', 'gift_shop', 'pet_store',
+    'shoe_store', 'sporting_goods_store', 'liquor_store', 'convenience_store',
+    'night_club', 'movie_theater', 'bowling_alley', 'amusement_park', 'amusement_center',
+    'park', 'national_park', 'museum', 'art_gallery', 'zoo', 'aquarium',
+    'tourist_attraction', 'spa', 'gym', 'stadium', 'casino',
+    'hotel', 'campground', 'parking', 'gas_station', 'car_rental',
+    'pharmacy', 'hospital', 'dentist', 'doctor', 'beauty_salon', 'barber_shop',
+    'bank', 'atm', 'laundry', 'car_wash', 'library',
+  ]);
   if (includedTypes && Array.isArray(includedTypes) && includedTypes.length > 0) {
-    body.includedType = includedTypes[0];
+    const validType = includedTypes.find((t) => VALID_PLACE_TYPES.has(t));
+    if (validType) body.includedType = validType;
   }
   if (center && center.latitude != null && center.longitude != null) {
     const radius = Math.min(radiusMeters || 50000, 50000); // Google Places max: 50000m
