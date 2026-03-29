@@ -127,7 +127,7 @@ cd scripts && node populate-discovery-profiles.js
 - Each profile has 5 photos (pictureUrls array)
 - Realistic bios, interests, occupations
 - Distributed locations across CDMX (Centro, Polanco, Condesa, Roma, etc.)
-- Mix of Sugar Baby, Sugar Daddy, Sugar Mommy types
+- Mix of user types: SUGAR_DADDY (💎 Elite), SUGAR_MOMMY (💎 Elite), SUGAR_BABY (🌟 Prime)
 - Sets isDiscoveryProfile flag for identification
 
 #### 3. cleanup-test-matches.js
@@ -230,7 +230,7 @@ node scripts/get-user-email.js <userId>
   name: string,
   email: string,
   gender: 'Hombre' | 'Mujer',
-  userType: 'SUGAR_BABY' | 'SUGAR_DADDY' | 'SUGAR_MOMMY',
+  userType: 'SUGAR_DADDY' | 'SUGAR_MOMMY' | 'SUGAR_BABY', // UI: 💎 Elite / 💎 Elite / 🌟 Prime
   avatarUrl?: string,           // Single avatar (match users)
   pictureUrls?: string[],       // Multiple photos (discovery profiles)
   isTestUser?: boolean,         // Flag for match test users

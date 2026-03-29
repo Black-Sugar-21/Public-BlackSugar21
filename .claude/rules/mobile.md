@@ -67,6 +67,23 @@ core/             ← cache, performance, utils compartidos
 
 ---
 
+## UserType — UI vs Backend
+
+**UI muestra 2 opciones**: 💎 Elite y 🌟 Prime
+**Backend almacena 3 valores**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+
+| UI | Hombre → Firestore | Mujer → Firestore |
+|----|--------------------|--------------------|
+| 💎 Elite | `SUGAR_DADDY` | `SUGAR_MOMMY` |
+| 🌟 Prime | `SUGAR_BABY` | `SUGAR_BABY` |
+
+- iOS: `resolveUserType()` / `selectElite()` mapea según género
+- Android: `eliteIndex = if (genderIndex == 0) 1 else 2` en mapper
+- Botón "?" abre modal con descripción de cada tipo
+- **NUNCA escribir "Elite"/"Prime" a Firestore** — solo son labels de UI
+
+---
+
 ## Reglas de sincronización
 
 1. **Cambio en Firestore** → actualizar modelo en Android Y iOS
@@ -74,6 +91,7 @@ core/             ← cache, performance, utils compartidos
 3. **Nuevo campo en perfil de usuario** → reflejarlo en `editprofile` de ambas apps
 4. **Cambio en lógica de matching** → verificar paridad en `MatchingScoreCalculator` (iOS) y `core/matching/` (Android)
 5. **Push notifications** → `core/fcm/` (Android) debe recibir el mismo payload que el handler de iOS
+6. **Cambio en UserType UI** → verificar que Firestore sigue recibiendo `SUGAR_DADDY`/`SUGAR_MOMMY`/`SUGAR_BABY`
 
 ---
 

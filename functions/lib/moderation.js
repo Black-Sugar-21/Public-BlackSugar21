@@ -417,11 +417,11 @@ function buildMessageModerationPrompt(text, lang, isSpanish, ragContext = '') {
   const languageInstruction = getLanguageInstruction(lang);
 
   if (isSpanish) {
-    return `Analiza este mensaje de chat en una app de citas sugar y determina si es apropiado.
+    return `Analiza este mensaje de chat en una app de citas y determina si es apropiado.
 
 Mensaje: "${text}"
 
-CONTEXTO: Esta es una app de citas sugar (Black Sugar 21). El coqueteo, discutir expectativas de relación y estilo de vida es NORMAL y PERMITIDO.
+CONTEXTO: Esta es una app de citas (Black Sugar 21). El coqueteo, discutir expectativas de relación y estilo de vida es NORMAL y PERMITIDO.
 
 RECHAZA si contiene:
 - Acoso o lenguaje abusivo

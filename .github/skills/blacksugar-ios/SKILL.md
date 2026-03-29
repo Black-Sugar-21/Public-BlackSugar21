@@ -41,7 +41,7 @@ userData["birthDate"]               = birthDate
 userData["bio"]                     = bio
 userData["male"]                    = male
 userData["orientation"]             = orientation.rawValue  // "men"|"women"|"both" LOWERCASE
-userData["userType"]                = userType.rawValue     // "SUGAR_BABY"|"SUGAR_DADDY"|"SUGAR_MOMMY"
+userData["userType"]                = userType.rawValue     // "SUGAR_DADDY"|"SUGAR_MOMMY"|"SUGAR_BABY" (Firestore raw, UI: 💎 Elite / 🌟 Prime)
 userData["pictures"]                = pictures
 userData["liked"]                   = []
 userData["passed"]                  = []
@@ -157,6 +157,34 @@ Analytics.logEvent("phone_verification_error",     parameters: ["error": s])
 Analytics.logEvent("phone_verification_failed",    parameters: ["reason": s])
 Analytics.logEvent("swipe_failed_pending_retry",   parameters: ["user_id": id, "action": "like"|"super_like"])
 ```
+
+---
+
+## UserType — Elite/Prime (2 opciones UI, 3 valores backend)
+
+```swift
+// domain/profile/UserType.swift
+enum UserType: String, CaseIterable, Codable {
+    case sugarDaddy = "SUGAR_DADDY"   // 💎 Elite (hombre)
+    case sugarMommy = "SUGAR_MOMMY"   // 💎 Elite (mujer)
+    case sugarBaby  = "SUGAR_BABY"    // 🌟 Prime
+
+    var emoji: String       // 💎 o 🌟
+    var displayName: String // "Elite" o "Prime" (desde RemoteConfigService)
+    var localizationKey: String
+    var minimumAge: Int     // 18 para todos
+}
+```
+
+**UI muestra solo 2 opciones**: 💎 Elite y 🌟 Prime
+- Si elige **Elite**: backend asigna `SUGAR_DADDY` (hombre) o `SUGAR_MOMMY` (mujer) automáticamente según género
+- Si elige **Prime**: backend asigna `SUGAR_BABY`
+- Botón "?" abre modal `UserTypeInfoSheet` con descripción de cada tipo
+- Onboarding: `OnboardingUserTypeView.swift` → `resolveUserType(for: "elite")` mapea según `coordinator.userData.male`
+- EditProfile: `EditProfileView.swift` → `selectElite()` mapea según `userGender == "Hombre"`
+- Badge en SwipeView/ProfileDetailsSheet: `"\(userType.emoji) \(userType.displayName)"` → "💎 Elite" o "🌟 Prime"
+- Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+- Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 
 ---
 

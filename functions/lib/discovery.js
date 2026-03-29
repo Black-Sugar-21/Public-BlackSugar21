@@ -65,6 +65,7 @@ exports.getCompatibleProfileIds = onCall(
     // 2. Obtener cooldown desde Remote Config (default 14 días)
     const COOLDOWN_DAYS_DEFAULT = 14;
     let cooldownDays = COOLDOWN_DAYS_DEFAULT;
+    let reviewerUids = new Set(['g4Zbr8tEguMcpZonw72xM5MGse32']); // fallback
     try {
       const rc = admin.remoteConfig();
       const template = await rc.getTemplate();
@@ -73,8 +74,12 @@ exports.getCompatibleProfileIds = onCall(
         const parsed = parseInt(cooldownParam.defaultValue.value, 10);
         if (!isNaN(parsed) && parsed > 0) cooldownDays = parsed;
       }
+      const reviewerParam = template.parameters['reviewer_uid'];
+      if (reviewerParam && reviewerParam.defaultValue && reviewerParam.defaultValue.value) {
+        reviewerUids = new Set(reviewerParam.defaultValue.value.split(',').map(s => s.trim()).filter(Boolean));
+      }
     } catch (e) {
-      logger.warn('[getCompatibleProfileIds] Could not read Remote Config, using default cooldownDays=14');
+      logger.warn('[getCompatibleProfileIds] Could not read Remote Config, using defaults');
     }
 
     const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
@@ -168,7 +173,7 @@ exports.getCompatibleProfileIds = onCall(
 
           // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
           const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
-          const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+          const isReviewerUser = reviewerUids.has(currentUserId);
 
           // Excluir perfiles de test/reviewer para usuarios normales
           if (isReviewerProfile && !isReviewerUser) continue;
@@ -280,7 +285,7 @@ exports.getCompatibleProfileIds = onCall(
 
         // Reviewer siempre ve perfiles de test/reviewer (incluso tras swipe)
         const isReviewerProfile = candidate.isTest === true || candidate.isReviewer === true;
-        const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+        const isReviewerUser = reviewerUids.has(currentUserId);
 
         // Excluir perfiles de test/reviewer para usuarios normales
         if (isReviewerProfile && !isReviewerUser) continue;
@@ -346,7 +351,7 @@ exports.getCompatibleProfileIds = onCall(
     // mientras el reviewer está en otra ubicación (ej: Concepción, 430km).
     // El geohash query solo cubre maxDistance (~200km), así que los perfiles
     // de test quedan fuera. Esta query adicional los trae sin filtro geográfico.
-    const isReviewerUser = currentUserId === 'g4Zbr8tEguMcpZonw72xM5MGse32';
+    const isReviewerUser = reviewerUids.has(currentUserId);
     if (isReviewerUser && compatibleIds.length < limit) {
       try {
         const reviewerSnap = await db.collection('users')

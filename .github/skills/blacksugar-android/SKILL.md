@@ -168,6 +168,34 @@ analyticsService.logSwipeFailedPendingRetry(userId, action)  // "like"|"super_li
 
 ---
 
+## UserType — Elite/Prime (2 opciones UI, 3 valores backend)
+
+```kotlin
+// profile/model/UserType.kt
+enum class UserType(val displayName: String) {
+    SUGAR_DADDY("Elite"),   // 💎 (hombre)
+    SUGAR_MOMMY("Elite"),   // 💎 (mujer)
+    SUGAR_BABY("Prime"),    // 🌟
+
+    val emoji: String       // "💎" o "🌟"
+    val minimumAge: Int     // 18 para todos
+    val localizationKey: String
+}
+// core/config/UserType.kt — misma estructura con emoji como constructor param
+```
+
+**UI muestra solo 2 opciones**: 💎 Elite y 🌟 Prime
+- Si elige **Elite**: `eliteIndex = if (genderIndex == 0) 1 else 2` → SUGAR_DADDY (hombre) o SUGAR_MOMMY (mujer)
+- Si elige **Prime**: index 0 → SUGAR_BABY
+- Botón "?" abre AlertDialog con descripción de cada tipo
+- Onboarding: `UserTypeStepScreen.kt` → `eliteIndex` resuelve según `genderIndex`
+- Badge en ProfileCardView: `"💎 Elite"` o `"🌟 Prime"` (emoji inline)
+- Dialog en ProfileCardView: usa `contains("Elite")` / `contains("Prime")` para match
+- Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+- Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
+
+---
+
 ## Remote Config — 10 Claves Android
 
 ```kotlin

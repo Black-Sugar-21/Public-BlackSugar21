@@ -34,7 +34,7 @@ Verificadas en codigo iOS (`RemoteConfigService.swift`) y Android (`RemoteConfig
 | `moderation_image_jpeg_quality` | Number | `50` | 20-100 | Calidad JPEG (%) moderacion. iOS convierte a 0.0-1.0 |
 | `gemini_tokens` | Number | `1024` | — | Max tokens para respuestas Gemini |
 | `enable_screen_protection` | Boolean | `true` | — | Proteccion contra capturas/grabacion |
-| `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` | — | UID del reviewer exento de proteccion |
+| `reviewer_uid` | String | `IlG6U9cfcOcnKJvEv4tAD4IZ0513,...` | — | UIDs comma-separated del reviewer. Exento de screen protection + ve test profiles en discovery. Leido por iOS/Android (screen protection) y discovery.js CF (test profiles bypass) |
 | `coach_max_input_length` | Number | `2000` | 100-10000 | Largo maximo input Coach Chat |
 | `coach_daily_credits` | Number | `5` | 1-100 | Creditos diarios Coach Chat |
 
@@ -82,7 +82,7 @@ Leido por CFs del Coach. Cache 5 min. Cambiar sin redeploy.
 | `personalityTone` | String | `"warm, supportive, encouraging but honest..."` | Tono de personalidad |
 | `responseStyle` | Object | `{maxParagraphs:4, useEmojis:true, formalityLevel:"casual_professional", encouragementLevel:"high"}` | Formato y estilo |
 | `allowedTopics` | Array | ~70 temas | Lista de temas permitidos |
-| `coachingSpecializations` | Object | Claves: `SUGAR_BABY`, `SUGAR_DADDY`, `SUGAR_MOMMY` | Guia especifica por userType (WHEN SINGLE / WHEN IN A RELATIONSHIP) |
+| `coachingSpecializations` | Object | Claves: `SUGAR_DADDY` (💎 Elite), `SUGAR_MOMMY` (💎 Elite), `SUGAR_BABY` (🌟 Prime) | Guia especifica por userType (WHEN SINGLE / WHEN IN A RELATIONSHIP) |
 | `stagePrompts` | Object | Claves: `no_conversation_yet`, `just_started_talking`, `getting_to_know`, `building_connection`, `active_conversation` | Prompts por etapa de relacion |
 | `blockedTopics` | Array | Lista de temas off-topic | Deteccion de off-topic |
 | `offTopicMessages` | Object | 10 idiomas | Mensajes de redireccion localizados |

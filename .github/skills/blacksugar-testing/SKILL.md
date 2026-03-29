@@ -127,7 +127,7 @@ interface MatchUser {
   profile: {
     name: string;
     gender: 'male' | 'female';
-    userType: 'SUGAR_BABY' | 'SUGAR_DADDY' | 'SUGAR_MOMMY';
+    userType: 'SUGAR_DADDY' | 'SUGAR_MOMMY' | 'SUGAR_BABY'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
     age: number;
     city: string;
     createdAt: Timestamp;
@@ -169,7 +169,7 @@ interface DiscoveryProfile {
   profile: {
     name: string;  // "FirstName LastName"
     gender: 'male' | 'female';
-    userType: 'SUGAR_BABY' | 'SUGAR_DADDY' | 'SUGAR_MOMMY';
+    userType: 'SUGAR_DADDY' | 'SUGAR_MOMMY' | 'SUGAR_BABY'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
     age: number;  // 22-40
     city: string;  // Santiago, Valparaíso, Concepción, Viña del Mar
     bio: string;  // From predefined list
@@ -577,10 +577,10 @@ await matchRef.update({
 ```javascript
 // Check userType logic:
 if (CURRENT_USER.name === 'Daniel') {
-  // Daniel es hombre, mostrar mujeres (Sugar Baby/Mommy)
+  // Daniel es hombre, mostrar mujeres (🌟 Prime / 💎 Elite)
   userType = isMale ? 'SUGAR_DADDY' : (i % 3 === 0 ? 'SUGAR_MOMMY' : 'SUGAR_BABY');
 } else {
-  // Rosita es mujer, mostrar hombres (Sugar Daddy)
+  // Rosita es mujer, mostrar hombres (💎 Elite)
   userType = isMale ? 'SUGAR_DADDY' : 'SUGAR_BABY';
 }
 ```
