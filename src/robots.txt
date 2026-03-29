@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /analytics
+Disallow: /data-deletion
+
+Sitemap: https://www.blacksugar21.com/sitemap.xml
