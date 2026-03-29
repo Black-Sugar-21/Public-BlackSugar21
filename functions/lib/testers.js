@@ -116,6 +116,8 @@ exports.onTesterSignup = onDocumentCreated(
         optInUrl: OPT_IN_URL,
       });
       logger.info(`[Testers] Duplicate signup: ${email}`);
+      // Still notify admin even for duplicates (user is requesting again)
+      notifyAdminNewTester(db, email).catch(() => {});
       return;
     }
 
