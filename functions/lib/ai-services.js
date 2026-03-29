@@ -223,7 +223,7 @@ exports.calculateSafetyScore = onCall(
 
         const prompt = `Analyze this dating chat for safety concerns. Focus on messages from "them" (the other person).
 
-IMPORTANT CONTEXT: This is a sugar dating app. Flirtatious language, pet names ("bb", "baby", "amor", "mi vida", "cariño"), and compliments are COMPLETELY NORMAL and should NOT be flagged. Only flag genuinely concerning behavior.
+IMPORTANT CONTEXT: This is a dating app. Flirtatious language, pet names ("bb", "baby", "amor", "mi vida", "cariño"), and compliments are COMPLETELY NORMAL and should NOT be flagged. Only flag genuinely concerning behavior.
 
 Conversation:
 ${conversation}

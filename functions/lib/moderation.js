@@ -444,11 +444,11 @@ Responde SOLO con JSON:
 }`;
   }
 
-  return `Analyze this chat message in a sugar dating app and determine if it's appropriate.
+  return `Analyze this chat message in a dating app and determine if it's appropriate.
 
 Message: "${text}"
 
-CONTEXT: This is a sugar dating app (Black Sugar 21). Flirting, discussing relationship expectations, and lifestyle is NORMAL and ALLOWED.
+CONTEXT: This is a dating app (Black Sugar 21). Flirting, discussing relationship expectations, and lifestyle is NORMAL and ALLOWED.
 
 REJECT if it contains:
 - Harassment or abusive language
@@ -859,7 +859,7 @@ exports.autoModerateMessage = onDocumentCreated(
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
 
       const ragSection = ragContext ? `\n\nMODERATION KNOWLEDGE BASE:\n${ragContext}\n` : '';
-      const prompt = `You are a content moderation system for Black Sugar 21, a sugar dating app. Analyze the following chat message and classify it.
+      const prompt = `You are a content moderation system for Black Sugar 21, a dating app. Analyze the following chat message and classify it.
 ${ragSection}
 Message: "${message.substring(0, 1000)}"
 
@@ -870,7 +870,7 @@ Categories:
 - INAPPROPRIATE: Unsolicited explicit sexual content, harassment, insults, violence, threats
 - PERSONAL_INFO: Phone numbers, addresses, social media handles, emails shared unsolicited
 
-IMPORTANT CONTEXT: This is a sugar dating app. Compliments about appearance, casual flirting, discussing lifestyle expectations, and mentioning dates/dinners are NORMAL and should be classified as SAFE. Only flag genuinely harmful, explicit, or predatory content.
+IMPORTANT CONTEXT: This is a dating app. Compliments about appearance, casual flirting, discussing lifestyle expectations, and mentioning dates/dinners are NORMAL and should be classified as SAFE. Only flag genuinely harmful, explicit, or predatory content.
 
 Severity (only if NOT SAFE):
 - LOW: Mild, warning sufficient
@@ -1224,7 +1224,7 @@ exports.updateModerationKnowledge = onSchedule(
       }
       const model = genAI.getGenerativeModel(modelConfig);
 
-      let prompt = 'You are a content moderation knowledge base curator for a sugar dating app.\n\n';
+      let prompt = 'You are a content moderation knowledge base curator for a dating app.\n\n';
 
       // Include user-reported patterns
       if (userReportedPatterns.length > 0) {
@@ -1254,13 +1254,13 @@ exports.updateModerationKnowledge = onSchedule(
       if (coachContext.length > 0) {
         prompt += `COACH CROSS-LEARNING (understand what normal conversations look like):
 ${coachContext.join('\n')}
-These topics are NORMAL in sugar dating — do NOT flag them as violations.\n\n`;
+These topics are NORMAL in dating — do NOT flag them as violations.\n\n`;
       }
 
       prompt += `Based on all the above data (disputes, user reports, coach context, and your knowledge of current online dating scam trends), generate 3-7 new moderation knowledge chunks.
 
 Focus on:
-1. REDUCE FALSE POSITIVES — rules that prevent flagging normal sugar dating conversation
+1. REDUCE FALSE POSITIVES — rules that prevent flagging normal dating conversation
 2. CATCH NEW THREATS — emerging scam patterns, crypto fraud, AI-generated catfish, pig butchering
 3. CULTURAL CONTEXT — dating norms that vary by region/language that cause false flags
 4. EVASION TACTICS — new ways bad actors bypass moderation (Unicode tricks, code-switching, homoglyphs)
@@ -1428,7 +1428,7 @@ exports.resolveDisputesDaily = onSchedule(
               generationConfig: {maxOutputTokens: 512, temperature: 0.2},
             });
             const examples = disputes.slice(0, 5).map((d) => `"${d.data.messageText}" (${d.data.explanation || 'no explanation'})`).join('\n');
-            const chunkPrompt = `Create a concise moderation rule (100-200 words) for a sugar dating app.
+            const chunkPrompt = `Create a concise moderation rule (100-200 words) for a dating app.
 
 These ${disputes.length} messages were ${disputeType === 'false_positive' ? 'INCORRECTLY flagged as ' + category : 'MISSED by moderation'}:
 ${examples}
@@ -1515,12 +1515,12 @@ exports.dailyModerationMicroUpdate = onSchedule(
         return `[${data.disputeType}] Category: ${data.originalCategory} | "${data.messageText}" | Explanation: "${data.explanation || 'none'}"`;
       }).join('\n');
 
-      const prompt = `Based on yesterday's moderation disputes in a sugar dating app, generate 1-2 targeted moderation rules.
+      const prompt = `Based on yesterday's moderation disputes in a dating app, generate 1-2 targeted moderation rules.
 
 DISPUTES:
 ${disputeSummary}
 
-Generate concise rules (100-200 words each) as plain text. Focus on reducing false positives for normal sugar dating conversation.`;
+Generate concise rules (100-200 words each) as plain text. Focus on reducing false positives for normal dating conversation.`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();

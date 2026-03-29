@@ -316,7 +316,7 @@ function analyzeUserMessage(msg) {
     love_languages: /love language|lenguaje.*amor|acts of service|actos de servicio|words of affirmation|palabras.*afirmación|quality time|tiempo de calidad|physical touch|contacto físico|gift giving|dar regalos|show.*love|demostrar.*amor|how.*show|cómo.*demostrar|affection|cariño|spontaneous|espontáneo|attachment style|estilo de apego|emotional needs|necesidades emocionales|avoidant|ansioso|secure attachment|apego seguro/,
     communication: /communicate|comunicar|listen|escuchar|understand|entender|misunderstand|malentendido|argument|discusión|fight|pelea|disagree|desacuerdo|conflict|conflicto|apologize|disculpar|forgive|perdonar|compromise|comprom|boundaries|límites|space|espacio|need.*talk|necesito.*hablar|express|expresar|open.*up|abrirse|nonverbal|tono de voz|tone of voice|assertive|asertiv|difficult conversation|conversación difícil/,
     dating_strategy: /strategy|estrategia|approach|enfoque|technique|técnica|tactic|táctica|improve|mejorar|optimize|optimizar|more matches|más matches|better|mejor|successful|éxito|stand out|destacar|algorithm|algoritmo|likes|swipe|discovery|descubrimiento|visibility|visibilidad|app.*tip|expand pool|niche|más visible|more visible|boost|premium|super like|upgrade/,
-    sugar_dynamics: /sugar|arrangement|allowance|expectation|financial|spoil|consentir|lujo|luxury|lavish|generous|generos[oa]|benefactor|mentor|provider|proveedor|pamper|mimar|treat|tratar bien|age.?gap|diferencia de edad|younger.*older|older.*younger|mayor.*menor|sugar baby|sugar daddy|sugar mommy|mutually beneficial|beneficio mutuo|lifestyle|estilo de vida|travel.*together|viajar juntos|experience.*together|experiencia|fine dining|upscale|exclusiv/,
+    lifestyle_dynamics: /expectation|lifestyle|estilo de vida|luxury|lujo|lavish|generous|generos[oa]|mentor|pamper|mimar|treat|tratar bien|age.?gap|diferencia de edad|travel.*together|viajar juntos|experience.*together|experiencia|fine dining|upscale|exclusiv/,
     self_care: /self[- ]?care|auto[- ]?cuidado|me time|consentirme|cuidarme|bienestar|wellness|solo.*activit|día.*para\s*mí|jour.*pour\s*moi|Tag.*für\s*mich|dia.*para\s*mim|ご褒美|犒劳自己|побаловать\s*себя|عناية\s*بالنفس|perawatan\s*diri|treat\s*myself|me\s*faire\s*plaisir|mir.*gönnen|spa\s*day|yoga.*sol[oa]|paseo.*sol[oa]|walk.*alone|stroll/,
     group_activities: /double\s*date|doble\s*cita|group\s*(date|outing|activity)|cita\s*(grupal|en\s*grupo)|triple\s*date|friend.*date|cita.*amig|game\s*night|noche.*juegos|salida.*amigos|bowling.*group|karaoke.*group|escape\s*room.*friend|amigos.*juntos|Doppel[- ]?date|encontro\s*duplo|ダブルデート|双人约会|двойное\s*свидание|موعد\s*جماعي/,
     vague_intent: /\bbored\b|\baburrido\b|no\s*s[eé]\s*qu[eé]\s*hacer|what.*(should|can)\s*I\s*do|don'?t\s*know\s*what\s*to|qu[eé]\s*hago|qu[eé]\s*puedo\s*hacer|surprise\s*me|sorpréndeme|something\s*(fun|different)|algo\s*(divertido|diferente)|plan.*for\s*me|planea.*para\s*mí|cualquier\s*cosa|whatever|indeciso|undecided|not\s*sure\s*what/,
@@ -3870,7 +3870,7 @@ exports.updateCoachKnowledge = onSchedule(
       }
       const model = genAI.getGenerativeModel(modelConfig);
 
-      let gapPrompt = `You are a dating coach knowledge base curator for a sugar dating app (sugar daddy/mommy + sugar baby relationships).
+      let gapPrompt = `You are a dating coach knowledge base curator for a dating app (users).
 
 UNHELPFUL RESPONSES — users marked these as not helpful:
 ${negativeExamples.slice(0, 10).map((e, i) => `${i + 1}. Topic: ${e.topic} | Q: "${e.question}" | Reason: "${e.reason}"`).join('\n')}
@@ -3901,7 +3901,7 @@ Generate 3-7 NEW knowledge chunks. Focus on:
 1. FILL GAPS — address the unhelpful response topics with expert, actionable advice
 2. REINFORCE SUCCESS — expand on what users found helpful
 3. LATEST TRENDS — new dating psychology, attachment theory applications, communication frameworks
-4. SUGAR DATING CONTEXT — arrangement negotiation, boundary setting, first meeting safety, expectations management
+4. SUGAR DATING CONTEXT — boundary setting, first meeting safety, expectations management
 5. SAFE COMMUNICATION — help users express themselves without triggering content moderation filters
 6. CULTURAL SENSITIVITY — advice that works across cultures (app has users in 10+ languages)
 
@@ -3911,7 +3911,7 @@ Return JSON:
 {
   "chunks": [
     {
-      "category": "conversation_starters|first_dates|boundaries|safety|arrangement_tips|communication|psychology|cultural_context|confidence|conflict_resolution",
+      "category": "conversation_starters|first_dates|boundaries|safety|communication|psychology|cultural_context|confidence|conflict_resolution",
       "language": "en",
       "title": "short title",
       "content": "detailed expert advice (200-400 words)"
