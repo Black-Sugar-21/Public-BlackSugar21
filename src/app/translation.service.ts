@@ -68,8 +68,9 @@ export class TranslationService {
       en: 'Discover places, get personalized advice, and enhance your social life with intelligent guidance.'
     },
     'hero.subtitle': {
-      es: '',
-      en: ''
+      es: 'Tu coach personal con IA. Descubre lugares, recibe consejos personalizados y mejora tu vida social con guía inteligente.',
+      en: 'Your personal AI coach. Discover places, get personalized advice, and enhance your social life with intelligent guidance.',
+      pt: 'Seu coach pessoal com IA. Descubra lugares, receba conselhos personalizados e melhore sua vida social com orientação inteligente.'
     },
     'hero.ios': {
       es: 'Descargar en iOS',
