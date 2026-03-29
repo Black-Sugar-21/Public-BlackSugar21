@@ -193,6 +193,8 @@ enum class UserType(val displayName: String) {
 - Dialog en ProfileCardView: usa `contains("Elite")` / `contains("Prime")` para match
 - Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
+- Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
+- Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite" (corregido de "Elite/Mommy")
 
 ---
 
