@@ -90,10 +90,10 @@
         <p class="sub-tagline animate-in delay-3">{{ t('hero.subtitle') }}</p>
 
         <div class="download-buttons animate-in delay-4">
-          <a [href]="storeLinks().ios" class="store-badge app-store">
+          <a [href]="storeLinks().ios" class="store-badge app-store" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'hero'})">
             <img src="app-store-badge.webp" alt="Descárgalo en el App Store">
           </a>
-          <a (click)="showTesterModal.set(true); $event.preventDefault()" href="#" class="store-badge google-play">
+          <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'hero'}); $event.preventDefault()" href="#" class="store-badge google-play">
             <img src="google-play-badge.webp" alt="Disponible en Google Play">
           </a>
         </div>
@@ -155,10 +155,10 @@
           </div>
 
           <div class="coach-cta-buttons">
-            <a [href]="storeLinks().ios" class="store-badge app-store coach-store-badge">
+            <a [href]="storeLinks().ios" class="store-badge app-store coach-store-badge" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'coach'})">
               <img src="app-store-badge.webp" alt="Download on App Store">
             </a>
-            <a (click)="showTesterModal.set(true); $event.preventDefault()" href="#" class="store-badge google-play coach-store-badge">
+            <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'coach'}); $event.preventDefault()" href="#" class="store-badge google-play coach-store-badge">
               <img src="google-play-badge.webp" alt="Get it on Google Play">
             </a>
           </div>
@@ -327,11 +327,8 @@
           <div style="margin-top:20px; text-align:center;">
             <div style="font-size:48px; margin-bottom:12px;">✅</div>
             <p class="modal-success-text">{{ t('tester.success') }}</p>
-            <p style="color: rgba(255,255,255,0.6); font-size:13px; margin-top:12px; line-height:1.5;">{{ t('tester.instructions') }}</p>
-
-            <a href="https://play.google.com/apps/testing/com.black.sugar21" target="_blank" class="modal-button" style="display:block; text-decoration:none; margin-top:20px; text-align:center;">
-              {{ t('tester.install') }}
-            </a>
+            <p style="color: rgba(255,255,255,0.6); font-size:14px; margin-top:12px; line-height:1.6;">{{ t('tester.instructions') }}</p>
+            <button class="modal-button" style="margin-top:20px; width:100%;" (click)="showTesterModal.set(false)">OK</button>
           </div>
         } @else {
           <div style="margin-top:20px;">

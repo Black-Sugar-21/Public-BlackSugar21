@@ -969,9 +969,9 @@ export class TranslationService {
       pt: 'Junte-se ao beta exclusivo',
     },
     'tester.subtitle': {
-      es: 'Prueba Black Sugar 21 en Android antes que nadie. Únete a la versión beta exclusiva.',
-      en: 'Try Black Sugar 21 on Android before anyone else. Join the exclusive beta.',
-      pt: 'Experimente o Black Sugar 21 no Android antes de todos. Junte-se ao beta exclusivo.',
+      es: 'Ingresa tu correo de Google y recibirás una invitación para descargar la app.',
+      en: 'Enter your Google email and you will receive an invitation to download the app.',
+      pt: 'Digite seu email do Google e você receberá um convite para baixar o app.',
     },
     'tester.placeholder': {
       es: 'tu.correo@gmail.com',
@@ -984,14 +984,14 @@ export class TranslationService {
       pt: 'Solicitar acesso',
     },
     'tester.success': {
-      es: '¡Registro exitoso!',
-      en: 'Registration successful!',
-      pt: 'Registro bem-sucedido!',
+      es: '¡Solicitud enviada!',
+      en: 'Request sent!',
+      pt: 'Solicitação enviada!',
     },
     'tester.instructions': {
-      es: 'Únete al grupo que se abrió en otra pestaña, luego descarga la app aquí.',
-      en: 'Join the group that opened in another tab, then download the app here.',
-      pt: 'Entre no grupo que abriu em outra aba, depois baixe o app aqui.',
+      es: 'Recibirás una invitación en tu correo para descargar Black Sugar 21. Revisa tu bandeja de entrada.',
+      en: 'You will receive an invitation to download Black Sugar 21 in your email. Check your inbox.',
+      pt: 'Você receberá um convite para baixar o Black Sugar 21 no seu email. Verifique sua caixa de entrada.',
     },
     'tester.ready': {
       es: 'Ya puedes descargar la app.',

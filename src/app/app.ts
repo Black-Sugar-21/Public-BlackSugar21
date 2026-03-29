@@ -55,6 +55,46 @@ export class App implements OnInit {
 
     // Track page views with Firebase Analytics
     this.trackPageViews();
+
+    // Track traffic source, device, and landing info
+    this.trackVisitorInfo();
+  }
+
+  private trackVisitorInfo(): void {
+    // Traffic source (UTM params or referrer)
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get('utm_source') || '';
+    const utmMedium = params.get('utm_medium') || '';
+    const utmCampaign = params.get('utm_campaign') || '';
+    const referrer = document.referrer || 'direct';
+
+    // Device info
+    const ua = navigator.userAgent;
+    const isMobile = /iPhone|iPad|Android|Mobile/i.test(ua);
+    const isIOS = /iPhone|iPad/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const platform = isIOS ? 'iOS' : isAndroid ? 'Android' : 'Desktop';
+
+    // Browser language
+    const browserLang = navigator.language || 'unknown';
+
+    // Country from timezone
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+
+    this.firebase.logEvent('visitor_info', {
+      traffic_source: utmSource || (referrer.includes('google') ? 'google' : referrer.includes('facebook') ? 'facebook' : referrer.includes('instagram') ? 'instagram' : referrer.includes('tiktok') ? 'tiktok' : referrer === 'direct' ? 'direct' : 'other'),
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+      referrer: referrer.substring(0, 100),
+      platform,
+      is_mobile: isMobile,
+      browser_language: browserLang,
+      timezone,
+      landing_page: window.location.pathname,
+      screen_width: window.screen.width,
+      screen_height: window.screen.height,
+    });
   }
 
   async verifyAge() {
@@ -62,6 +102,7 @@ export class App implements OnInit {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('ageVerified', 'true');
     }
+    this.firebase.logEvent('age_verified', {});
 
     // Save to Firebase if user is logged in
     const user = this.firebase.currentUser();
@@ -191,8 +232,9 @@ export class App implements OnInit {
         language: this.translate.currentLanguage(),
       });
 
-      // 2. Redirect directly to Play Store testing opt-in
-      window.location.href = 'https://play.google.com/apps/testing/com.black.sugar21';
+      // 2. Track event + show success (admin gets push notification via CF)
+      this.firebase.logEvent('tester_signup', { email_domain: email.split('@')[1] });
+      this.testerStatus.set('success');
     } catch (err) {
       console.error('Tester signup error:', err);
       this.testerStatus.set('error');
