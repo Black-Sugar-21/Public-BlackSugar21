@@ -5,6 +5,49 @@ const admin = require('firebase-admin');
 
 const PROJECT_NUMBER = '706595096331';
 const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
+const ADMIN_USER_ID = 'tvmkXqXGSzfriAkQUI4KrQF6sZm2'; // dverdugo85@gmail.com
+
+/**
+ * Notify admin (dverdugo85@gmail.com) via push notification when a new tester signs up.
+ * Also saves to adminNotifications collection for dashboard visibility.
+ */
+async function notifyAdminNewTester(db, testerEmail) {
+  // 1. Save to adminNotifications collection
+  await db.collection('adminNotifications').add({
+    type: 'new_tester',
+    email: testerEmail,
+    message: `Nuevo tester registrado: ${testerEmail}. Agrégalo al Google Group para que pueda descargar la app.`,
+    googleGroupUrl: 'https://groups.google.com/g/blacksugar21-testers-pro/members',
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 2. Send push notification to admin device
+  try {
+    const adminDoc = await db.collection('users').doc(ADMIN_USER_ID).get();
+    if (!adminDoc.exists) return;
+    const fcmToken = adminDoc.data().fcmToken;
+    if (!fcmToken) return;
+
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: {
+        title: '🆕 Nuevo tester registrado',
+        body: `${testerEmail} quiere probar Black Sugar 21. Agrégalo al Google Group.`,
+      },
+      data: {
+        type: 'admin_new_tester',
+        email: testerEmail,
+        googleGroupUrl: 'https://groups.google.com/g/blacksugar21-testers-pro/members',
+      },
+      apns: {payload: {aps: {sound: 'default', badge: 1}}},
+      android: {priority: 'high', notification: {sound: 'default', channelId: 'default_channel'}},
+    });
+    logger.info(`[Testers] Admin notified about new tester: ${testerEmail}`);
+  } catch (notifErr) {
+    logger.warn(`[Testers] Admin notification failed: ${notifErr.message}`);
+  }
+}
 
 /**
  * Add a tester email via Firebase App Distribution API.
@@ -88,6 +131,9 @@ exports.onTesterSignup = onDocumentCreated(
       });
 
       logger.info(`[Testers] AUTO-ADDED ${email} via App Distribution`);
+
+      // Notify admin via push notification
+      notifyAdminNewTester(db, email).catch(() => {});
     } catch (err) {
       logger.error(`[Testers] Failed to auto-add ${email}: ${err.message}`);
       await snapshot.ref.update({

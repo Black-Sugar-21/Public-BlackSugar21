@@ -590,6 +590,12 @@ maxCacheAgeMinutes: Number (30)
 ```
 Cache for `getRealtimeCoachTips` results per match. TTL 30 minutes (`maxCacheAgeMinutes`). Prevents redundant Gemini calls when re-opening the same chat.
 
+### `dateCheckIns` Composite Indexes (Session 2026-03-28)
+
+Two composite indexes created for `dateCheckIns` collection:
+- `(status ASC, scheduledTime ASC)` — used by `processDateCheckIns` to query pending check-ins
+- `(status ASC, checkInSentAt ASC)` — used by `processDateCheckIns` to query sent check-ins awaiting response
+
 ### `aiAnalytics/{YYYY-MM-DD}` collection (Session 2026-03-28)
 
 ```

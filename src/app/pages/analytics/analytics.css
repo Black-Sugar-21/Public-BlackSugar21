@@ -56,6 +56,26 @@
   font-size: 13px;
 }
 
+.code-input {
+  width: 260px;
+  padding: 12px 16px;
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: white;
+  font-size: 16px;
+  text-align: center;
+  outline: none;
+  margin-bottom: 16px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.code-input:focus {
+  border-color: #D4AF37;
+}
+
 .period-selector {
   display: flex;
   gap: 8px;

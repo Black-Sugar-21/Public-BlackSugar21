@@ -169,8 +169,10 @@ export class App implements OnInit {
    * from Firebase Remote Config (minimum_age_by_country).
    */
   async requestBetaAccess() {
-    const email = this.testerEmail().trim();
-    if (!email || !email.includes('@')) {
+    const email = this.testerEmail().trim().toLowerCase();
+    // Validate email format: user@domain.ext
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!email || !emailRegex.test(email)) {
       this.testerStatus.set('error');
       return;
     }

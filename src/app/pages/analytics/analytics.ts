@@ -1,6 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { getAuth, signInWithPopup, GoogleAuthProvider, User, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 interface DailyAnalytics {
@@ -15,8 +14,6 @@ interface DailyAnalytics {
   healthCheck?: { errorRate: number; avgLatencyMs: number; alerts: string[] };
 }
 
-const ADMIN_EMAILS = ['dverdugo85@gmail.com'];
-
 @Component({
   selector: 'app-analytics',
   standalone: true,
@@ -25,9 +22,8 @@ const ADMIN_EMAILS = ['dverdugo85@gmail.com'];
   styleUrl: './analytics.css',
 })
 export class AnalyticsComponent implements OnInit {
-  user = signal<User | null>(null);
-  isAdmin = signal(false);
-  loading = signal(true);
+  authenticated = signal(false);
+  loading = signal(false);
   error = signal('');
   daily = signal<DailyAnalytics[]>([]);
   days = signal(7);
@@ -40,27 +36,22 @@ export class AnalyticsComponent implements OnInit {
   errorRate = signal(0);
   avgCostPerDay = signal(0);
 
+  private readonly accessCode = 'bs21-admin-2026';
+
   ngOnInit() {
-    const auth = getAuth();
-    onAuthStateChanged(auth, (u) => {
-      this.user.set(u);
-      this.isAdmin.set(u ? ADMIN_EMAILS.includes(u.email || '') : false);
-      if (this.isAdmin()) {
-        this.loadData();
-      } else {
-        this.loading.set(false);
-      }
-    });
+    if (sessionStorage.getItem('bs21-analytics') === 'ok') {
+      this.authenticated.set(true);
+      this.loadData();
+    }
   }
 
-  async login() {
-    try {
-      const auth = getAuth();
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
-    } catch (err: any) {
-      this.error.set(err.message || 'Login failed');
+  checkCode(input: HTMLInputElement) {
+    if (input.value === this.accessCode) {
+      this.authenticated.set(true);
+      sessionStorage.setItem('bs21-analytics', 'ok');
+      this.loadData();
+    } else {
+      this.error.set('Código incorrecto');
     }
   }
 
@@ -70,7 +61,6 @@ export class AnalyticsComponent implements OnInit {
     try {
       const db = getFirestore();
       const results: DailyAnalytics[] = [];
-
       for (let i = 0; i < this.days(); i++) {
         const date = new Date(Date.now() - i * 86400000).toISOString().substring(0, 10);
         const snap = await getDoc(doc(db, 'aiAnalytics', date));
@@ -78,7 +68,6 @@ export class AnalyticsComponent implements OnInit {
           results.push({ date, ...snap.data() } as DailyAnalytics);
         }
       }
-
       this.daily.set(results);
       this.computeSummary(results);
     } catch (err: any) {
@@ -105,40 +94,31 @@ export class AnalyticsComponent implements OnInit {
     this.avgCostPerDay.set(results.length > 0 ? cost / results.length : 0);
   }
 
-  setDays(d: number) {
-    this.days.set(d);
-    this.loadData();
-  }
+  setDays(d: number) { this.days.set(d); this.loadData(); }
 
   getFunctionNames(): string[] {
     const latest = this.daily()[0];
-    if (!latest?.functions) return [];
-    return Object.keys(latest.functions).sort();
+    return latest?.functions ? Object.keys(latest.functions).sort() : [];
   }
 
   getFunctionData(name: string) {
-    const latest = this.daily()[0];
-    return latest?.functions?.[name] || { calls: 0, tokens: 0, costUsd: 0, errors: 0 };
+    return this.daily()[0]?.functions?.[name] || { calls: 0, tokens: 0, costUsd: 0, errors: 0 };
   }
 
   getModelNames(): string[] {
     const latest = this.daily()[0];
-    if (!latest?.models) return [];
-    return Object.keys(latest.models).sort();
+    return latest?.models ? Object.keys(latest.models).sort() : [];
   }
 
   getModelData(name: string) {
-    const latest = this.daily()[0];
-    return latest?.models?.[name] || { calls: 0, tokens: 0, costUsd: 0 };
+    return this.daily()[0]?.models?.[name] || { calls: 0, tokens: 0, costUsd: 0 };
   }
 
   getAlerts(): string[] {
     return this.daily().flatMap(d => d.healthCheck?.alerts || []);
   }
 
-  formatCost(usd: number): string {
-    return '$' + (usd || 0).toFixed(4);
-  }
+  formatCost(usd: number): string { return '$' + (usd || 0).toFixed(4); }
 
   formatTokens(n: number): string {
     if (!n) return '0';
@@ -151,8 +131,8 @@ export class AnalyticsComponent implements OnInit {
     return day.totalCalls > 0 ? Math.round(day.totalLatencyMs / day.totalCalls) : 0;
   }
 
-  async logout() {
-    const auth = getAuth();
-    await auth.signOut();
+  logout() {
+    sessionStorage.removeItem('bs21-analytics');
+    this.authenticated.set(false);
   }
 }

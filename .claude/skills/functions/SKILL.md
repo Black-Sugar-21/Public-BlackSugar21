@@ -831,3 +831,18 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - `@anthropic-ai/claude-agent-sdk` installed (TypeScript)
 - `/team-audit` command orchestrates parallel agent audits
 - `scripts/agents/`: backend-audit.mjs, coach-quality.mjs, moderation-health.mjs, team-run.mjs, schedule-audit.sh
+
+### Bug Fixes (Session 2026-03-28)
+
+#### Places API radius cap
+- Google Places API v2 max radius is 50km, default was 100km (silently capped by Google)
+- Fixed with `Math.min(radius, 50000)` in `placesTextSearch()`
+- RC `places_search_config` defaults updated: `defaultRadius` 100k→50k, `radiusSteps` [100k,130k,180k,250k,300k]→[50k], `progressiveRadiusSteps` [15k,30k,60k,120k,200k,300k]→[15k,30k,50k], `loadMoreDefaultBaseRadius` 60k→30k
+
+#### Invalid Google Places types removed
+- `sake_bar`, `whiskey_bar`, `beer_garden`, `beer_hall`, `tapas_bar` don't exist in Google Places API v2
+- Removed from queries + added `VALID_PLACE_TYPES` whitelist (100+ types) that silently skips invalid types
+
+#### Instagram @null. false positive
+- Search Grounding returned "null." which passed validation due to trailing dot
+- Fixed with `.replace(/\.+$/, '')` before validation in `isValidCoachInstagramHandle`
