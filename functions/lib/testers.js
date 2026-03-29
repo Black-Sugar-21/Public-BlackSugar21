@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const PROJECT_NUMBER = '706595096331';
 const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
 const ADMIN_USER_ID = 'tvmkXqXGSzfriAkQUI4KrQF6sZm2';
-const WORKSPACE_GROUP = 'blacksugar21-tester@blacksugar21.com';
+const WORKSPACE_GROUP = 'alpha-testers@blacksugar21.com';
 const WORKSPACE_ADMIN = 'hello@blacksugar21.com';
 
 /**
@@ -97,10 +97,10 @@ async function notifyAdminNewTester(db, email) {
     await admin.messaging().send({
       token: fcmToken,
       notification: {
-        title: '🆕 Nuevo tester registrado',
-        body: `${email} fue agregado automáticamente al grupo alpha.`,
+        title: '🆕 Nuevo tester',
+        body: `${email} agregado al grupo Workspace. Agrégalo también al Google Group desde: groups.google.com/g/blacksugar21-testers-pro/members`,
       },
-      data: { type: 'admin_new_tester', email },
+      data: { type: 'admin_new_tester', email, action: 'https://groups.google.com/g/blacksugar21-testers-pro/members' },
       apns: { payload: { aps: { sound: 'default' } } },
       android: { priority: 'high', notification: { sound: 'default', channelId: 'default_channel' } },
     });
