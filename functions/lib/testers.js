@@ -5,53 +5,51 @@ const admin = require('firebase-admin');
 
 const PROJECT_NUMBER = '706595096331';
 const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
-const ADMIN_USER_ID = 'tvmkXqXGSzfriAkQUI4KrQF6sZm2'; // dverdugo85@gmail.com
+const ADMIN_USER_ID = 'tvmkXqXGSzfriAkQUI4KrQF6sZm2';
+const WORKSPACE_GROUP = 'blacksugar21-tester@blacksugar21.com';
+const WORKSPACE_ADMIN = 'hello@blacksugar21.com';
 
 /**
- * Notify admin (dverdugo85@gmail.com) via push notification when a new tester signs up.
- * Also saves to adminNotifications collection for dashboard visibility.
+ * Add email to Google Workspace Group via Admin Directory API.
+ * This automatically makes them a tester in Play Console (group linked to alpha track).
  */
-async function notifyAdminNewTester(db, testerEmail) {
-  // 1. Save to adminNotifications collection
-  await db.collection('adminNotifications').add({
-    type: 'new_tester',
-    email: testerEmail,
-    message: `Nuevo tester registrado: ${testerEmail}. Agrégalo al Google Group para que pueda descargar la app.`,
-    googleGroupUrl: 'https://groups.google.com/g/blacksugar21-testers-pro/members',
-    read: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+async function addToWorkspaceGroup(email) {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({
+    scopes: [
+      'https://www.googleapis.com/auth/admin.directory.group',
+      'https://www.googleapis.com/auth/admin.directory.group.member',
+    ],
+    clientOptions: { subject: WORKSPACE_ADMIN },
   });
+  const authClient = await auth.getClient();
+  const dir = google.admin({ version: 'directory_v1', auth: authClient });
 
-  // 2. Send push notification to admin device
+  // Check if already member
   try {
-    const adminDoc = await db.collection('users').doc(ADMIN_USER_ID).get();
-    if (!adminDoc.exists) return;
-    const fcmToken = adminDoc.data().fcmToken;
-    if (!fcmToken) return;
-
-    await admin.messaging().send({
-      token: fcmToken,
-      notification: {
-        title: '🆕 Nuevo tester registrado',
-        body: `${testerEmail} quiere probar Black Sugar 21. Agrégalo al Google Group.`,
-      },
-      data: {
-        type: 'admin_new_tester',
-        email: testerEmail,
-        googleGroupUrl: 'https://groups.google.com/g/blacksugar21-testers-pro/members',
-      },
-      apns: {payload: {aps: {sound: 'default', badge: 1}}},
-      android: {priority: 'high', notification: {sound: 'default', channelId: 'default_channel'}},
-    });
-    logger.info(`[Testers] Admin notified about new tester: ${testerEmail}`);
-  } catch (notifErr) {
-    logger.warn(`[Testers] Admin notification failed: ${notifErr.message}`);
+    const check = await dir.members.get({ groupKey: WORKSPACE_GROUP, memberKey: email });
+    if (check.data) {
+      logger.info(`[Testers] ${email} already in Workspace group`);
+      return { alreadyMember: true };
+    }
+  } catch (e) {
+    // 404 = not a member, continue to add
+    if (e.response?.status !== 404) {
+      throw e;
+    }
   }
+
+  // Add member
+  await dir.members.insert({
+    groupKey: WORKSPACE_GROUP,
+    requestBody: { email, role: 'MEMBER' },
+  });
+  logger.info(`[Testers] AUTO-ADDED ${email} to Workspace group ${WORKSPACE_GROUP}`);
+  return { added: true };
 }
 
 /**
  * Add a tester email via Firebase App Distribution API.
- * This is FREE and works without Google Workspace.
  */
 async function addTesterViaAppDistribution(email) {
   const { GoogleAuth } = require('google-auth-library');
@@ -75,18 +73,46 @@ async function addTesterViaAppDistribution(email) {
     const errData = await res.text();
     throw new Error(`App Distribution API error (${res.status}): ${errData}`);
   }
+  return { added: true };
+}
 
-  const data = await res.json();
-  return { added: true, testers: data.testers?.length || 0 };
+/**
+ * Notify admin via push notification when a new tester signs up.
+ */
+async function notifyAdminNewTester(db, email) {
+  await db.collection('adminNotifications').add({
+    type: 'new_tester',
+    email,
+    message: `Nuevo tester: ${email}`,
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  try {
+    const adminDoc = await db.collection('users').doc(ADMIN_USER_ID).get();
+    if (!adminDoc.exists) return;
+    const fcmToken = adminDoc.data().fcmToken;
+    if (!fcmToken) return;
+
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: {
+        title: '🆕 Nuevo tester registrado',
+        body: `${email} fue agregado automáticamente al grupo alpha.`,
+      },
+      data: { type: 'admin_new_tester', email },
+      apns: { payload: { aps: { sound: 'default' } } },
+      android: { priority: 'high', notification: { sound: 'default', channelId: 'default_channel' } },
+    });
+    logger.info(`[Testers] Admin notified about: ${email}`);
+  } catch (notifErr) {
+    logger.warn(`[Testers] Admin notification failed: ${notifErr.message}`);
+  }
 }
 
 /**
  * Firestore trigger: When a new tester signup is created,
- * automatically add to Firebase App Distribution + provide Play Console opt-in link.
- *
- * The Google Group (blacksugar21-testers-pro@googlegroups.com) is linked to
- * Play Console closed testing. Users join the group to become Play Console testers.
- * Firebase App Distribution handles the tester registry.
+ * automatically add to Workspace Group (→ Play Console tester) + App Distribution.
  */
 exports.onTesterSignup = onDocumentCreated(
   { document: 'testerSignups/{signupId}', region: 'us-central1' },
@@ -101,8 +127,12 @@ exports.onTesterSignup = onDocumentCreated(
       return;
     }
 
-    // Check for duplicate signups
     const db = admin.firestore();
+
+    // Always notify admin (even duplicates)
+    notifyAdminNewTester(db, email).catch(() => {});
+
+    // Check for duplicate signups
     const existing = await db.collection('testerSignups')
       .where('email', '==', email)
       .where('status', 'in', ['received', 'added'])
@@ -116,34 +146,36 @@ exports.onTesterSignup = onDocumentCreated(
         optInUrl: OPT_IN_URL,
       });
       logger.info(`[Testers] Duplicate signup: ${email}`);
-      // Still notify admin even for duplicates (user is requesting again)
-      notifyAdminNewTester(db, email).catch(() => {});
       return;
     }
 
-    // Add to Firebase App Distribution automatically
+    // Add to Workspace Group (auto-tester in Play Console) + App Distribution
+    let workspaceResult = null;
+    let appDistResult = null;
+
     try {
-      const result = await addTesterViaAppDistribution(email);
-
-      await snapshot.ref.update({
-        status: 'added',
-        addedAt: admin.firestore.FieldValue.serverTimestamp(),
-        addedAutomatically: true,
-        optInUrl: OPT_IN_URL,
-      });
-
-      logger.info(`[Testers] AUTO-ADDED ${email} via App Distribution`);
-
-      // Notify admin via push notification
-      notifyAdminNewTester(db, email).catch(() => {});
+      workspaceResult = await addToWorkspaceGroup(email);
     } catch (err) {
-      logger.error(`[Testers] Failed to auto-add ${email}: ${err.message}`);
-      await snapshot.ref.update({
-        status: 'received',
-        receivedAt: admin.firestore.FieldValue.serverTimestamp(),
-        autoAddError: err.message,
-        optInUrl: OPT_IN_URL,
-      });
+      logger.error(`[Testers] Workspace group failed for ${email}: ${err.message}`);
     }
-  }
+
+    try {
+      appDistResult = await addTesterViaAppDistribution(email);
+    } catch (err) {
+      logger.error(`[Testers] App Distribution failed for ${email}: ${err.message}`);
+    }
+
+    const addedToGroup = workspaceResult?.added || workspaceResult?.alreadyMember || false;
+
+    await snapshot.ref.update({
+      status: addedToGroup ? 'added' : 'received',
+      addedAt: admin.firestore.FieldValue.serverTimestamp(),
+      addedToWorkspaceGroup: addedToGroup,
+      addedToAppDistribution: !!appDistResult?.added,
+      optInUrl: OPT_IN_URL,
+      ...(workspaceResult?.alreadyMember ? { note: 'Already in group' } : {}),
+    });
+
+    logger.info(`[Testers] ${email}: group=${addedToGroup}, appDist=${!!appDistResult?.added}`);
+  },
 );
