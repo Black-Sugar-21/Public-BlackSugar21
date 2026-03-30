@@ -618,7 +618,8 @@ a:hover {
 .carousel-dots {
     display: flex;
     justify-content: center;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
     margin-top: 24px;
 }
 
@@ -626,17 +627,18 @@ a:hover {
     width: 8px;
     height: 8px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.2);
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.45, 0, 0.15, 1);
+    transition: all 0.5s cubic-bezier(0.45, 0, 0.15, 1);
     position: relative;
     overflow: hidden;
 }
 
 .carousel-dot.active {
-    width: 32px;
-    background: #D4AF37;
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+    width: 40px;
+    height: 6px;
+    background: rgba(212, 175, 55, 0.3);
+    border-radius: 3px;
 }
 
 .carousel-dot.active::after {
@@ -645,12 +647,14 @@ a:hover {
     top: 0;
     left: 0;
     height: 100%;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-    animation: dotProgress 5s linear forwards;
+    width: 0;
+    background: linear-gradient(90deg, #D4AF37, #F0D060);
+    border-radius: 3px;
+    animation: dotTimer 5s linear forwards;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.6);
 }
 
-@keyframes dotProgress {
+@keyframes dotTimer {
     from { width: 0; }
     to { width: 100%; }
 }
