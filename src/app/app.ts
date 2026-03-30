@@ -1,9 +1,11 @@
-import { Component, signal, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 @Component({
   selector: 'app-root',
@@ -11,7 +13,9 @@ import { FirebaseService } from './firebase.service';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements OnInit, OnDestroy {
+export class App implements OnInit, OnDestroy, AfterViewInit {
+  private isBrowser: boolean;
+  private gsapCtx: gsap.Context | null = null;
   protected readonly title = signal('Black Sugar 21');
   protected readonly ageVerified = signal(false);
   protected readonly storeLinks = signal({ ios: '#', android: '#' });
@@ -31,10 +35,121 @@ export class App implements OnInit, OnDestroy {
   constructor(
     public translate: TranslationService,
     public firebase: FirebaseService,
-    private router: Router
-  ) {}
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+    if (this.isBrowser) {
+      gsap.registerPlugin(ScrollTrigger);
+    }
+  }
+
+  ngAfterViewInit() {
+    if (!this.isBrowser) return;
+
+    this.gsapCtx = gsap.context(() => {
+      // 1. Hero Timeline — coordinated entrance
+      const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      heroTl
+        .from('.logo-container', { scale: 0, opacity: 0, duration: 0.8, ease: 'back.out(1.7)' })
+        .from('.hero-section h1', { y: 40, opacity: 0, duration: 0.7 }, '-=0.3')
+        .from('.tagline', { y: 30, opacity: 0, duration: 0.6 }, '-=0.3')
+        .from('.sub-tagline', { y: 30, opacity: 0, duration: 0.6 }, '-=0.4')
+        .from('.download-buttons', { y: 20, opacity: 0, scale: 0.95, duration: 0.6 }, '-=0.3')
+        .from('.hero-carousel', { y: 30, opacity: 0, duration: 0.8 }, '-=0.3');
+
+      // 2. ScrollTrigger — Coach section reveal
+      gsap.from('.coach-section-inner', {
+        scrollTrigger: {
+          trigger: '.coach-section',
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+        y: 60,
+        opacity: 0,
+        duration: 1,
+        ease: 'power2.out',
+      });
+
+      // Coach phones — enter from sides
+      gsap.from('.coach-phone-mockup', {
+        scrollTrigger: {
+          trigger: '.coach-section',
+          start: 'top 75%',
+        },
+        x: -80,
+        opacity: 0,
+        duration: 1,
+        ease: 'power2.out',
+      });
+
+      gsap.from('.chat-phone', {
+        scrollTrigger: {
+          trigger: '.coach-section',
+          start: 'top 75%',
+        },
+        x: 80,
+        opacity: 0,
+        duration: 1,
+        delay: 0.2,
+        ease: 'power2.out',
+      });
+
+      // Coach features list — stagger
+      gsap.from('.coach-features-list li', {
+        scrollTrigger: {
+          trigger: '.coach-features-list',
+          start: 'top 85%',
+        },
+        y: 25,
+        opacity: 0,
+        duration: 0.5,
+        stagger: 0.15,
+        ease: 'power2.out',
+      });
+
+      // 3. ScrollTrigger — Features cards stagger
+      gsap.from('.feature-card', {
+        scrollTrigger: {
+          trigger: '.features-grid',
+          start: 'top 80%',
+        },
+        y: 50,
+        opacity: 0,
+        scale: 0.95,
+        duration: 0.7,
+        stagger: 0.2,
+        ease: 'power2.out',
+      });
+
+      // 4. Parallax — Hero section subtle
+      gsap.to('.hero-section', {
+        scrollTrigger: {
+          trigger: '.hero-section',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true,
+        },
+        backgroundPositionY: '30%',
+        ease: 'none',
+      });
+
+      // 5. Footer reveal
+      gsap.from('.footer-content', {
+        scrollTrigger: {
+          trigger: 'footer',
+          start: 'top 90%',
+        },
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power2.out',
+      });
+    });
+  }
 
   ngOnDestroy() {
+    this.gsapCtx?.revert();
     this.stopCarousel();
   }
 

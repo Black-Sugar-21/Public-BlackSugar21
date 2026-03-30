@@ -680,25 +680,13 @@ a:hover {
     }
 }
 
+/* animate-in classes replaced by GSAP timeline — kept for fallback */
 .animate-in {
-    opacity: 0;
-    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 1;
 }
 
-.delay-1 {
-    animation-delay: 0.1s;
-}
-
-.delay-2 {
-    animation-delay: 0.3s;
-}
-
-.delay-3 {
-    animation-delay: 0.5s;
-}
-
-.delay-4 {
-    animation-delay: 0.7s;
+.delay-1, .delay-2, .delay-3, .delay-4 {
+    /* GSAP handles timing — no CSS delay needed */
 }
 
 /* Features Section */
