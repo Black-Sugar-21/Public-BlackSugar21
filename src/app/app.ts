@@ -45,11 +45,11 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  ngAfterViewInit() {
-    if (!this.isBrowser) return;
+  private initGsapAnimations() {
+    if (this.gsapCtx) return; // Already initialized
+    // Check if hero section exists in DOM
+    if (!document.querySelector('.hero-section')) return;
 
-    // Delay GSAP init to ensure DOM is rendered after age gate
-    setTimeout(() => {
     this.gsapCtx = gsap.context(() => {
       // 1. Hero Timeline — coordinated entrance
       const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -149,7 +149,12 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         ease: 'power2.out',
       });
     });
-    }, 500); // Wait for DOM render after age gate
+  }
+
+  ngAfterViewInit() {
+    if (!this.isBrowser) return;
+    // Try init immediately if age already verified, otherwise wait
+    setTimeout(() => this.initGsapAnimations(), 100);
   }
 
   ngOnDestroy() {
@@ -189,6 +194,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
       const verified = localStorage.getItem('ageVerified');
       if (verified === 'true') {
         this.ageVerified.set(true);
+        // Init GSAP after DOM renders
+        setTimeout(() => this.initGsapAnimations(), 300);
       }
     }
 
@@ -253,6 +260,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('ageVerified', 'true');
     }
+    // Init GSAP after DOM renders the main content
+    setTimeout(() => this.initGsapAnimations(), 300);
     this.firebase.logEvent('age_verified', {});
 
     // Save to Firebase if user is logged in
