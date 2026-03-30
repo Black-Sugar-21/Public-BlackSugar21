@@ -1136,12 +1136,64 @@ a:hover {
 
     .hero-carousel {
         margin-top: var(--spacing-md);
-        max-width: 320px;
+        max-width: 90vw;
     }
 
     .hero-screenshot-img {
-        max-width: 320px;
+        max-width: 90vw;
         border-radius: 18px;
+    }
+
+    .carousel-dots {
+        gap: 6px;
+        margin-top: 16px;
+    }
+
+    .carousel-dot {
+        width: 6px;
+        height: 6px;
+    }
+
+    .carousel-dot.active {
+        width: 28px;
+        height: 5px;
+    }
+
+    /* Coach section mobile */
+    .coach-section {
+        padding: 3rem 1rem;
+    }
+
+    .coach-section-inner {
+        gap: 2rem;
+    }
+
+    .coach-label {
+        font-size: 0.7rem;
+    }
+
+    .coach-title {
+        font-size: 1.5rem;
+    }
+
+    .coach-description {
+        font-size: 0.9rem;
+    }
+
+    .coach-feature-item {
+        padding: 12px;
+    }
+
+    .coach-feature-icon {
+        font-size: 1.2rem;
+    }
+
+    .coach-feature-item h4 {
+        font-size: 0.9rem;
+    }
+
+    .coach-feature-item p {
+        font-size: 0.8rem;
     }
 
     /* Footer */
@@ -1243,6 +1295,37 @@ a:hover {
     .mobile-menu {
         width: 100%;
         max-width: 100vw;
+    }
+
+    .hero-carousel {
+        max-width: 95vw;
+    }
+
+    .hero-screenshot-img {
+        max-width: 95vw;
+        border-radius: 14px;
+    }
+
+    .carousel-slide {
+        opacity: 0.6;
+        transform: scale(0.95);
+    }
+
+    .carousel-slide.active {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .coach-section {
+        padding: 2.5rem 0.75rem;
+    }
+
+    .coach-title {
+        font-size: 1.3rem;
+    }
+
+    .dual-phones {
+        --phone-width: min(280px, 85vw);
     }
 }
 
