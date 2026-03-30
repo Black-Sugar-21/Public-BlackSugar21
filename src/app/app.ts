@@ -41,7 +41,7 @@ export class App implements OnInit, OnDestroy {
   private startCarousel() {
     this.carouselInterval = setInterval(() => {
       this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
-    }, 4000);
+    }, 5000);
   }
 
   private stopCarousel() {

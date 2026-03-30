@@ -100,42 +100,42 @@
 
         <div class="hero-carousel animate-in delay-4">
           <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide * 100 + '%)'">
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 0">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'discovery-es.png' : 'discovery-en.png'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Encuentra conexiones con análisis de IA' : 'Find connections with AI analysis'"
                 class="hero-screenshot-img"
               />
             </div>
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 1">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'coachIA-photo-es.jpeg' : 'coachIA-photo-en.jpeg'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Coach IA de Fotos' : 'AI Photo Coach'"
                 class="hero-screenshot-img"
               />
             </div>
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 2">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'break-ice-es.png' : 'break-ice-en.png'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Tu coach IA te sugiere cómo romper el hielo' : 'Your AI coach suggests how to break the ice'"
                 class="hero-screenshot-img"
               />
             </div>
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 3">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'planning-es.png' : 'planning-en.jpg'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Planifica tu cita con IA' : 'AI Date Planning'"
                 class="hero-screenshot-img"
               />
             </div>
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 4">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'places-coach-es.png' : 'places-coach-en.png'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Descubre lugares con IA' : 'Discover places with AI'"
                 class="hero-screenshot-img"
               />
             </div>
-            <div class="carousel-slide">
+            <div class="carousel-slide" [class.active]="currentSlide === 5">
               <img
                 [src]="getCurrentLanguage() === 'es' ? 'coachIA-conversation-es.png' : 'coachIA-conversation-en.jpeg'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Coach IA conversacional' : 'AI Conversational Coach'"
