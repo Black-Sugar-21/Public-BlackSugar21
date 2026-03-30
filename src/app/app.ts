@@ -48,6 +48,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   ngAfterViewInit() {
     if (!this.isBrowser) return;
 
+    // Delay GSAP init to ensure DOM is rendered after age gate
+    setTimeout(() => {
     this.gsapCtx = gsap.context(() => {
       // 1. Hero Timeline — coordinated entrance
       const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -97,7 +99,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
       });
 
       // Coach features list — stagger
-      gsap.from('.coach-features-list li', {
+      gsap.from('.coach-feature-item', {
         scrollTrigger: {
           trigger: '.coach-features-list',
           start: 'top 85%',
@@ -147,6 +149,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         ease: 'power2.out',
       });
     });
+    }, 500); // Wait for DOM render after age gate
   }
 
   ngOnDestroy() {
@@ -169,6 +172,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
   goToSlide(index: number) {
     this.currentSlide = index;
+    this.slideKey++;
     this.stopCarousel();
     this.startCarousel();
   }
