@@ -21,9 +21,9 @@ globs:
 - **Ruta**: `/Users/daniel/IdeaProjects/Public-BlackSugar21`
 - **Build output**: `dist/Public-BlackSugar21/browser/`
 
-## Landing Page — Hero Carousel
+## Landing Page — Hero Carousel (GSAP + IntersectionObserver)
 
-La landing page (`app.html`) tiene un carrusel automático con 4 slides:
+6 slides con auto-rotate controlado por GSAP + visibilidad por IntersectionObserver:
 
 | # | Slide | EN image | ES image |
 |---|-------|----------|----------|
@@ -31,13 +31,39 @@ La landing page (`app.html`) tiene un carrusel automático con 4 slides:
 | 2 | AI Photo Coach | `coachIA-photo-en.jpeg` | `coachIA-photo-es.jpeg` |
 | 3 | AI Icebreakers | `break-ice-en.png` | `break-ice-es.png` |
 | 4 | AI Date Planning | `planning-en.jpg` | `planning-es.png` |
+| 5 | Places Coach | `places-coach-en.png` | `places-coach-es.png` |
+| 6 | AI Conversational Coach | `coachIA-conversation-en.jpeg` | `coachIA-conversation-es.png` |
 
-- Auto-rotate: 4 segundos, `setInterval` en `app.ts`
-- Transición: `cubic-bezier(0.25, 0.1, 0.25, 1)` 0.6s
-- Dots dorados navegables con click (`goToSlide()`)
-- Responsive: 420px desktop / 320px mobile
-- Idioma: `getCurrentLanguage()` decide EN/ES images
-- Imágenes en `public/` (served as root by Angular build)
+### Arquitectura del carrusel
+- **`currentSlide`**: `signal(0)` — Angular detecta cambios automáticamente
+- **`IntersectionObserver`** (threshold 0.3): detecta visibilidad del carrusel
+  - Visible → `animateDot()` empieza
+  - No visible → `pauseCarousel()` (ahorra CPU)
+- **`animateDot()`**: GSAP tween anima `.carousel-dot-fill` width 0%→100% en 5s
+  - `onComplete` → avanza slide → llama `animateDot()` recursivamente
+- **`goToSlide(i)`**: mata tween + cambia slide + reinicia animación
+- **NO usa `setInterval` ni CSS animations** — GSAP controla todo el ciclo
+- **Shimmer**: `.img-shimmer` gradient púrpura animado mientras imágenes cargan
+
+### GSAP Animations (integradas en `app.ts`)
+- Hero Timeline: logo bounce → título → tagline → buttons → carousel
+- ScrollTrigger Coach: phones entran desde lados + features stagger
+- ScrollTrigger Features: cards stagger desde abajo
+- Parallax Hero: backgroundPositionY scrub
+- Footer: fade-in reveal
+- `gsap.context()` para cleanup en `ngOnDestroy()`
+- `isPlatformBrowser` guard para SSR safety
+- `initGsapAnimations()` se ejecuta después de age gate verification
+
+### Responsive
+- **Desktop**: max-width 420px
+- **Tablet** (768px): 90vw, dots 6px/28px
+- **Phone** (480px): 95vw, border-radius 14px
+- Viewport meta: `width=device-width, initial-scale=1`
+
+### Dependencias
+- `gsap: ^3.14.2` con `ScrollTrigger` plugin
+- Bundle budget: 1.5MB (con GSAP)
 
 ## Rutas publicas
 
