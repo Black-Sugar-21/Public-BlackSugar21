@@ -21,7 +21,7 @@ export class App implements OnInit, OnDestroy {
   // Hero carousel
   currentSlide = 0;
   private carouselInterval: any;
-  private readonly totalSlides = 2;
+  private readonly totalSlides = 3;
 
   showTesterModal = signal(false);
   testerEmail = signal('');

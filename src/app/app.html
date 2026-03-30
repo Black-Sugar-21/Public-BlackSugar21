@@ -109,6 +109,13 @@
             </div>
             <div class="carousel-slide">
               <img
+                [src]="getCurrentLanguage() === 'es' ? 'coachIA-photo-es.jpeg' : 'coachIA-photo-en.jpeg'"
+                [alt]="getCurrentLanguage() === 'es' ? 'Coach IA de Fotos' : 'AI Photo Coach'"
+                class="hero-screenshot-img"
+              />
+            </div>
+            <div class="carousel-slide">
+              <img
                 [src]="getCurrentLanguage() === 'es' ? 'break-ice-es.png' : 'break-ice-en.png'"
                 [alt]="getCurrentLanguage() === 'es' ? 'Tu coach IA te sugiere cómo romper el hielo' : 'Your AI coach suggests how to break the ice'"
                 class="hero-screenshot-img"
@@ -117,7 +124,7 @@
           </div>
           <div class="carousel-dots">
             <span
-              *ngFor="let dot of [0, 1]; let i = index"
+              *ngFor="let dot of [0, 1, 2]; let i = index"
               class="carousel-dot"
               [class.active]="currentSlide === i"
               (click)="goToSlide(i)"
