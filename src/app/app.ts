@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -37,6 +37,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     public translate: TranslationService,
     public firebase: FirebaseService,
     private router: Router,
+    private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -163,10 +164,14 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private startCarousel() {
-    this.carouselInterval = setInterval(() => {
-      this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
-      this.slideKey++;
-    }, 5000);
+    this.ngZone.runOutsideAngular(() => {
+      this.carouselInterval = setInterval(() => {
+        this.ngZone.run(() => {
+          this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
+          this.slideKey++;
+        });
+      }, 5000);
+    });
   }
 
   private stopCarousel() {
