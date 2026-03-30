@@ -651,15 +651,7 @@ a:hover {
     background: linear-gradient(90deg, #D4AF37, #F0D060);
     border-radius: 3px;
     box-shadow: 0 0 6px rgba(212, 175, 55, 0.5);
-}
-
-.carousel-dot-fill.animating {
-    animation: dotFill 5s linear forwards;
-}
-
-@keyframes dotFill {
-    from { width: 0; }
-    to { width: 100%; }
+    /* Width animated by GSAP — no CSS animation needed */
 }
 
 /* Image shimmer while loading */

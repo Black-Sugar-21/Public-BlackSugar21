@@ -128,7 +128,7 @@
           <div class="carousel-dots">
             @for (dot of [0, 1, 2, 3, 4, 5]; track dot; let i = $index) {
               <div class="carousel-dot" [class.active]="currentSlide() === i" (click)="goToSlide(i)">
-                <div class="carousel-dot-fill" [class.animating]="currentSlide() === i"></div>
+                <div class="carousel-dot-fill"></div>
               </div>
             }
           </div>

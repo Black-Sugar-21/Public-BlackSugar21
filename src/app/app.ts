@@ -161,14 +161,38 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     this.stopCarousel();
   }
 
+  private dotTween: gsap.core.Tween | null = null;
+
   private startCarousel() {
     this.stopCarousel();
-    this.carouselInterval = setInterval(() => {
-      this.currentSlide.set((this.currentSlide() + 1) % this.totalSlides);
-    }, 5000);
+    this.animateDot();
+  }
+
+  private animateDot() {
+    if (this.dotTween) this.dotTween.kill();
+    // Reset all fill bars
+    gsap.set('.carousel-dot-fill', { width: '0%' });
+    // Animate current dot fill bar
+    const fills = document.querySelectorAll('.carousel-dot-fill');
+    const currentFill = fills[this.currentSlide()];
+    if (currentFill) {
+      this.dotTween = gsap.to(currentFill, {
+        width: '100%',
+        duration: 5,
+        ease: 'none',
+        onComplete: () => {
+          this.currentSlide.set((this.currentSlide() + 1) % this.totalSlides);
+          this.animateDot();
+        }
+      });
+    }
   }
 
   private stopCarousel() {
+    if (this.dotTween) {
+      this.dotTween.kill();
+      this.dotTween = null;
+    }
     if (this.carouselInterval) {
       clearInterval(this.carouselInterval);
       this.carouselInterval = null;
@@ -177,7 +201,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
   goToSlide(index: number) {
     this.currentSlide.set(index);
-    this.startCarousel();
+    this.animateDot();
   }
 
   ngOnInit() {
