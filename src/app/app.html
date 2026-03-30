@@ -135,10 +135,17 @@
                 class="hero-screenshot-img"
               />
             </div>
+            <div class="carousel-slide">
+              <img
+                [src]="getCurrentLanguage() === 'es' ? 'coachIA-conversation-es.png' : 'coachIA-conversation-en.jpeg'"
+                [alt]="getCurrentLanguage() === 'es' ? 'Coach IA conversacional' : 'AI Conversational Coach'"
+                class="hero-screenshot-img"
+              />
+            </div>
           </div>
           <div class="carousel-dots">
             <span
-              *ngFor="let dot of [0, 1, 2, 3, 4]; let i = index"
+              *ngFor="let dot of [0, 1, 2, 3, 4, 5]; let i = index"
               class="carousel-dot"
               [class.active]="currentSlide === i"
               (click)="goToSlide(i)"
