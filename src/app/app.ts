@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID, NgZone } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -22,9 +22,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
 
-  // Hero carousel
-  currentSlide = 0;
-  slideKey = 0; // Increments on each slide change to force animation restart
+  // Hero carousel (signals for reliable change detection)
+  currentSlide = signal(0);
   private carouselInterval: any;
   private readonly totalSlides = 6;
 
@@ -37,7 +36,6 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     public translate: TranslationService,
     public firebase: FirebaseService,
     private router: Router,
-    private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -164,26 +162,21 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private startCarousel() {
-    this.ngZone.runOutsideAngular(() => {
-      this.carouselInterval = setInterval(() => {
-        this.ngZone.run(() => {
-          this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
-          this.slideKey++;
-        });
-      }, 5000);
-    });
+    this.stopCarousel();
+    this.carouselInterval = setInterval(() => {
+      this.currentSlide.set((this.currentSlide() + 1) % this.totalSlides);
+    }, 5000);
   }
 
   private stopCarousel() {
     if (this.carouselInterval) {
       clearInterval(this.carouselInterval);
+      this.carouselInterval = null;
     }
   }
 
   goToSlide(index: number) {
-    this.currentSlide = index;
-    this.slideKey++;
-    this.stopCarousel();
+    this.currentSlide.set(index);
     this.startCarousel();
   }
 

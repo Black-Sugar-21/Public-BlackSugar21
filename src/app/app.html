@@ -99,60 +99,36 @@
         </div>
 
         <div class="hero-carousel animate-in delay-4">
-          <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide * 100 + '%)'">
-            <div class="carousel-slide" [class.active]="currentSlide === 0">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'discovery-es.png' : 'discovery-en.png'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Encuentra conexiones con análisis de IA' : 'Find connections with AI analysis'"
-                class="hero-screenshot-img"
-              />
+          <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide() * 100 + '%)'">
+            <div class="carousel-slide" [class.active]="currentSlide() === 0">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'discovery-es.png' : 'discovery-en.png'" alt="Discovery AI" class="hero-screenshot-img" loading="lazy" />
             </div>
-            <div class="carousel-slide" [class.active]="currentSlide === 1">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'coachIA-photo-es.jpeg' : 'coachIA-photo-en.jpeg'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Coach IA de Fotos' : 'AI Photo Coach'"
-                class="hero-screenshot-img"
-              />
+            <div class="carousel-slide" [class.active]="currentSlide() === 1">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'coachIA-photo-es.jpeg' : 'coachIA-photo-en.jpeg'" alt="AI Photo Coach" class="hero-screenshot-img" loading="lazy" />
             </div>
-            <div class="carousel-slide" [class.active]="currentSlide === 2">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'break-ice-es.png' : 'break-ice-en.png'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Tu coach IA te sugiere cómo romper el hielo' : 'Your AI coach suggests how to break the ice'"
-                class="hero-screenshot-img"
-              />
+            <div class="carousel-slide" [class.active]="currentSlide() === 2">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'break-ice-es.png' : 'break-ice-en.png'" alt="AI Icebreakers" class="hero-screenshot-img" loading="lazy" />
             </div>
-            <div class="carousel-slide" [class.active]="currentSlide === 3">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'planning-es.png' : 'planning-en.jpg'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Planifica tu cita con IA' : 'AI Date Planning'"
-                class="hero-screenshot-img"
-              />
+            <div class="carousel-slide" [class.active]="currentSlide() === 3">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'planning-es.png' : 'planning-en.jpg'" alt="AI Planning" class="hero-screenshot-img" loading="lazy" />
             </div>
-            <div class="carousel-slide" [class.active]="currentSlide === 4">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'places-coach-es.png' : 'places-coach-en.png'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Descubre lugares con IA' : 'Discover places with AI'"
-                class="hero-screenshot-img"
-              />
+            <div class="carousel-slide" [class.active]="currentSlide() === 4">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'places-coach-es.png' : 'places-coach-en.png'" alt="Places Coach" class="hero-screenshot-img" loading="lazy" />
             </div>
-            <div class="carousel-slide" [class.active]="currentSlide === 5">
-              <img
-                [src]="getCurrentLanguage() === 'es' ? 'coachIA-conversation-es.png' : 'coachIA-conversation-en.jpeg'"
-                [alt]="getCurrentLanguage() === 'es' ? 'Coach IA conversacional' : 'AI Conversational Coach'"
-                class="hero-screenshot-img"
-              />
+            <div class="carousel-slide" [class.active]="currentSlide() === 5">
+              <div class="img-shimmer"></div>
+              <img [src]="getCurrentLanguage() === 'es' ? 'coachIA-conversation-es.png' : 'coachIA-conversation-en.jpeg'" alt="AI Coach" class="hero-screenshot-img" loading="lazy" />
             </div>
           </div>
           <div class="carousel-dots">
             @for (dot of [0, 1, 2, 3, 4, 5]; track dot; let i = $index) {
-              <div
-                class="carousel-dot"
-                [class.active]="currentSlide === i"
-                (click)="goToSlide(i)"
-              >
-                @if (currentSlide === i) {
-                  <div class="carousel-dot-progress" [attr.data-key]="slideKey"></div>
-                }
+              <div class="carousel-dot" [class.active]="currentSlide() === i" (click)="goToSlide(i)">
+                <div class="carousel-dot-fill" [class.animating]="currentSlide() === i"></div>
               </div>
             }
           </div>
