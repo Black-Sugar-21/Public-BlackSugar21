@@ -196,6 +196,17 @@ enum class UserType(val displayName: String) {
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite" (corregido de "Elite/Mommy")
 
+### AI Icebreakers en Chat vacío
+- Cuando el chat tiene 0 mensajes, se muestran 3 icebreakers generados por `generateIcebreakers` CF
+- `ChatViewModel.fetchIcebreakers(matchUserId)` → `aiWingmanService.generateIcebreakers(userId1, userId2)` via `viewModelScope.launch`
+- UI: Composable en LazyColumn reversed, dentro de `item {}` con `LaunchedEffect(Unit)`
+- Tap icebreaker → pre-llena `suggestedText` → `ChatFooterWithCamera.externalText`
+- Condición: `messages.isEmpty()`
+- Guard: `icebreakersLoaded` flag previene calls repetidos
+- Loading: 3 placeholder boxes con `surfaceVariant`
+- Error: `onFailure` → Log + loading false (fail silently)
+- String: `ai_conversation_starters` (10 idiomas)
+
 ---
 
 ## Remote Config — 10 Claves Android

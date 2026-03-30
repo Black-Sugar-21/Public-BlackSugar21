@@ -93,6 +93,7 @@ core/             ← cache, performance, utils compartidos
 5. **Push notifications** → `core/fcm/` (Android) debe recibir el mismo payload que el handler de iOS
 6. **Cambio en UserType UI** → verificar que Firestore sigue recibiendo `SUGAR_DADDY`/`SUGAR_MOMMY`/`SUGAR_BABY`
 7. **Chat primer mensaje** → Solo Elite (SUGAR_DADDY/SUGAR_MOMMY) puede iniciar. Prime (SUGAR_BABY) espera. Validación usa `userTypesAtMatch` (tipo original al matchear, inmutable)
+8. **AI Icebreakers en chat vacío** → CF `generateIcebreakers` genera 3 sugerencias cuando `messages.isEmpty`. Tap pre-llena input. iOS: `typingMessage`, Android: `suggestedText`. Guard `icebreakersLoaded` previene calls repetidos. Fail silently en error de red.
 
 ---
 

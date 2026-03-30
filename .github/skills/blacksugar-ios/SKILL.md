@@ -181,13 +181,25 @@ enum UserType: String, CaseIterable, Codable {
 - Si elige **Prime**: backend asigna `SUGAR_BABY`
 - Botón "?" abre modal `UserTypeInfoSheet` con descripción de cada tipo
 - Onboarding: `OnboardingUserTypeView.swift` → `resolveUserType(for: "elite")` mapea según `coordinator.userData.male`
-- EditProfile: `EditProfileView.swift` → `selectElite()` mapea según `userGender == "Hombre"`
+- EditProfile: `EditProfileView.swift` → `selectElite()` mapea según `userGender == "man"` (Constants.genderOptions)
 - Badge en SwipeView/ProfileDetailsSheet: `"\(userType.emoji) \(userType.displayName)"` → "💎 Elite" o "🌟 Prime"
 - Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite"
 - Photo Coach spinner: `.tint(AppColor.metallicGold)` (dark/light compatible)
+
+### AI Icebreakers en Chat vacío
+- Cuando el chat tiene 0 mensajes, se muestran 3 icebreakers generados por `generateIcebreakers` CF
+- `ChatViewModel.fetchIcebreakers(matchUserId:)` → `AIWingmanService.shared.generateIcebreakers(userId1:userId2:)`
+- Task con `[weak self]` + `MainActor.run` (sin memory leak)
+- UI: `icebreakersSuggestions` view en `messagesScrollContent()` con `.flippedUpsideDown()`
+- Tap icebreaker → pre-llena `typingMessage` + focus input
+- Condición: `messageList.isEmpty && !firstMessageSent`
+- Guard: `icebreakersLoaded` flag previene calls repetidos
+- Loading: 3 shimmer rectangles con gold gradient
+- Error: fail silently (shimmer desaparece, chat usable)
+- ForEach: `enumerated(), id: \.offset` (safe IDs)
 
 ---
 
