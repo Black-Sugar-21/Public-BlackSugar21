@@ -24,6 +24,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
   // Hero carousel
   currentSlide = 0;
+  slideKey = 0; // Increments on each slide change to force animation restart
   private carouselInterval: any;
   private readonly totalSlides = 6;
 
@@ -156,6 +157,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   private startCarousel() {
     this.carouselInterval = setInterval(() => {
       this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
+      this.slideKey++;
     }, 5000);
   }
 

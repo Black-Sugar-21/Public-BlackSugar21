@@ -641,8 +641,7 @@ a:hover {
     border-radius: 3px;
 }
 
-.carousel-dot.active::after {
-    content: '';
+.carousel-dot-progress {
     position: absolute;
     top: 0;
     left: 0;

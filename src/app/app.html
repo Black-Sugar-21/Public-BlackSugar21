@@ -144,12 +144,17 @@
             </div>
           </div>
           <div class="carousel-dots">
-            <span
-              *ngFor="let dot of [0, 1, 2, 3, 4, 5]; let i = index"
-              class="carousel-dot"
-              [class.active]="currentSlide === i"
-              (click)="goToSlide(i)"
-            ></span>
+            @for (dot of [0, 1, 2, 3, 4, 5]; track dot; let i = $index) {
+              <div
+                class="carousel-dot"
+                [class.active]="currentSlide === i"
+                (click)="goToSlide(i)"
+              >
+                @if (currentSlide === i) {
+                  <div class="carousel-dot-progress" [attr.data-key]="slideKey"></div>
+                }
+              </div>
+            }
           </div>
         </div>
       </div>
