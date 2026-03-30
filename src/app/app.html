@@ -98,19 +98,31 @@
           </a>
         </div>
 
-        <div class="hero-screenshot animate-in delay-4">
-          <img
-            *ngIf="getCurrentLanguage() !== 'es'"
-            src="discovery-en.png"
-            alt="Find connections with AI analysis"
-            class="hero-screenshot-img"
-          />
-          <img
-            *ngIf="getCurrentLanguage() === 'es'"
-            src="discovery-es.png"
-            alt="Encuentra conexiones con análisis de IA"
-            class="hero-screenshot-img"
-          />
+        <div class="hero-carousel animate-in delay-4">
+          <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide * 100 + '%)'">
+            <div class="carousel-slide">
+              <img
+                [src]="getCurrentLanguage() === 'es' ? 'discovery-es.png' : 'discovery-en.png'"
+                [alt]="getCurrentLanguage() === 'es' ? 'Encuentra conexiones con análisis de IA' : 'Find connections with AI analysis'"
+                class="hero-screenshot-img"
+              />
+            </div>
+            <div class="carousel-slide">
+              <img
+                [src]="getCurrentLanguage() === 'es' ? 'break-ice-es.png' : 'break-ice-en.png'"
+                [alt]="getCurrentLanguage() === 'es' ? 'Tu coach IA te sugiere cómo romper el hielo' : 'Your AI coach suggests how to break the ice'"
+                class="hero-screenshot-img"
+              />
+            </div>
+          </div>
+          <div class="carousel-dots">
+            <span
+              *ngFor="let dot of [0, 1]; let i = index"
+              class="carousel-dot"
+              [class.active]="currentSlide === i"
+              (click)="goToSlide(i)"
+            ></span>
+          </div>
         </div>
       </div>
     </section>

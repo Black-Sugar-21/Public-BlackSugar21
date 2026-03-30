@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -11,12 +11,17 @@ import { FirebaseService } from './firebase.service';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   protected readonly title = signal('Black Sugar 21');
   protected readonly ageVerified = signal(false);
   protected readonly storeLinks = signal({ ios: '#', android: '#' });
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
+
+  // Hero carousel
+  currentSlide = 0;
+  private carouselInterval: any;
+  private readonly totalSlides = 2;
 
   showTesterModal = signal(false);
   testerEmail = signal('');
@@ -29,7 +34,32 @@ export class App implements OnInit {
     private router: Router
   ) {}
 
+  ngOnDestroy() {
+    this.stopCarousel();
+  }
+
+  private startCarousel() {
+    this.carouselInterval = setInterval(() => {
+      this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
+    }, 4000);
+  }
+
+  private stopCarousel() {
+    if (this.carouselInterval) {
+      clearInterval(this.carouselInterval);
+    }
+  }
+
+  goToSlide(index: number) {
+    this.currentSlide = index;
+    this.stopCarousel();
+    this.startCarousel();
+  }
+
   ngOnInit() {
+    // Start hero carousel
+    this.startCarousel();
+
     // Detect legal age from Remote Config + timezone
     this.detectAndSetLegalAge();
 
