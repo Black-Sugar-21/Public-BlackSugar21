@@ -164,7 +164,8 @@ Analytics.logEvent("swipe_failed_pending_retry",   parameters: ["user_id": id, "
 
 ```swift
 // domain/profile/UserType.swift
-enum UserType: String, CaseIterable, Codable {
+enum UserType: String, CaseIterable, Codable, Identifiable {
+    var id: String { rawValue }
     case sugarDaddy = "SUGAR_DADDY"   // 💎 Elite (hombre)
     case sugarMommy = "SUGAR_MOMMY"   // 💎 Elite (mujer)
     case sugarBaby  = "SUGAR_BABY"    // 🌟 Prime
@@ -187,7 +188,12 @@ enum UserType: String, CaseIterable, Codable {
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite"
+- Photo Coach: title + button = "AI Photo Coach" / "Coach IA de Fotos" (10 langs)
 - Photo Coach spinner: `.tint(AppColor.metallicGold)` (dark/light compatible)
+- SwipeView type dialog: `.sheet(item: $selectedUserType)` con `Identifiable` (no `isPresented`)
+- Edit profile nav title: `NSLocalizedString("edit-profile")` (no raw key)
+- SafetyCheckIn: behind RC `enable_safety_checkin` (default false)
+- Reviewer location: skip `updateUserLocation()` via `isReviewerUid()` — ubicación fija Santiago
 
 ### AI Icebreakers en Chat vacío
 - Cuando el chat tiene 0 mensajes, se muestran 3 icebreakers generados por `generateIcebreakers` CF

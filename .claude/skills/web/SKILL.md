@@ -21,6 +21,24 @@ globs:
 - **Ruta**: `/Users/daniel/IdeaProjects/Public-BlackSugar21`
 - **Build output**: `dist/Public-BlackSugar21/browser/`
 
+## Landing Page — Hero Carousel
+
+La landing page (`app.html`) tiene un carrusel automático con 4 slides:
+
+| # | Slide | EN image | ES image |
+|---|-------|----------|----------|
+| 1 | Discovery AI | `discovery-en.png` | `discovery-es.png` |
+| 2 | AI Photo Coach | `coachIA-photo-en.jpeg` | `coachIA-photo-es.jpeg` |
+| 3 | AI Icebreakers | `break-ice-en.png` | `break-ice-es.png` |
+| 4 | AI Date Planning | `planning-en.jpg` | `planning-es.png` |
+
+- Auto-rotate: 4 segundos, `setInterval` en `app.ts`
+- Transición: `cubic-bezier(0.25, 0.1, 0.25, 1)` 0.6s
+- Dots dorados navegables con click (`goToSlide()`)
+- Responsive: 420px desktop / 320px mobile
+- Idioma: `getCurrentLanguage()` decide EN/ES images
+- Imágenes en `public/` (served as root by Angular build)
+
 ## Rutas publicas
 
 | Ruta | Componente | Directorio |

@@ -195,6 +195,14 @@ enum class UserType(val displayName: String) {
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite" (corregido de "Elite/Mommy")
+- EditProfile: 2 botones (Elite/Prime) + info "?" AlertDialog + `eliteIndex` por género
+- Photo Coach: title + button = "AI Photo Coach" (10 langs, traducido por idioma)
+- ProfileCardView gradient: sutil (55% transparent → 72% black) homologado con iOS
+- Font sizes: 26dp icons, 15sp text, 18sp lineHeight en selectores edit profile
+- SafetyCheckIn: behind RC `enable_safety_checkin` (default false)
+- Coach credits: `remoteConfigManager.getCoachDailyCredits()` (0 hardcoded 5)
+- Reviewer location: skip `updateUserLocation()` via RC `reviewer_uid` — ubicación fija Santiago
+- Interest keys: Firestore usa `interest_travel_adventures` (no raw Spanish)
 
 ### AI Icebreakers en Chat vacío
 - Cuando el chat tiene 0 mensajes, se muestran 3 icebreakers generados por `generateIcebreakers` CF

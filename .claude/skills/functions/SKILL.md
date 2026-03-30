@@ -63,6 +63,11 @@ getBatchPhotoUrls, getBatchCompatibilityScores, getCompatibleProfileIds,
 getMatchesWithMetadata, getDateSuggestions, getDatingAdvice
 ```
 
+### Coach Interest Humanization
+- `coach.js:1200`: Interest keys se convierten a nombres legibles antes de enviar a Gemini
+- `interest_travel_adventures` → `travel adventures` (`.replace('interest_', '').replace(/_/g, ' ')`)
+- Evita que Gemini muestre raw keys como "interest_travel_adventures" en respuestas
+
 ### AI Chemistry (1 CF)
 ```
 calculateAIChemistry
