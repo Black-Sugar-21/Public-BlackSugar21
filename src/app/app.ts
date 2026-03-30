@@ -148,6 +148,9 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         ease: 'power2.out',
       });
     });
+
+    // 6. Carousel auto-play when visible
+    this.setupCarouselObserver();
   }
 
   ngAfterViewInit() {
@@ -162,51 +165,72 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private dotTween: gsap.core.Tween | null = null;
+  private carouselObserver: IntersectionObserver | null = null;
+  private carouselVisible = false;
 
-  private startCarousel() {
-    this.stopCarousel();
-    this.animateDot();
+  private setupCarouselObserver() {
+    const el = document.querySelector('.hero-carousel');
+    if (!el) return;
+
+    this.carouselObserver = new IntersectionObserver(
+      (entries) => {
+        const isVisible = entries[0]?.isIntersecting ?? false;
+        if (isVisible && !this.carouselVisible) {
+          this.carouselVisible = true;
+          this.animateDot();
+        } else if (!isVisible && this.carouselVisible) {
+          this.carouselVisible = false;
+          this.pauseCarousel();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    this.carouselObserver.observe(el);
   }
 
   private animateDot() {
-    if (this.dotTween) this.dotTween.kill();
-    // Reset all fill bars
-    gsap.set('.carousel-dot-fill', { width: '0%' });
-    // Animate current dot fill bar
+    this.pauseCarousel();
     const fills = document.querySelectorAll('.carousel-dot-fill');
+    gsap.set(fills, { width: '0%' });
     const currentFill = fills[this.currentSlide()];
-    if (currentFill) {
-      this.dotTween = gsap.to(currentFill, {
-        width: '100%',
-        duration: 5,
-        ease: 'none',
-        onComplete: () => {
-          this.currentSlide.set((this.currentSlide() + 1) % this.totalSlides);
-          this.animateDot();
-        }
-      });
-    }
+    if (!currentFill) return;
+
+    this.dotTween = gsap.to(currentFill, {
+      width: '100%',
+      duration: 5,
+      ease: 'none',
+      onComplete: () => {
+        if (!this.carouselVisible) return;
+        this.currentSlide.set((this.currentSlide() + 1) % this.totalSlides);
+        this.animateDot();
+      }
+    });
   }
 
-  private stopCarousel() {
+  private pauseCarousel() {
     if (this.dotTween) {
       this.dotTween.kill();
       this.dotTween = null;
     }
-    if (this.carouselInterval) {
-      clearInterval(this.carouselInterval);
-      this.carouselInterval = null;
+  }
+
+  private stopCarousel() {
+    this.pauseCarousel();
+    if (this.carouselObserver) {
+      this.carouselObserver.disconnect();
+      this.carouselObserver = null;
     }
   }
 
   goToSlide(index: number) {
     this.currentSlide.set(index);
-    this.animateDot();
+    if (this.carouselVisible) {
+      this.animateDot();
+    }
   }
 
   ngOnInit() {
-    // Start hero carousel
-    this.startCarousel();
+    // Carousel starts when visible (IntersectionObserver in initGsapAnimations)
 
     // Detect legal age from Remote Config + timezone
     this.detectAndSetLegalAge();
