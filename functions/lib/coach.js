@@ -1194,10 +1194,10 @@ exports.dateCoachChat = onCall(
               const matchType = other.userType || '';
               const matchPhotosCount = (other.pictures || []).length;
 
-              // Calculate shared interests
+              // Calculate shared interests (convert keys to readable names)
               const userInterestsArr = (userData.interests || []).slice(0, 10);
               const shared = userInterestsArr.filter((i) => otherInterestsArr.includes(i));
-              sharedInterests = shared.join(', ');
+              sharedInterests = shared.map((key) => key.replace('interest_', '').replace(/_/g, ' ')).join(', ');
 
               // Calculate match age (how long they've been matched)
               let matchAgeDays = null;

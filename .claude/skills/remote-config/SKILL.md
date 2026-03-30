@@ -34,7 +34,8 @@ Verificadas en codigo iOS (`RemoteConfigService.swift`) y Android (`RemoteConfig
 | `moderation_image_jpeg_quality` | Number | `50` | 20-100 | Calidad JPEG (%) moderacion. iOS convierte a 0.0-1.0 |
 | `gemini_tokens` | Number | `1024` | — | Max tokens para respuestas Gemini |
 | `enable_screen_protection` | Boolean | `true` | — | Proteccion contra capturas/grabacion |
-| `reviewer_uid` | String | `IlG6U9cfcOcnKJvEv4tAD4IZ0513,...` | — | UIDs comma-separated del reviewer. Exento de screen protection + ve test profiles en discovery. Leido por iOS/Android (screen protection) y discovery.js CF (test profiles bypass) |
+| `reviewer_uid` | String | `IlG6U9cfcOcnKJvEv4tAD4IZ0513,...` | — | UIDs comma-separated del reviewer. Exento de screen protection + ve test profiles en discovery + skip location update. Leido por iOS/Android y discovery.js CF |
+| `enable_safety_checkin` | Boolean | `false` | — | Habilita Safety Check-In en menu de chat. Default false — habilitar cuando este listo para produccion |
 | `coach_max_input_length` | Number | `2000` | 100-10000 | Largo maximo input Coach Chat |
 | `coach_daily_credits` | Number | `5` | 1-100 | Creditos diarios Coach Chat |
 
