@@ -1944,10 +1944,22 @@ Return JSON with these fields:
       if (isUserPlaceSearch) {
         logger.info(`[dateCoachChat] Place search: hasLocation=${hasLocation}, realPlaces=${realPlaces.length}, isUserPlaceSearch=${isUserPlaceSearch}`);
       }
-      const history = historySnap.empty ? '' : historySnap.docs.reverse().map((d) => {
-        const m = d.data();
-        return `${m.sender === 'user' ? 'User' : 'Coach'}: ${(m.message || '').substring(0, 300)}`;
-      }).join('\n');
+      // Smart history: last 3 verbatim + summary of older (saves tokens)
+      let history = '';
+      if (!historySnap.empty) {
+        const allMsgs = historySnap.docs.reverse().map((d) => {
+          const m = d.data();
+          return { sender: m.sender === 'user' ? 'User' : 'Coach', text: (m.message || '').substring(0, 300) };
+        });
+        if (allMsgs.length <= 3) {
+          history = allMsgs.map((m) => `${m.sender}: ${m.text}`).join('\n');
+        } else {
+          const older = allMsgs.slice(0, -3);
+          const recent = allMsgs.slice(-3);
+          const topics = [...new Set(older.filter((m) => m.sender === 'User').map((m) => m.text.substring(0, 50)))].join(', ');
+          history = `[Earlier: user asked about: ${topics}]\n` + recent.map((m) => `${m.sender}: ${m.text}`).join('\n');
+        }
+      }
 
       // Detect user's communication style from coach chat history
       const coachUserMessages = historySnap.docs.reverse().map((d) => d.data()).filter((m) => m.sender === 'user');
@@ -2319,30 +2331,7 @@ ${userTypeSpec ? `   ${userTypeSpec}` : `   - SUGAR_BABY: Focus on authenticity,
 
 ${adaptivePrompt}
 
-6. RESPONSE QUALITY STANDARDS:
-   - Be ${config.personalityTone}
-   - Every response must be ACTIONABLE — include at least one specific thing the user can do RIGHT NOW
-   - Use the "${responseStyleConfig.formalityLevel || 'casual_professional'}" tone: professional expertise delivered in a friendly, approachable way
-   ${responseStyleConfig.useEmojis !== false ? '- Use emojis naturally to add warmth (1-3 per response, not excessive)' : '- Avoid emojis in responses'}
-   - Keep responses concise (${responseStyleConfig.maxParagraphs || 4} paragraphs max) but information-dense
-   - Structure advice clearly: observation → analysis → specific recommendation
-   - Encouragement level: ${responseStyleConfig.encouragementLevel || 'high'} — ${responseStyleConfig.encouragementLevel === 'moderate' ? 'be supportive but balanced' : 'always end on an encouraging, empowering note'}
-   - Use the user's language naturally
-   - Include concrete examples when possible (e.g., sample messages they could send, specific date plans)
-
-7. CONVERSATION CONTINUITY:
-   - If the conversation history shows recurring topics, acknowledge their focus and offer progressively deeper insights
-   - Reference previous advice you've given in the session if relevant
-   - Build on earlier conversations rather than starting from scratch each time
-   - If the user seems stuck, proactively suggest a new angle or different approach
-
-8. NEVER DO THESE:
-   - Never be judgmental about dating preferences, lifestyle, age gaps, or relationship styles
-   - Never give one-size-fits-all generic advice when you have profile data
-   - Never invent facts about the user or their matches
-   - Never suggest manipulative tactics — always focus on genuine connection
-   - Never be preachy or condescending — treat users as equal adults making their own choices
-   - Never give the same response twice — if asked similar questions, find a new angle
+6. RULES: Be actionable (1 specific action per response). Max ${responseStyleConfig.maxParagraphs || 3} paragraphs. ${responseStyleConfig.useEmojis !== false ? '1-3 emojis.' : 'No emojis.'} End encouraging. Build on prior conversation. NEVER: judge, invent facts, be generic, suggest manipulation, repeat yourself.
 ${activityBlock}
 ${placeSearchInstruction}
 ${noLocationInstruction}
@@ -2362,7 +2351,7 @@ Always include the "topics" array in your response.
 
 For off-topic messages, use: {"off_topic": true, "reply": "redirect message", "suggestions": ["topic1", "topic2", "topic3"]}
 
-The "suggestions" array should contain ${config.maxSuggestions} short follow-up questions/topics the user might want to ask next. Make suggestions HIGHLY CONTEXTUAL — based on what the user just asked and their current situation. Vary the types: include a deeper question, a related topic, and a practical next step. Keep each suggestion under 40 characters.
+The "suggestions" array MUST contain ${config.maxSuggestions} SPECIFIC follow-up questions. NEVER use generic prompts like "Tell me more" or "What else?". Each suggestion must reference the CURRENT topic. Examples: if user asked about first date → "What should I wear?", "Best time to text after?", "How to split the bill?". Keep each under 40 chars.
 ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this response — the user is explicitly searching for places, shops, or products to buy. You MUST include it with real venues/shops from the REAL PLACES list.' : 'The "activitySuggestions" array is OPTIONAL — only include it when contextually relevant (date ideas, venue searches, gift shopping, product shopping, place recommendations).'}`;
 
       // 6. Call Gemini
