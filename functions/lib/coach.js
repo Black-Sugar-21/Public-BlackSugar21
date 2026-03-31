@@ -2262,6 +2262,7 @@ ${config.additionalGuidelines ? `\nADDITIONAL GUIDELINES:\n${config.additionalGu
 
       const systemPrompt = `You are Date Coach, an expert AI dating advisor for a premium dating app called Black Sugar 21.
 Your role is to help users improve their dating life with personalized, actionable advice.
+CRITICAL: Respond ENTIRELY in the SAME language as the user's last message. Never mix languages.
 Personality: ${config.personalityTone}
 
 USER PROFILE (use this data to personalize EVERY response):
@@ -2349,7 +2350,7 @@ ${langInstruction}
 
 Respond in JSON format:
 {
-  "reply": "Your coaching response here (concise, actionable, personalized, with warmth and specific examples)",
+  "reply": "Your coaching response (MAX 150 words, concise for mobile screens, actionable, personalized)",
   "suggestions": ["Contextual follow-up 1", "Related suggestion 2", "Next step 3"],
   "activitySuggestions": [{"emoji": "🍷", "title": "Real Place Name", "placeId": "ChIJ...", "description": "Why this fits their situation", "category": "restaurant", "bestFor": "romantic", "priceLevel": "$$", "rating": 4.6, "website": "https://realwebsite.com", "instagram": null}],
   "topics": ["first_date", "conversation_tips"]
@@ -2378,10 +2379,18 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       const outputTokens = (isUserPlaceSearch || hasRealPlaces) ? Math.max(config.maxTokens, placeTokenBudget) : config.maxTokens;
       // Search Grounding: Gemini busca en Google cuando NO es place search
       const enableSearchGrounding = config.enableSearchGrounding !== false && !isUserPlaceSearch && !hasRealPlaces;
+      // Dynamic temperature: safety/boundaries → precise, places → balanced, creative → high
+      const safetyTopics = ['safety', 'red_flags', 'boundary_setting', 'emotional'];
+      const placesTopics = ['activity_places', 'venue_recommendations', 'date_ideas', 'gift_ideas'];
+      const detectedTopics = (intentResult?.topics || []).map((t) => t.toLowerCase());
+      const isSafetyQuery = detectedTopics.some((t) => safetyTopics.includes(t));
+      const isPlacesQuery = isUserPlaceSearch || hasRealPlaces || detectedTopics.some((t) => placesTopics.includes(t));
+      const dynamicTemp = isSafetyQuery ? 0.3 : isPlacesQuery ? 0.7 : (config.temperature || 0.85);
+
       const modelConfig = {
         model: AI_MODEL_NAME,
         generationConfig: {
-          temperature: config.temperature,
+          temperature: dynamicTemp,
           maxOutputTokens: outputTokens,
           responseMimeType: 'application/json',
         },
