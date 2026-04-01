@@ -3114,8 +3114,9 @@ exports.getRealtimeCoachTips = onCall(
     const {matchId, userLanguage} = request.data || {};
 
     if (!matchId) throw new Error('matchId is required');
-    const lang = (userLanguage || 'en').toLowerCase();
+    const clientLang = (userLanguage || 'en').toLowerCase();
     const db = admin.firestore();
+    // Note: final lang is determined later from Firestore deviceLanguage (more accurate than client param)
 
     try {
       // 0. Read RC config for tuning
@@ -3133,8 +3134,16 @@ exports.getRealtimeCoachTips = onCall(
         const cacheAge = Date.now() - (cached.updatedAt?.toMillis?.() || 0);
         const msgCount = cached.messageCount || 0;
 
-        // Use cache if within TTL
-        if (cacheAge < cacheTtl) {
+        // Use cache if within TTL AND language matches
+        const cacheLang = cached.language || '';
+        // Read deviceLanguage from Firestore for accurate language detection
+        const userDocForLang = await db.collection('users').doc(userId).get();
+        const firestoreLang = ((userDocForLang.data()?.deviceLanguage || '').split('-')[0]).toLowerCase() || clientLang;
+        const langMismatch = cacheLang && firestoreLang && cacheLang !== firestoreLang;
+        if (langMismatch) {
+          logger.info(`[getRealtimeCoachTips] Cache language mismatch: cached="${cacheLang}" vs device="${firestoreLang}" → regenerating`);
+        }
+        if (cacheAge < cacheTtl && !langMismatch) {
           logger.info(`[getRealtimeCoachTips] Cache hit (${Math.round(cacheAge / 1000)}s old) for ${matchId}`);
           return {
             success: true,
@@ -3182,6 +3191,15 @@ exports.getRealtimeCoachTips = onCall(
           type: m.type || 'text',
         };
       }).reverse();
+
+      // ── Language: prefer user's deviceLanguage from Firestore (most accurate) ──
+      // The client may send wrong locale (e.g. app locale vs system locale).
+      // Firestore deviceLanguage is set from the actual system language.
+      const firestoreLang = (userData.deviceLanguage || '').split('-')[0].toLowerCase();
+      const lang = firestoreLang || clientLang || 'en';
+      if (firestoreLang && firestoreLang !== clientLang) {
+        logger.info(`[getRealtimeCoachTips] Language: using Firestore deviceLanguage="${firestoreLang}" (client sent "${clientLang}")`);
+      }
 
       // Behavioral pattern analysis
       const patterns = analyzeConversationPatterns(messagesRaw, userId);
@@ -3242,10 +3260,11 @@ Use this behavioral data to generate SPECIFIC, DATA-DRIVEN tips. If flags exist,
           suggestedAction: cached.suggestedAction || null,
         };
 
-        // Update cache with new algorithmic score
+        // Update cache with new algorithmic score (preserve language)
         await cacheRef.set({
           ...result,
           messageCount: messages.length,
+          language: lang,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           source: 'algorithmic',
         }, {merge: true});
@@ -3381,10 +3400,11 @@ Rules:
         suggestedAction,
       };
 
-      // Cache the Gemini result for future requests
+      // Cache the Gemini result for future requests (include language for mismatch detection)
       await cacheRef.set({
         ...coachResult,
         messageCount: messages.length,
+        language: lang,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         source: 'gemini',
         algoScore: algoResult.score,
