@@ -7,6 +7,7 @@ const PROJECT_NUMBER = '706595096331';
 const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
 const ADMIN_USER_ID = 'tvmkXqXGSzfriAkQUI4KrQF6sZm2';
 const WORKSPACE_GROUP = 'alpha-testers@blacksugar21.com';
+const PLAY_CONSOLE_GROUP = 'blacksugar21-tester@googlegroups.com'; // Linked to Play Console Alpha track
 const WORKSPACE_ADMIN = 'hello@blacksugar21.com';
 
 /**
@@ -14,38 +15,42 @@ const WORKSPACE_ADMIN = 'hello@blacksugar21.com';
  * This automatically makes them a tester in Play Console (group linked to alpha track).
  */
 async function addToWorkspaceGroup(email) {
-  const { google } = require('googleapis');
-  const auth = new google.auth.GoogleAuth({
-    scopes: [
-      'https://www.googleapis.com/auth/admin.directory.group',
-      'https://www.googleapis.com/auth/admin.directory.group.member',
-    ],
+  const { GoogleAuth } = require('google-auth-library');
+  const saKey = require('../workspace-sa-key.json');
+
+  const auth = new GoogleAuth({
+    credentials: saKey,
+    scopes: ['https://www.googleapis.com/auth/cloud-identity'],
     clientOptions: { subject: WORKSPACE_ADMIN },
   });
-  const authClient = await auth.getClient();
-  const dir = google.admin({ version: 'directory_v1', auth: authClient });
+  const client = await auth.getClient();
+  const accessToken = (await client.getAccessToken()).token;
 
-  // Check if already member
-  try {
-    const check = await dir.members.get({ groupKey: WORKSPACE_GROUP, memberKey: email });
-    if (check.data) {
-      logger.info(`[Testers] ${email} already in Workspace group`);
-      return { alreadyMember: true };
-    }
-  } catch (e) {
-    // 404 = not a member, continue to add
-    if (e.response?.status !== 404) {
-      throw e;
-    }
-  }
+  // Lookup group
+  const lookupRes = await fetch(
+    `https://cloudidentity.googleapis.com/v1/groups:lookup?groupKey.id=${encodeURIComponent(WORKSPACE_GROUP)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!lookupRes.ok) throw new Error(`Group lookup failed (${lookupRes.status}): ${await lookupRes.text()}`);
+  const groupName = (await lookupRes.json()).name;
 
   // Add member
-  await dir.members.insert({
-    groupKey: WORKSPACE_GROUP,
-    requestBody: { email, role: 'MEMBER' },
+  const addRes = await fetch(`https://cloudidentity.googleapis.com/v1/${groupName}/memberships`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preferredMemberKey: { id: email }, roles: [{ name: 'MEMBER' }] }),
   });
-  logger.info(`[Testers] AUTO-ADDED ${email} to Workspace group ${WORKSPACE_GROUP}`);
-  return { added: true };
+
+  if (addRes.ok) {
+    logger.info(`[Testers] AUTO-ADDED ${email} to ${WORKSPACE_GROUP}`);
+    return { added: true };
+  }
+  const errBody = await addRes.text();
+  if (addRes.status === 409 || errBody.includes('ALREADY_EXISTS')) {
+    logger.info(`[Testers] ${email} already in group`);
+    return { alreadyMember: true };
+  }
+  throw new Error(`Add member failed (${addRes.status}): ${errBody}`);
 }
 
 /**

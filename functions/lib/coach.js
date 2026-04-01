@@ -2371,7 +2371,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       // Dynamic temperature: safety/boundaries → precise, places → balanced, creative → high
       const safetyTopics = ['safety', 'red_flags', 'boundary_setting', 'emotional'];
       const placesTopics = ['activity_places', 'venue_recommendations', 'date_ideas', 'gift_ideas'];
-      const detectedTopics = (intentResult?.topics || []).map((t) => t.toLowerCase());
+      const detectedTopics = (analysis?.topics || []).map((t) => t.toLowerCase());
       const isSafetyQuery = detectedTopics.some((t) => safetyTopics.includes(t));
       const isPlacesQuery = isUserPlaceSearch || hasRealPlaces || detectedTopics.some((t) => placesTopics.includes(t));
       const dynamicTemp = isSafetyQuery ? 0.3 : isPlacesQuery ? 0.7 : (config.temperature || 0.85);
