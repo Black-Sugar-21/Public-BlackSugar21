@@ -1415,6 +1415,38 @@ Return JSON with these fields:
             const intentResult = await intentModel.generateContent(intentPrompt);
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
+
+            // ── Post-extraction keyword override ────────────────────────────
+            // Gemini sometimes hallucinate the wrong googleCategory despite explicit
+            // prompt instructions. This safety net catches obvious misclassifications
+            // by checking the user's actual words against the extracted category.
+            if (extractedIntent && extractedIntent.googleCategory) {
+              const msgLower = message.toLowerCase();
+              const extractedCat = normalizeCategory(extractedIntent.googleCategory);
+
+              // BAR/PUB keywords (10 languages) — must override cafe/restaurant
+              const barRx = /\b(pub|pubs|bar|bares|irish\s*pub|sports?\s*bar|craft\s*beer|cervecería|cerveceria|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chela|birra|cerveja|bière|Bier|ビール|啤酒|пиво|بيرة|bir)\b/i;
+              // NIGHT CLUB keywords (10 languages)
+              const nightRx = /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i;
+              // CAFE keywords — to avoid false override when user actually wants cafe
+              const cafeRx = /\b(cafe|café|cafetería|cafeteria|coffee|starbucks|tea|kaffee|カフェ|咖啡|кафе|مقهى|kopi)\b/i;
+
+              if (barRx.test(msgLower) && !cafeRx.test(msgLower) && extractedCat !== 'bar' && extractedCat !== 'night_club') {
+                logger.info(`[dateCoachChat] Override: user said pub/bar but Gemini returned "${extractedIntent.googleCategory}" → forcing "bar"`);
+                extractedIntent.googleCategory = 'bar';
+                // Also fix placeQueries if they look wrong
+                if (extractedIntent.placeQueries && extractedIntent.placeQueries.length > 0) {
+                  const hasBarQuery = extractedIntent.placeQueries.some((q) => barRx.test((q || '').toLowerCase()));
+                  if (!hasBarQuery) {
+                    extractedIntent.placeQueries.unshift('pub bar cervecería');
+                  }
+                }
+              } else if (nightRx.test(msgLower) && extractedCat !== 'night_club') {
+                logger.info(`[dateCoachChat] Override: user said disco/club but Gemini returned "${extractedIntent.googleCategory}" → forcing "night_club"`);
+                extractedIntent.googleCategory = 'night_club';
+              }
+            }
+
             logger.info(`[dateCoachChat] Intent extracted: placeType=${extractedIntent.placeType}, location=${extractedIntent.locationMention}, category=${extractedIntent.googleCategory}`);
           }
         } catch (intentErr) {
@@ -2678,6 +2710,22 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
         const sortedCats = Object.entries(catCounts).sort(([, a], [, b]) => b - a);
         if (sortedCats.length > 0 && sortedCats[0][1] / activitySuggestions.length >= 0.3) {
           dominantCategory = sortedCats[0][0];
+        }
+      }
+
+      // ── Final dominantCategory keyword override (same logic as intent extraction) ──
+      // Catches cases where activity distribution skewed the category wrong
+      if (dominantCategory) {
+        const msgLower = message.toLowerCase();
+        const barRx = /\b(pub|pubs|bar|bares|irish\s*pub|sports?\s*bar|craft\s*beer|cervecería|cerveceria|brewpub|brewery|taproom|taberna|chela|birra|cerveja)\b/i;
+        const nightRx = /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club)\b/i;
+        const cafeRx = /\b(cafe|café|cafetería|cafeteria|coffee|starbucks|tea)\b/i;
+        if (barRx.test(msgLower) && !cafeRx.test(msgLower) && dominantCategory !== 'bar' && dominantCategory !== 'night_club') {
+          logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "bar" (user mentioned pub/bar)`);
+          dominantCategory = 'bar';
+        } else if (nightRx.test(msgLower) && dominantCategory !== 'night_club') {
+          logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "night_club" (user mentioned disco/club)`);
+          dominantCategory = 'night_club';
         }
       }
 
