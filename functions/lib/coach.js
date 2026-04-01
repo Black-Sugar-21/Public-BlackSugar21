@@ -3000,7 +3000,8 @@ exports.getCoachHistory = onCall(
       messages.reverse();
 
       const userDocForCredits = await db.collection('users').doc(userId).get();
-      const dailyCreditsDefault = config.dailyCredits || 3;
+      const coachConfig = await getCoachConfig();
+      const dailyCreditsDefault = coachConfig.dailyCredits || 3;
       const currentCredits = userDocForCredits.exists
         ? (typeof userDocForCredits.data().coachMessagesRemaining === 'number'
           ? userDocForCredits.data().coachMessagesRemaining : dailyCreditsDefault)
