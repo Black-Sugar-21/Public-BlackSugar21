@@ -551,9 +551,11 @@ exports.moderateProfileImage = onCall(
 
       const parsed = parseGeminiJsonResponse(responseText);
       const approved = !!parsed.approved;
-      const reason = parsed.reason || '';
-      const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (approved ? 1.0 : 0.9);
-      const categories = Array.isArray(parsed.categories) ? parsed.categories : [];
+      const reason = typeof parsed.reason === 'string' ? parsed.reason.substring(0, 500) : '';
+      // Anti-hallucination: clamp confidence, validate categories
+      const confidence = typeof parsed.confidence === 'number' && !isNaN(parsed.confidence)
+        ? Math.max(0, Math.min(1, parsed.confidence)) : (approved ? 1.0 : 0.9);
+      const categories = Array.isArray(parsed.categories) ? parsed.categories.filter((c) => typeof c === 'string') : [];
       const category = parsed.category || (categories.length > 0 ? categories[0] : (approved ? 'approved' : 'other'));
 
       return {approved, reason, confidence, categories, category};
@@ -616,9 +618,11 @@ exports.moderateMessage = onCall(
       const approved = !!parsed.approved;
       // Support both "allowed" (iOS CF compat) and "approved" fields
       const isAllowed = parsed.allowed !== undefined ? !!parsed.allowed : approved;
-      const reason = parsed.reason || '';
+      const reason = typeof parsed.reason === 'string' ? parsed.reason.substring(0, 500) : '';
       const category = (parsed.category || (isAllowed ? 'approved' : 'other')).toLowerCase();
-      const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (isAllowed ? 1.0 : 0.9);
+      // Anti-hallucination: clamp confidence to valid range
+      const confidence = typeof parsed.confidence === 'number' && !isNaN(parsed.confidence)
+        ? Math.max(0, Math.min(1, parsed.confidence)) : (isAllowed ? 1.0 : 0.9);
 
       return {approved: isAllowed, reason, category, confidence};
     } catch (error) {
@@ -885,7 +889,26 @@ Respond ONLY with valid JSON (no markdown):
       trackAICall({functionName: 'autoModerateMessage', model: AI_MODEL_LITE, operation: 'classify', usage: result.response.usageMetadata, latencyMs: Date.now() - modStart});
       const responseText = result.response.text().trim();
       const cleanText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const analysis = JSON.parse(cleanText);
+      const rawAnalysis = JSON.parse(cleanText);
+
+      // ── Anti-Hallucination Validation Layer ──────────────────────────
+      // Gemini can return invalid categories, out-of-range confidence, or missing fields.
+      // Validate and clamp all outputs to prevent hallucinated blocks.
+      const VALID_CATEGORIES = ['SAFE', 'SPAM', 'SCAM', 'INAPPROPRIATE', 'PERSONAL_INFO'];
+      const VALID_SEVERITIES = ['NONE', 'LOW', 'MEDIUM', 'HIGH'];
+      const analysis = {
+        category: VALID_CATEGORIES.includes((rawAnalysis.category || '').toUpperCase())
+          ? rawAnalysis.category.toUpperCase() : 'SAFE',
+        severity: VALID_SEVERITIES.includes((rawAnalysis.severity || '').toUpperCase())
+          ? rawAnalysis.severity.toUpperCase() : 'NONE',
+        confidence: typeof rawAnalysis.confidence === 'number' && !isNaN(rawAnalysis.confidence)
+          ? Math.max(0, Math.min(100, Math.round(rawAnalysis.confidence))) : 50,
+        reason: typeof rawAnalysis.reason === 'string' ? rawAnalysis.reason.substring(0, 500) : '',
+      };
+      // Log if Gemini hallucinated an invalid category
+      if (rawAnalysis.category && !VALID_CATEGORIES.includes(rawAnalysis.category.toUpperCase())) {
+        logger.warn(`[autoModerate] Gemini hallucinated category "${rawAnalysis.category}" → defaulting to SAFE`);
+      }
 
       // Adaptive confidence: if a category has high false positive rate, require higher confidence
       const baseConfidenceThreshold = modConfig.confidenceThreshold || 50;
