@@ -1458,6 +1458,45 @@ Return JSON with these fields:
                 {rx: /\b(cafetería|cafeteria|coffee\s*shop|starbucks|café\s*de\s*especialidad)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
               ];
 
+              // Fallback queries per category × language — used when Gemini's queries are for the WRONG category
+              const fallbackByLang = {
+                bar: {
+                  es: ['pub bar cervecería', 'bar de cervezas cocktail lounge', 'irish pub sports bar'],
+                  en: ['pub bar brewery', 'cocktail lounge craft beer', 'irish pub sports bar'],
+                  pt: ['pub bar cervejaria', 'bar de cervejas cocktail', 'irish pub sports bar'],
+                  fr: ['pub bar brasserie', 'bar à cocktails bière artisanale', 'irish pub'],
+                  de: ['pub bar kneipe', 'biergarten craft beer', 'irish pub sports bar'],
+                  zh: ['酒吧 pub 啤酒', '精酿啤酒 cocktail bar', 'irish pub'],
+                  ja: ['パブ バー ビール', 'クラフトビール カクテルバー', 'アイリッシュパブ'],
+                  ru: ['паб бар пивоварня', 'коктейль бар крафтовое пиво', 'ирландский паб'],
+                  ar: ['حانة بار مشروبات', 'بار كوكتيل بيرة', 'حانة أيرلندية'],
+                  in: ['pub bar bir', 'bar koktail craft beer', 'irish pub sports bar'],
+                },
+                night_club: {
+                  es: ['discoteca nightclub dance club', 'club nocturno bailar', 'disco antro boliche'],
+                  en: ['nightclub dance club disco', 'dance floor DJ', 'night club party'],
+                  pt: ['boate discoteca balada', 'casa noturna dance club', 'festa DJ'],
+                  fr: ['discothèque boîte de nuit', 'club danse DJ', 'soirée night club'],
+                  de: ['nachtclub diskothek tanzen', 'club DJ party', 'disco'],
+                },
+                spa: {
+                  es: ['spa masajes wellness', 'centro de bienestar sauna', 'termas relax'],
+                  en: ['spa massage wellness', 'wellness center sauna', 'hot springs relax'],
+                  pt: ['spa massagem bem-estar', 'centro de bem-estar sauna', 'termas relax'],
+                },
+                cafe: {
+                  es: ['cafetería coffee shop café', 'café de especialidad', 'café con terraza'],
+                  en: ['cafe coffee shop specialty', 'coffee house espresso', 'cozy cafe'],
+                  pt: ['cafeteria coffee shop café', 'café especial', 'café com terraço'],
+                },
+              };
+              // Get queries for the corrected category in user's language, fallback to ES then EN
+              const getCategoryQueries = (cat) => {
+                const byLang = fallbackByLang[cat];
+                if (!byLang) return [`${cat} near me`, `best ${cat}`, `popular ${cat}`];
+                return byLang[lang] || byLang['es'] || byLang['en'] || [`${cat} near me`];
+              };
+
               for (const rule of keywordCategoryRules) {
                 if (rule.rx.test(msgLower)) {
                   // Anti-pattern: if the user also mentions the conflicting category, skip override
@@ -1465,13 +1504,17 @@ Return JSON with these fields:
                   if (extractedCat !== rule.cat) {
                     logger.info(`[dateCoachChat] Keyword override: user said "${msgLower.match(rule.rx)?.[0]}" but Gemini returned "${extractedIntent.googleCategory}" → forcing "${rule.cat}"`);
                     extractedIntent.googleCategory = rule.cat;
-                    // Inject a relevant query if placeQueries don't match the corrected category
-                    if (extractedIntent.placeQueries && extractedIntent.placeQueries.length > 0) {
-                      const hasMatch = extractedIntent.placeQueries.some((q) => rule.rx.test((q || '').toLowerCase()));
-                      if (!hasMatch) {
-                        const fallbackQuery = (msgLower.match(rule.rx) || [''])[0];
-                        if (fallbackQuery) extractedIntent.placeQueries.unshift(fallbackQuery);
-                      }
+                    // REPLACE queries entirely — Gemini's queries are for the WRONG category
+                    // and would cause Google Places to return wrong place types
+                    const correctedQueries = getCategoryQueries(rule.cat);
+                    if (correctedQueries) {
+                      // Keep any query that mentions the user's location (city name)
+                      const locationQuery = (extractedIntent.placeQueries || []).find((q) =>
+                        extractedIntent.locationMention && typeof q === 'string' &&
+                        q.toLowerCase().includes(extractedIntent.locationMention.toLowerCase()));
+                      extractedIntent.placeQueries = [...correctedQueries];
+                      if (locationQuery) extractedIntent.placeQueries.push(locationQuery);
+                      logger.info(`[dateCoachChat] Replaced queries with ${rule.cat} fallbacks: ${extractedIntent.placeQueries.join(' | ')}`);
                     }
                   }
                   break; // First match wins
