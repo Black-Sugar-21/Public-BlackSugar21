@@ -1,6 +1,6 @@
 ---
 name: firestore
-description: Esquema completo de Firestore de BlackSugar21 — todas las colecciones, campos, tipos, Storage paths, Security Rules, Remote Config 21 claves y 46 reglas de alineación iOS↔Android. Fuente de verdad cross-platform. Usar cuando se trabaje con datos Firestore, esquemas, campos de usuario, matches, mensajes, o cuando se audite alineación iOS↔Android.
+description: Esquema completo de Firestore de BlackSugar21 — todas las colecciones, campos, tipos, Storage paths, Security Rules, Remote Config 21 claves y 58 reglas de alineación iOS↔Android. Fuente de verdad cross-platform. Usar cuando se trabaje con datos Firestore, esquemas, campos de usuario, matches, mensajes, o cuando se audite alineación iOS↔Android.
 ---
 
 # BlackSugar21 — Firestore Schema Completo
@@ -22,11 +22,11 @@ fcmToken (camelCase exacto), apnsToken (solo iOS), fcmBuildType (solo Android: "
 timezoneOffset (número), timezone (string), deviceLanguage
 dailyLikesRemaining (100), dailyLikesLimit (100), dailyLikesUsedToday
 superLikesRemaining (5), superLikesUsedToday, lastLikeResetDate, lastSuperLikeResetDate
-coachMessagesRemaining (3), lastCoachResetDate
+coachMessagesRemaining (3 — decremented SERVER-SIDE by CF dateCoachChat via FieldValue.increment(-1), reset daily by resetCoachMessages CF), lastCoachResetDate
 liked [String], superLiked [String], passed [String], blocked [String], blockedBy [String]
 isOnline, lastSeen, activeChat, activeChatTimestamp, activeMatchId
-paused, visible, pausedAt — pauseAccount: {paused:true, visible:false, pausedAt:serverTimestamp()}
-accountStatus ("active"|"suspended"|"banned"), reportSummary {uniqueReporters, totalReports, reasonCounts}
+paused (Boolean — account temporarily hidden), visible, pausedAt — pauseAccount: {paused:true, visible:false, pausedAt:serverTimestamp()}
+accountStatus ("active"|"suspended"|"banned"|"blocked"), reportSummary {uniqueReporters, totalReports, reasonCounts}
 visibilityReduced, aiModerationResult
 scheduledForDeletion, deletionDate, deletionScheduledAt
 (Android also: scheduledDeletionDate — not used by CFs)
@@ -49,9 +49,10 @@ wingPersonOptOut (bool), wingPersonLastNotifiedAt, wingPersonNotifCountToday, wi
 userId1, userId2
 usersMatched [userId1, userId2]
 timestamp (Timestamp) — orden principal en match list
-lastMessage (String), lastMessageSeq (Number), lastMessageTimestamp (Timestamp)
+lastMessage (String), lastMessageSeq (Number — monotonically increasing, incremented by CF on each message, used by read cache to detect new messages), lastMessageTimestamp (Timestamp), lastMessageSenderId (String — userId of last message sender)
 createdAt, messageCount
-lastSeenTimestamps {userId: Timestamp} — para indicador de mensajes no leídos
+lastSeenTimestamps {userId: Timestamp} — Map of userId → serverTimestamp. Updated when user opens/exits chat (marks messages as read). Both iOS and Android update with FieldValue.serverTimestamp()
+userTypesAtMatch {userId: String} — Original user types at time of match (e.g. SUGAR_DADDY, SUGAR_BABY)
 isTest — para matches de prueba
 ```
 
@@ -286,9 +287,9 @@ Created by `respondToDateCheckIn` (SOS) or `processDateCheckIns` (no response). 
 | `gemini_tokens` | Number | 1024 |
 | `moderation_image_jpeg_quality` | Number | 50 (iOS: /100 → 0.0-1.0) |
 | `enable_screen_protection` | Boolean | true (solo afecta iOS actualmente) |
-| `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` |
+| `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` — Comma-separated UIDs of App Store/Play reviewer accounts. Used to skip location updates and show fixed test data |
 | `coach_max_input_length` | Number | 2000 |
-| `coach_daily_credits` | Number | 3 |
+| `coach_daily_credits` | Number | 3 — Controls how many coach messages per day. Used by `getCoachDailyCredits()` in RemoteConfigManager |
 
 ### Leídas directamente por UI (no via RemoteConfigManager)
 
@@ -339,7 +340,7 @@ Created by `respondToDateCheckIn` (SOS) or `processDateCheckIns` (no response). 
 
 ---
 
-## Reglas de Alineación iOS ↔ Android (56 reglas)
+## Reglas de Alineación iOS ↔ Android (58 reglas)
 
 Las más críticas:
 
@@ -519,6 +520,35 @@ Written by web tester auto-enrollment modal. Used for beta tester management.
 ### Alignment rule 48 — event messages
 ```
 48. **event messages**: `type:"event"` with `eventData` structured field. `autoModerateMessage` ignores `type:"event"` (like date_blueprint). Both platforms must render EventMessageCard with image, title, date, venue, source badge. `lastMessage` = event title.
+```
+
+### Alignment rule 49 — markAsRead returns lastMessageSeq
+```
+49. **markAsRead returns lastMessageSeq**: `markAsRead` must return `lastMessageSeq` (Int) on both platforms. Android chain: MessageService → DataSource → Repository → ChatViewModel. iOS: FirestoreRemoteDataSource.markMessagesAsRead() returns Int.
+```
+
+### Alignment rule 50 — read cache uses lastMessageSeq
+```
+50. **read cache uses lastMessageSeq**: Read cache must use `lastMessageSeq` (not `lastMessage` text) for detecting new messages on both platforms. Text comparison is unreliable — sequence numbers are deterministic.
+```
+
+### Alignment rule 51 — lastSeenTimestamps on enter AND exit
+```
+51. **lastSeenTimestamps on enter AND exit**: `lastSeenTimestamps.{userId}` must be updated with `FieldValue.serverTimestamp()` on both platforms when entering AND exiting chat. This ensures accurate unread counts even if the app is killed mid-chat.
+```
+
+### Real-Time Flow Alignment Rules
+
+```
+52. **Match list sort order**: Must be identical on both platforms: timestamp DESC → lastMessageSeq DESC → id ASC. Any divergence causes matches to appear in different order between iOS and Android
+53. **Coach credits server-side only**: `coachMessagesRemaining` decremented SERVER-SIDE only by CF `dateCoachChat` via `FieldValue.increment(-1)`. Clients must NEVER write this field directly
+54. **Tab switch no re-fetch**: Tab switch must NOT trigger re-fetch of profiles or matches. Use cached data. Re-fetch only on pull-to-refresh or explicit user action
+55. **Foreground recovery restart listener**: Foreground recovery (app returning from background) must restart match listener on both platforms. iOS: `scenePhase .active`, Android: `Lifecycle.Event.ON_START`
+56. **Story throttle**: 3 seconds minimum between story refreshes on both platforms. Prevents rapid-fire Firestore reads on scroll/tab switch
+57. **Photo verification throttle**: 5 minutes minimum between photo verifications on both platforms. Prevents abuse of moderation pipeline
+58. **First message restriction**: Only Elite (SUGAR_DADDY/SUGAR_MOMMY) can send the first message in a match, not Prime (SUGAR_BABY). Enforced by Security Rules AND client-side UI (disable send button for Prime until Elite sends first)
+59. **FirestoreUser model completeness**: FirestoreUser model must include ALL fields present in Firestore documents to avoid CustomClassMapper warnings (pictureNames, pictureCount, lastCoachResetDate, isReviewer, isTest, createdAt, geohash)
+60. **Cloud Functions config safety**: Every CF that reads coach_config must call `getCoachConfig()` — never use bare `config` variable. Audited 2026-04-01: only getCoachHistory had this bug (fixed)
 ```
 
 ### `coachInsights/daily/{YYYY-MM-DD}` collection

@@ -608,3 +608,11 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 - Scheduled CF that generates RAG chunks from yesterday's moderation disputes
 - Feeds new knowledge into `moderationKnowledge` collection
 - Continuous improvement of moderation accuracy without manual intervention
+
+## Session 2026-03-31 Updates
+- Moderation system verified stable, no changes needed
+- All "sugar" references removed from backend prompts (coach.js, moderation.js) — Elite/Prime rebrand
+- `reviewer_uid` moved from hardcoded UID to Remote Config (comma-separated Set)
+- Elite/Prime rebranding complete — no "sugar daddy/mommy/baby" in user-facing text
+- AI Icebreakers: conversation starters generated server-side are NOT moderated (trusted source)
+- Android: 35+ operations moved to Dispatchers.IO across 12 ViewModels (no moderation impact)
