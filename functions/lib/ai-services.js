@@ -261,21 +261,27 @@ Return ONLY a JSON object:
           generationConfig: {maxOutputTokens: 512, temperature: safetyConfig.temperature || 0.1},
         });
 
-        const parsed = parseGeminiJsonResponse(result.response.text());
+        let parsed = null;
+        try {
+          parsed = parseGeminiJsonResponse(result.response.text());
+        } catch (_parseErr) {
+          logger.warn(`[calculateSafetyScore] JSON parse failed: ${_parseErr.message}`);
+        }
 
         if (parsed && typeof parsed.score === 'number') {
-          const allFlags = [...new Set([...quickFlags, ...(parsed.warnings || []).map((w) => w.type)])];
+          const validRiskLevels = ['low', 'medium', 'high'];
+          const allFlags = [...new Set([...quickFlags, ...(parsed.warnings || []).map((w) => String(w.type || ''))])];
           const response = {
             success: true,
             score: Math.max(0, Math.min(100, parsed.score)),
             safetyScore: Math.max(0, Math.min(100, parsed.score)),
-            riskLevel: parsed.riskLevel || (parsed.score > 70 ? 'low' : parsed.score > 40 ? 'medium' : 'high'),
+            riskLevel: validRiskLevels.includes(String(parsed.riskLevel)) ? parsed.riskLevel : (parsed.score > 70 ? 'low' : parsed.score > 40 ? 'medium' : 'high'),
             flags: allFlags,
             concerns: (parsed.concerns || []).slice(0, 5).map((c) => String(c).substring(0, 150)),
             warnings: (parsed.warnings || []).slice(0, 3).map((w) => ({
               type: String(w.type || '').substring(0, 30),
               message: String(w.message || '').substring(0, 200),
-              severity: ['low', 'medium', 'high'].includes(w.severity) ? w.severity : 'low',
+              severity: validRiskLevels.includes(String(w.severity)) ? w.severity : 'low',
             })),
             summary: String(parsed.summary || '').substring(0, 200),
             badges: parsed.score >= 80 ? ['safe_conversation'] : [],
@@ -545,7 +551,12 @@ Return ONLY a JSON object:
       trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart});
 
       const text = result.response.text();
-      const parsed = parseGeminiJsonResponse(text);
+      let parsed = null;
+      try {
+        parsed = parseGeminiJsonResponse(text);
+      } catch (_parseErr) {
+        logger.warn(`[generateSmartReply] JSON parse failed: ${_parseErr.message}`);
+      }
 
       // New format: replies array with tone + explanation
       if (parsed && Array.isArray(parsed.replies) && parsed.replies.length >= 3) {
@@ -1122,7 +1133,12 @@ Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning"
       });
 
       const text = result.response.text();
-      const parsed = parseGeminiJsonResponse(text);
+      let parsed = null;
+      try {
+        parsed = parseGeminiJsonResponse(text);
+      } catch (_parseErr) {
+        logger.warn(`[generateIcebreakers] JSON parse failed: ${_parseErr.message}`);
+      }
 
       if (Array.isArray(parsed) && parsed.length >= 3) {
         const icebreakers = parsed.slice(0, 3).map((item) => ({
@@ -1472,7 +1488,12 @@ Respond ONLY with valid JSON:
       const geminiResult = await Promise.race([geminiPromise, geminiTimeout]);
 
       const text = geminiResult.response.text();
-      const parsed = parseGeminiJsonResponse(text);
+      let parsed = null;
+      try {
+        parsed = parseGeminiJsonResponse(text);
+      } catch (_parseErr) {
+        logger.warn(`[AIChemistry] JSON parse failed: ${_parseErr.message}`);
+      }
       if (parsed && typeof parsed.score === 'number') {
         aiScore = Math.max(0.55, Math.min(parsed.score, 0.95));
         reasons = Array.isArray(parsed.reasons) ? parsed.reasons.filter((r) => typeof r === 'string' && r.length > 0).slice(0, 3) : [];
@@ -1999,11 +2020,21 @@ Return ONLY valid JSON with this structure:
       const contents = [{role: 'user', parts: [...photoParts, {text: prompt}]}];
       const result = await model.generateContent({contents});
       const text = result.response.text();
-      const analysis = parseGeminiJsonResponse(text);
+      let analysis = null;
+      try {
+        analysis = parseGeminiJsonResponse(text);
+      } catch (_parseErr) {
+        logger.warn(`[getPhotoCoachAnalysis] JSON parse failed: ${_parseErr.message}`);
+      }
 
       if (!analysis || typeof analysis !== 'object') {
         logger.warn('[getPhotoCoachAnalysis] Gemini returned invalid JSON');
         return {success: false, error: 'parse_error'};
+      }
+
+      // Validate overallScore type
+      if (typeof analysis.overallScore !== 'number') {
+        analysis.overallScore = Number(analysis.overallScore) || 50;
       }
 
       // Map suggestedOrder indexes back to filenames

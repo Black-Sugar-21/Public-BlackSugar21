@@ -218,8 +218,12 @@ exports.reportUser = onCall(
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           aiAnalysis = JSON.parse(jsonMatch[0]);
+          // Validate types strictly — this path suspends users
+          const shouldSuspend = aiAnalysis.shouldSuspend === true;
+          const confidence = typeof aiAnalysis.confidence === 'number' ? aiAnalysis.confidence : -1;
+          aiAnalysis.reasoning = typeof aiAnalysis.reasoning === 'string' ? aiAnalysis.reasoning : '';
           // Si la IA recomienda suspensión con alta confianza, escalar
-          if (aiAnalysis.shouldSuspend && aiAnalysis.confidence >= 0.8) {
+          if (shouldSuspend && confidence >= 0.8) {
             await db.collection('users').doc(reportedUserId).update({
               accountStatus: 'suspended',
               suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
