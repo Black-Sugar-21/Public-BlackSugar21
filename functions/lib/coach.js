@@ -2369,9 +2369,10 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       // Search Grounding: Gemini busca en Google cuando NO es place search
       const enableSearchGrounding = config.enableSearchGrounding !== false && !isUserPlaceSearch && !hasRealPlaces;
       // Dynamic temperature: safety/boundaries → precise, places → balanced, creative → high
+      const quickAnalysis = analyzeUserMessage(message);
       const safetyTopics = ['safety', 'red_flags', 'boundary_setting', 'emotional'];
       const placesTopics = ['activity_places', 'venue_recommendations', 'date_ideas', 'gift_ideas'];
-      const detectedTopics = (analysis?.topics || []).map((t) => t.toLowerCase());
+      const detectedTopics = (quickAnalysis?.topics || []).map((t) => t.toLowerCase());
       const isSafetyQuery = detectedTopics.some((t) => safetyTopics.includes(t));
       const isPlacesQuery = isUserPlaceSearch || hasRealPlaces || detectedTopics.some((t) => placesTopics.includes(t));
       const dynamicTemp = isSafetyQuery ? 0.3 : isPlacesQuery ? 0.7 : (config.temperature || 0.85);
