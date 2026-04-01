@@ -3129,6 +3129,7 @@ exports.getRealtimeCoachTips = onCall(
       // 1. Check cache first (avoid Gemini calls)
       const cacheRef = db.collection('coachTipsCache').doc(matchId);
       const cacheDoc = await cacheRef.get();
+      let langMismatch = false; // Declared here so shouldCallGemini can use it
       if (cacheDoc.exists) {
         const cached = cacheDoc.data();
         const cacheAge = Date.now() - (cached.updatedAt?.toMillis?.() || 0);
@@ -3139,7 +3140,7 @@ exports.getRealtimeCoachTips = onCall(
         // Read deviceLanguage from Firestore for accurate language detection
         const userDocForLang = await db.collection('users').doc(userId).get();
         const firestoreLang = ((userDocForLang.data()?.deviceLanguage || '').split('-')[0]).toLowerCase() || clientLang;
-        const langMismatch = cacheLang && firestoreLang && cacheLang !== firestoreLang;
+        langMismatch = cacheLang && firestoreLang && cacheLang !== firestoreLang;
         if (langMismatch) {
           logger.info(`[getRealtimeCoachTips] Cache language mismatch: cached="${cacheLang}" vs device="${firestoreLang}" → regenerating`);
         }
@@ -3245,7 +3246,7 @@ Use this behavioral data to generate SPECIFIC, DATA-DRIVEN tips. If flags exist,
       // Gemini conditions: first time, every N new messages, significant score change, or cache too old
       const cacheAgeMs = prevCache?.updatedAt?.toMillis ? (Date.now() - prevCache.updatedAt.toMillis()) : Infinity;
       const maxCacheAgeMs = (tipsConfig.maxCacheAgeMinutes || 30) * 60 * 1000;
-      const shouldCallGemini = !prevCache || newMsgsSinceLast >= geminiThreshold || scoreDelta > deltaThreshold || cacheAgeMs > maxCacheAgeMs;
+      const shouldCallGemini = !prevCache || newMsgsSinceLast >= geminiThreshold || scoreDelta > deltaThreshold || cacheAgeMs > maxCacheAgeMs || langMismatch;
 
       if (!shouldCallGemini) {
         // Use algorithmic score + cached tips (saves Gemini cost)
