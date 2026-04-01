@@ -89,7 +89,7 @@ function parseGeminiJsonResponse(responseText) {
 
 const CATEGORY_KEYWORD_MAP = [
   // Ordered by specificity — first match wins. antiRx prevents false overrides.
-  {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chelas?|birra|cervecería|cerveceria|cervejaria)\b/i, cat: 'bar', antiRx: /(cafe|café|cafetería|coffee|starbucks|tea)/i},
+  {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chelas?|birra|cervecería|cerveceria|cervejaria)\b|ビール|啤酒|пиво|пивоварня|بيرة|حانة/i, cat: 'bar', antiRx: /(cafe|café|cafetería|coffee|starbucks|tea)|カフェ|咖啡|кафе|مقهى|kopi/i},
   {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /(cafe|café|cafetería|coffee|chocolate|candy|snack)/i},
   {rx: /\b(discos?|discotecas?|nightclubs?|night\s*clubs?|clubs?\s*nocturnos?|antros?|boliches?|boates?|bailar|dance\s*clubs?|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i, cat: 'night_club'},
   {rx: /\b(spas?|masajes?|massages?|termas|saunas?|wellness|hammam|onsen|yoga\s*studio|pilates)\b/i, cat: 'spa'},
