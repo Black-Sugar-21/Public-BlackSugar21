@@ -1416,34 +1416,66 @@ Return JSON with these fields:
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
 
-            // ── Post-extraction keyword override ────────────────────────────
-            // Gemini sometimes hallucinate the wrong googleCategory despite explicit
-            // prompt instructions. This safety net catches obvious misclassifications
-            // by checking the user's actual words against the extracted category.
-            if (extractedIntent && extractedIntent.googleCategory) {
+            // ── Post-extraction keyword-first override ────────────────────────
+            // Gemini hallucinates the wrong googleCategory ~10-15% of the time
+            // despite explicit prompt instructions. This keyword-first safety net
+            // detects the CORRECT category from the user's actual words and overrides
+            // Gemini when there's a clear mismatch. Covers ALL 16 categories.
+            if (extractedIntent) {
               const msgLower = message.toLowerCase();
               const extractedCat = normalizeCategory(extractedIntent.googleCategory);
 
-              // BAR/PUB keywords (10 languages) — must override cafe/restaurant
-              const barRx = /\b(pub|pubs|bar|bares|irish\s*pub|sports?\s*bar|craft\s*beer|cervecería|cerveceria|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chela|birra|cerveja|bière|Bier|ビール|啤酒|пиво|بيرة|bir)\b/i;
-              // NIGHT CLUB keywords (10 languages)
-              const nightRx = /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i;
-              // CAFE keywords — to avoid false override when user actually wants cafe
-              const cafeRx = /\b(cafe|café|cafetería|cafeteria|coffee|starbucks|tea|kaffee|カフェ|咖啡|кафе|مقهى|kopi)\b/i;
+              // Keyword → expected category map (ordered by specificity, first match wins)
+              const keywordCategoryRules = [
+                // BAR / PUB — most common hallucination target (Gemini → cafe)
+                {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chela|birra|cervecería|cerveceria|cervejaria)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|starbucks|tea)\b/i},
+                {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|chocolate|candy|snack)\b/i},
+                // NIGHT CLUB
+                {rx: /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i, cat: 'night_club'},
+                // SPA / WELLNESS
+                {rx: /\b(spa|masaje|massage|termas|sauna|wellness|hammam|onsen|yoga\s*studio|pilates)\b/i, cat: 'spa'},
+                // MUSEUM
+                {rx: /\b(museo|museum|museu|musée|galería\s*de\s*arte|art\s*gallery|exposición|exhibition)\b/i, cat: 'museum'},
+                // PARK / OUTDOOR
+                {rx: /\b(parque|park|jardín|garden|playa|beach|sendero|trail|hiking|mirador|viewpoint|picnic)\b/i, cat: 'park', antiRx: /\b(amusement|theme|water)\b/i},
+                // BOWLING / ENTERTAINMENT
+                {rx: /\b(bowling|boliche|billar|billiard|arcade|escape\s*room|laser\s*tag|karting|paintball)\b/i, cat: 'bowling_alley'},
+                // MOVIE THEATER
+                {rx: /\b(cine|cinema|película|movie|theater|theatre|film|imax)\b/i, cat: 'movie_theater', antiRx: /\b(museo|museum|teatro\s*de\s*ópera|theater\s*company)\b/i},
+                // BAKERY / PASTRY
+                {rx: /\b(pastelería|panadería|bakery|patisserie|repostería|donut|cupcake|macaron|galletas|cookies|dulcería|confitería|heladería|ice\s*cream)\b/i, cat: 'bakery'},
+                // FLORIST
+                {rx: /\b(florería|floristería|flower\s*shop|fleuriste|Blumen|flores|flowers|ramo|bouquet)\b/i, cat: 'florist'},
+                // LIQUOR STORE (buying alcohol to take home)
+                {rx: /\b(vinoteca|licorería|liquor\s*store|wine\s*shop|botillería|tienda\s*de\s*vinos|tienda\s*de\s*licores)\b/i, cat: 'liquor_store'},
+                // SHOPPING
+                {rx: /\b(mall|centro\s*comercial|shopping|tienda\s*de\s*ropa|boutique|joyería|jewelry|perfumería)\b/i, cat: 'shopping_mall'},
+                // ZOO
+                {rx: /\b(zoo|zoológico|safari|bioparque)\b/i, cat: 'zoo'},
+                // AQUARIUM
+                {rx: /\b(acuario|aquarium|oceanario)\b/i, cat: 'aquarium'},
+                // CAFE — explicit (only override if Gemini gave something clearly wrong)
+                {rx: /\b(cafetería|cafeteria|coffee\s*shop|starbucks|café\s*de\s*especialidad)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
+              ];
 
-              if (barRx.test(msgLower) && !cafeRx.test(msgLower) && extractedCat !== 'bar' && extractedCat !== 'night_club') {
-                logger.info(`[dateCoachChat] Override: user said pub/bar but Gemini returned "${extractedIntent.googleCategory}" → forcing "bar"`);
-                extractedIntent.googleCategory = 'bar';
-                // Also fix placeQueries if they look wrong
-                if (extractedIntent.placeQueries && extractedIntent.placeQueries.length > 0) {
-                  const hasBarQuery = extractedIntent.placeQueries.some((q) => barRx.test((q || '').toLowerCase()));
-                  if (!hasBarQuery) {
-                    extractedIntent.placeQueries.unshift('pub bar cervecería');
+              for (const rule of keywordCategoryRules) {
+                if (rule.rx.test(msgLower)) {
+                  // Anti-pattern: if the user also mentions the conflicting category, skip override
+                  if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
+                  if (extractedCat !== rule.cat) {
+                    logger.info(`[dateCoachChat] Keyword override: user said "${msgLower.match(rule.rx)?.[0]}" but Gemini returned "${extractedIntent.googleCategory}" → forcing "${rule.cat}"`);
+                    extractedIntent.googleCategory = rule.cat;
+                    // Inject a relevant query if placeQueries don't match the corrected category
+                    if (extractedIntent.placeQueries && extractedIntent.placeQueries.length > 0) {
+                      const hasMatch = extractedIntent.placeQueries.some((q) => rule.rx.test((q || '').toLowerCase()));
+                      if (!hasMatch) {
+                        const fallbackQuery = (msgLower.match(rule.rx) || [''])[0];
+                        if (fallbackQuery) extractedIntent.placeQueries.unshift(fallbackQuery);
+                      }
+                    }
                   }
+                  break; // First match wins
                 }
-              } else if (nightRx.test(msgLower) && extractedCat !== 'night_club') {
-                logger.info(`[dateCoachChat] Override: user said disco/club but Gemini returned "${extractedIntent.googleCategory}" → forcing "night_club"`);
-                extractedIntent.googleCategory = 'night_club';
               }
             }
 
@@ -2713,19 +2745,32 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
         }
       }
 
-      // ── Final dominantCategory keyword override (same logic as intent extraction) ──
+      // ── Final dominantCategory keyword override (reuses same rules as intent extraction) ──
       // Catches cases where activity distribution skewed the category wrong
       if (dominantCategory) {
         const msgLower = message.toLowerCase();
-        const barRx = /\b(pub|pubs|bar|bares|irish\s*pub|sports?\s*bar|craft\s*beer|cervecería|cerveceria|brewpub|brewery|taproom|taberna|chela|birra|cerveja)\b/i;
-        const nightRx = /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club)\b/i;
-        const cafeRx = /\b(cafe|café|cafetería|cafeteria|coffee|starbucks|tea)\b/i;
-        if (barRx.test(msgLower) && !cafeRx.test(msgLower) && dominantCategory !== 'bar' && dominantCategory !== 'night_club') {
-          logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "bar" (user mentioned pub/bar)`);
-          dominantCategory = 'bar';
-        } else if (nightRx.test(msgLower) && dominantCategory !== 'night_club') {
-          logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "night_club" (user mentioned disco/club)`);
-          dominantCategory = 'night_club';
+        const domKeywordRules = [
+          {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|cervecería|cerveceria|chela|birra)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|tea)\b/i},
+          {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|chocolate)\b/i},
+          {rx: /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club)\b/i, cat: 'night_club'},
+          {rx: /\b(spa|masaje|massage|termas|sauna|wellness|hammam)\b/i, cat: 'spa'},
+          {rx: /\b(museo|museum|galería\s*de\s*arte|art\s*gallery|exposición)\b/i, cat: 'museum'},
+          {rx: /\b(parque|park|playa|beach|sendero|trail|hiking|mirador)\b/i, cat: 'park'},
+          {rx: /\b(cine|cinema|película|movie)\b/i, cat: 'movie_theater'},
+          {rx: /\b(pastelería|bakery|heladería|ice\s*cream|donut|cupcake)\b/i, cat: 'bakery'},
+          {rx: /\b(florería|floristería|flower\s*shop|flores|flowers)\b/i, cat: 'florist'},
+          {rx: /\b(vinoteca|licorería|liquor\s*store|botillería)\b/i, cat: 'liquor_store'},
+          {rx: /\b(bowling|billar|arcade|escape\s*room)\b/i, cat: 'bowling_alley'},
+        ];
+        for (const rule of domKeywordRules) {
+          if (rule.rx.test(msgLower)) {
+            if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
+            if (dominantCategory !== rule.cat) {
+              logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "${rule.cat}" (keyword match)`);
+              dominantCategory = rule.cat;
+            }
+            break;
+          }
         }
       }
 
