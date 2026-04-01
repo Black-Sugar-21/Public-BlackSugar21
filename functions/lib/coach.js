@@ -5,7 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, getCachedEmbedding, trackAICall } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall } = require('./shared');
 const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
@@ -1416,111 +1416,8 @@ Return JSON with these fields:
             const intentText = intentResult.response.text();
             extractedIntent = parseGeminiJsonResponse(intentText);
 
-            // ── Post-extraction keyword-first override ────────────────────────
-            // Gemini hallucinates the wrong googleCategory ~10-15% of the time
-            // despite explicit prompt instructions. This keyword-first safety net
-            // detects the CORRECT category from the user's actual words and overrides
-            // Gemini when there's a clear mismatch. Covers ALL 16 categories.
-            if (extractedIntent) {
-              const msgLower = message.toLowerCase();
-              const extractedCat = normalizeCategory(extractedIntent.googleCategory);
-
-              // Keyword → expected category map (ordered by specificity, first match wins)
-              const keywordCategoryRules = [
-                // BAR / PUB — most common hallucination target (Gemini → cafe)
-                {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chela|birra|cervecería|cerveceria|cervejaria)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|starbucks|tea)\b/i},
-                {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|chocolate|candy|snack)\b/i},
-                // NIGHT CLUB
-                {rx: /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i, cat: 'night_club'},
-                // SPA / WELLNESS
-                {rx: /\b(spa|masaje|massage|termas|sauna|wellness|hammam|onsen|yoga\s*studio|pilates)\b/i, cat: 'spa'},
-                // MUSEUM
-                {rx: /\b(museo|museum|museu|musée|galería\s*de\s*arte|art\s*gallery|exposición|exhibition)\b/i, cat: 'museum'},
-                // PARK / OUTDOOR
-                {rx: /\b(parque|park|jardín|garden|playa|beach|sendero|trail|hiking|mirador|viewpoint|picnic)\b/i, cat: 'park', antiRx: /\b(amusement|theme|water)\b/i},
-                // BOWLING / ENTERTAINMENT
-                {rx: /\b(bowling|boliche|billar|billiard|arcade|escape\s*room|laser\s*tag|karting|paintball)\b/i, cat: 'bowling_alley'},
-                // MOVIE THEATER
-                {rx: /\b(cine|cinema|película|movie|theater|theatre|film|imax)\b/i, cat: 'movie_theater', antiRx: /\b(museo|museum|teatro\s*de\s*ópera|theater\s*company)\b/i},
-                // BAKERY / PASTRY
-                {rx: /\b(pastelería|panadería|bakery|patisserie|repostería|donut|cupcake|macaron|galletas|cookies|dulcería|confitería|heladería|ice\s*cream)\b/i, cat: 'bakery'},
-                // FLORIST
-                {rx: /\b(florería|floristería|flower\s*shop|fleuriste|Blumen|flores|flowers|ramo|bouquet)\b/i, cat: 'florist'},
-                // LIQUOR STORE (buying alcohol to take home)
-                {rx: /\b(vinoteca|licorería|liquor\s*store|wine\s*shop|botillería|tienda\s*de\s*vinos|tienda\s*de\s*licores)\b/i, cat: 'liquor_store'},
-                // SHOPPING
-                {rx: /\b(mall|centro\s*comercial|shopping|tienda\s*de\s*ropa|boutique|joyería|jewelry|perfumería)\b/i, cat: 'shopping_mall'},
-                // ZOO
-                {rx: /\b(zoo|zoológico|safari|bioparque)\b/i, cat: 'zoo'},
-                // AQUARIUM
-                {rx: /\b(acuario|aquarium|oceanario)\b/i, cat: 'aquarium'},
-                // CAFE — explicit (only override if Gemini gave something clearly wrong)
-                {rx: /\b(cafetería|cafeteria|coffee\s*shop|starbucks|café\s*de\s*especialidad)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
-              ];
-
-              // Fallback queries per category × language — used when Gemini's queries are for the WRONG category
-              const fallbackByLang = {
-                bar: {
-                  es: ['pub bar cervecería', 'bar de cervezas cocktail lounge', 'irish pub sports bar'],
-                  en: ['pub bar brewery', 'cocktail lounge craft beer', 'irish pub sports bar'],
-                  pt: ['pub bar cervejaria', 'bar de cervejas cocktail', 'irish pub sports bar'],
-                  fr: ['pub bar brasserie', 'bar à cocktails bière artisanale', 'irish pub'],
-                  de: ['pub bar kneipe', 'biergarten craft beer', 'irish pub sports bar'],
-                  zh: ['酒吧 pub 啤酒', '精酿啤酒 cocktail bar', 'irish pub'],
-                  ja: ['パブ バー ビール', 'クラフトビール カクテルバー', 'アイリッシュパブ'],
-                  ru: ['паб бар пивоварня', 'коктейль бар крафтовое пиво', 'ирландский паб'],
-                  ar: ['حانة بار مشروبات', 'بار كوكتيل بيرة', 'حانة أيرلندية'],
-                  in: ['pub bar bir', 'bar koktail craft beer', 'irish pub sports bar'],
-                },
-                night_club: {
-                  es: ['discoteca nightclub dance club', 'club nocturno bailar', 'disco antro boliche'],
-                  en: ['nightclub dance club disco', 'dance floor DJ', 'night club party'],
-                  pt: ['boate discoteca balada', 'casa noturna dance club', 'festa DJ'],
-                  fr: ['discothèque boîte de nuit', 'club danse DJ', 'soirée night club'],
-                  de: ['nachtclub diskothek tanzen', 'club DJ party', 'disco'],
-                },
-                spa: {
-                  es: ['spa masajes wellness', 'centro de bienestar sauna', 'termas relax'],
-                  en: ['spa massage wellness', 'wellness center sauna', 'hot springs relax'],
-                  pt: ['spa massagem bem-estar', 'centro de bem-estar sauna', 'termas relax'],
-                },
-                cafe: {
-                  es: ['cafetería coffee shop café', 'café de especialidad', 'café con terraza'],
-                  en: ['cafe coffee shop specialty', 'coffee house espresso', 'cozy cafe'],
-                  pt: ['cafeteria coffee shop café', 'café especial', 'café com terraço'],
-                },
-              };
-              // Get queries for the corrected category in user's language, fallback to ES then EN
-              const getCategoryQueries = (cat) => {
-                const byLang = fallbackByLang[cat];
-                if (!byLang) return [`${cat} near me`, `best ${cat}`, `popular ${cat}`];
-                return byLang[lang] || byLang['es'] || byLang['en'] || [`${cat} near me`];
-              };
-
-              for (const rule of keywordCategoryRules) {
-                if (rule.rx.test(msgLower)) {
-                  // Anti-pattern: if the user also mentions the conflicting category, skip override
-                  if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
-                  if (extractedCat !== rule.cat) {
-                    logger.info(`[dateCoachChat] Keyword override: user said "${msgLower.match(rule.rx)?.[0]}" but Gemini returned "${extractedIntent.googleCategory}" → forcing "${rule.cat}"`);
-                    extractedIntent.googleCategory = rule.cat;
-                    // REPLACE queries entirely — Gemini's queries are for the WRONG category
-                    // and would cause Google Places to return wrong place types
-                    const correctedQueries = getCategoryQueries(rule.cat);
-                    if (correctedQueries) {
-                      // Keep any query that mentions the user's location (city name)
-                      const locationQuery = (extractedIntent.placeQueries || []).find((q) =>
-                        extractedIntent.locationMention && typeof q === 'string' &&
-                        q.toLowerCase().includes(extractedIntent.locationMention.toLowerCase()));
-                      extractedIntent.placeQueries = [...correctedQueries];
-                      if (locationQuery) extractedIntent.placeQueries.push(locationQuery);
-                      logger.info(`[dateCoachChat] Replaced queries with ${rule.cat} fallbacks: ${extractedIntent.placeQueries.join(' | ')}`);
-                    }
-                  }
-                  break; // First match wins
-                }
-              }
-            }
+            // ── Anti-Hallucination Layer (centralized in shared.js) ──────────
+            extractedIntent = validateAndCorrectIntent(extractedIntent, message, lang, logger);
 
             logger.info(`[dateCoachChat] Intent extracted: placeType=${extractedIntent.placeType}, location=${extractedIntent.locationMention}, category=${extractedIntent.googleCategory}`);
           }
@@ -2788,34 +2685,8 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
         }
       }
 
-      // ── Final dominantCategory keyword override (reuses same rules as intent extraction) ──
-      // Catches cases where activity distribution skewed the category wrong
-      if (dominantCategory) {
-        const msgLower = message.toLowerCase();
-        const domKeywordRules = [
-          {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|cervecería|cerveceria|chela|birra)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|tea)\b/i},
-          {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /\b(cafe|café|cafetería|coffee|chocolate)\b/i},
-          {rx: /\b(disco|discoteca|nightclub|night\s*club|club\s*nocturno|antro|boliche|boate|bailar|dance\s*club)\b/i, cat: 'night_club'},
-          {rx: /\b(spa|masaje|massage|termas|sauna|wellness|hammam)\b/i, cat: 'spa'},
-          {rx: /\b(museo|museum|galería\s*de\s*arte|art\s*gallery|exposición)\b/i, cat: 'museum'},
-          {rx: /\b(parque|park|playa|beach|sendero|trail|hiking|mirador)\b/i, cat: 'park'},
-          {rx: /\b(cine|cinema|película|movie)\b/i, cat: 'movie_theater'},
-          {rx: /\b(pastelería|bakery|heladería|ice\s*cream|donut|cupcake)\b/i, cat: 'bakery'},
-          {rx: /\b(florería|floristería|flower\s*shop|flores|flowers)\b/i, cat: 'florist'},
-          {rx: /\b(vinoteca|licorería|liquor\s*store|botillería)\b/i, cat: 'liquor_store'},
-          {rx: /\b(bowling|billar|arcade|escape\s*room)\b/i, cat: 'bowling_alley'},
-        ];
-        for (const rule of domKeywordRules) {
-          if (rule.rx.test(msgLower)) {
-            if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
-            if (dominantCategory !== rule.cat) {
-              logger.info(`[dateCoachChat] Override dominantCategory: "${dominantCategory}" → "${rule.cat}" (keyword match)`);
-              dominantCategory = rule.cat;
-            }
-            break;
-          }
-        }
-      }
+      // ── Anti-Hallucination Layer for dominantCategory (centralized in shared.js) ──
+      dominantCategory = validateDominantCategory(dominantCategory, message, logger);
 
       // Append location-aware suggestion chip (e.g. "📍 Lugares en Santiago")
       // Only when: has location, not off-topic, not loadMore, response doesn't already have activities

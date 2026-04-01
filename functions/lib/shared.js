@@ -83,6 +83,97 @@ function parseGeminiJsonResponse(responseText) {
   return JSON.parse(cleanText);
 }
 
+// ── Anti-Hallucination Validation Layer ────────────────────────────────────
+// Validates Gemini's extracted intent against the user's actual message.
+// Returns corrected intent object. Does NOT trust Gemini blindly.
+
+const CATEGORY_KEYWORD_MAP = [
+  // Ordered by specificity — first match wins. antiRx prevents false overrides.
+  {rx: /\b(pub|pubs|irish\s*pub|sports?\s*bar|brewpub|brewery|taproom|taberna|birreria|brasserie|kneipe|chelas?|birra|cervecería|cerveceria|cervejaria)\b/i, cat: 'bar', antiRx: /(cafe|café|cafetería|coffee|starbucks|tea)/i},
+  {rx: /\b(bar|bares)\b/i, cat: 'bar', antiRx: /(cafe|café|cafetería|coffee|chocolate|candy|snack)/i},
+  {rx: /\b(discos?|discotecas?|nightclubs?|night\s*clubs?|clubs?\s*nocturnos?|antros?|boliches?|boates?|bailar|dance\s*clubs?|boîte|nachtclub|ナイトクラブ|夜店|ночной\s*клуб|ملهى|klub\s*malam)\b/i, cat: 'night_club'},
+  {rx: /\b(spas?|masajes?|massages?|termas|saunas?|wellness|hammam|onsen|yoga\s*studio|pilates)\b/i, cat: 'spa'},
+  {rx: /\b(museos?|museums?|museu|musée|galerías?\s*de\s*arte|art\s*gallery|exposición|exhibition)\b/i, cat: 'museum'},
+  {rx: /\b(parque|park|jardín|garden|playa|beach|sendero|trail|hiking|mirador|viewpoint|picnic)\b/i, cat: 'park', antiRx: /\b(amusement|theme|water)\b/i},
+  {rx: /\b(bowling|boliche|billar|billiard|arcade|escape\s*room|laser\s*tag|karting|paintball)\b/i, cat: 'bowling_alley'},
+  {rx: /\b(cine|cinema|película|movie|theater|theatre|film|imax)\b/i, cat: 'movie_theater', antiRx: /\b(museo|museum|teatro\s*de\s*ópera)\b/i},
+  {rx: /\b(pastelería|panadería|bakery|patisserie|repostería|donut|cupcake|macaron|galletas|cookies|dulcería|confitería|heladería|ice\s*cream)\b/i, cat: 'bakery'},
+  {rx: /\b(florería|floristería|flower\s*shop|fleuriste|flores|flowers|ramo|bouquet)\b/i, cat: 'florist'},
+  {rx: /\b(vinoteca|licorería|liquor\s*store|wine\s*shop|botillería|tienda\s*de\s*vinos|tienda\s*de\s*licores)\b/i, cat: 'liquor_store'},
+  {rx: /\b(mall|centro\s*comercial|shopping|tienda\s*de\s*ropa|boutique|joyería|jewelry|perfumería)\b/i, cat: 'shopping_mall'},
+  {rx: /\b(zoo|zoológico|safari|bioparque)\b/i, cat: 'zoo'},
+  {rx: /\b(acuario|aquarium|oceanario)\b/i, cat: 'aquarium'},
+  {rx: /\b(cafetería|cafeteria|coffee\s*shop|starbucks|café\s*de\s*especialidad)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
+];
+
+// Multilingual fallback queries per category (es/en/pt/fr/de + fallback)
+const CATEGORY_FALLBACK_QUERIES = {
+  bar: {es: ['pub bar cervecería', 'bar de cervezas cocktail lounge', 'irish pub sports bar'], en: ['pub bar brewery', 'cocktail lounge craft beer', 'irish pub sports bar'], pt: ['pub bar cervejaria', 'bar de cervejas cocktail', 'irish pub sports bar'], fr: ['pub bar brasserie', 'bar à cocktails bière artisanale', 'irish pub'], de: ['pub bar kneipe', 'biergarten craft beer', 'irish pub sports bar']},
+  night_club: {es: ['discoteca nightclub dance club', 'club nocturno bailar', 'disco antro boliche'], en: ['nightclub dance club disco', 'dance floor DJ', 'night club party'], pt: ['boate discoteca balada', 'casa noturna dance club', 'festa DJ'], fr: ['discothèque boîte de nuit', 'club danse DJ', 'soirée night club'], de: ['nachtclub diskothek tanzen', 'club DJ party', 'disco']},
+  spa: {es: ['spa masajes wellness', 'centro de bienestar sauna', 'termas relax'], en: ['spa massage wellness', 'wellness center sauna', 'hot springs relax'], pt: ['spa massagem bem-estar', 'centro de bem-estar sauna', 'termas relax']},
+  cafe: {es: ['cafetería coffee shop café', 'café de especialidad', 'café con terraza'], en: ['cafe coffee shop specialty', 'coffee house espresso', 'cozy cafe'], pt: ['cafeteria coffee shop café', 'café especial', 'café com terraço']},
+};
+
+/**
+ * Validates and corrects Gemini's intent extraction against the user's actual message.
+ * @param {object} intent - Gemini's extracted intent (mutable — corrected in place)
+ * @param {string} message - Original user message
+ * @param {string} lang - User language code (es, en, pt, etc.)
+ * @param {object} [logger] - Optional logger for tracking overrides
+ * @returns {object} Corrected intent
+ */
+function validateAndCorrectIntent(intent, message, lang, logger) {
+  if (!intent || !message) return intent || {};
+  const msgLower = message.toLowerCase();
+  const extractedCat = normalizeCategory(intent.googleCategory);
+
+  for (const rule of CATEGORY_KEYWORD_MAP) {
+    if (rule.rx.test(msgLower)) {
+      if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
+      if (extractedCat !== rule.cat) {
+        if (logger) logger.info(`[AntiHallucination] Override: user said "${msgLower.match(rule.rx)?.[0]}" but Gemini returned "${intent.googleCategory}" → forcing "${rule.cat}"`);
+        intent.googleCategory = rule.cat;
+        // Replace queries with category-specific ones in user's language
+        const fallbacks = CATEGORY_FALLBACK_QUERIES[rule.cat];
+        if (fallbacks) {
+          const correctedQueries = fallbacks[lang] || fallbacks['es'] || fallbacks['en'] || [`${rule.cat} near me`];
+          const locationQuery = (intent.placeQueries || []).find((q) =>
+            intent.locationMention && typeof q === 'string' &&
+            q.toLowerCase().includes(intent.locationMention.toLowerCase()));
+          intent.placeQueries = [...correctedQueries];
+          if (locationQuery) intent.placeQueries.push(locationQuery);
+          if (logger) logger.info(`[AntiHallucination] Replaced queries: ${intent.placeQueries.join(' | ')}`);
+        }
+      }
+      break;
+    }
+  }
+  return intent;
+}
+
+/**
+ * Validates and corrects dominantCategory against the user's actual message.
+ * @param {string} category - Gemini's computed dominant category
+ * @param {string} message - Original user message
+ * @param {object} [logger] - Optional logger
+ * @returns {string} Corrected category
+ */
+function validateDominantCategory(category, message, logger) {
+  if (!category || !message) return category;
+  const msgLower = message.toLowerCase();
+  for (const rule of CATEGORY_KEYWORD_MAP) {
+    if (rule.rx.test(msgLower)) {
+      if (rule.antiRx && rule.antiRx.test(msgLower)) continue;
+      if (category !== rule.cat) {
+        if (logger) logger.info(`[AntiHallucination] Override dominantCategory: "${category}" → "${rule.cat}"`);
+        return rule.cat;
+      }
+      break;
+    }
+  }
+  return category;
+}
+
 // ── Shared Embedding Cache ──────────────────────────────────────────
 // In-memory cache for Gemini embeddings to avoid duplicate API calls.
 // Cache key: SHA-256 of normalized query text + dimensions. TTL: 10 minutes. Max: 100 entries.
@@ -267,6 +358,10 @@ module.exports = {
   normalizeCategory,
   categoryEmojiMap,
   parseGeminiJsonResponse,
+  validateAndCorrectIntent,
+  validateDominantCategory,
+  CATEGORY_KEYWORD_MAP,
+  CATEGORY_FALLBACK_QUERIES,
   getCachedEmbedding,
   trackAICall,
   trackedGenerateContent,
