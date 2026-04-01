@@ -3304,7 +3304,12 @@ Use this behavioral data to generate SPECIFIC, DATA-DRIVEN tips. If flags exist,
 
       // 5. Build Gemini prompt
       const langInstruction = getLanguageInstruction(lang);
-      const systemPrompt = `You are a real-time dating coach AI analyzing a live chat conversation.
+      const langNames = {es: 'Spanish', en: 'English', pt: 'Portuguese', fr: 'French', de: 'German', ja: 'Japanese', zh: 'Chinese', ru: 'Russian', ar: 'Arabic', id: 'Indonesian'};
+      const langName = langNames[lang] || 'English';
+      const systemPrompt = `${langInstruction}
+CRITICAL: ALL text content in tips, suggestedAction, and every string value in the JSON response MUST be in ${langName}. The conversation may be in a different language — IGNORE the conversation language and respond in ${langName} ONLY.
+
+You are a real-time dating coach AI analyzing a live chat conversation.
 Analyze the following conversation between ${userName} and ${matchName} and provide actionable coaching insights.
 
 User profile: ${userData.userType || 'unknown'}, interests: ${userInterests || 'none'}
@@ -3313,9 +3318,8 @@ Match profile: ${otherData.userType || 'unknown'}, interests: ${matchInterests |
 Recent conversation:
 ${transcript}
 ${ragContext ? `\nEXPERT KNOWLEDGE:\n${ragContext}\n` : ''}
-${langInstruction}
 
-Respond ONLY with a valid JSON object (no markdown, no extra text):
+Respond ONLY with a valid JSON object (no markdown, no extra text). ALL text values MUST be in ${langName}:
 {
   "chemistryScore": <number 0-100, based on mutual engagement, emotional connection, humor, and reciprocity>,
   "chemistryTrend": "<rising|falling|stable> based on how the conversation energy is evolving",
