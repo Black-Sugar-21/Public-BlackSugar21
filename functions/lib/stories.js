@@ -4,7 +4,20 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
-const REVIEWER_UID = 'g4Zbr8tEguMcpZonw72xM5MGse32';
+// Reviewer UIDs from Remote Config (comma-separated)
+let _reviewerUids = null;
+async function getReviewerUids() {
+  if (_reviewerUids) return _reviewerUids;
+  try {
+    const template = await admin.remoteConfig().getTemplate();
+    const raw = template.parameters?.reviewer_uid?.defaultValue?.value || '';
+    _reviewerUids = new Set(raw.split(',').map((s) => s.trim()).filter(Boolean));
+  } catch (e) {
+    _reviewerUids = new Set(['g4Zbr8tEguMcpZonw72xM5MGse32', 'IlG6U9cfcOcnKJvEv4tAD4IZ0513']);
+  }
+  return _reviewerUids;
+}
+function isReviewerUid(uid, reviewerSet) { return reviewerSet.has(uid); }
 
 exports.createStory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
@@ -16,7 +29,7 @@ exports.createStory = onCall(
 
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
-    const isReviewerUser = senderId === REVIEWER_UID;
+    const isReviewerUser = isReviewerUid(senderId, await getReviewerUids());
     const expiresAt = isReviewerUser
       ? admin.firestore.Timestamp.fromDate(new Date('2099-12-31T23:59:59Z'))
       : admin.firestore.Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000);
@@ -119,7 +132,7 @@ exports.getBatchStoryStatus = onCall(
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const storiesStatus = {};
-    const isReviewerUser = request.auth.uid === REVIEWER_UID;
+    const isReviewerUser = isReviewerUid(request.auth.uid, await getReviewerUids());
 
     // Inicializar todos como false
     userIds.forEach((uid) => { storiesStatus[uid] = false; });
@@ -170,7 +183,7 @@ exports.getBatchPersonalStories = onCall(
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const stories = {};
-    const isReviewerUser = request.auth.uid === REVIEWER_UID;
+    const isReviewerUser = isReviewerUid(request.auth.uid, await getReviewerUids());
 
     userIds.forEach((uid) => { stories[uid] = []; });
 
