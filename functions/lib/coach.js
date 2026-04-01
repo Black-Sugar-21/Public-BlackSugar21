@@ -4227,7 +4227,7 @@ exports.evaluateCoachResponses = onSchedule(
           const evalDoc = {
             userId: ref.parent.parent.id,
             messageId: doc.id,
-            evaluatedBy: 'claude-sonnet',
+            evaluatedBy: 'claude-haiku',
             ...evaluation,
             userMessage: userMessage.substring(0, 200),
             coachResponse: data.message.substring(0, 200),
@@ -4364,7 +4364,7 @@ exports.generateCoachImprovements = onSchedule(
       }).join('\n');
 
       const response = await client.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
         messages: [{
           role: 'user',
@@ -4417,7 +4417,7 @@ Return JSON array:
 
       logger.info(`[generateCoachImprovements] Generated ${validInstructions.length} instructions for ${weakDims.length} weak dimensions`);
 
-      trackAICall({functionName: 'generateCoachImprovements', model: 'claude-sonnet-4-6', operation: 'generate_improvements'});
+      trackAICall({functionName: 'generateCoachImprovements', model: 'claude-haiku-4-5-20251001', operation: 'generate_improvements'});
     } catch (err) {
       logger.error(`[generateCoachImprovements] Error: ${err.message}`);
     }

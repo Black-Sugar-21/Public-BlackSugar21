@@ -361,7 +361,7 @@ async function evaluateWithClaude(userMessage, coachResponse, lang, apiKey) {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       messages: [{
         role: 'user',
@@ -403,12 +403,12 @@ Dimensions:
     parsed.strengths = Array.isArray(parsed.strengths) ? parsed.strengths.filter((s) => typeof s === 'string').slice(0, 3) : [];
 
     const latencyMs = Date.now() - start;
-    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-sonnet-4-6', operation: 'evaluate', latencyMs});
+    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-haiku-4-5-20251001', operation: 'evaluate', latencyMs});
 
     return parsed;
   } catch (err) {
     const latencyMs = Date.now() - start;
-    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-sonnet-4-6', operation: 'evaluate', latencyMs, error: err.message});
+    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-haiku-4-5-20251001', operation: 'evaluate', latencyMs, error: err.message});
     throw err;
   }
 }
