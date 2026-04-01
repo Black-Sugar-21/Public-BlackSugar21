@@ -5,7 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude } = require('./shared');
 const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
@@ -1922,13 +1922,32 @@ Return JSON with these fields:
       const eventsPromise = (isUserPlaceSearch && hasLocation)
         ? eventPrefsPromise.then(prefs => fetchLocalEvents(searchLat || userLat, searchLng || userLng, searchRadius / 1000, lang, null, prefs)).catch(() => [])
         : Promise.resolve([]);
-      const [historySnap, fetchedPlaces, ragKnowledge, localEvents] = await Promise.all([
+      const [historySnap, fetchedPlaces, ragKnowledge, localEvents, promptTuningDoc] = await Promise.all([
         db.collection('coachChats').doc(userId)
           .collection('messages').orderBy('timestamp', 'desc').limit(config.historyLimit).get(),
         fetchCoachPlaces(),
         retrieveCoachKnowledge(message, process.env.GEMINI_API_KEY, ragConfig, lang),
         eventsPromise,
+        db.collection('coachPromptTuning').doc('latest').get().catch(() => null),
       ]);
+
+      // ── Dynamic Prompt Tuning (Capa 2: auto-generated improvements) ──
+      let promptTuningInstructions = '';
+      if (promptTuningDoc && promptTuningDoc.exists) {
+        const tuning = promptTuningDoc.data();
+        if (tuning.status === 'active' && Array.isArray(tuning.instructions) && tuning.instructions.length > 0) {
+          const instrList = tuning.instructions
+            .map((i, idx) => `${idx + 1}. [${(i.dimension || 'general').toUpperCase()}] ${i.instruction}`)
+            .join('\n');
+          promptTuningInstructions = `\nDYNAMIC COACHING IMPROVEMENTS (auto-generated from independent evaluation):\n${instrList}\n`;
+          // Track usage
+          if (!tuning.appliedAt) {
+            promptTuningDoc.ref.update({appliedAt: admin.firestore.FieldValue.serverTimestamp(), appliedCount: 1}).catch(() => {});
+          } else {
+            promptTuningDoc.ref.update({appliedCount: admin.firestore.FieldValue.increment(1)}).catch(() => {});
+          }
+        }
+      }
 
       // Merge fetched places with cached supplementary places (deduplicate by placeId)
       let realPlaces = fetchedPlaces;
@@ -2294,6 +2313,7 @@ ${userTimezone ? `- Timezone: ${userTimezone}${userTimezoneOffset !== null ? ` (
 ${matchContext}${learningContext}
 ${contentGuardrails}
 ${ragKnowledge}
+${promptTuningInstructions}
 PRECISION GUIDELINES — FOLLOW STRICTLY:
 
 1. PERSONALIZATION IS MANDATORY:
@@ -4123,6 +4143,283 @@ Return as plain text, separating chunks with "---".`;
       logger.info(`[dailyCoachMicroUpdate] Added ${added} chunks + ${exemplarsCurated} exemplars (satisfaction: ${data.satisfactionRate}%)`);
     } catch (err) {
       logger.error(`[dailyCoachMicroUpdate] Error: ${err.message}`);
+    }
+  },
+);
+
+// ── Independent Coach Evaluator (Capa 1: Claude Sonnet evalúa Gemini) ──────
+// Scheduled CF that evaluates a sample of recent coach responses using Claude
+// to provide independent, unbiased quality assessment.
+
+exports.evaluateCoachResponses = onSchedule(
+  {schedule: 'every 60 minutes', region: 'us-central1', memory: '256MiB', timeoutSeconds: 120, secrets: [anthropicApiKey]},
+  async () => {
+    const db = admin.firestore();
+    try {
+      const config = await getCoachConfig();
+      const evalConfig = config.independentEvaluator || {};
+      if (evalConfig.enabled === false) {
+        logger.info('[evaluateCoachResponses] Disabled via RC');
+        return;
+      }
+
+      const sampleRate = evalConfig.sampleRate || 0.2;
+      const maxBatch = evalConfig.maxBatchSize || 10;
+
+      // Find recent coach messages NOT yet independently evaluated (last 2 hours)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const messagesSnap = await db.collectionGroup('messages')
+        .where('sender', '==', 'coach')
+        .where('timestamp', '>=', admin.firestore.Timestamp.fromDate(twoHoursAgo))
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+
+      if (messagesSnap.empty) {
+        logger.info('[evaluateCoachResponses] No recent coach messages to evaluate');
+        return;
+      }
+
+      // Filter: not yet evaluated + apply sample rate
+      const candidates = [];
+      for (const doc of messagesSnap.docs) {
+        const data = doc.data();
+        if (data.independentEvalDone) continue; // Already evaluated
+        if (data.type === 'debrief_prompt') continue; // Skip system messages
+        if (!data.message || data.message.length < 20) continue; // Skip very short
+        if (Math.random() > sampleRate) continue; // Sample rate filter
+        candidates.push({doc, data, ref: doc.ref});
+        if (candidates.length >= maxBatch) break;
+      }
+
+      if (candidates.length === 0) {
+        logger.info('[evaluateCoachResponses] No candidates after sampling');
+        return;
+      }
+
+      logger.info(`[evaluateCoachResponses] Evaluating ${candidates.length} messages with Claude Sonnet`);
+
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        logger.error('[evaluateCoachResponses] ANTHROPIC_API_KEY not configured');
+        return;
+      }
+
+      let evaluated = 0;
+      for (const {doc, data, ref} of candidates) {
+        try {
+          // Find the user message that triggered this coach response
+          const parentPath = ref.parent.path; // coachChats/{userId}/messages
+          const userMsgSnap = await db.collection(parentPath)
+            .where('sender', '==', 'user')
+            .where('timestamp', '<', data.timestamp)
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .get();
+
+          const userMessage = userMsgSnap.empty ? '' : (userMsgSnap.docs[0].data().message || '');
+          const lang = data.language || 'es';
+
+          // Call Claude Sonnet for independent evaluation
+          const evaluation = await evaluateWithClaude(userMessage, data.message, lang, apiKey);
+
+          // Store evaluation
+          const evalDoc = {
+            userId: ref.parent.parent.id,
+            messageId: doc.id,
+            evaluatedBy: 'claude-sonnet',
+            ...evaluation,
+            userMessage: userMessage.substring(0, 200),
+            coachResponse: data.message.substring(0, 200),
+            selfEvalScore: data.selfEvalScore || null,
+            selfEvalDiscrepancy: data.selfEvalScore
+              ? Math.abs((data.selfEvalScore / 10 * 10) - evaluation.overall) // Normalize self-eval to 1-10
+              : null,
+            needsImprovement: Object.values(evaluation).some((v) => typeof v === 'number' && v < 5),
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          };
+
+          await db.collection('coachEvaluations').add(evalDoc);
+
+          // Mark message as independently evaluated
+          await ref.update({independentEvalDone: true, independentEvalScore: evaluation.overall});
+
+          evaluated++;
+          logger.info(`[evaluateCoachResponses] Evaluated msg ${doc.id}: overall=${evaluation.overall}, issues=${evaluation.issues.length}`);
+
+          // Breathing room between API calls
+          await new Promise((r) => setTimeout(r, 500));
+        } catch (msgErr) {
+          logger.warn(`[evaluateCoachResponses] Error evaluating ${doc.id}: ${msgErr.message}`);
+        }
+      }
+
+      logger.info(`[evaluateCoachResponses] Completed: ${evaluated}/${candidates.length} messages evaluated`);
+    } catch (err) {
+      logger.error(`[evaluateCoachResponses] Error: ${err.message}`);
+    }
+  },
+);
+
+// ── Coach Prompt Auto-Improvement Generator (Capa 2) ───────────────────────
+// Weekly scheduled CF that analyzes evaluations and generates dynamic
+// improvement instructions for the coach system prompt.
+
+exports.generateCoachImprovements = onSchedule(
+  {schedule: 'every sunday 05:00', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [anthropicApiKey]},
+  async () => {
+    const db = admin.firestore();
+    try {
+      const config = await getCoachConfig();
+      const tuningConfig = config.promptTuning || {};
+      if (tuningConfig.enabled === false) {
+        logger.info('[generateCoachImprovements] Disabled via RC');
+        return;
+      }
+
+      const minEvaluations = tuningConfig.minEvaluations || 20;
+      const maxInstructions = tuningConfig.maxInstructions || 10;
+
+      // Read all evaluations from the past 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const evalsSnap = await db.collection('coachEvaluations')
+        .where('timestamp', '>=', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+        .orderBy('timestamp', 'desc')
+        .limit(200)
+        .get();
+
+      if (evalsSnap.size < minEvaluations) {
+        logger.info(`[generateCoachImprovements] Only ${evalsSnap.size} evaluations (need ${minEvaluations}), skipping`);
+        return;
+      }
+
+      // Aggregate scores by dimension
+      const dims = ['relevance', 'actionability', 'empathy', 'safety', 'creativity', 'cultural'];
+      const dimStats = {};
+      const weakExamples = {};
+      for (const dim of dims) {
+        dimStats[dim] = {sum: 0, count: 0, below5: 0};
+        weakExamples[dim] = [];
+      }
+
+      evalsSnap.docs.forEach((doc) => {
+        const d = doc.data();
+        for (const dim of dims) {
+          if (typeof d[dim] === 'number') {
+            dimStats[dim].sum += d[dim];
+            dimStats[dim].count++;
+            if (d[dim] < 5) {
+              dimStats[dim].below5++;
+              if (weakExamples[dim].length < 3) {
+                weakExamples[dim].push({
+                  userMsg: d.userMessage || '',
+                  coachMsg: d.coachResponse || '',
+                  score: d[dim],
+                  issues: d.issues || [],
+                });
+              }
+            }
+          }
+        }
+      });
+
+      // Find weakest dimensions (average < 7 or > 10% below 5)
+      const weakDims = dims.filter((dim) => {
+        const avg = dimStats[dim].count > 0 ? dimStats[dim].sum / dimStats[dim].count : 10;
+        const below5Rate = dimStats[dim].count > 0 ? dimStats[dim].below5 / dimStats[dim].count : 0;
+        return avg < 7 || below5Rate > 0.1;
+      });
+
+      if (weakDims.length === 0) {
+        logger.info('[generateCoachImprovements] All dimensions scoring well, no improvements needed');
+        // Store a "healthy" tuning doc
+        await db.collection('coachPromptTuning').doc('latest').set({
+          instructions: [],
+          status: 'healthy',
+          evaluationCount: evalsSnap.size,
+          dimensionAverages: Object.fromEntries(dims.map((d) => [d, dimStats[d].count > 0 ? +(dimStats[d].sum / dimStats[d].count).toFixed(1) : null])),
+          generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+
+      logger.info(`[generateCoachImprovements] Weak dimensions: ${weakDims.join(', ')}`);
+
+      // Generate improvement instructions using Claude
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        logger.error('[generateCoachImprovements] ANTHROPIC_API_KEY not configured');
+        return;
+      }
+
+      const Anthropic = require('@anthropic-ai/sdk');
+      const client = new Anthropic({apiKey});
+
+      const examplesStr = weakDims.map((dim) => {
+        const avg = (dimStats[dim].sum / dimStats[dim].count).toFixed(1);
+        const examples = weakExamples[dim].map((e) =>
+          `  User: "${e.userMsg}" → Coach: "${e.coachMsg}" (score: ${e.score}, issues: ${e.issues.join(', ')})`
+        ).join('\n');
+        return `\n### ${dim.toUpperCase()} (avg: ${avg}/10, ${dimStats[dim].below5} below 5)\n${examples}`;
+      }).join('\n');
+
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `You are improving an AI dating coach's system prompt. Based on evaluation data, generate specific, actionable instructions to fix weak areas.
+
+EVALUATION DATA (${evalsSnap.size} responses evaluated this week):
+${examplesStr}
+
+Generate ${Math.min(weakDims.length * 2, maxInstructions)} improvement instructions. Each instruction must be:
+1. SPECIFIC (reference the exact pattern to fix)
+2. ACTIONABLE (tell the coach exactly what to do differently)
+3. SHORT (1-2 sentences max)
+
+Return JSON array:
+[{"dimension":"relevance","instruction":"When user asks about X, always do Y","priority":"high|medium"},...]`,
+        }],
+      });
+
+      const text = response.content[0].text.trim();
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const instructions = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+
+      // Validate instructions
+      const validInstructions = instructions
+        .filter((i) => i && typeof i.instruction === 'string' && i.instruction.length > 10)
+        .slice(0, maxInstructions)
+        .map((i) => ({
+          dimension: dims.includes(i.dimension) ? i.dimension : 'general',
+          instruction: i.instruction.substring(0, 300),
+          priority: ['high', 'medium'].includes(i.priority) ? i.priority : 'medium',
+        }));
+
+      // Store as latest tuning
+      const tuningDoc = {
+        instructions: validInstructions,
+        status: 'active',
+        evaluationCount: evalsSnap.size,
+        weakDimensions: weakDims,
+        dimensionAverages: Object.fromEntries(dims.map((d) => [d, dimStats[d].count > 0 ? +(dimStats[d].sum / dimStats[d].count).toFixed(1) : null])),
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        appliedAt: null,
+        appliedCount: 0,
+      };
+
+      await db.collection('coachPromptTuning').doc('latest').set(tuningDoc);
+
+      // Archive in history
+      const dateStr = new Date().toISOString().substring(0, 10);
+      await db.collection('coachPromptTuning').doc('history').collection(dateStr).doc('tuning').set(tuningDoc);
+
+      logger.info(`[generateCoachImprovements] Generated ${validInstructions.length} instructions for ${weakDims.length} weak dimensions`);
+
+      trackAICall({functionName: 'generateCoachImprovements', model: 'claude-sonnet-4-6', operation: 'generate_improvements'});
+    } catch (err) {
+      logger.error(`[generateCoachImprovements] Error: ${err.message}`);
     }
   },
 );

@@ -348,6 +348,71 @@ async function trackedGenerateContent(model, prompt, {functionName, operation, u
   }
 }
 
+// ── Claude Independent Evaluator ───────────────────────────────────────────
+// Uses Anthropic Claude (Sonnet) to evaluate coach responses independently,
+// eliminating Gemini's self-evaluation bias.
+
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+
+async function evaluateWithClaude(userMessage, coachResponse, lang, apiKey) {
+  const Anthropic = require('@anthropic-ai/sdk');
+  const client = new Anthropic({apiKey});
+  const start = Date.now();
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `You are an expert evaluator of AI dating coach responses. Evaluate this coach response objectively.
+
+User language: "${lang}"
+User message: "${(userMessage || '').substring(0, 500)}"
+Coach response: "${(coachResponse || '').substring(0, 1000)}"
+
+Rate each dimension 1-10 (1=terrible, 5=acceptable, 10=excellent). Be STRICT — most responses should score 5-7.
+
+Return ONLY valid JSON:
+{"relevance":N,"actionability":N,"empathy":N,"safety":N,"creativity":N,"cultural":N,"overall":N,"issues":["concise issue 1","concise issue 2"],"strengths":["strength 1"]}
+
+Dimensions:
+- relevance: Does it answer what the user actually asked?
+- actionability: Does it give concrete, specific steps (not vague advice)?
+- empathy: Does it acknowledge emotions before giving advice?
+- safety: Is the advice safe, responsible, and non-harmful?
+- creativity: Is it personalized and non-generic?
+- cultural: Is it appropriate for the user's language/culture?
+- overall: Weighted average considering all dimensions
+- issues: Top 2-3 specific problems (empty array if none)
+- strengths: Top 1-2 specific strengths`,
+      }],
+    });
+
+    const text = response.content[0].text.trim();
+    // Parse JSON — handle markdown wrapping
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+
+    // Validate and clamp all scores to 1-10
+    const dims = ['relevance', 'actionability', 'empathy', 'safety', 'creativity', 'cultural', 'overall'];
+    for (const dim of dims) {
+      parsed[dim] = typeof parsed[dim] === 'number' ? Math.max(1, Math.min(10, Math.round(parsed[dim]))) : 5;
+    }
+    parsed.issues = Array.isArray(parsed.issues) ? parsed.issues.filter((i) => typeof i === 'string').slice(0, 5) : [];
+    parsed.strengths = Array.isArray(parsed.strengths) ? parsed.strengths.filter((s) => typeof s === 'string').slice(0, 3) : [];
+
+    const latencyMs = Date.now() - start;
+    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-sonnet-4-6', operation: 'evaluate', latencyMs});
+
+    return parsed;
+  } catch (err) {
+    const latencyMs = Date.now() - start;
+    trackAICall({functionName: 'evaluateWithClaude', model: 'claude-sonnet-4-6', operation: 'evaluate', latencyMs, error: err.message});
+    throw err;
+  }
+}
+
 module.exports = {
   geminiApiKey,
   placesApiKey,
@@ -366,4 +431,6 @@ module.exports = {
   trackAICall,
   trackedGenerateContent,
   MODEL_PRICING,
+  anthropicApiKey,
+  evaluateWithClaude,
 };
