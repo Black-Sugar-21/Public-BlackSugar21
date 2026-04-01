@@ -897,16 +897,16 @@ Respond ONLY with valid JSON (no markdown):
       const VALID_CATEGORIES = ['SAFE', 'SPAM', 'SCAM', 'INAPPROPRIATE', 'PERSONAL_INFO'];
       const VALID_SEVERITIES = ['NONE', 'LOW', 'MEDIUM', 'HIGH'];
       const analysis = {
-        category: VALID_CATEGORIES.includes((rawAnalysis.category || '').toUpperCase())
-          ? rawAnalysis.category.toUpperCase() : 'SAFE',
-        severity: VALID_SEVERITIES.includes((rawAnalysis.severity || '').toUpperCase())
-          ? rawAnalysis.severity.toUpperCase() : 'NONE',
+        category: VALID_CATEGORIES.includes(String(rawAnalysis.category || '').toUpperCase())
+          ? String(rawAnalysis.category).toUpperCase() : 'SAFE',
+        severity: VALID_SEVERITIES.includes(String(rawAnalysis.severity || '').toUpperCase())
+          ? String(rawAnalysis.severity).toUpperCase() : 'NONE',
         confidence: typeof rawAnalysis.confidence === 'number' && !isNaN(rawAnalysis.confidence)
           ? Math.max(0, Math.min(100, Math.round(rawAnalysis.confidence))) : 50,
         reason: typeof rawAnalysis.reason === 'string' ? rawAnalysis.reason.substring(0, 500) : '',
       };
       // Log if Gemini hallucinated an invalid category
-      if (rawAnalysis.category && !VALID_CATEGORIES.includes(rawAnalysis.category.toUpperCase())) {
+      if (rawAnalysis.category && !VALID_CATEGORIES.includes(String(rawAnalysis.category).toUpperCase())) {
         logger.warn(`[autoModerate] Gemini hallucinated category "${rawAnalysis.category}" → defaulting to SAFE`);
       }
 
