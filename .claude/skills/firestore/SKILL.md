@@ -287,7 +287,7 @@ Created by `respondToDateCheckIn` (SOS) or `processDateCheckIns` (no response). 
 | `gemini_tokens` | Number | 1024 |
 | `moderation_image_jpeg_quality` | Number | 50 (iOS: /100 → 0.0-1.0) |
 | `enable_screen_protection` | Boolean | true (solo afecta iOS actualmente) |
-| `reviewer_uid` | String | `g4Zbr8tEguMcpZonw72xM5MGse32` — Comma-separated UIDs of App Store/Play reviewer accounts. Used to skip location updates and show fixed test data |
+| `reviewer_uid` | String | `IlG6U9cfcOcnKJvEv4tAD4IZ0513,g4Zbr8tEguMcpZonw72xM5MGse32,C3QgIAGvMvRLPrnBtfHqYRsrV7p2,tvmkXqXGSzfriAkQUI4KrQF6sZm2` — Comma-separated UIDs. Ricardo=IlG6U9cf..., dverdugo85=tvmkXqXG... Used by getDiscoveryFeed to show isTest profiles, skip location updates |
 | `coach_max_input_length` | Number | 2000 |
 | `coach_daily_credits` | Number | 3 — Controls how many coach messages per day. Used by `getCoachDailyCredits()` in RemoteConfigManager |
 
@@ -549,6 +549,7 @@ Written by web tester auto-enrollment modal. Used for beta tester management.
 58. **First message restriction**: Only Elite (SUGAR_DADDY/SUGAR_MOMMY) can send the first message in a match, not Prime (SUGAR_BABY). Enforced by Security Rules AND client-side UI (disable send button for Prime until Elite sends first)
 59. **FirestoreUser model completeness**: FirestoreUser model must include ALL fields present in Firestore documents to avoid CustomClassMapper warnings (pictureNames, pictureCount, lastCoachResetDate, isReviewer, isTest, createdAt, geohash)
 60. **Cloud Functions config safety**: Every CF that reads coach_config must call `getCoachConfig()` — never use bare `config` variable. Audited 2026-04-01: only getCoachHistory had this bug (fixed)
+61. **Independent evaluator zero-cost guard**: `evaluateCoachResponses` must skip when no new messages exist (`messagesSnap.empty → return`), already-evaluated messages (`independentEvalDone → skip`), and after sampling (`candidates.length === 0 → return`)
 ```
 
 ### `coachInsights/daily/{YYYY-MM-DD}` collection

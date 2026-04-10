@@ -3,6 +3,41 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
+/**
+ * Clean up stale/invalid FCM tokens after sendEachForMulticast.
+ * Removes tokens that FCM rejected (unregistered, invalid, etc.)
+ */
+async function cleanupStaleTokens(response, tokens, db) {
+  const staleTokens = [];
+  response.responses.forEach((resp, i) => {
+    if (!resp.success && resp.error) {
+      const code = resp.error.code;
+      // These errors mean the token is permanently invalid
+      if (code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/invalid-argument') {
+        staleTokens.push(tokens[i]);
+      }
+    }
+  });
+  if (staleTokens.length > 0) {
+    // Find users with these tokens and remove them
+    const batch = db.batch();
+    for (const token of staleTokens) {
+      try {
+        const snap = await db.collection('users').where('fcmToken', '==', token).limit(1).get();
+        if (!snap.empty) {
+          batch.update(snap.docs[0].ref, {fcmToken: admin.firestore.FieldValue.delete()});
+        }
+      } catch (_) {}
+    }
+    if (staleTokens.length > 0) {
+      try { await batch.commit(); } catch (_) {}
+      logger.info(`[cleanupStaleTokens] Removed ${staleTokens.length} invalid FCM tokens`);
+    }
+  }
+}
+
 exports.resetDailyLikes = onSchedule(
   {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
   async () => {
@@ -97,6 +132,8 @@ exports.resetDailyLikes = onSchedule(
           }},
         });
         notifCount += response.successCount;
+        // Clean up invalid tokens (non-blocking)
+        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
       } catch (err) {
         logger.error(`[resetDailyLikes] Notification batch error:`, err);
       }
@@ -203,6 +240,7 @@ exports.resetSuperLikes = onSchedule(
           }},
         });
         notifCount += response.successCount;
+        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
       } catch (err) {
         logger.error(`[resetSuperLikes] Notification batch error:`, err);
       }
@@ -333,6 +371,7 @@ exports.resetCoachMessages = onSchedule(
           }},
         });
         notifCount += response.successCount;
+        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
       } catch (err) {
         logger.error(`[resetCoachMessages] Notification batch error:`, err);
       }

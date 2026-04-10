@@ -1,6 +1,6 @@
 ---
 name: remote-config
-description: Todas las 21 claves de Remote Config de BlackSugar21 organizadas por tipo — 12 via RemoteConfigManager, 2 UI-direct, 3 server-side JSON (coach_config 19 campos, places_search_config 21 campos, moderation_config 5 campos), 4 scheduled/referencia. Rangos, defaults y reglas de validacion. Usar cuando se trabaje con Remote Config, configuracion dinamica, o se necesite saber que campos controlan que comportamiento.
+description: Todas las 21 claves de Remote Config de BlackSugar21 organizadas por tipo — 12 via RemoteConfigManager, 2 UI-direct, 3 server-side JSON (coach_config 23 campos, places_search_config 21 campos, moderation_config 5 campos), 4 scheduled/referencia. Rangos, defaults y reglas de validacion. Usar cuando se trabaje con Remote Config, configuracion dinamica, o se necesite saber que campos controlan que comportamiento.
 globs:
   - "functions/lib/coach.js"
   - "functions/lib/places.js"
@@ -64,7 +64,7 @@ No pasan por RemoteConfigManager — leidas directamente en LoginView.
 
 ## Claves server-side JSON (3) — leidas por Cloud Functions
 
-### `coach_config` (19 campos)
+### `coach_config` (23 campos)
 
 Leido por CFs del Coach. Cache 5 min. Cambiar sin redeploy.
 
@@ -75,7 +75,11 @@ Leido por CFs del Coach. Cache 5 min. Cambiar sin redeploy.
 | `maxMessageLength` | Number | `2000` | Largo maximo mensaje usuario |
 | `historyLimit` | Number | `10` | Mensajes de historial para contexto |
 | `maxActivities` | Number | `10` | Max activity suggestions por respuesta |
-| `maxSuggestions` | Number | `3` | Max quick-reply suggestions |
+| `maxSuggestions` | Number | `12` | Max quick-reply suggestions per coach response |
+| `maxFreeClarifications` | Number | `3` | Max free context clarifications before charging credit |
+| `clarificationChips` | Array | `["At a cafe", "At a bar/pub", "At a nightclub", "At a park", "Via chat/app", "At a restaurant"]` | Customizable context chips for clarification flow |
+| `clarificationPrompt` | String | `""` | System prompt extension for clarification logic |
+| `clarificationEnabled` | Boolean | `true` | Enable/disable context clarification flow |
 | `maxReplyLength` | Number | `5000` | Largo maximo respuesta del coach |
 | `rateLimitPerHour` | Number | `30` | Max mensajes de usuario por hora |
 | `temperature` | Number | `0.9` | Temperatura de Gemini |

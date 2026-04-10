@@ -6,6 +6,12 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude } = require('./shared');
+
+/** Safely extract text from Gemini result — prevents crash on null/undefined response */
+function safeResponseText(result) {
+  try { return result?.response?.text() || ''; }
+  catch (e) { logger.warn(`[safeResponseText] Failed: ${e.message}`); return ''; }
+}
 const { reverseGeocode, forwardGeocode, haversineDistanceKm } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
@@ -104,7 +110,21 @@ async function getCoachConfig() {
     maxMessageLength: 2000,
     historyLimit: 10,
     maxActivities: 30,
-    maxSuggestions: 3,
+    maxSuggestions: 12,
+    maxFreeClarifications: 3,
+    clarificationChips: {
+      en: ['☕ At a cafe', '🍺 At a bar/pub', '💃 At a nightclub', '🌳 At a park', '💬 Via chat/app', '🍽️ At a restaurant'],
+      es: ['☕ En un café', '🍺 En un bar/pub', '💃 En una discoteca', '🌳 En un parque', '💬 Por chat/app', '🍽️ En un restaurante'],
+      pt: ['☕ Em um café', '🍺 Em um bar/pub', '💃 Em uma balada', '🌳 Em um parque', '💬 Por chat/app', '🍽️ Em um restaurante'],
+      fr: ['☕ Dans un café', '🍺 Dans un bar/pub', '💃 En boîte de nuit', '🌳 Dans un parc', '💬 Par chat/app', '🍽️ Au restaurant'],
+      de: ['☕ In einem Café', '🍺 In einer Bar/Pub', '💃 In einem Club', '🌳 In einem Park', '💬 Per Chat/App', '🍽️ Im Restaurant'],
+      ja: ['☕ カフェで', '🍺 バーで', '💃 クラブで', '🌳 公園で', '💬 チャット/アプリで', '🍽️ レストランで'],
+      zh: ['☕ 咖啡厅', '🍺 酒吧', '💃 夜店', '🌳 公园', '💬 聊天/App', '🍽️ 餐厅'],
+      ru: ['☕ В кафе', '🍺 В баре/пабе', '💃 В клубе', '🌳 В парке', '💬 В чате/приложении', '🍽️ В ресторане'],
+      ar: ['☕ في مقهى', '🍺 في بار/حانة', '💃 في ملهى ليلي', '🌳 في حديقة', '💬 عبر الدردشة', '🍽️ في مطعم'],
+      id: ['☕ Di kafe', '🍺 Di bar/pub', '💃 Di klub malam', '🌳 Di taman', '💬 Via chat/app', '🍽️ Di restoran'],
+    },
+    suggestionsTemperature: 0.95,
     maxReplyLength: 5000,
     rateLimitPerHour: 30,
     temperature: 0.9,
@@ -122,11 +142,11 @@ async function getCoachConfig() {
       SUGAR_MOMMY: 'Focus on confidence, authentic connections, creative and memorable date ideas, and expressing genuine interest. Help them leverage their experience, sophistication, and independence as strengths. Guide them on navigating social dynamics and building connections based on mutual respect. WHEN SINGLE: help them overcome hesitation about re-entering the dating scene, build an engaging profile that balances confidence with approachability, manage conversations, handle societal double standards gracefully, and maintain standards without seeming intimidating. WHEN IN A RELATIONSHIP: help them balance independence with partnership, plan dates that play to their strengths, communicate expectations clearly, keep the relationship exciting through shared new experiences, and build trust through consistent emotional availability.',
     },
     stagePrompts: {
-      no_conversation_yet: "This is a NEW match with zero messages exchanged. The user needs help crafting the PERFECT first message. Analyze the match's profile deeply — bio keywords, interests, photos — and create 2-3 highly personalized openers that reference specific details. Explain WHY each opener works psychologically. Also suggest the best TIME to send the first message based on temporal context. If the user seems anxious about reaching out, normalize first-message nerves and boost their confidence.",
+      no_conversation_yet: "This is a NEW match with zero messages exchanged. The user needs help crafting the PERFECT first message. Analyze the match's profile deeply — bio keywords, interests, photos — and create 2-3 highly personalized openers that reference specific details. Explain WHY each opener works psychologically. Also suggest the best TIME to send the first message based on temporal context. If the user seems anxious about reaching out, normalize first-message nerves and boost their confidence. IMPORTANT: The 'suggestions' array MUST contain ready-to-copy first messages personalized to the match — complete sentences the user can paste directly into the chat. NEVER return generic advice or follow-up questions as suggestions. Each suggestion must be a concrete opener (40-120 chars).",
       just_started_talking: 'They just started chatting (1-5 messages). Focus on: keeping momentum alive, asking engaging open-ended questions, showing genuine interest, strategic self-disclosure (share something personal to build trust), and avoiding common early-chat mistakes (one-word replies, too many questions, moving too fast). Warn them about red flags to watch for at this stage. Suggest conversation topics based on the match\'s profile. Help them gauge mutual interest level from response patterns (timing, length, enthusiasm).',
       getting_to_know: "They're in the getting-to-know phase (5-20 messages). Focus on: deepening the conversation beyond surface level, finding shared values and experiences, injecting humor and personality, creating inside jokes, and naturally transitioning toward suggesting a first date or call. Help them stand out from other matches. Suggest specific date ideas based on shared interests. Coach them on how to propose meeting up without seeming too eager or too passive. Help them handle if the conversation is going great but the other person avoids meeting in person.",
       building_connection: "There's a real connection forming (20-50 messages). Focus on: taking it to the next level (video call, phone call, in-person date), showing vulnerability appropriately, navigating the exclusivity question, maintaining mystery while being open, and creating memorable shared experiences. Help them read signs of genuine interest vs. casual chatting. If they've already met in person, help them plan the perfect second/third date. Coach them on the transition from texting to a real relationship — pace, expectations, and emotional availability.",
-      active_conversation: 'They have an active, ongoing connection (50+ messages or already in a relationship). Focus on: MAINTAINING THE SPARK through creative and surprising date ideas, navigating relationship milestones (DTR talk, meeting friends/family, moving in, anniversaries), dealing with conflicts constructively using healthy communication frameworks, deepening emotional intimacy through meaningful conversations and shared experiences. COUPLE-SPECIFIC guidance: help with planning anniversary surprises, recovering from arguments, keeping routine from killing romance, balancing individual identity with partnership, handling jealousy or insecurities, navigating long-distance phases, managing stress as a couple, planning travel together, dealing with external pressures (family opinions, work-life balance), reigniting passion after a flat period, and building shared goals/dreams. Always suggest PLACES and ACTIVITIES to strengthen their bond.',
+      active_conversation: 'They have an active, ongoing connection (50+ messages or already in a relationship). Focus on: MAINTAINING THE SPARK through creative and surprising date ideas, navigating relationship milestones (DTR talk, meeting friends/family, moving in, anniversaries), dealing with conflicts constructively using healthy communication frameworks, deepening emotional intimacy through meaningful conversations and shared experiences. COUPLE-SPECIFIC guidance: help with planning anniversary surprises, recovering from arguments, keeping routine from killing romance, balancing individual identity with partnership, handling jealousy or insecurities, navigating long-distance phases, managing stress as a couple, planning travel together, dealing with external pressures (family opinions, work-life balance), reigniting passion after a flat period, and building shared goals/dreams. Always suggest PLACES and ACTIVITIES to strengthen their bond. RELATIONSHIP HEALTH CHECK-IN: If the user asks generic questions like "how are we doing" "cómo estamos" "qué tal vamos" or asks about relationship health, provide a structured check-in covering 4 areas: (1) Communication — are you both expressing needs clearly? (2) Quality Time — have you done something special together recently? (3) Emotional Intimacy — do you feel safe being vulnerable with each other? (4) Growth — are you supporting each other\'s individual goals? Give a qualitative summary and actionable suggestions for each area. End with a positive affirmation about their commitment to checking in.',
       stalled: '', // Prompt is built dynamically with daysSinceLastMsg in dateCoachChat
     },
     allowedTopics: [
@@ -136,7 +156,7 @@ async function getCoachConfig() {
       'body_language', 'online_dating', 'match_analysis',
       'icebreakers', 'activity_suggestions', 'venue_recommendations',
       'gift_ideas', 'grooming_fashion', 'emotional_intelligence',
-      'dealing_with_rejection', 'red_flags', 'green_flags',
+      'dealing_with_rejection', 'red_flags', 'green_flags', 'conflict_resolution',
       'long_distance', 'cultural_differences', 'self_improvement',
       'love_languages', 'attachment_styles', 'dating_strategy',
       'travel_dates', 'luxury_experiences',
@@ -156,6 +176,9 @@ async function getCoachConfig() {
       'couple_travel', 'surprise_planning', 'reconciliation',
       'shared_goals', 'work_life_dating_balance', 'cohabitation',
       'dealing_with_ex', 'dating_as_parent', 'second_chance_romance',
+      'attachment_theory', 'couples_maintenance', 'rejection_resilience',
+      'digital_communication', 'dating_psychology', 'relationship_research',
+      'mental_health_dating', 'lgbtq_dating', 'accessibility_dating',
     ],
     blockedTopics: [
       'politics', 'religion_debate', 'illegal_activities', 'violence',
@@ -314,7 +337,8 @@ function analyzeUserMessage(msg) {
     safety: /safe|danger|uncomfortable|unsafe|segur|peligr|creepy|acoso|harass|stalker|follow.*me|me sigue|pressure|presion|force|forzar|unwanted|no deseado|boundary|límite|consent|consentimiento|respect|respeto|abuse|abuso|drunk|borracho|alone|solo.*con|first.*meet|meet.*stranger/,
     gift_ideas: /gift|regalo|present|surprise|sorpresa|buy.*for|comprar.*para|what.*give|qué.*regalar|flower|flor|chocolate|wine|vino|jewelry|joya|ring|anillo|romantic gesture|gesto romántico|anniversary|aniversario|birthday.*date|cumpleaños|valentine|san valentín|detail|detalle|special.*occasion|ocasión especial|DIY|handmade|hecho a mano|playlist|experience gift|regalo experiencia|voucher|gift card|tarjeta regalo|personalized|personalizado/,
     love_languages: /love language|lenguaje.*amor|acts of service|actos de servicio|words of affirmation|palabras.*afirmación|quality time|tiempo de calidad|physical touch|contacto físico|gift giving|dar regalos|show.*love|demostrar.*amor|how.*show|cómo.*demostrar|affection|cariño|spontaneous|espontáneo|attachment style|estilo de apego|emotional needs|necesidades emocionales|avoidant|ansioso|secure attachment|apego seguro/,
-    communication: /communicate|comunicar|listen|escuchar|understand|entender|misunderstand|malentendido|argument|discusión|fight|pelea|disagree|desacuerdo|conflict|conflicto|apologize|disculpar|forgive|perdonar|compromise|comprom|boundaries|límites|space|espacio|need.*talk|necesito.*hablar|express|expresar|open.*up|abrirse|nonverbal|tono de voz|tone of voice|assertive|asertiv|difficult conversation|conversación difícil/,
+    communication: /communicate|comunicar|listen|escuchar|understand|entender|misunderstand|malentendido|apologize|disculpar|forgive|perdonar|compromise|comprom|boundaries|límites|space|espacio|need.*talk|necesito.*hablar|express|expresar|open.*up|abrirse|nonverbal|tono de voz|tone of voice|assertive|asertiv|difficult conversation|conversación difícil/,
+    conflict_resolution: /(?:we |had a |tuve una |tuvimos )fight|pelea con|pelear con|peleamos|discutimos|discusión con|argument with|angry (at|with|con)|enojad[oa] (con|por)|molest[oa] (con|por)|frustrad[oa] (con|por)|tensión (entre|con)|conflicto (con|entre)|disagreement (with|about)|desacuerdo (con|entre)|not talking to|no nos hablamos|silent treatment|she'?s (mad|angry|upset)|he'?s (mad|angry|upset)|está enoj|hartazgo|cansad[oa] de pelear|tired of fighting|mal ambiente entre|bad vibes between|cold shoulder|me ignora|ignoring me|resentment|rencor hacia|争吵|けんか|ссора|شجار|pertengkaran|briga com|dispute with|de-escalat|desescal|resolve.*conflict|resolver.*conflict|make.?up with|reconcil[ei]|arreglar.*cosas|fix.*things with/,
     dating_strategy: /strategy|estrategia|approach|enfoque|technique|técnica|tactic|táctica|improve|mejorar|optimize|optimizar|more matches|más matches|better|mejor|successful|éxito|stand out|destacar|algorithm|algoritmo|likes|swipe|discovery|descubrimiento|visibility|visibilidad|app.*tip|expand pool|niche|más visible|more visible|boost|premium|super like|upgrade/,
     lifestyle_dynamics: /expectation|lifestyle|estilo de vida|luxury|lujo|travel.*together|viajar juntos|experience.*together|experiencia|fine dining|upscale|exclusiv/,
     self_care: /self[- ]?care|auto[- ]?cuidado|me time|consentirme|cuidarme|bienestar|wellness|solo.*activit|día.*para\s*mí|jour.*pour\s*moi|Tag.*für\s*mich|dia.*para\s*mim|ご褒美|犒劳自己|побаловать\s*себя|عناية\s*بالنفس|perawatan\s*diri|treat\s*myself|me\s*faire\s*plaisir|mir.*gönnen|spa\s*day|yoga.*sol[oa]|paseo.*sol[oa]|walk.*alone|stroll/,
@@ -567,7 +591,7 @@ async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en'
       const data = doc.data();
       const distance = data._distance ?? 1;
       return {
-        text: (data.text || '').substring(0, maxChunkLength),
+        text: (data.text || data.content || '').substring(0, maxChunkLength),
         category: data.category || 'general',
         language: data.language || 'en',
         similarity: 1 - distance,
@@ -628,7 +652,7 @@ exports.dateCoachChat = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const userId = request.auth.uid;
-    const {message, matchId, userLanguage, loadMoreActivities, category: _rawCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
+    const {message, matchId, userLanguage, loadMoreActivities, loadMoreSuggestions, category: _rawCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
     // Normalize category early: handles multilingual display names sent from older app versions
     // (e.g. "Cafetería" → "cafe", "Restaurante" → "restaurant", "Bar/Pub" → "bar")
     const requestCategory = _rawCategory ? normalizeCategory(_rawCategory) : _rawCategory;
@@ -661,7 +685,7 @@ exports.dateCoachChat = onCall(
       const coachMessagesRemaining = typeof creditData.coachMessagesRemaining === 'number'
         ? creditData.coachMessagesRemaining : (config.dailyCredits || 3);
 
-      if (!loadMoreActivities && coachMessagesRemaining <= 0) {
+      if (!loadMoreActivities && !loadMoreSuggestions && coachMessagesRemaining <= 0) {
         const noCreditsMsg = {
           en: "You've used all your daily coach messages. They'll reset at midnight! ✨",
           es: '¡Has usado todos tus mensajes diarios del coach. Se renovarán a medianoche! ✨',
@@ -680,6 +704,78 @@ exports.dateCoachChat = onCall(
           suggestions: [],
           coachMessagesRemaining: 0,
         };
+      }
+
+      // 0. Fast path: load more conversation suggestions (no credits, no save, just Gemini)
+      if (loadMoreSuggestions) {
+        // Read last 4 messages for context (to know what place/situation was discussed)
+        const recentSnap = await db.collection('coachChats').doc(userId)
+          .collection('messages').orderBy('timestamp', 'desc').limit(4).get();
+        const recentHistory = recentSnap.docs.reverse().map((d) => d.data());
+        const historyContext = recentHistory.map((m) =>
+          `${m.sender === 'user' ? 'User' : 'Coach'}: ${(m.message || '').substring(0, 300)}`
+        ).join('\n');
+
+        const lang = userLanguage || 'es';
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error('AI service unavailable');
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: AI_MODEL_LITE,
+          generationConfig: {maxOutputTokens: config.maxTokens || 2048, temperature: config.suggestionsTemperature || 0.95},
+        });
+
+        const langMap = {
+          es: 'Spanish (Latin American, informal tú, warm/humor-forward)',
+          en: 'English (friendly, respect personal space)',
+          pt: 'Portuguese (Brazilian, warm/enthusiastic)',
+          fr: 'French (charming, witty, slightly formal)',
+          de: 'German (direct, less small-talk, confident)',
+          ja: 'Japanese (respectful, indirect, polite forms)',
+          zh: 'Chinese (polite, modest, rapport-building)',
+          ru: 'Russian (warm but direct, humor appreciated)',
+          ar: 'Arabic (respectful, hospitable, gender-aware)',
+          id: 'Indonesian (friendly, polite, use kamu/Anda appropriately)',
+        };
+        const lmsPrompt = `You are a dating coach generating conversation starters.
+
+RECENT CONVERSATION CONTEXT:
+${historyContext}
+
+USER REQUEST: ${message}
+
+Based on the conversation context above, generate EXACTLY ${config.maxSuggestions || 12} NEW conversation suggestions that:
+1. Match the SAME context/place/situation from the recent conversation
+2. Sound completely NATURAL — like a real person would actually say them out loud
+3. Are NOT repeated from the exclude list in the user request
+4. Are in ${langMap[lang] || 'the same language as the conversation'}
+5. Mix different tones: funny, direct, observational, warm, bold, playful
+6. Each is 40-120 chars, a complete sentence ready to copy/say
+7. MUST be ready-to-use phrases — NEVER questions like "¿Qué tipo de ambiente buscas?" or meta-questions about preferences
+8. Adapt to the cultural norms of the language — colloquialisms, humor style, formality level
+9. If the context involves a PLACE (bar, café, pub, restaurant, club, park), generate icebreakers for that venue type
+
+Reply ONLY with a JSON array of strings. No explanation, no wrapper object. Just the array.
+Example: ["phrase 1", "phrase 2", ...]`;
+
+        try {
+          const result = await model.generateContent(lmsPrompt);
+          const text = safeResponseText(result).trim();
+          // Parse JSON array from response
+          const jsonMatch = text.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const suggestions = JSON.parse(jsonMatch[0]).filter((s) => typeof s === 'string' && s.trim().length > 5);
+            if (suggestions.length > 0) {
+              logger.info(`[dateCoachChat] loadMoreSuggestions: generated ${suggestions.length} new suggestions`);
+              return {success: true, suggestions, coachMessagesRemaining};
+            }
+          }
+        } catch (lmsErr) {
+          logger.warn(`[dateCoachChat] loadMoreSuggestions Gemini error: ${lmsErr.message}`);
+        }
+        // Fallback: empty
+        return {success: true, suggestions: [], coachMessagesRemaining};
       }
 
       // 1. Rate limiting — check messages in last hour (skip for load more)
@@ -949,7 +1045,7 @@ exports.dateCoachChat = onCall(
               return await lmModel.generateContent(lmPrompt);
             }
           })();
-          lmText = lmResult.response.text();
+          lmText = safeResponseText(lmResult);
         } catch (geminiErr) {
           logger.warn(`[dateCoachChat] loadMore Gemini failed, using Places fallback: ${geminiErr.message}`);
         }
@@ -1413,7 +1509,7 @@ Return JSON with these fields:
   * NEVER use "bar" for buying alcohol to take home — use "liquor_store" instead
   * When the query is a short brand name (1-2 words), add " near me" or the equivalent in user's language to placeQueries for better Google Places results`;
             const intentResult = await intentModel.generateContent(intentPrompt);
-            const intentText = intentResult.response.text();
+            const intentText = safeResponseText(intentResult);
             extractedIntent = parseGeminiJsonResponse(intentText);
 
             // ── Anti-Hallucination Layer (centralized in shared.js) ──────────
@@ -1974,13 +2070,20 @@ Return JSON with these fields:
           const m = d.data();
           return { sender: m.sender === 'user' ? 'User' : 'Coach', text: (m.message || '').substring(0, 300) };
         });
-        if (allMsgs.length <= 3) {
+        if (allMsgs.length <= 4) {
+          // Short history — include all verbatim
           history = allMsgs.map((m) => `${m.sender}: ${m.text}`).join('\n');
         } else {
+          // Long history — summarize older, keep last 3 verbatim (saves 40%+ input tokens)
           const older = allMsgs.slice(0, -3);
           const recent = allMsgs.slice(-3);
-          const topics = [...new Set(older.filter((m) => m.sender === 'User').map((m) => m.text.substring(0, 50)))].join(', ');
-          history = `[Earlier: user asked about: ${topics}]\n` + recent.map((m) => `${m.sender}: ${m.text}`).join('\n');
+          const userTopics = [...new Set(older.filter((m) => m.sender === 'User').map((m) => m.text.substring(0, 60)))];
+          const coachAdvice = older.filter((m) => m.sender === 'Coach').slice(-2).map((m) => m.text.substring(0, 80));
+          const summary = `[Conversation summary (${older.length} earlier messages):
+Topics discussed: ${userTopics.slice(0, 5).join(' | ')}
+${coachAdvice.length > 0 ? `Coach already advised: ${coachAdvice.join(' | ')}` : ''}
+Do NOT repeat advice already given above.]`;
+          history = summary + '\n' + recent.map((m) => `${m.sender}: ${m.text}`).join('\n');
         }
       }
 
@@ -2293,7 +2396,57 @@ Single Scenarios:
 - Ex dynamics (co-parenting/mutual friends): healthy boundaries, avoid comparison, focus forward
 - Second-chance romance: evaluate worth, tasteful outreach, reunion venue planning
 ${config.edgeCaseExtensions ? `\n${config.edgeCaseExtensions}` : ''}
-${config.additionalGuidelines ? `\nADDITIONAL GUIDELINES:\n${config.additionalGuidelines}` : ''}`;
+${config.additionalGuidelines ? `\nADDITIONAL GUIDELINES:\n${config.additionalGuidelines}` : ''}
+
+SKILL BUILDER — at the END of EVERY coaching reply (after your main advice), add a single line:
+"💡 Skill: [skill name]"
+Where [skill name] is a concise micro-skill the user just practiced or learned (2-5 words). Examples:
+- "💡 Skill: Active Listening" / "💡 Habilidad: Escucha Activa" / "💡 スキル: 傾聴力"
+- "💡 Skill: Confident First Impression" / "💡 Habilidad: Primera Impresión Segura"
+- "💡 Skill: Emotional Repair" / "💡 Habilidad: Reparación Emocional"
+- "💡 Skill: Reading Social Cues" / "💡 Habilidad: Leer Señales Sociales"
+- "💡 Skill: Cultural Awareness" / "💡 Habilidad: Conciencia Cultural"
+This reframes the Coach as a SKILL TEACHER, not a crutch. Write BOTH the "💡" prefix AND the skill name in the user's language (e.g., "Habilidad:" for ES, "スキル:" for JA, "技能:" for ZH, "Навык:" for RU, "مهارة:" for AR).
+EXCEPTIONS — do NOT add skill line when:
+- needsContext is true (clarification messages — no coaching happened yet)
+- The response is an error/fallback message
+- The response is only a greeting or small talk
+NEVER use skill names that imply manipulation ("Playing Hard to Get", "Making Them Jealous", "Power Play").
+
+POST-DATE SCORECARD — When the user responds to a debrief prompt (type: "debrief_prompt") describing how their date went, analyze their experience and include a "dateScore" object in your JSON response:
+{
+  "reply": "your coaching analysis and advice",
+  "dateScore": {
+    "conversation": {"score": 1-10, "note": "brief note in user language (max 50 chars)"},
+    "chemistry": {"score": 1-10, "note": "brief note"},
+    "effort": {"score": 1-10, "note": "brief note"},
+    "fun": {"score": 1-10, "note": "brief note"},
+    "overall": 1-10,
+    "highlight": "best moment mentioned by user (max 80 chars, user language)",
+    "improvement": "one specific, actionable tip for next time (max 80 chars, user language)",
+    "wouldMeetAgain": true/false
+  }
+}
+Score definitions:
+- conversation: How well they communicated (active listening, interesting topics, flow)
+- chemistry: Physical/emotional attraction signals they described
+- effort: Preparation, punctuality, thoughtfulness (venue choice, appearance, details)
+- fun: Overall enjoyment level, laughs, memorable moments
+- overall: Weighted average (conversation 25%, chemistry 25%, effort 20%, fun 30%)
+- highlight: The single best moment from their story
+- improvement: ONE concrete, actionable improvement (not generic)
+- wouldMeetAgain: Based on their enthusiasm level
+
+ONLY include "dateScore" when the user is CLEARLY describing a completed date they personally went on (responding to debrief or voluntarily sharing their experience). Do NOT generate a dateScore for:
+- Hypothetical questions ("what if the date goes badly?")
+- Pre-date coaching ("my date is at 5pm")
+- Advice requests about future dates
+- Describing someone else's date ("my friend went on a date")
+- Casual mentions of the word "date" in other contexts
+
+BAD DATE SENSITIVITY: If the user describes a genuinely bad experience (disrespect, safety issues, no-show, rude behavior from the other person), validate their feelings FIRST. Scores should reflect the OTHER person's behavior, not blame the user. Focus "improvement" on boundary-setting and self-worth, never self-blame. Low overall scores are OK when deserved — be honest but supportive.
+
+If the user's description is too vague to score (e.g. "it was fine"), ask 2-3 follow-up questions to get details before scoring.`;
 
       const systemPrompt = `You are Date Coach, an expert AI dating advisor for a premium dating app called Black Sugar 21.
 Your role is to help users improve their dating life with personalized, actionable advice.
@@ -2375,7 +2528,213 @@ Always include the "topics" array in your response.
 
 For off-topic messages, use: {"off_topic": true, "reply": "redirect message", "suggestions": ["topic1", "topic2", "topic3"]}
 
-The "suggestions" array MUST contain ${config.maxSuggestions} SPECIFIC follow-up questions. NEVER use generic prompts like "Tell me more" or "What else?". Each suggestion must reference the CURRENT topic. Examples: if user asked about first date → "What should I wear?", "Best time to text after?", "How to split the bill?". Keep each under 40 chars.
+SUGGESTIONS — SIX MODES (detect automatically):
+
+CRITICAL NATURALNESS RULE: Every suggestion MUST sound like something a REAL person would actually say in that situation. Write as if you're coaching a friend — use contractions, slang, filler words, incomplete thoughts, humor, and the natural rhythm of spoken language. NEVER write suggestions that sound like a textbook, a corporate script, or a chatbot.
+
+BAD (robotic/generic): "¿Cuáles son tus pasatiempos favoritos?" / "Me parece interesante tu perspectiva" / "¿Qué te trae por aquí?"
+GOOD (natural/real): "Oye, ¿qué estás tomando? Se ve bueno" / "Jaja no sé si es el lugar o tú, pero qué buena vibra" / "¿Esa cerveza es tan buena como se ve?"
+
+Test each suggestion: Would a 25-year-old actually say this out loud to someone they just met? If it sounds like a job interview or a customer service script, REWRITE IT.
+
+The "suggestions" array MUST contain EXACTLY ${config.maxSuggestions} items in ALL modes. Each item is a complete sentence or phrase ready to copy/use.
+
+MODE 1 — IN-PERSON CONVERSATION STARTERS (user mentions a place):
+Triggers: user mentions a PLACE (bar, café, pub, restaurant, park, club, gym, event, concert) — with OR without mentioning a person. If they mention a place, ALWAYS generate icebreakers for that place type.
+Examples: "pubs en concepción", "bares en santiago", "voy a un pub con una amiga", "going to a cafe with my date", "tengo una cita en un parque", "quedé con alguien en un bar", "I'm meeting her at a restaurant", "vamos a una discoteca".
+IMPORTANT: When the user asks for PLACES (e.g. "pubs en concepción"), generate icebreakers for that place type in "suggestions". NEVER return clarification questions as suggestions when places are being recommended.
+Generate ${config.maxSuggestions} ready-to-use openers SPECIFIC to that place type. Vary the TONE across suggestions — mix:
+- Funny/playful: humor breaks ice faster than anything ("¿Esa cerveza es tan buena como se ve o solo tiene buen marketing?")
+- Observational: comment on something happening right now ("Me encanta este tema, ¿tú cachai quién toca?")
+- Direct/confident: straightforward, no games ("Oye, te vi y quise saludarte. Soy [nombre]")
+- Situational: tied to the environment ("¿Es idea mía o este lugar tiene la mejor música de la ciudad?")
+- Warm/casual: low-risk, friendly ("¡Buena elección de lugar! ¿Lo conocías de antes?")
+Adapt language to venue energy:
+- Café/restaurant: relaxed, quieter, observation-based
+- Bar/pub: fun, louder, humor-forward, drinking references OK
+- Nightclub: brief, energetic, physical (dancing), music-based
+- Park/outdoor: natural, casual, activity-based
+- Gym/sport: brief, respectful of focus, activity-related
+- Event/concert: shared experience, excitement, opinions
+Each suggestion: 40-120 chars, MUST sound spoken (not written). Use contractions, colloquialisms, humor. NOT a follow-up question.
+
+MODE 2 — CHAT/APP OPENERS (user asks about messaging, DMs, dating apps):
+Triggers: mentions "chat", "app", "message", "DM", "texto", "escribir", "mandar mensaje", "Tinder", "Bumble", "Hinge", "Instagram DM", "WhatsApp".
+Generate ${config.maxSuggestions} creative first messages. MUST feel spontaneous, not rehearsed. Mix styles:
+- Playful/teasing: "Tu perfil me hizo parar de hacer scroll, y eso dice mucho jaja"
+- Curiosity hook: "Ok necesito saber la historia detrás de tu tercera foto"
+- Shared interest: "¿En serio te gusta [X]? Yo pensé que era la única persona en el mundo"
+- Bold/direct: "No voy a mentir, tu sonrisa me hizo dar like antes de leer tu bio"
+- Witty/clever: "Si tu personalidad es la mitad de buena que tu gusto musical, ya la hicimos"
+Each: 40-100 chars. NO generic "hola cómo estás". Each must be copy-pasteable as-is. NOT a meta-question or clarification prompt.
+
+MODE 3 — APOLOGY/REPAIR PHRASES (user asks how to apologize or fix a situation):
+Triggers: "disculpa", "perdón", "sorry", "apologize", "pedir perdón", "la regué", "metí la pata", "messed up", "I was wrong", "me equivoqué", "arreglar las cosas", "fix things".
+Generate ${config.maxSuggestions} sincere apology phrases. MUST sound genuine, not rehearsed. Mix:
+- Acknowledging: "La verdad la regué, y no hay excusa. Lo siento"
+- Vulnerable: "Sé que te lastimé y me siento pésimo. ¿Podemos hablar?"
+- Action-oriented: "No solo lo siento — quiero arreglarlo. ¿Qué puedo hacer?"
+- Light (for minor things): "Ok sí, fui un desastre. ¿Me perdonas si te invito algo?"
+Each: 50-150 chars, genuine tone. NEVER manipulative or guilt-tripping.
+
+MODE 4 — RE-ENGAGEMENT MESSAGES (user hasn't talked to someone in a while):
+Triggers: "hace tiempo no hablo", "haven't talked in a while", "retomar conversación", "re-engage", "volver a escribir", "ghosteé", "I ghosted", "left on read", "dejé en visto".
+Generate ${config.maxSuggestions} casual re-starters. MUST feel effortless, not desperate. Mix:
+- Callback: "Oye, me acordé de ti porque vi [something related to them]"
+- Honest: "Sé que desaparecí pero no dejé de pensar en nuestra conversación jaja"
+- Casual: "Random pero... ¿al final fuiste a [thing they mentioned]?"
+- Funny: "Bueno, acabo de volver de mi viaje espiritual de desaparición 😂 ¿cómo vas?"
+- Low-pressure: "Hola! Solo quería ver cómo estabas, sin presión"
+Each: 40-100 chars, NO guilt-tripping, NO "why didn't you write".
+
+MODE 5 — COMPLIMENTS/FLIRTING (user asks how to compliment or show interest):
+Triggers: "cómo halagar", "compliment", "piropo", "coquetear", "flirt", "mostrar interés", "show interest", "elogio", "praise".
+Generate ${config.maxSuggestions} specific, natural compliments. MUST feel sincere, not cheesy. Mix:
+- Personality: "Me encanta lo fácil que es hablar contigo"
+- Energy: "Tienes una energía que contagia, en serio"
+- Specific: "Esa risa tuya... es imposible no sonreír"
+- Subtle: "No sé qué es, pero algo en ti me hace querer seguir conversando"
+- Bold: "Te voy a ser honesto/a: me gustas. Así de simple"
+Each: 30-80 chars. NEVER objectifying, sexual, or about body parts. Focus on energy, personality, vibe.
+
+MODE 6 — FOLLOW-UP QUESTIONS (for general advice, tips, profile analysis, strategy):
+Triggers: general questions about dating, profiles, confidence, strategy — anything NOT covered by modes 1-5 or 7.
+Generate ${config.maxSuggestions} specific, useful follow-up questions the user can tap to go deeper. NOT generic.
+Examples: ["¿Qué ropa me pongo?", "¿Y si hay silencios?", "¿Quién paga la cuenta?", "¿Qué temas evitar?", "¿Cuándo pedir el número?"]
+Each: under 50 chars, conversational tone.
+
+MODE 7 — CONFLICT RESOLUTION & DE-ESCALATION (user has a fight, disagreement, or tension with partner/date/match):
+Triggers: "pelea", "pelear", "discutimos", "discusión", "fight", "argument", "angry", "enojado/a", "molesto/a", "frustrated", "frustrado/a", "tension", "tensión", "conflict", "conflicto", "disagreement", "desacuerdo", "not talking", "no nos hablamos", "silent treatment", "tratamiento de silencio", "we fought", "peleamos", "she's mad", "está enojada", "he's upset", "hartazgo", "cansado de pelear", "tired of fighting", "mal ambiente", "bad vibes", "cold shoulder", "me ignora", "ignoring me", "resentment", "rencor", "爭吵", "けんか", "ссора", "شجار", "pertengkaran", "briga", "dispute".
+Generate ${config.maxSuggestions} ready-to-use de-escalation phrases. MUST be emotionally intelligent, non-blaming, constructive. Mix:
+- "I feel" statements: "Me siento [emoción] cuando [situación], y me gustaría que pudiéramos [solución]"
+- Active listening: "Quiero entender tu punto de vista, cuéntame qué sientes"
+- Repair bids: "Sé que esto no está bien entre nosotros. ¿Podemos hablar con calma?"
+- Accountability: "Reconozco que lo que hice te afectó. Lo siento de verdad"
+- Cooling down: "Creo que ambos necesitamos un momento. ¿Retomamos esto en un rato?"
+- Bridge-building: "Lo que tenemos vale más que esta pelea. ¿Cómo lo arreglamos juntos?"
+Each: 50-150 chars. NEVER dismissive ("no es para tanto"), NEVER manipulative ("si me quisieras"), NEVER passive-aggressive. Focus on empathy, accountability, and repair.
+Adapt to severity: minor (playful repair) vs major (serious, vulnerable, no humor).
+CULTURAL ADAPTATION for conflict resolution:
+- ES (Latam): warm, "nosotros" framing, physical affection as repair ("un abrazo arregla todo")
+- EN: "I feel" statements, active listening, clear boundaries
+- JA: indirect, face-saving, avoid direct blame, suggest shared responsibility ("一緒に考えましょう")
+- ZH: harmony-focused, mutual respect, avoid public confrontation
+- AR: honor-based, respectful, involve trusted mediator if needed
+- DE: direct but constructive, fact-focused, solution-oriented
+- PT (BR): emotional, warm reconnection, vulnerability valued
+- FR: eloquent expression, rational discussion, give space before resolving
+- RU: direct emotional expression OK, but avoid ultimatums
+- ID: respect hierarchy if age gap, indirect criticism, community harmony
+In the main reply, also provide coaching context: WHY these phrases work, WHAT to avoid saying, and HOW to read the other person's emotional state.
+
+MODE DETECTION PRIORITY (check in order, use first match):
+1. Check MODE 3 first (apology keywords — "perdón", "sorry", "disculpa")
+2. Check MODE 7 (conflict/fight/tension keywords — "peleamos", "we fought", "está enojada")
+3. Check MODE 4 (re-engagement keywords)
+4. Check MODE 5 (compliment/flirt keywords)
+5. Check MODE 1 (ANY place type mentioned — bar, café, pub, restaurant, club, park, gym, event, concert — with OR without a person)
+6. Check MODE 2 (chat/app/message keywords — no place mentioned)
+7. Default to MODE 6 (follow-up questions)
+
+CRITICAL VALIDATION — before returning, check your "suggestions" array:
+- Modes 1-5, 7: Every item MUST be a complete, ready-to-use phrase (40-120 chars for modes 1-5, 50-150 for mode 7). If any item is a question about preferences, context, or clarification (e.g. "¿Qué tipo de ambiente buscas?", "¿Con quién irías?"), REPLACE it with an actual usable phrase.
+- Mode 6: Follow-up questions are OK (this is the only mode where questions are valid suggestions).
+- needsContext: Clarification chips are OK (this is the only case where context-gathering is valid).
+
+Additional triggers by language for MODE 1 (place-based):
+- EN: "going to", "meeting at", "date at", "hanging out at", "drinks at", "dinner at"
+- ES: "voy a", "vamos a", "juntarme", "salir con", "cita en", "ir a", "quedé en", "nos vemos en"
+- PT: "vou ao", "vamos ao", "encontro no", "saindo para"
+- FR: "je vais au", "rendez-vous au", "on se retrouve au"
+- DE: "ich gehe zum", "treffen im", "verabredet im"
+- JA: "に行く", "で会う", "デートで"
+- ZH: "去", "约在", "见面在"
+- RU: "иду в", "встреча в", "свидание в"
+- AR: "ذاهب إلى", "موعد في", "سأقابل"
+- ID: "pergi ke", "bertemu di", "kencan di"
+
+CONTEXT CLARIFICATION FOR CONVERSATION STARTERS:
+When the user asks ONLY for conversation starters, openers, or icebreakers WITHOUT specifying ANY place or context (e.g. "qué le digo", "dame frases", "help me start a conversation"), you MUST ask for clarification BEFORE generating suggestions.
+Return: {"needsContext": true, "reply": "ask for context in the user language", "suggestions": ${JSON.stringify(
+      (typeof config.clarificationChips === 'object' && !Array.isArray(config.clarificationChips))
+        ? (config.clarificationChips[lang] || config.clarificationChips['en'] || ['☕ At a cafe', '🍺 At a bar/pub', '💃 At a nightclub', '🌳 At a park', '💬 Via chat/app', '🍽️ At a restaurant'])
+        : (config.clarificationChips || ['☕ At a cafe', '🍺 At a bar/pub', '💃 At a nightclub', '🌳 At a park', '💬 Via chat/app', '🍽️ At a restaurant'])
+    )}, "topics": ["icebreakers"]}
+CRITICAL RULES FOR SUGGESTIONS:
+1. If the user mentions ANY place type (bar, pub, café, restaurant, club, park, gym, event, concert, etc.), do NOT use needsContext. Generate icebreakers for that place type directly in "suggestions".
+2. If you are returning activitySuggestions (places), the "suggestions" array MUST contain icebreakers/conversation starters for those places — NEVER clarification questions.
+3. The "suggestions" array must ALWAYS contain ready-to-use phrases that the user can copy and send/say directly. NEVER return follow-up questions, clarification prompts, or meta-questions like "¿Qué tipo de ambiente buscas?" as suggestions.
+4. Write all suggestions in the user's language. Add appropriate emoji to clarification chips only (☕ cafe, 🍺 bar, 💃 club, 🌳 park, 💬 chat, 🍽️ restaurant).
+5. When the user DOES provide context (place, situation, person), use the appropriate MODE above.
+
+EDGE CASES FOR SUGGESTIONS (by language):
+- "Pubs en [city]" / "Bars in [city]" / "バーを探して" / "酒吧推荐" → MODE 1 icebreakers for that place type + activitySuggestions. NOT clarification.
+- "Bares" / "Bars" / "バー" / "酒吧" (just place type, no city) → Still MODE 1 icebreakers. Use user's location if available.
+- "Qué le digo" / "What do I say" / "何を言えばいい" / "我该说什么" (no place, no person) → needsContext with clarification chips in user's language.
+- "Dame frases para un café" / "Give me phrases for a café" → MODE 1 icebreakers for café. NOT clarification.
+- "Frases" / "Phrases" / "フレーズ" / "话术" (no context at all) → needsContext with clarification chips.
+- User language mismatch (e.g. asking in Spanish but app language is English) → Respond in the language the user WROTE, not the app language.
+- Place names in local language: "居酒屋" (izakaya) → bar mode, "Kneipe" → bar mode, "бар" → bar mode, "مقهى" → café mode.
+- Slang/colloquial place references: "un toque" (AR) = bar, "boteco" (BR) = bar, "Stammkneipe" (DE) = regular bar.
+
+CULTURAL ADAPTATION BY LANGUAGE — suggestions MUST match the cultural norms of the user's language:
+- ES (Latam): Warm, informal (tú), affectionate, humor-forward. Physical proximity OK. "¿Me recomiendas algo? Es mi primera vez aquí"
+- ES (España): Direct, colloquial, confident. Use "tío/tía" naturally. "Oye, ¿qué tal está esto?"
+- EN: Friendly but respect personal space. Light humor, open questions. "What would you recommend here?"
+- PT (Brasil): Very warm, enthusiastic, "você" form. Physical contact normal. "O que você recomenda aqui?"
+- FR: Charming, witty, slightly formal at first. "Tu me conseilles quoi ici ?"
+- DE: Direct, honest, less small-talk. Get to the point. "Was empfiehlst du hier?"
+- JA: Respectful, indirect, use polite forms. Never too forward. "ここのおすすめは何ですか？"
+- ZH: Polite, modest, build rapport gradually. "你推荐这里什么？"
+- RU: Warm but direct, humor appreciated. "Что порекомендуешь здесь?"
+- AR: Respectful, hospitable tone. Gender-aware phrasing. RTL text. "ماذا تنصح هنا؟"
+- ID: Friendly, polite, use "kamu/Anda" appropriately. "Apa yang kamu rekomendasikan di sini?"
+
+GENERAL EDGE CASES:
+- Mixed languages: respond in the dominant language of the message
+- Ambiguous context ("I'm going out" / "voy a salir"): if ANY place type can be inferred, use MODE 1. Only needsContext if truly ambiguous.
+- Unusual places (gym, transport, laundromat, supermarket, bookstore, museum): adapt tone — brief for noisy/transit, activity-based for gym, intellectual for bookstore/museum
+- "with a friend" vs "with a date" vs "with someone I like": adjust flirtation level (0 for friend, moderate for date, playful for crush)
+- Gender-neutral: don't assume gender unless user specifies. Use inclusive language. In Spanish use "la persona" not "el/ella" unless user specifies.
+- User seems nervous/shy: include low-risk, easy openers alongside bolder ones. Mix confidence levels.
+- User already knows the person: skip introduction-style openers, focus on deepening connection
+- Long-distance / video call context: adapt for screen-based interaction ("¿Qué tal se ve mi fondo?" / "Is that your real background?")
+- Group setting (double date, party): include group-friendly icebreakers
+- Age gap context: avoid patronizing or overly youthful slang if user is older. Match maturity level.
+- Same-sex dating: fully inclusive, no heteronormative assumptions
+- Cultural taboos: In JA/ZH avoid overly direct/bold openers. In AR respect gender dynamics. In DE skip excessive small-talk.
+- All suggestions must be SAFE, respectful, non-manipulative, and culturally appropriate
+- NEVER return an empty suggestions array — if in doubt, generate MODE 6 follow-up questions as fallback
+
+WHEN TO INCLUDE activitySuggestions (places):
+- MODE 1 (in-person, place mentioned): YES — include places
+- MODE 6 (follow-up, general advice): YES if contextually relevant
+- MODE 2 (chat/app openers): NO places — user is texting, not going somewhere
+- MODE 3 (apology): NO places — user needs phrases, not venues
+- MODE 4 (re-engagement): NO places — user needs messages, not venues
+- MODE 5 (compliments): NO places — user needs phrases, not venues
+- MODE 7 (conflict resolution): NO places — user needs de-escalation phrases, not venues
+CRITICAL: For Modes 2, 3, 4, 5, 7 the "activitySuggestions" array MUST be empty or omitted. The "suggestions" array must contain ONLY ready-to-use phrases — NEVER location names, venue references, or place-based items like "📍 Lugares en [city]".
+
+OUTFIT RECOMMENDATION — When you suggest PLACES (activitySuggestions), ALWAYS include an outfit recommendation at the END of your reply text, formatted as:
+"👔 Outfit: [specific outfit suggestion for the dominant venue type]"
+Examples by venue type:
+- Bar/pub: "👔 Outfit: Jeans oscuros, camisa casual arremangada, zapatillas limpias. Evita ropa deportiva."
+- Restaurant: "👔 Outfit: Pantalón chino, camisa con botones, zapatos cerrados. Smart casual."
+- Nightclub: "👔 Outfit: Ropa oscura, bien ajustada. Camisa o top con personalidad. Zapatos, no zapatillas."
+- Café: "👔 Outfit: Look casual pero cuidado. Jeans, polera bonita, zapatillas blancas."
+- Park/outdoor: "👔 Outfit: Ropa cómoda y casual. Zapatillas, jeans o shorts según clima."
+- Formal event: "👔 Outfit: Traje o vestido. Colores neutros. Accesorios elegantes pero no excesivos."
+- Museum/gallery: "👔 Outfit: Smart casual con toque artístico. Colores neutros, corte limpio."
+Rules:
+- Write the outfit suggestion in the user's language
+- Adapt to cultural context (formal in DE/JA, casual in BR/Latam, modest in AR/ID)
+- Adapt to time of day if mentioned (casual for brunch, smart for dinner)
+- Be SPECIFIC (name actual clothing items, colors, shoes) — not generic "dress well"
+- Include what to AVOID (e.g., "evita ropa deportiva", "no sneakers")
+- Gender-neutral — don't assume what the user wears
+- Do NOT include outfit when user is NOT asking about places (advice, profile, texting)
+
 ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this response — the user is explicitly searching for places, shops, or products to buy. You MUST include it with real venues/shops from the REAL PLACES list.' : 'The "activitySuggestions" array is OPTIONAL — only include it when contextually relevant (date ideas, venue searches, gift shopping, product shopping, place recommendations).'}`;
 
       // 6. Call Gemini
@@ -2401,11 +2760,17 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       const isPlacesQuery = isUserPlaceSearch || hasRealPlaces || detectedTopics.some((t) => placesTopics.includes(t));
       const dynamicTemp = isSafetyQuery ? 0.3 : isPlacesQuery ? 0.7 : (config.temperature || 0.85);
 
+      // Dynamic model selection — use lite for simple queries, flash for complex
+      const isSimpleQuery = message.length < 30 && !hasMatchContext && !isPlacesQuery && !isSafetyQuery &&
+        !detectedTopics.some((t) => ['conflict_resolution', 'relationship', 'match_analysis', 'emotional'].includes(t));
+      const selectedModel = (config.modelRouting?.enabled !== false && isSimpleQuery) ? AI_MODEL_LITE : AI_MODEL_NAME;
+      if (isSimpleQuery) logger.info(`[dateCoachChat] Using LITE model for simple query: "${message.substring(0, 30)}"`);
+
       const modelConfig = {
-        model: AI_MODEL_NAME,
+        model: selectedModel,
         generationConfig: {
           temperature: dynamicTemp,
-          maxOutputTokens: outputTokens,
+          maxOutputTokens: isSimpleQuery ? Math.min(outputTokens, 1024) : outputTokens,
           responseMimeType: 'application/json',
         },
       };
@@ -2440,13 +2805,15 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
           }
         }
       })();
-      const responseText = result.response.text();
+      const responseText = safeResponseText(result);
       trackAICall({functionName: 'dateCoachChat', model: AI_MODEL_NAME, operation: 'chat', usage: result.response.usageMetadata, latencyMs: Date.now() - (result._startTime || Date.now()), userId});
 
       let reply;
       let suggestions;
       let activitySuggestions;
+      let dateScore;
       let isOffTopic = false;
+      let needsContext = false;
       let geminiTopics = [];
       try {
         logger.info(`[dateCoachChat] Raw response (first 500): ${responseText.substring(0, 500)}`);
@@ -2456,6 +2823,20 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
         const activities = parsed.activitySuggestions || parsed.activity_suggestions || parsed.activities || parsed.places;
         logger.info(`[dateCoachChat] Parsed keys: ${Object.keys(parsed).join(', ')}, activitySuggestions isArray: ${Array.isArray(activities)}, length: ${Array.isArray(activities) ? activities.length : 'N/A'}`);
         geminiTopics = Array.isArray(parsed.topics) ? parsed.topics.filter((t) => typeof t === 'string').slice(0, 5) : [];
+
+        // Detect context clarification (no credit deduction)
+        // Limit to max 2 free clarifications per conversation to prevent abuse
+        needsContext = parsed.needsContext === true || parsed.needs_context === true;
+        if (needsContext) {
+          const recentClarifications = (conversationHistory || [])
+            .filter((m) => m.type === 'clarification')
+            .length;
+          const maxFreeClarifications = config.maxFreeClarifications || 3;
+          if (recentClarifications >= maxFreeClarifications) {
+            needsContext = false; // Force credit deduction after max free clarifications
+            logger.info(`[dateCoachChat] Max clarifications reached (${recentClarifications}/${maxFreeClarifications}), charging credit`);
+          }
+        }
 
         // Detect off-topic response from Gemini
         if (parsed.off_topic === true) {
@@ -2467,6 +2848,80 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
           reply = parsed.reply || parsed.response || responseText;
           suggestions = Array.isArray(parsed.suggestions) ?
             parsed.suggestions.slice(0, config.maxSuggestions) : undefined;
+
+          // Parse dateScore from Gemini response (Post-Date Scorecard)
+          const rawDateScore = parsed.dateScore || parsed.date_score;
+          if (rawDateScore && typeof rawDateScore === 'object' && typeof rawDateScore.overall === 'number') {
+            dateScore = {
+              conversation: {score: Math.min(10, Math.max(1, rawDateScore.conversation?.score || 5)), note: (rawDateScore.conversation?.note || '').substring(0, 80)},
+              chemistry: {score: Math.min(10, Math.max(1, rawDateScore.chemistry?.score || 5)), note: (rawDateScore.chemistry?.note || '').substring(0, 80)},
+              effort: {score: Math.min(10, Math.max(1, rawDateScore.effort?.score || 5)), note: (rawDateScore.effort?.note || '').substring(0, 80)},
+              fun: {score: Math.min(10, Math.max(1, rawDateScore.fun?.score || 5)), note: (rawDateScore.fun?.note || '').substring(0, 80)},
+              overall: Math.min(10, Math.max(1, isNaN(Number(rawDateScore.overall)) ? 5 : Number(rawDateScore.overall))),
+              highlight: (rawDateScore.highlight || '').substring(0, 120),
+              improvement: (rawDateScore.improvement || '').substring(0, 120),
+              wouldMeetAgain: rawDateScore.wouldMeetAgain === true,
+            };
+            logger.info(`[dateCoachChat] Post-date scorecard generated: overall=${dateScore.overall}/10`);
+          }
+
+          // GUARD: If we have activitySuggestions (places), filter out clarification-style questions from suggestions
+          // These are meta-questions like "¿Qué tipo de ambiente buscas?" that should never appear as copyable phrases
+          if (Array.isArray(activities) && activities.length > 0 && Array.isArray(suggestions)) {
+            // NARROW patterns: only match meta-questions about preferences/context, NOT valid icebreakers
+            // "¿Qué estás tomando?" = valid icebreaker (keep). "¿Qué tipo de ambiente buscas?" = clarification (filter)
+            const clarificationPatterns = [
+              // ES: only preference/context questions, not conversational icebreakers
+              /^¿(qué tipo|cuál prefieres|con quién (irías|vas|quieres)|dónde (prefieres|quieres|te gustaría)|cómo (prefieres|te gustaría)|prefieres|te gustaría)/i,
+              // EN: only preference/context questions
+              /^(what (type|kind) of|which (type|kind)|who (are you|would you|will you)|where (do you prefer|would you)|how (do you prefer|would you)|do you prefer|would you (like|prefer|rather))/i,
+              // PT: only preference/context questions
+              /^(que tipo|qual (prefere|tipo)|com quem (iria|vai)|onde (prefere|gostaria)|prefere|gostaria de)/i,
+              // FR: only preference/context questions
+              /^(quel (type|genre)|avec qui (irais|veux)|où (préfères|aimerais)|préfères|aimerais)/i,
+              // DE: only preference/context questions
+              /^(was für (ein|eine)|welch(e|er|es) (Art|Typ)|mit wem (möchtest|willst)|wo (möchtest|bevorzugst)|möchtest du|bevorzugst)/i,
+              // JA: only preference/context questions
+              /^(どんな(タイプ|種類|雰囲気)|誰と|どこが(いい|好き))/,
+              // ZH: only preference/context questions
+              /^(什么(类型|样的|风格)|跟谁|你(喜欢|想要|偏好))/,
+              // RU: only preference/context questions
+              /^(какой (тип|вид)|с кем (хотите|пойдёте)|где (предпочитаете|хотите)|предпочитаете|хотите)/i,
+              // AR: only preference/context questions
+              /^(ما (نوع|نمط)|مع من|أين (تفضل|تريد)|هل تفضل)/,
+              // ID: only preference/context questions
+              /^(tipe (apa|seperti)|jenis apa|dengan siapa|dimana (kamu prefer|kamu mau)|mau yang|preferensi)/i,
+              // Universal: meta-questions about venue preferences (all languages)
+              /tipo de (ambiente|lugar|sitio)|kind of (place|vibe|atmosphere|venue)|type of (place|venue|vibe)|qué ambiente|what vibe|preferencia de lugar/i,
+            ];
+            const originalCount = suggestions.length;
+            suggestions = suggestions.filter((s) => {
+              if (typeof s !== 'string') return false;
+              return !clarificationPatterns.some((p) => p.test(s.trim()));
+            });
+            if (suggestions.length < originalCount) {
+              logger.info(`[dateCoachChat] Filtered ${originalCount - suggestions.length} clarification-style suggestions (had activitySuggestions)`);
+            }
+            if (suggestions.length === 0) suggestions = undefined;
+          }
+
+          // GUARD: Filter out location-based items from suggestions (they belong in activitySuggestions, not copyable phrases)
+          if (Array.isArray(suggestions)) {
+            const locationPatterns = /^📍|^🏠|^🗺|lugares en |places in |ubicación|location:|dirección|address:/i;
+            const beforeFilter = suggestions.length;
+            suggestions = suggestions.filter((s) => typeof s === 'string' && !locationPatterns.test(s.trim()));
+            if (suggestions.length < beforeFilter) {
+              logger.info(`[dateCoachChat] Filtered ${beforeFilter - suggestions.length} location-based items from suggestions`);
+            }
+            if (suggestions.length === 0) suggestions = undefined;
+          }
+
+          // GUARD: If needsContext is true but we have activitySuggestions, override — places provide context
+          if (needsContext && Array.isArray(activities) && activities.length > 0) {
+            needsContext = false;
+            logger.info('[dateCoachChat] Overriding needsContext=true because activitySuggestions were returned');
+          }
+
           if (Array.isArray(activities) && activities.length > 0) {
             // Build lookup of real places by normalized name for merging
             const realPlaceLookup = new Map();
@@ -2672,7 +3127,7 @@ Score on: specificity (references user situation?), actionability (concrete step
 Return JSON: {"score":N,"issues":["issue1"]}`;
 
             const evalResult = await evalModel.generateContent(evalPrompt);
-            const evalParsed = parseGeminiJsonResponse(evalResult.response.text());
+            const evalParsed = parseGeminiJsonResponse(safeResponseText(evalResult));
             selfEvalData = {score: evalParsed.score || 5, issues: evalParsed.issues || []};
             logger.info(`[Self-eval] score: ${selfEvalData.score}, issues: ${(selfEvalData.issues || []).join(', ')}`);
           } catch (evalErr) {
@@ -2764,7 +3219,7 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
       // 7. Store both messages + decrement credits atomically (skip for load more)
       let newRemaining = coachMessagesRemaining;
       let userMsgRef, coachMsgRef;
-      if (!loadMoreActivities) {
+      if (!loadMoreActivities && !loadMoreSuggestions) {
         const messagesRef = db.collection('coachChats').doc(userId).collection('messages');
         // Use Timestamp.now() with +1ms offset for coach to guarantee deterministic order
         // (FieldValue.serverTimestamp() assigns identical timestamps in a batch,
@@ -2785,6 +3240,30 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
           ...(matchId ? {matchId} : {}),
         });
 
+        // GUARD: dateScore and needsContext are mutually exclusive — needsContext takes priority
+        if (needsContext && dateScore) {
+          dateScore = undefined;
+          logger.info('[dateCoachChat] Clearing dateScore because needsContext is active');
+        }
+        // GUARD: dateScore requires matchId — no scoring without match context
+        if (dateScore && !matchId) {
+          dateScore = undefined;
+          logger.info('[dateCoachChat] Clearing dateScore because no matchId');
+        }
+
+        // GUARD: Strip activitySuggestions for non-place modes (apology, conflict, compliments, re-engagement, chat openers)
+        // These modes should NEVER include places — only phrases
+        const nonPlaceTopics = ['conflict_resolution', 'communication', 'emotional', 'rejection', 'confidence'];
+        const userDetectedTopics = (quickAnalysis?.topics || []).map((t) => t.toLowerCase());
+        const isNonPlaceMode = userDetectedTopics.some((t) => nonPlaceTopics.includes(t));
+        if (isNonPlaceMode && activitySuggestions && activitySuggestions.length > 0) {
+          logger.info(`[dateCoachChat] Stripping ${activitySuggestions.length} activitySuggestions — non-place mode detected (topics: ${userDetectedTopics.join(',')})`);
+          activitySuggestions = undefined;
+        }
+
+        // Determine message type (only one type per message)
+        const messageType = needsContext ? 'clarification' : dateScore ? 'date_scorecard' : null;
+
         batch.set(coachMsgRef, {
           message: reply.substring(0, config.maxReplyLength),
           sender: 'coach',
@@ -2793,14 +3272,33 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
           ...(suggestions ? {suggestions} : {}),
           ...(activitySuggestions ? {activitySuggestions} : {}),
           ...(isOffTopic ? {offTopic: true} : {}),
+          ...(messageType ? {type: messageType} : {}),
           ...(selfEvalData ? {selfEvalScore: selfEvalData.score} : {}),
+          ...(dateScore ? {dateScore} : {}),
         });
 
-        // 8. Decrement coach messages remaining (atomic increment avoids TOCTOU race)
-        newRemaining = Math.max(0, coachMessagesRemaining - 1);
-        batch.update(userRefForCredits, {
-          coachMessagesRemaining: admin.firestore.FieldValue.increment(-1),
-        });
+        // Save dateScore to historical collection for growth tracking dashboard
+        if (dateScore && matchId) {
+          const scoreRef = db.collection('coachChats').doc(userId).collection('dateScores').doc();
+          batch.set(scoreRef, {
+            ...dateScore,
+            matchId,
+            matchName: matchName || 'Match',
+            timestamp: coachTs,
+            messageId: coachMsgRef.id,
+          });
+          logger.info(`[dateCoachChat] Saved dateScore to dateScores collection for match ${matchId}`);
+        }
+
+        // 8. Decrement coach messages remaining (skip for clarifications — free context gathering)
+        if (!needsContext) {
+          newRemaining = Math.max(0, coachMessagesRemaining - 1);
+          batch.update(userRefForCredits, {
+            coachMessagesRemaining: admin.firestore.FieldValue.increment(-1),
+          });
+        } else {
+          logger.info(`[dateCoachChat] Clarification message — no credit deducted for user ${userId}`);
+        }
 
         await batch.commit();
 
@@ -2826,7 +3324,7 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
         }
       }
 
-      logger.info(`[dateCoachChat] Coach replied to user ${userId}${matchId ? ` (match: ${matchId})` : ''}${isOffTopic ? ' [off-topic]' : ''}${activitySuggestions ? ` with ${activitySuggestions.length} activities` : ''} (credits: ${newRemaining})`);    
+      logger.info(`[dateCoachChat] Coach replied to user ${userId}${matchId ? ` (match: ${matchId})` : ''}${isOffTopic ? ' [off-topic]' : ''}${needsContext ? ' [clarification]' : ''}${activitySuggestions ? ` with ${activitySuggestions.length} activities` : ''} (credits: ${newRemaining})`);    
       return {
         success: true,
         reply,
@@ -2836,6 +3334,7 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
         userMessageId: userMsgRef?.id,
         coachMessageId: coachMsgRef?.id,
         ...(dominantCategory ? {dominantCategory} : {}),
+        ...(dateScore ? {dateScore} : {}),
       };
     } catch (error) {
       logger.error(`[dateCoachChat] Error: ${error.message}`);
@@ -3361,7 +3860,7 @@ Rules:
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE, generationConfig: {maxOutputTokens: 1024, responseMimeType: 'application/json'}});
       const result = await model.generateContent(systemPrompt);
-      const responseText = result.response.text();
+      const responseText = safeResponseText(result);
 
       // 7. Parse response
       let parsed;
@@ -3947,32 +4446,76 @@ ${moderationContext.slice(0, 5).join('\n')}
       }
 
       gapPrompt += `
-Search the internet for the LATEST dating advice trends, relationship psychology research, and communication techniques from 2025-2026.
+Search the internet for the LATEST research, studies, and expert advice on dating, relationships, and social psychology from 2024-2026. Focus on PEER-REVIEWED or EXPERT-BACKED sources.
 
-Generate 3-7 NEW knowledge chunks. Focus on:
-1. FILL GAPS — address the unhelpful response topics with expert, actionable advice
-2. REINFORCE SUCCESS — expand on what users found helpful
-3. LATEST TRENDS — new dating psychology, attachment theory applications, communication frameworks
-4. DATING SAFETY — boundary setting, first meeting safety, expectations management
-5. SAFE COMMUNICATION — help users express themselves without triggering content moderation filters
-6. CULTURAL SENSITIVITY — advice that works across cultures (app has users in 10+ languages)
+Generate 5-10 NEW knowledge chunks. PRIORITIES:
 
-Each chunk should be actionable, specific, and immediately useful (not generic platitudes).
+1. GLOBAL RELATIONSHIP RESEARCH — Search for latest studies from:
+   - Gottman Institute (relationship dynamics, communication patterns)
+   - Helen Fisher / Kinsey Institute (attraction, chemistry, attachment)
+   - Esther Perel (modern relationships, desire, infidelity prevention)
+   - University studies on dating app behavior and success factors
+   - WHO/UN data on relationship wellness and mental health impact
+
+2. SINGLES COACHING — Latest research on:
+   - First date success factors (what predicts second date?)
+   - Online dating fatigue and burnout prevention
+   - Profile optimization based on behavioral science
+   - Approach anxiety and confidence building techniques
+   - Conversation depth ladder (small talk → deep connection)
+   - Ghosting psychology and prevention strategies
+
+3. COUPLES COACHING — Latest research on:
+   - Conflict resolution frameworks (Gottman's Four Horsemen, repair attempts)
+   - Love languages evolution (Chapman + modern adaptations)
+   - Attachment theory in practice (anxious-avoidant dynamics)
+   - Maintaining desire in long-term relationships
+   - Digital communication in couples (texting patterns, social media boundaries)
+   - Relationship milestones and transition management
+
+4. CULTURAL DATING NORMS (2024-2026 updates):
+   - How dating culture changed post-pandemic globally
+   - Gen Z vs Millennial dating expectations
+   - Cross-cultural relationship challenges and solutions
+   - LGBTQ+ dating safety and community norms by region
+   - Age gap relationship dynamics and social perception
+
+5. MENTAL HEALTH & DATING:
+   - Dating and anxiety management
+   - Rejection resilience building
+   - Healthy boundaries in early dating
+   - Self-worth independent of relationship status
+   - Recognizing manipulation and emotional abuse patterns
+
+6. PRACTICAL ACTIONABLE ADVICE:
+   - Conversation starters backed by research
+   - Body language signals and interpretation
+   - First date venue selection psychology
+   - When to have "the talk" (exclusivity, boundaries, future)
+   - Recovery after breakup (timeline, stages, activities)
+
+Each chunk MUST:
+- Reference a specific study, expert, or research finding (not generic advice)
+- Be actionable (give the user something to DO, not just know)
+- Be culturally adaptable (work in Latin America, Europe, Asia, Middle East)
+- Be 200-400 words with specific examples
+- Include a "source" field with the research reference
 
 Return JSON:
 {
   "chunks": [
     {
-      "category": "conversation_starters|first_dates|boundaries|safety|communication|psychology|cultural_context|confidence|conflict_resolution",
+      "category": "conversation_starters|first_dates|boundaries|safety|communication|psychology|cultural_context|confidence|conflict_resolution|attachment_theory|couples_maintenance|dating_burnout|rejection_resilience|body_language|digital_communication",
       "language": "en",
-      "title": "short title",
-      "content": "detailed expert advice (200-400 words)"
+      "title": "short descriptive title",
+      "content": "detailed expert advice with research reference (200-400 words)",
+      "source": "Study/Expert name and year (e.g., 'Gottman Institute 2025', 'Journal of Social Psychology 2024')"
     }
   ]
 }`;
 
       const result = await model.generateContent(gapPrompt);
-      const parsed = parseGeminiJsonResponse(result.response.text());
+      const parsed = parseGeminiJsonResponse(safeResponseText(result));
 
       if (!parsed || !parsed.chunks || parsed.chunks.length === 0) {
         logger.warn('[updateCoachKnowledge] Gemini returned no chunks');
@@ -3998,6 +4541,7 @@ Return JSON:
             category: chunk.category || 'general',
             language: chunk.language || 'en',
             title: chunk.title || '',
+            text: chunk.content,
             content: chunk.content,
             embedding,
             autoGenerated: true,
@@ -4091,7 +4635,7 @@ Generate 1-3 focused knowledge chunks (200-300 words each) that would directly h
 Return as plain text, separating chunks with "---".`;
 
       const result = await model.generateContent(prompt);
-      const chunks = result.response.text().split('---').map((c) => c.trim()).filter((c) => c.length > 50);
+      const chunks = safeResponseText(result).split('---').map((c) => c.trim()).filter((c) => c.length > 50);
 
       const maxChunks = microConfig.maxChunksPerDay || 3;
       let added = 0;
@@ -4105,6 +4649,7 @@ Return as plain text, separating chunks with "---".`;
             category: weakTopics.split(',')[0]?.trim() || 'general',
             language: 'en',
             title: `Daily micro: ${yesterdayStr}`,
+            text: chunk,
             content: chunk,
             embedding: embResult.embedding.values,
             autoGenerated: true,

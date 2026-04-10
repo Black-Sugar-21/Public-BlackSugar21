@@ -7,6 +7,49 @@ const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageIns
 const { calcAge } = require('./geo');
 const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 
+// Centralized AI config — cached for 5 minutes, single-flight fetch
+let _aiConfig = null;
+let _aiConfigFetchedAt = 0;
+let _aiConfigPromise = null;
+const AI_CONFIG_CACHE_TTL = 5 * 60 * 1000;
+
+async function getAiConfig() {
+  if (_aiConfig && Date.now() - _aiConfigFetchedAt < AI_CONFIG_CACHE_TTL) return _aiConfig;
+  // Single-flight: only one fetch at a time
+  if (_aiConfigPromise) return _aiConfigPromise;
+  _aiConfigPromise = (async () => {
+    try {
+      const doc = await admin.firestore().collection('appConfig').doc('ai').get();
+      _aiConfig = doc.exists ? doc.data() : {};
+      _aiConfigFetchedAt = Date.now();
+    } catch (e) {
+      logger.warn(`[getAiConfig] Firestore fetch failed: ${e.message}`);
+      _aiConfig = _aiConfig || {};
+    }
+    _aiConfigPromise = null;
+    return _aiConfig;
+  })();
+  return _aiConfigPromise;
+}
+
+function getTemp(aiConfig, key, fallback) {
+  return aiConfig?.temperatures?.[key] ?? fallback;
+}
+
+function getTokens(aiConfig, key, fallback) {
+  return aiConfig?.maxOutputTokens?.[key] ?? fallback;
+}
+
+/** Safely extract text from Gemini result — prevents crash on null/undefined response */
+function safeResponseText(result) {
+  try {
+    return result?.response?.text() || '';
+  } catch (e) {
+    logger.warn(`[safeResponseText] Failed to extract text: ${e.message}`);
+    return '';
+  }
+}
+
 exports.generateInterestSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
@@ -46,7 +89,7 @@ Return only the JSON array, no explanation.`;
       const _aiStart = Date.now();
       const result = await model.generateContent(prompt);
       trackAICall({functionName: 'generateInterestSuggestions', model: AI_MODEL_LITE, operation: 'interests', usage: result.response.usageMetadata, latencyMs: Date.now() - _aiStart});
-      const responseText = result.response.text().trim();
+      const responseText = safeResponseText(result).trim();
       logger.info(`[generateInterestSuggestions] Gemini response: ${responseText.substring(0, 200)}`);
 
       // Parse JSON array from response
@@ -263,7 +306,7 @@ Return ONLY a JSON object:
 
         let parsed = null;
         try {
-          parsed = parseGeminiJsonResponse(result.response.text());
+          parsed = parseGeminiJsonResponse(safeResponseText(result));
         } catch (_parseErr) {
           logger.warn(`[calculateSafetyScore] JSON parse failed: ${_parseErr.message}`);
         }
@@ -546,11 +589,11 @@ Return ONLY a JSON object:
       const _srStart = Date.now();
       const result = await model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: 512, temperature: 0.85},
+        generationConfig: await (async () => { const c = await getAiConfig(); return {maxOutputTokens: getTokens(c, 'smartReply', 512), temperature: getTemp(c, 'smartReply', 0.85)}; })(),
       });
       trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart});
 
-      const text = result.response.text();
+      const text = safeResponseText(result);
       let parsed = null;
       try {
         parsed = parseGeminiJsonResponse(text);
@@ -1016,8 +1059,8 @@ exports.generateIcebreakers = onCall(
       const user1 = user1Snap.exists ? user1Snap.data() : {};
       const user2 = user2Snap.exists ? user2Snap.data() : {};
 
-      // Detect language: prefer sender's deviceLanguage, normalize to base code
-      const rawLang = user1.deviceLanguage || user2.deviceLanguage || 'en';
+      // Detect language: prefer client-supplied, then Firestore deviceLanguage, then fallback
+      const rawLang = request.data?.language || user1.deviceLanguage || user2.deviceLanguage || 'en';
       const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
       const fallbackStarters = FALLBACK_BY_LANG[lang] || FALLBACK_BY_LANG.en;
 
@@ -1105,6 +1148,7 @@ exports.generateIcebreakers = onCall(
         logger.info(`[generateIcebreakers] RAG skipped (${ragErr.message})`);
       }
 
+      const aiConfig = await getAiConfig();
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
 
@@ -1116,23 +1160,22 @@ ${ragContext}
 
 Rules:
 - ${getLanguageInstruction(lang)}
-- Each message should be 1-2 sentences max, casual and fun
-- Reference SPECIFIC shared interests or details from their profiles when possible
+- CRITICAL: Each message MUST be SHORT — maximum ${aiConfig?.icebreakers?.maxWords || 15} words, ONE sentence only
+- Keep it simple and quick to read — these appear in a match celebration screen
 - Include one relevant emoji per message
 - Make them feel personal, NOT generic
 - Avoid cliché pickup lines
 - If limited profile data, use creative open-ended questions
-- Use the expert dating advice above as inspiration but DO NOT copy it verbatim
 - Vary the style: 1 playful/fun, 1 thoughtful/genuine, 1 creative/unique
 
 Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning": "why this works", "emoji": "🎯"}]`;
 
       const result = await model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: 512, temperature: 0.9},
+        generationConfig: {maxOutputTokens: getTokens(aiConfig, 'icebreakers', 512), temperature: getTemp(aiConfig, 'icebreakers', 0.9)},
       });
 
-      const text = result.response.text();
+      const text = safeResponseText(result);
       let parsed = null;
       try {
         parsed = parseGeminiJsonResponse(text);
@@ -1142,7 +1185,7 @@ Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning"
 
       if (Array.isArray(parsed) && parsed.length >= 3) {
         const icebreakers = parsed.slice(0, 3).map((item) => ({
-          message: String(item.message || item.text || '').substring(0, 200),
+          message: String(item.message || item.text || '').substring(0, 100),
           reasoning: String(item.reasoning || '').substring(0, 100),
           emoji: String(item.emoji || '💬').substring(0, 4),
         })).filter((i) => i.message.length > 0);
@@ -1482,12 +1525,12 @@ Respond ONLY with valid JSON:
 
       const geminiPromise = model.generateContent({
         contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: 300, temperature: 0.4},
+        generationConfig: {maxOutputTokens: getTokens(await getAiConfig(), 'chemistry', 300), temperature: getTemp(await getAiConfig(), 'chemistry', 0.4)},
       });
       const geminiTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 8000));
       const geminiResult = await Promise.race([geminiPromise, geminiTimeout]);
 
-      const text = geminiResult.response.text();
+      const text = safeResponseText(geminiResult);
       let parsed = null;
       try {
         parsed = parseGeminiJsonResponse(text);
@@ -1850,9 +1893,9 @@ Return ONLY a JSON object:
       try {
         const result = await model.generateContent({
           contents: [{role: 'user', parts: [{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 2048, temperature: 0.85, responseMimeType: 'application/json'},
+          generationConfig: {maxOutputTokens: getTokens(await getAiConfig(), 'blueprint', 2048), temperature: getTemp(await getAiConfig(), 'blueprint', 0.85), responseMimeType: 'application/json'},
         });
-        const rawText = result.response.text();
+        const rawText = safeResponseText(result);
         parsed = JSON.parse(rawText);
       } catch (jsonErr) {
         logger.info(`[DateBlueprint] JSON mode failed (${jsonErr.message}), retrying with text mode`);
@@ -1860,9 +1903,9 @@ Return ONLY a JSON object:
         try {
           const result2 = await model.generateContent({
             contents: [{role: 'user', parts: [{text: prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no code blocks.'}]}],
-            generationConfig: {maxOutputTokens: 2048, temperature: 0.7},
+            generationConfig: {maxOutputTokens: getTokens(await getAiConfig(), 'blueprint', 2048), temperature: getTemp(await getAiConfig(), 'blueprintRetry', 0.7)},
           });
-          parsed = parseGeminiJsonResponse(result2.response.text());
+          parsed = parseGeminiJsonResponse(safeResponseText(result2));
         } catch (retryErr) {
           logger.warn(`[DateBlueprint] Both JSON attempts failed: ${retryErr.message}`);
         }
@@ -1930,6 +1973,231 @@ Return ONLY a JSON object:
     } catch (err) {
       logger.warn(`[DateBlueprint] Error: ${err.message}`);
       return fallback;
+    }
+  },
+);
+
+/**
+ * Callable: Generate a weekend/event date plan using Gemini Search Grounding.
+ * Finds REAL events happening near the user via Google Search (no Ticketmaster/Eventbrite),
+ * then generates a full date Blueprint around the best event.
+ * Returns: { success, events: [{name, date, venue, category, url, description}], blueprint? }
+ */
+exports.generateEventDatePlan = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 90, secrets: [geminiApiKey, placesApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {matchId, userLanguage, category, dateRange} = request.data || {};
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    const placesKey = process.env.GOOGLE_PLACES_API_KEY || apiKey;
+    const db = admin.firestore();
+    const userId = request.auth.uid;
+    const rawLang = userLanguage || 'en';
+    const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+
+    try {
+      // 1. Get user location
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) return {success: false, error: 'user_not_found'};
+      const userData = userDoc.data();
+      let lat = userData.latitude;
+      let lng = userData.longitude;
+      let cityName = userData.city || '';
+
+      // If matchId provided, use midpoint
+      let matchName = '';
+      let sharedInterests = [];
+      if (matchId) {
+        try {
+          const {myProfile, theirProfile} = await getMatchUsersLocations(db, userId, matchId);
+          if (myProfile && theirProfile) {
+            const mid = calculateMidpoint(myProfile.latitude, myProfile.longitude, theirProfile.latitude, theirProfile.longitude);
+            lat = mid.latitude;
+            lng = mid.longitude;
+            matchName = theirProfile.name || '';
+            const mySet = new Set((myProfile.interests || []).map((i) => String(i).toLowerCase()));
+            sharedInterests = (theirProfile.interests || []).filter((i) => mySet.has(String(i).toLowerCase()));
+          }
+        } catch (e) {
+          logger.info(`[EventDatePlan] Match location fetch failed: ${e.message}`);
+        }
+      }
+
+      if (!lat || !lng) {
+        return {success: false, error: 'no_location'};
+      }
+
+      // 2. Use Gemini + Search Grounding to find REAL events
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_NAME,
+        generationConfig: {
+          maxOutputTokens: 4096,
+          temperature: getTemp(await getAiConfig(), 'eventPlan', 0.7),
+          responseMimeType: 'application/json',
+        },
+        tools: [{googleSearch: {}}], // Search Grounding — searches Google for real events
+      });
+
+      const langInstruction = getLanguageInstruction(lang);
+      const categoryFilter = category ? `Focus on "${category}" events.` : 'Include diverse categories: music, food, art, sports, festivals, comedy, theater, markets, nightlife.';
+      const dateRangeText = dateRange || 'this weekend and next 7 days';
+      const interestContext = sharedInterests.length > 0
+        ? `The couple shares interests in: ${sharedInterests.slice(0, 5).join(', ')}. Prioritize events matching these interests.`
+        : '';
+
+      const eventPrompt = `You are an events curator for a dating app. Find REAL events happening near ${cityName || `${lat},${lng}`} in ${dateRangeText}.
+
+IMPORTANT: Search Google for REAL, UPCOMING events. Do NOT invent events. Each event must be something you found via search with a real venue, date, and ideally a ticket/info URL.
+
+${categoryFilter}
+${interestContext}
+${langInstruction}
+
+Return JSON:
+{
+  "events": [
+    {
+      "name": "Event Name (in original language)",
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM (24h, or 'TBA')",
+      "venue": "Venue Name",
+      "address": "Full address",
+      "category": "music|food|art|sports|festivals|comedy|theater|markets|nightlife|workshops|outdoor",
+      "description": "1-2 sentences describing the event (in ${lang})",
+      "url": "ticket or info URL (if found)",
+      "price": "free|$X|$X-Y|TBA",
+      "dateVibes": "why this is great for a date (in ${lang}, max 60 chars)",
+      "emoji": "relevant emoji"
+    }
+  ],
+  "weekendHighlight": "one sentence describing the best event for a date (in ${lang})"
+}
+
+Rules:
+- Return 5-10 events, sorted by date (soonest first)
+- ONLY include events you found via Google Search — no hallucinated events
+- Include the event URL when available
+- "dateVibes" explains WHY this event is good for a date (built-in conversation, shared experience, etc.)
+- Write descriptions and dateVibes in ${lang}
+- If you cannot find events near this location, return {"events": [], "weekendHighlight": "No events found nearby"}`;
+
+      const startTime = Date.now();
+      const result = await model.generateContent(eventPrompt);
+      const responseText = safeResponseText(result);
+      trackAICall({functionName: 'generateEventDatePlan', model: AI_MODEL_NAME, operation: 'event_search', usage: result.response.usageMetadata, latencyMs: Date.now() - startTime, userId});
+
+      const parsed = parseGeminiJsonResponse(responseText);
+      const events = Array.isArray(parsed.events) ? parsed.events.filter((e) => e.name && e.date).slice(0, 10) : [];
+
+      if (events.length === 0) {
+        logger.info('[EventDatePlan] No events found via Search Grounding');
+        return {success: true, events: [], weekendHighlight: parsed.weekendHighlight || ''};
+      }
+
+      // 3. Sanitize events
+      const sanitizedEvents = events.map((e, i) => ({
+        id: `event_${i}_${Date.now()}`,
+        name: String(e.name || '').substring(0, 100),
+        date: String(e.date || '').substring(0, 10),
+        time: String(e.time || 'TBA').substring(0, 5),
+        venue: String(e.venue || '').substring(0, 100),
+        address: String(e.address || '').substring(0, 200),
+        category: String(e.category || 'general').substring(0, 30),
+        description: String(e.description || '').substring(0, 200),
+        url: (() => {
+          const raw = String(e.url || '').substring(0, 500);
+          // Only allow http/https URLs — block javascript:, data:, etc.
+          if (raw && /^https?:\/\//i.test(raw)) return raw;
+          return '';
+        })(),
+        price: String(e.price || 'TBA').substring(0, 20),
+        dateVibes: String(e.dateVibes || '').substring(0, 80),
+        emoji: String(e.emoji || '🎫').substring(0, 4),
+        isEvent: true,
+      }));
+
+      // 4. Optionally generate a Blueprint around the top event
+      let blueprint = null;
+      if (matchId && sanitizedEvents.length > 0) {
+        try {
+          const topEvent = sanitizedEvents[0];
+
+          // Fetch 2-3 nearby places to complement the event
+          const nearbyPlaces = [];
+          for (const q of ['café coffee', 'restaurant dinner bar']) {
+            try {
+              const results = await placesTextSearch(q, {latitude: lat, longitude: lng}, 5000, lang, null, 3, true);
+              if (results?.places) {
+                const placesConfig = await getPlacesSearchConfig();
+                for (const p of results.places.slice(0, 2)) {
+                  const s = transformPlaceToSuggestion(p, userData, {}, placesKey, placesConfig);
+                  if (s) nearbyPlaces.push(s);
+                }
+              }
+            } catch (_) {}
+          }
+
+          // Generate mini-blueprint: pre-event → event → post-event
+          const hour = parseInt(topEvent.time) || 19;
+          blueprint = {
+            title: lang === 'es' ? `Noche de ${topEvent.category}` : `${topEvent.category.charAt(0).toUpperCase() + topEvent.category.slice(1)} Night`,
+            totalDuration: '4-5h',
+            estimatedBudget: topEvent.price !== 'TBA' && topEvent.price !== 'free' ? topEvent.price : '$30-60',
+            featuredEvent: topEvent,
+            steps: [
+              ...(nearbyPlaces.length > 0 ? [{
+                order: 1,
+                time: `${Math.max(hour - 2, 12)}:00`,
+                duration: '1h',
+                activity: lang === 'es' ? 'Pre-evento: café y conversación' : 'Pre-event: coffee & chat',
+                placeName: nearbyPlaces[0].name || '',
+                place: nearbyPlaces[0] || null,
+                tip: lang === 'es' ? 'Llega temprano para relajarse antes del evento' : 'Arrive early to relax before the event',
+                isEvent: false,
+              }] : []),
+              {
+                order: nearbyPlaces.length > 0 ? 2 : 1,
+                time: `${hour}:00`,
+                duration: '2-3h',
+                activity: topEvent.name,
+                placeName: topEvent.venue,
+                tip: topEvent.dateVibes,
+                ticketUrl: topEvent.url,
+                isEvent: true,
+              },
+              ...(nearbyPlaces.length > 1 ? [{
+                order: nearbyPlaces.length > 0 ? 3 : 2,
+                time: `${hour + 3}:00`,
+                duration: '1h',
+                activity: lang === 'es' ? 'Post-evento: cena y reflexión' : 'Post-event: dinner & debrief',
+                placeName: nearbyPlaces[1].name || '',
+                place: nearbyPlaces[1] || null,
+                tip: lang === 'es' ? 'Comenten qué les pareció el evento' : 'Discuss what you thought of the event',
+                isEvent: false,
+              }] : []),
+            ],
+            icebreaker: lang === 'es'
+              ? `¿Habías ido a algo de ${topEvent.category} antes?`
+              : `Have you been to a ${topEvent.category} event before?`,
+            dresscode: ['nightlife', 'theater', 'art'].includes(topEvent.category) ? 'smart casual' : 'casual',
+          };
+        } catch (bpErr) {
+          logger.info(`[EventDatePlan] Blueprint generation failed: ${bpErr.message}`);
+        }
+      }
+
+      logger.info(`[EventDatePlan] Found ${sanitizedEvents.length} events for user ${userId} near ${cityName || `${lat},${lng}`}`);
+      return {
+        success: true,
+        events: sanitizedEvents,
+        weekendHighlight: String(parsed.weekendHighlight || '').substring(0, 200),
+        ...(blueprint ? {blueprint} : {}),
+      };
+    } catch (err) {
+      logger.error(`[EventDatePlan] Error: ${err.message}`);
+      return {success: false, error: err.message};
     }
   },
 );
@@ -2014,12 +2282,12 @@ Return ONLY valid JSON with this structure:
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: AI_MODEL_NAME,
-        generationConfig: {responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 4096},
+        generationConfig: {responseMimeType: 'application/json', temperature: getTemp(await getAiConfig(), 'photoCoach', 0.3), maxOutputTokens: getTokens(await getAiConfig(), 'photoCoach', 4096)},
       });
 
       const contents = [{role: 'user', parts: [...photoParts, {text: prompt}]}];
       const result = await model.generateContent({contents});
-      const text = result.response.text();
+      const text = safeResponseText(result);
       let analysis = null;
       try {
         analysis = parseGeminiJsonResponse(text);
@@ -2064,6 +2332,174 @@ Return ONLY valid JSON with this structure:
       };
     } catch (error) {
       logger.error(`[getPhotoCoachAnalysis] Error: ${error.message}`);
+      return {success: false, error: 'analysis_failed'};
+    }
+  },
+);
+
+/**
+ * Callable: Analyze user's outfit photo before a date using Gemini Vision.
+ * User uploads a selfie/mirror pic; Gemini analyzes outfit appropriateness
+ * for the venue type and gives specific improvement suggestions.
+ * Returns: { success, score, verdict, strengths, improvements, colorAdvice, accessoryTips }
+ */
+exports.analyzeOutfit = onCall(
+  {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
+  async (request) => {
+    if (!request.auth) throw new Error('Authentication required');
+    const {photoBase64, venueType, occasion, userLanguage} = request.data || {};
+
+    if (!photoBase64 || typeof photoBase64 !== 'string') {
+      return {success: false, error: 'photo_required'};
+    }
+
+    // Validate base64 format (must be valid base64 chars)
+    if (!/^[A-Za-z0-9+/=]+$/.test(photoBase64.substring(0, 100))) {
+      return {success: false, error: 'invalid_photo_format'};
+    }
+
+    // Limit photo size to 5MB base64 (~3.7MB actual)
+    if (photoBase64.length > 5 * 1024 * 1024 * 1.37) {
+      return {success: false, error: 'photo_too_large'};
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return {success: false, error: 'config_error'};
+
+    // Rate limiting: configurable via Firestore appConfig or default 10/hour
+    const db = admin.firestore();
+    const userId = request.auth.uid;
+    let maxPerHour = 10;
+    try {
+      const appConfigDoc = await db.collection('appConfig').doc('outfit').get();
+      if (appConfigDoc.exists) maxPerHour = appConfigDoc.data().maxPerHour || 10;
+    } catch (_) {}
+    const oneHourAgo = new Date(Date.now() - 3600000);
+    try {
+      const recentAnalyses = await db.collection('coachChats').doc(userId)
+        .collection('outfitAnalyses').where('timestamp', '>', oneHourAgo)
+        .count().get();
+      if ((recentAnalyses.data()?.count ?? 0) >= maxPerHour) {
+        return {success: false, error: 'rate_limit_exceeded'};
+      }
+    } catch (rateLimitErr) {
+      logger.warn(`[analyzeOutfit] Rate limit check failed: ${rateLimitErr.message}`);
+      // Allow request if rate limit check fails — don't block users due to infra issue
+    }
+
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const venue = venueType || 'restaurant';
+    const occ = occasion || 'date';
+
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: AI_MODEL_NAME,
+        generationConfig: {responseMimeType: 'application/json', temperature: getTemp(await getAiConfig(), 'outfitAnalysis', 0.5), maxOutputTokens: getTokens(await getAiConfig(), 'outfitAnalysis', 2048)},
+      });
+
+      const langInstruction = getLanguageInstruction(lang);
+
+      const prompt = `You are an expert fashion and dating image consultant. Analyze this outfit photo for a ${occ} at a ${venue}.
+
+CONTEXT:
+- Venue type: ${venue} (adjust formality expectations accordingly)
+- Occasion: ${occ}
+- Consider: fit, colors, appropriateness for venue, grooming, accessories, confidence projection
+
+VENUE FORMALITY GUIDE:
+- café/park/casual: smart casual is perfect, jeans OK, sneakers OK
+- restaurant/dinner: business casual minimum, no sportswear
+- bar/pub: casual to smart casual, personality-forward OK
+- nightclub: fashionable, bold, dark colors work well
+- theater/gallery/museum: smart casual to semi-formal
+- gym/sport: athletic wear expected
+- formal event: suit/dress required
+- temple/shrine/mosque: modest, covered shoulders/knees
+- beach/pool: casual but put-together, cover-up for transit
+
+CULTURAL CONTEXT by language:
+- ES (Latam): stylish casual is king, bright colors OK, personal grooming very valued
+- DE/Scandinavia: understated elegance, avoid flashy brands
+- JA: attention to detail, clean lines, seasonal awareness
+- AR/Middle East: modest, conservative, quality fabrics valued
+- PT (Brazil): casual but well-fitted, beach-influenced
+
+APPEARANCE SAFETY RULES — NEVER:
+- Comment on body shape, weight, skin color, or ethnicity
+- Suggest the outfit is "too revealing" or "too conservative" based on body type (only venue appropriateness)
+- Make gendered assumptions about what they "should" wear
+- Reference attractiveness of the person wearing the outfit
+- Compare to beauty standards or other people
+ONLY comment on: clothing fit, color coordination, venue appropriateness, accessories, grooming (hair, nails IF visible), style coherence
+
+${langInstruction}
+
+Return ONLY valid JSON:
+{
+  "score": 1-10 (overall outfit appropriateness for this venue),
+  "verdict": "one-line summary of the outfit (max 60 chars, in ${lang})",
+  "vibe": "what personality this outfit projects (max 40 chars, in ${lang})",
+  "strengths": ["what works well (2-3 items, each max 40 chars, in ${lang})"],
+  "improvements": ["specific changes to make (2-3 items, each max 60 chars, in ${lang})"],
+  "colorAdvice": "one tip about color coordination (max 60 chars, in ${lang})",
+  "accessoryTip": "one accessory suggestion (max 50 chars, in ${lang})",
+  "groomingNote": "one grooming observation if visible (max 50 chars, in ${lang})",
+  "confidenceBoost": "one encouraging compliment about what they're doing right (max 60 chars, in ${lang})",
+  "alternativeStyle": "one alternative outfit idea for this venue (max 80 chars, in ${lang})"
+}
+
+Rules:
+- Be HONEST but KIND — constructive criticism, never harsh
+- Focus on ACTIONABLE changes (not "buy a new wardrobe")
+- Consider cultural context based on language
+- If the photo doesn't show a clear outfit (too dark, blurry, no person), set score to 0 and explain in verdict
+- Score guide: 1-3 (needs significant changes), 4-6 (decent but improvable), 7-8 (great choice), 9-10 (perfect for the venue)`;
+
+      const startTime = Date.now();
+      const contents = [{
+        role: 'user',
+        parts: [
+          {inlineData: {mimeType: 'image/jpeg', data: photoBase64}},
+          {text: prompt},
+        ],
+      }];
+
+      const result = await model.generateContent({contents});
+      const responseText = safeResponseText(result);
+      trackAICall({functionName: 'analyzeOutfit', model: AI_MODEL_NAME, operation: 'outfit_analysis', usage: result.response.usageMetadata, latencyMs: Date.now() - startTime, userId: request.auth.uid});
+
+      const parsed = parseGeminiJsonResponse(responseText);
+      if (!parsed || typeof parsed.score !== 'number') {
+        return {success: false, error: 'parse_error'};
+      }
+
+      const analysis = {
+        score: Math.min(10, Math.max(0, parsed.score)),
+        verdict: String(parsed.verdict || '').substring(0, 80),
+        vibe: String(parsed.vibe || '').substring(0, 60),
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths.map((s) => String(s).substring(0, 60)).slice(0, 4) : [],
+        improvements: Array.isArray(parsed.improvements) ? parsed.improvements.map((s) => String(s).substring(0, 80)).slice(0, 4) : [],
+        colorAdvice: String(parsed.colorAdvice || '').substring(0, 80),
+        accessoryTip: String(parsed.accessoryTip || '').substring(0, 80),
+        groomingNote: String(parsed.groomingNote || '').substring(0, 80),
+        confidenceBoost: String(parsed.confidenceBoost || '').substring(0, 80),
+        alternativeStyle: String(parsed.alternativeStyle || '').substring(0, 100),
+        venueType: venue,
+        occasion: occ,
+      };
+
+      // Save for rate limiting + history
+      await db.collection('coachChats').doc(userId).collection('outfitAnalyses').add({
+        score: analysis.score,
+        venueType: venue,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      logger.info(`[analyzeOutfit] Score: ${analysis.score}/10 for ${venue} (user: ${userId})`);
+      return {success: true, ...analysis};
+    } catch (err) {
+      logger.error(`[analyzeOutfit] Error: ${err.message}`);
       return {success: false, error: 'analysis_failed'};
     }
   },

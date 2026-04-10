@@ -81,7 +81,7 @@ calculateAIChemistry
    - Score range: 45-92% (generous for new app)
 2. **Server AI** (~3s): RAG vector search + Gemini flash-lite analysis
    - Blend: 40% algorithmic + 60% AI
-   - RAG queries coachKnowledge (397 chunks) for compatibility advice
+   - RAG queries coachKnowledge (487 chunks) for compatibility advice
 3. **Cache**: Firestore `chemistryCache/{pairId}` (TTL 7 days)
    - pairId = sorted(userId1, userId2) to avoid duplicates
 
@@ -332,7 +332,7 @@ node scripts/coach-health-monitor.js --dry-run
 
 | Sistema | Colección | Chunks | Uso |
 |---|---|---|---|
-| Coach RAG | `coachKnowledge` | 397 chunks (70 categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
+| Coach RAG | `coachKnowledge` | 487 chunks (80+ categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
 | Moderation RAG | `moderationKnowledge` | 93 chunks (13 categorías, 10 idiomas) | `moderateMessage` + `autoModerateMessage` |
 
 Embedding: `gemini-embedding-001` (768 dims, COSINE). Configurables via RC: `coach_config.rag` y `moderation_config.rag`.
@@ -436,10 +436,10 @@ Cuando el usuario menciona otra ciudad (ej. "Buenos Aires") y Places search se e
 
 Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`overrideLat`/`overrideLng`) se almacenan en `placesCache` junto con los resultados. El path de `loadMore` lee estas coordenadas del caché para mantener la búsqueda en la ciudad mencionada sin necesidad de re-geocodificar.
 
-## Coach RAG — 307 chunks, 80+ categorías (actualizado)
+## Coach RAG — 487 chunks, 80+ categorías (actualizado)
 
 - **Colección**: `coachKnowledge`
-- **307 chunks**, 80+ categorías ampliadas:
+- **487 chunks**, 80+ categorías ampliadas:
   - **11 icebreaker especializados**: `icebreakers` (10 idiomas genéricos) + `icebreakers_travel`, `icebreakers_food`, `icebreakers_fitness`, `icebreakers_music`, `icebreakers_culture`, `icebreakers_nature`, `icebreakers_movies`, `icebreakers_nightlife`, `icebreakers_pets`, `icebreakers_sparse` (empty profiles), `icebreakers_agegap` (age gap matches) — todos `multi` language
   - **10 florist**: `florist_guide` (10 idiomas), `date_flowers` (10 idiomas)
   - **10 liquor**: `liquor_gift` (10 idiomas)
@@ -846,3 +846,169 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 #### Instagram @null. false positive
 - Search Grounding returned "null." which passed validation due to trailing dot
 - Fixed with `.replace(/\.+$/, '')` before validation in `isValidCoachInstagramHandle`
+
+## Session 2026-04-02 Updates
+
+### Bug Fixes
+- **collapseKey bug fix** in `onMessageCreated` (matches.js) — was causing notification issues
+- **needsContext variable scoping fix** — declared outside try block to prevent reference errors
+
+### dateCoachChat Improvements
+- **needsContext clarification flow** added — coach can ask follow-up questions before responding
+- `maxFreeClarifications` configurable via Remote Config (default 3)
+- `maxSuggestions` changed from 3 to **12**
+
+### RAG Knowledge Expansion
+- 160 new RAG chunks added (`approach-suggestions.json`)
+- Total coach RAG chunks: **487** (previously 327)
+
+## Session 2026-04-03 Updates
+
+### Icebreaker Robustness Overhaul
+- **6 Suggestion Modes** with explicit detection priority: Apology → Re-engagement → Compliments → Places (MODE 1) → Chat/App (MODE 2) → Follow-up (MODE 6)
+- **MODE 1 no longer requires person** — "Pubs en concepción" triggers icebreakers directly, no clarification
+- **clarificationChips multi-idioma** — changed from flat array to object with 10 language keys (en,es,pt,fr,de,ja,zh,ru,ar,id) with emojis. Resolved by client `lang`.
+- **Post-Gemini guard** — 11 NARROW regex patterns (10 langs) filter clarification-style questions when activitySuggestions exist. Tested: 25 valid icebreakers (0 false positives) + 29 clarifications (0 missed).
+- **needsContext override** — if Gemini returns needsContext=true but also activitySuggestions, force needsContext=false
+- **CRITICAL VALIDATION rule** in prompt — Modes 1-5 must have ready-to-use phrases, Mode 6 allows questions
+- **loadMoreSuggestions** — added langMap with cultural guidance + rules 7-9 (anti-questions, cultural norms, venue icebreakers)
+- **no_conversation_yet stagePrompt** — now requires suggestions to be copy-ready first messages (40-120 chars)
+- **Edge cases expanded** — slang local ("boteco" BR, "居酒屋" JA, "Kneipe" DE), age gap, same-sex, video calls, group settings, cultural taboos (JA/ZH indirect, AR gender-aware, DE no small-talk)
+- **iOS SuggestedRepliesSheet** — added `.frame(maxWidth: .infinity)` for uniform card width
+
+### Tier 1 — Coach as Lifestyle Advisor (prompt/RC only, no new CFs)
+- **MODE 7 Conflict Resolution** — new suggestion mode with de-escalation phrases, "I feel" statements, repair bids. Multi-lang triggers (10 langs). Cultural adaptation per language (JA indirect, AR honor-based, DE solution-oriented). Detection priority: Apology → Conflict → Re-engagement → etc.
+- **Relationship Health Check-In** — `stagePrompts.active_conversation` extended with 4-area structured check-in (Communication, Quality Time, Emotional Intimacy, Growth)
+- **Skill Builder** — every Coach reply ends with "💡 Skill: [name]" (localized). Exempt: clarifications, errors, greetings. Anti-manipulation guard (no "Playing Hard to Get" skills)
+- **Cultural Etiquette RAG** — 50 new chunks (5 regions x 10 langs): Latin America, Europe, Asia, Middle East, North America. Total RAG: **537 chunks**
+- **conflict_resolution** added to `allowedTopics` and `topicPatterns` regex
+
+### Tier 2 — New Cloud Functions
+- **`generateEventDatePlan`** (ai-services.js) — Uses Gemini + Google Search Grounding (NOT Ticketmaster/Eventbrite) to find real events near user. Returns 5-10 events with date, venue, url, dateVibes. Auto-generates Blueprint (pre-event + event + post-event) when matchId provided. URL sanitization: only https/http allowed.
+- **`analyzeOutfit`** (ai-services.js) — Gemini Vision analyzes selfie for venue appropriateness. Returns score 1-10, verdict, strengths, improvements, colorAdvice, accessoryTip, groomingNote, confidenceBoost. Rate limited via `appConfig/outfit.maxPerHour`. Base64 validation. APPEARANCE SAFETY RULES (never comment on body/weight/ethnicity).
+- **Post-Date Scorecard** — dateCoachChat now parses `dateScore` from Gemini response. 4 dimensions (conversation, chemistry, effort, fun) + overall + highlight + improvement + wouldMeetAgain. Saved to `coachChats/{userId}/dateScores/{id}`. Guards: needsContext > dateScore (mutual exclusivity), require matchId, NaN-safe clamping.
+
+### Centralized AI Config
+- **`appConfig/ai`** Firestore doc with `temperatures` (14 keys), `maxOutputTokens` (14 keys), `rag` settings, `retries` config
+- **`getAiConfig()`** helper with 5-min cache + single-flight Promise lock (race condition safe)
+- **`getTemp(config, key, fallback)`** and **`getTokens(config, key, fallback)`** helpers
+- All ai-services.js functions now use centralized config with hardcoded fallbacks
+
+### Robustness Fixes
+- **Post-Gemini clarification filter** — 11 NARROW regex patterns (tested 196 tests, 0 false positives)
+- **dateScore type override** — mutual exclusivity guard (needsContext always wins)
+- **dateScore bad date sensitivity** — prompt instructs to validate feelings, not blame user
+- **MODE 7 regex narrowed** — requires relational context ("pelea con", "fight with"), prevents false positives ("fighting games")
+- **Scorecard strings** — 7 strings x 10 languages x 2 platforms (Android strings.xml + iOS Localizable.strings)
+- **Colors** — ScoreRow uses `colorSubtleBg()` helper, iOS uses `AppColor.metallicGold` instead of `Color(hex:)`
+
+### Coach Credits Reset Notification
+- `resetCoachMessages` (scheduled.js) sends FCM `{type: "coach_messages_reset"}` to users who used credits
+- Notification now opens **Coach tab (tab 0)** instead of Home tab on both platforms
+- **Real-time Firestore listener** on `users/{userId}.coachMessagesRemaining` — when backend resets credits, both Android and iOS detect it immediately without needing user interaction
+- Auto-dismiss NoCreditsSheet when credits restored (remaining > 0)
+- Keyboard dismissed when NoCreditsSheet appears (Android `focusManager.clearFocus()`)
+
+### Security Fixes
+- `sendTestNotification`: auth check + self-only targeting (`userId !== request.auth.uid` blocked)
+- `sendTestNotificationToUser`: forced `targetId = request.auth.uid` (no arbitrary user targeting)
+- Android `wingperson_channel`: created in MyFirebaseMessagingService before use (was silently failing on Android 8+)
+
+### Stale FCM Token Cleanup
+- `cleanupStaleTokens()` in scheduled.js — removes invalid tokens after sendEachForMulticast
+- Detects: `messaging/registration-token-not-registered`, `messaging/invalid-registration-token`, `messaging/invalid-argument`
+- Called non-blocking (`.catch(() => {})`) in all 3 scheduled functions: resetDailyLikes, resetSuperLikes, resetCoachMessages
+
+### safeResponseText Protection
+- Helper function in 3 files: coach.js (8 calls), ai-services.js (10 calls), moderation.js (6 calls)
+- Prevents crash on null/undefined Gemini response — returns empty string with logging
+- 0 unprotected `.response.text()` calls remain across entire backend
+
+### Agent Team (24 agents, 5 tiers)
+- **Tier 1 Owners (7)**: coach, chatview-places, events-discovery, notifications, security-auth, rag-optimizer, mobile-platforms
+- **Tier 1 Platform (2)**: platform-android (Kotlin expert), platform-ios (Swift expert)
+- **Tier 2 Improvers (3)**: improve-coach, improve-moderation, improve-agents
+- **Tier 3 Auditors (4)**: audit-alignment, backend-audit, ui-performance, android-realtime
+- **Tier 4 QA (3)**: ios-android-homologation, internal-tests (295+ tests), apple-43b
+- **Tier 5 Deploy (3)**: deploy, deploy-android, deploy-ios
+- Boundaries: each agent has "Coordinación" table — no duplicated functionality
+- `/team-audit` orchestrates all tiers in parallel
+
+### Internationalization & Cultural Edge Cases (Coach IA)
+- **10 languages**: en, es, pt, fr, de, ja, zh, ru, ar, id
+- **Cultural adaptation per mode**: MODE 7 has 10 cultural de-escalation variants (JA indirect/face-saving, AR honor-based, DE solution-oriented, BR warm/vulnerable, etc.)
+- **clarificationChips**: multi-lang object with emojis, resolved by client `lang` with fallback chain
+- **Skill Builder**: localized prefix ("💡 Habilidad:", "💡 スキル:", "💡 技能:", "💡 Навык:", "💡 مهارة:")
+- **Post-Date Scorecard**: 7 dimension strings x 10 languages on both platforms (coach_score_conversation, chemistry, effort, fun, meet_again, pending, date_scorecard)
+- **Cultural Etiquette RAG**: 50 chunks (5 regions x 10 langs) — Latin America, Europe, Asia, Middle East, North America
+- **Gaps documented**: Africa (0 chunks), Oceania (0), Southeast Asia (implicit only), LGBTQ+ (0), video dating (0)
+- **Anti-stereotyping**: prompt instructs "avoid absolute cultural generalizations"
+- **Gender-neutral**: no heteronormative assumptions, same-sex dating supported
+- **RTL**: Arabic fully supported (SwiftUI auto-mirrors, Android layoutDirection)
+
+### Performance & Reliability
+- **Centralized AI config**: `appConfig/ai` Firestore doc — 14 temperatures, 14 maxOutputTokens, RAG config
+- **getAiConfig()**: single-flight Promise lock (race condition safe), 5-min cache TTL
+- **Rate limiting**: analyzeOutfit (appConfig/outfit.maxPerHour, default 10), dateCoachChat (30/hr), rateCoachResponse (5s cooldown)
+- **Appearance safety**: 5 NEVER rules (no body/weight/skin/gender/comparison comments)
+- **Bad date sensitivity**: dateScore prompt validates feelings first, doesn't blame user
+- **Total RAG**: 537 local chunks → 547 Firestore docs (10 legacy docs from previous indexing cycles)
+
+### Outfit Recommendation (prompt-integrated, no separate CF)
+- Outfit suggestion is part of the Coach reply text — NOT a separate button or CF
+- Triggered automatically when Coach suggests places (activitySuggestions)
+- Format: "👔 Outfit: [specific items for venue type]" at END of reply
+- Adapted per: venue type (bar/restaurant/nightclub/café/park/formal/museum), culture (DE/JA formal, BR/Latam casual, AR/ID modest), time of day, gender-neutral
+- Rules: specific items + what to AVOID, NOT generic "dress well"
+- NOT included when user asks about advice/profile/texting (only places)
+
+### Session 2026-04-05 Changes
+- Removed outfit button + BottomSheet from Android/iOS (was wrong UX)
+- Outfit is now server-side prompt instruction — appears in Coach reply when places are suggested
+- Venue strings (8 keys x 10 langs) remain in strings.xml/Localizable.strings for future use
+- 24 agents in 5 tiers, `/platform-android` + `/platform-ios` created with official docs references
+
+### Session 2026-04-08/09: getDiscoveryFeed + AI Improvements
+
+**New CF: `getDiscoveryFeed`** (`discovery-feed.js` — NEW file, does NOT edit existing functions):
+- Single CF returns: compatible profiles + photo URLs + personal stories in ONE response
+- Server-side parallel execution (Promise.all + Promise.allSettled)
+- **Reviewer bypass**: reviewer users (`reviewer_uid` in RC) get direct `isTest == true` query — no geohash dependency
+- **Geohash query**: queries `geohash` field only (NO `accountStatus` in query — filters in-memory to avoid composite index requirement)
+- **In-memory filters**: `accountStatus !== 'active'`, `paused === true`, orientation, age, distance
+- Exclusion sets (swipes within cooldown, matches, blocked) — reviewer bypasses for test profiles
+- Photo signed URLs (full + thumb, 7-day expiry)
+- Stories batch query (chunkSize 10, reviewer filter, ISO timestamps via `toISOString()`)
+- Performance: ~1-2s vs 4-6s (V1 sequential)
+- Input validation: limit capped 1-100, userId type check
+- **Error logging**: ALL 7 catch blocks log to `logger.warn`/`logger.error` with context (RC, swipes, matches, blocked, geohash, photos, stories)
+- **Analytics log**: final log includes profile count, photos count, stories count, reviewer status, excluded count
+- Remote Config: reads `profile_reappear_cooldown_days` + `reviewer_uid`
+- **Critical**: Firestore `geohash` + `accountStatus` composite index does NOT exist — must filter in-memory (same pattern as `discovery.js` V1)
+
+**AI Improvements (dateCoachChat):**
+- Dynamic model selection: simple queries → AI_MODEL_LITE (50% cheaper), complex → AI_MODEL_NAME
+- History summarization: >4 msgs → summary of older + last 3 verbatim (saves 30-40% tokens)
+- RAG auto-growth: searches Gottman/Fisher/Perel research, 5-10 chunks/week with source field
+- Claude evaluation: +researchBacked dimension, +knowledgeGap, +failureCategory
+- 9 new allowedTopics: attachment_theory, couples_maintenance, rejection_resilience, etc.
+
+**Outfit as prompt** (not button): Coach auto-includes "👔 Outfit:" when suggesting places
+
+**Non-place mode guard**: MODE 3/4/5/7 strip activitySuggestions + filter "📍 Lugares" from suggestions
+
+### Session 2026-04-07/08 — Backend Safety + Coach Non-Place Fix
+
+**safeResponseText (18→24 calls protected):**
+- moderation.js: 6 calls added (was unprotected)
+- Total: coach.js (8) + ai-services.js (10) + moderation.js (6) = 24 calls
+
+**Coach Non-Place Mode Fix (dateCoachChat prompt):**
+- Modes 2/3/4/5/7 → prompt explicitly says "activitySuggestions MUST be empty"
+- Backend guard: if topic is conflict/communication/emotional/rejection → strip activitySuggestions
+- Location filter: items starting with "📍" or containing "lugares en" removed from suggestions
+- Outfit recommendation: only included when activitySuggestions are present
+
+**Stale FCM Token Cleanup:**
+- `cleanupStaleTokens()` in scheduled.js removes tokens rejected by FCM
+- Called in resetDailyLikes, resetSuperLikes, resetCoachMessages (3 scheduled functions)

@@ -438,8 +438,210 @@ function sanitizeInstagramHandle(raw) {
 }
 
 /**
+ * Non-profile Instagram paths to ignore when extracting handles.
+ */
+const IG_BLACKLIST = new Set([
+  'p', 'reel', 'reels', 'explore', 'stories', 'tv', 'accounts',
+  'about', 'developer', 'legal', 'privacy', 'share', 'direct',
+  'tags', 'locations', 'nametag', 'web', 'emails', 'session',
+  'challenge', 'static', 'lite', 'api', 'graphql', 'oauth',
+]);
+
+/**
+ * Check if a candidate handle is a valid Instagram profile (not a reserved path).
+ */
+function isValidIgCandidate(handle) {
+  if (!handle) return false;
+  const h = handle.toLowerCase();
+  if (IG_BLACKLIST.has(h)) return false;
+  if (h.length < 2 || h.length > 30) return false;
+  // Must not be all dots/underscores
+  if (/^[._]+$/.test(h)) return false;
+  return true;
+}
+
+/**
+ * Extract all Instagram handle candidates from HTML, scored by priority.
+ * Returns the best candidate or null.
+ * @param {string} html - raw HTML content
+ * @param {string} sourceLabel - for logging
+ * @returns {string|null}
+ */
+function extractIgFromHtml(html, sourceLabel) {
+  // Collect candidates with priority scores (lower = better)
+  const candidates = new Map(); // handle → best priority
+
+  function addCandidate(handle, priority, method) {
+    const clean = sanitizeInstagramHandle(handle);
+    if (!clean || !isValidIgCandidate(clean)) return;
+    const existing = candidates.get(clean);
+    if (!existing || priority < existing.priority) {
+      candidates.set(clean, {priority, method});
+    }
+  }
+
+  // P1: <a href="...instagram.com/handle..."> (most reliable — explicit link)
+  const hrefPattern = /href\s*=\s*["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:\?[^"']*)?["']/gi;
+  for (const m of html.matchAll(hrefPattern)) {
+    addCandidate(m[1], 1, 'href');
+  }
+
+  // P2: aria-label or title containing "instagram" on links (icon-only social buttons)
+  const ariaPattern = /<a[^>]*(?:aria-label|title)\s*=\s*["'][^"']*instagram[^"']*["'][^>]*href\s*=\s*["']([^"']+)["']/gi;
+  const ariaPattern2 = /<a[^>]*href\s*=\s*["']([^"']+)["'][^>]*(?:aria-label|title)\s*=\s*["'][^"']*instagram[^"']*["']/gi;
+  for (const m of [...html.matchAll(ariaPattern), ...html.matchAll(ariaPattern2)]) {
+    const igMatch = m[1].match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
+    if (igMatch) addCandidate(igMatch[1], 1, 'aria-link');
+  }
+
+  // P3: og:see_also, og:url, or meta tags with Instagram URLs
+  const metaPattern = /(?:content|value)\s*=\s*["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:\?[^"']*)?["']/gi;
+  for (const m of html.matchAll(metaPattern)) {
+    addCandidate(m[1], 2, 'meta');
+  }
+
+  // P4: JSON-LD structured data — sameAs as array or string, including @graph
+  const scriptPattern = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  for (const sm of html.matchAll(scriptPattern)) {
+    try {
+      const ld = JSON.parse(sm[1]);
+      const objects = Array.isArray(ld) ? ld : ld['@graph'] ? (Array.isArray(ld['@graph']) ? ld['@graph'] : [ld['@graph']]) : [ld];
+      for (const obj of objects) {
+        const sameAs = obj.sameAs;
+        const urls = Array.isArray(sameAs) ? sameAs : (typeof sameAs === 'string' ? [sameAs] : []);
+        for (const url of urls) {
+          const igMatch = typeof url === 'string' && url.match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
+          if (igMatch) addCandidate(igMatch[1], 3, 'json-ld');
+        }
+      }
+    } catch (_) { /* malformed JSON-LD */ }
+  }
+
+  // P5: Instagram URLs anywhere in HTML (JS variables, data-href, inline scripts, etc.)
+  const urlPattern = /instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?=[\s"'<?,;)}\]])/gi;
+  for (const m of html.matchAll(urlPattern)) {
+    addCandidate(m[1], 5, 'url-anywhere');
+  }
+
+  // P6: Text patterns like "Follow us @handle on Instagram" or "IG: @handle"
+  const textPatterns = [
+    /(?:instagram|ig|insta)\s*[:\-–—]?\s*@([a-zA-Z0-9._]{2,30})/gi,
+    /@([a-zA-Z0-9._]{2,30})\s+(?:on|en|sur|auf|в)\s+instagram/gi,
+    /(?:follow|síguenos|síganosme?|nous suivre|seguir|segui[rn]?|folgen)\s+.*?@([a-zA-Z0-9._]{2,30}).*?instagram/gi,
+    /instagram\.com\s*[\/\\]?\s*@?([a-zA-Z0-9._]{2,30})/gi,
+  ];
+  for (const pat of textPatterns) {
+    for (const m of html.matchAll(pat)) {
+      addCandidate(m[1], 6, 'text-pattern');
+    }
+  }
+
+  // P7: data-instagram, data-social-instagram, or similar data attributes
+  const dataAttrPattern = /data-[a-z-]*instagram[a-z-]*\s*=\s*["'](?:https?:\/\/(?:www\.)?instagram\.com\/)?@?([a-zA-Z0-9._]{2,30})["']/gi;
+  for (const m of html.matchAll(dataAttrPattern)) {
+    addCandidate(m[1], 4, 'data-attr');
+  }
+
+  if (candidates.size === 0) return null;
+
+  // Pick the candidate with best (lowest) priority; on tie, pick most frequent
+  const freq = new Map();
+  for (const [handle] of candidates) freq.set(handle, 0);
+
+  // Count all raw occurrences to break ties
+  const allMentions = html.match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/gi) || [];
+  for (const mention of allMentions) {
+    const h = sanitizeInstagramHandle(mention.replace(/.*instagram\.com\//i, ''));
+    if (h && candidates.has(h)) freq.set(h, (freq.get(h) || 0) + 1);
+  }
+
+  let best = null;
+  let bestScore = Infinity;
+  for (const [handle, {priority, method}] of candidates) {
+    // Score = priority * 100 - frequency (so higher frequency wins ties)
+    const score = priority * 100 - (freq.get(handle) || 0);
+    if (score < bestScore) {
+      bestScore = score;
+      best = {handle, method};
+    }
+  }
+
+  if (best) {
+    logger.info(`[Instagram] Found @${best.handle} via ${best.method} from: ${sourceLabel}`);
+    return best.handle;
+  }
+  return null;
+}
+
+/**
+ * User-Agent pool — rotated to reduce 403 blocks from bot detection.
+ */
+const UA_POOL = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+];
+
+/**
+ * Fetch HTML from a URL with timeout, size limit, and User-Agent rotation.
+ * On 403, retries once with a different User-Agent.
+ * @param {string} url
+ * @param {number} [timeoutMs=5000]
+ * @param {number} [maxBytes=153600]
+ * @returns {Promise<string|null>} HTML string or null on error
+ */
+async function fetchHtmlSafe(url, timeoutMs = 5000, maxBytes = 153600) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const ua = UA_POOL[(Math.floor(Math.random() * UA_POOL.length) + attempt) % UA_POOL.length];
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': ua,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
+          'Accept-Encoding': 'identity',
+        },
+        redirect: 'follow',
+      });
+      clearTimeout(timer);
+      // Retry with different UA on 403
+      if (res.status === 403 && attempt === 0) continue;
+      if (!res.ok) return null;
+
+      const reader = res.body?.getReader?.();
+      let html = '';
+      if (reader) {
+        const decoder = new TextDecoder();
+        let bytes = 0;
+        while (bytes < maxBytes) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          html += decoder.decode(value, {stream: true});
+          bytes += value.length;
+        }
+        reader.cancel().catch(() => {});
+      } else {
+        const full = await res.text();
+        html = full.substring(0, maxBytes);
+      }
+      return html;
+    } catch (_) {
+      if (attempt === 0) continue; // Retry once on network errors
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
  * Extract Instagram handle from a venue's website HTML.
- * Fetches the website and searches for Instagram links.
+ * Fetches the website (and optionally /contact, /about subpages) and searches
+ * for Instagram links using 7 extraction strategies.
  * @param {string} websiteUrl - the venue's website URL
  * @returns {Promise<string|null>} Instagram handle or null
  */
@@ -450,91 +652,32 @@ async function extractInstagramFromWebsite(websiteUrl) {
     const directMatch = websiteUrl.match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
     return directMatch ? sanitizeInstagramHandle(directMatch[1]) : null;
   }
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(websiteUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'en-US,es;q=0.9',
-      },
-      redirect: 'follow',
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
 
-    // Only read first 100KB to avoid large pages
-    const reader = res.body?.getReader?.();
-    let html = '';
-    if (reader) {
-      const decoder = new TextDecoder();
-      let bytes = 0;
-      while (bytes < 102400) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        html += decoder.decode(value, {stream: true});
-        bytes += value.length;
-      }
-      reader.cancel().catch(() => {});
-    } else {
-      const full = await res.text();
-      html = full.substring(0, 102400);
-    }
+  // Fetch homepage
+  const html = await fetchHtmlSafe(websiteUrl);
 
-    // Priority 1: href links to Instagram (most reliable — actual links in HTML)
-    const hrefPattern = /href=["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:\?[^"']*)?["']/gi;
-    const hrefMatches = [...html.matchAll(hrefPattern)];
-    for (const match of hrefMatches) {
-      const handle = sanitizeInstagramHandle(match[1]);
-      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
-        logger.info(`[Instagram] Found @${handle} via href from: ${websiteUrl}`);
-        return handle;
-      }
-    }
+  // If homepage fetched OK, try extracting
+  if (html) {
+    const handle = extractIgFromHtml(html, websiteUrl);
+    if (handle) return handle;
 
-    // Priority 2: Instagram URLs anywhere in HTML (JS variables, data attributes, meta tags)
-    const urlPattern = /instagram\.com\/([a-zA-Z0-9._]{2,30})\/?(?:[\s"'<?,;)])/gi;
-    const urlMatches = [...html.matchAll(urlPattern)];
-    for (const match of urlMatches) {
-      const handle = sanitizeInstagramHandle(match[1]);
-      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
-        logger.info(`[Instagram] Found @${handle} via URL from: ${websiteUrl}`);
-        return handle;
-      }
-    }
-
-    // Priority 3: og:see_also or meta tags with Instagram
-    const metaPattern = /content=["']https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,30})\/?["']/gi;
-    const metaMatches = [...html.matchAll(metaPattern)];
-    for (const match of metaMatches) {
-      const handle = sanitizeInstagramHandle(match[1]);
-      if (handle && handle !== 'p' && handle !== 'reel' && handle !== 'explore' && handle !== 'stories') {
-        logger.info(`[Instagram] Found @${handle} via meta from: ${websiteUrl}`);
-        return handle;
-      }
-    }
-
-    // Priority 4: JSON-LD structured data (schema.org sameAs)
-    const jsonLdPattern = /"sameAs"\s*:\s*\[([^\]]*)\]/gi;
-    const jsonLdMatches = [...html.matchAll(jsonLdPattern)];
-    for (const match of jsonLdMatches) {
-      const igInLd = match[1].match(/instagram\.com\/([a-zA-Z0-9._]{2,30})/i);
-      if (igInLd) {
-        const handle = sanitizeInstagramHandle(igInLd[1]);
-        if (handle) {
-          logger.info(`[Instagram] Found @${handle} via JSON-LD from: ${websiteUrl}`);
-          return handle;
+    // Fallback: try /contact and /about subpages (many venues put social links there)
+    try {
+      const base = new URL(websiteUrl);
+      const subpages = ['/contact', '/about', '/contacto', '/sobre', '/kontakt'];
+      for (const sub of subpages) {
+        if (base.pathname === sub || base.pathname === sub + '/') continue;
+        const subUrl = `${base.origin}${sub}`;
+        const subHtml = await fetchHtmlSafe(subUrl, 3000, 102400);
+        if (subHtml) {
+          const subHandle = extractIgFromHtml(subHtml, subUrl);
+          if (subHandle) return subHandle;
         }
       }
-    }
-
-    return null;
-  } catch (err) {
-    // Timeout or fetch error — silently return null
-    return null;
+    } catch (_) { /* invalid URL */ }
   }
+
+  return null;
 }
 
 /**

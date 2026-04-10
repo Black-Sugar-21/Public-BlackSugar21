@@ -1606,5 +1606,305 @@
     "category": "date_blueprint_interests",
     "language": "multi",
     "text": "Date Plans by Shared Interest: FOODIES: Street food tour → hidden gem restaurant → dessert bar. ADVENTURERS: Hiking trail → waterfall picnic → craft brewery. ART LOVERS: Gallery opening → artist café → live music venue. BOOKWORMS: Independent bookstore → literary café → poetry reading. FITNESS: Morning yoga → açaí bowl → sunset beach walk. TECH/GAMING: VR arcade → ramen shop → retro game bar. MUSIC: Record shop browse → live band venue → late-night diner. NATURE: Botanical garden → farm-to-table lunch → sunset viewpoint. PHOTOGRAPHY: Photo walk through historic district → café review → rooftop sunset. WINE/SPIRITS: Vineyard tour → cheese pairing → jazz bar. The key: build the date around what BOTH people enjoy, not just one person's interests."
+  },
+  {
+    "id": "date_etiquette_latam-en",
+    "category": "date_etiquette_latam",
+    "language": "en",
+    "text": "Latin American Dating Etiquette: Greet with a kiss on the cheek (one in most countries, two in Brazil/Argentina). Physical touch and proximity are normal and expected. The person who invites usually pays, but offering to split is appreciated. Arrive 10-15 minutes late (punctuality is flexible). Compliments on appearance are welcome and expected. Bring a small gift if invited to their home. Topics to avoid: politics, religion on first dates. Humor and warmth are essential — being too formal feels distant. Use informal \"tú\" not \"usted\" with dates. PDA is socially acceptable. Family is important — asking about family shows genuine interest."
+  },
+  {
+    "id": "date_etiquette_latam-es",
+    "category": "date_etiquette_latam",
+    "language": "es",
+    "text": "Etiqueta de Citas en Latinoamérica: Saluda con beso en la mejilla (uno en la mayoría de países, dos en Brasil/Argentina). El contacto físico y la cercanía son normales. Quien invita generalmente paga, pero ofrecer dividir se aprecia. Llegar 10-15 minutos tarde es aceptable (la puntualidad es flexible). Los piropos sobre la apariencia son bienvenidos. Lleva un detalle si te invitan a su casa. Evita: política y religión en primera cita. El humor y la calidez son esenciales — ser muy formal se siente distante. Usa \"tú\" no \"usted\" con citas. Las muestras de afecto en público son aceptables. La familia es importante — preguntar por ella muestra interés genuino."
+  },
+  {
+    "id": "date_etiquette_latam-pt",
+    "category": "date_etiquette_latam",
+    "language": "pt",
+    "text": "Etiqueta de Encontros na América Latina: Cumprimente com beijo na bochecha (dois no Brasil). Contato físico e proximidade são normais. Quem convida geralmente paga, mas oferecer para dividir é apreciado. Chegar 10-15 minutos atrasado é aceitável. Elogios sobre aparência são bem-vindos. Leve um presente se convidado à casa. Evite: política e religião no primeiro encontro. Humor e calor humano são essenciais. Use \"você\" naturalmente. Demonstrações de afeto em público são aceitas. Família é importante — perguntar sobre ela mostra interesse genuíno."
+  },
+  {
+    "id": "date_etiquette_latam-fr",
+    "category": "date_etiquette_latam",
+    "language": "fr",
+    "text": "Étiquette des rendez-vous en Amérique latine : Saluez avec un bisou sur la joue. Le contact physique est normal. Celui qui invite paie généralement. Arriver 10-15 minutes en retard est acceptable. Les compliments sur l apparence sont bienvenus. Apportez un petit cadeau si invité chez eux. Évitez politique et religion au premier rendez-vous. L humour et la chaleur sont essentiels. Les démonstrations d affection en public sont acceptées. La famille est importante."
+  },
+  {
+    "id": "date_etiquette_latam-de",
+    "category": "date_etiquette_latam",
+    "language": "de",
+    "text": "Dating-Etikette in Lateinamerika: Begrüße mit Wangenkuss. Körperkontakt und Nähe sind normal. Wer einlädt, zahlt meistens. 10-15 Minuten Verspätung ist akzeptabel. Komplimente über das Aussehen sind willkommen. Bring ein kleines Geschenk mit, wenn du eingeladen wirst. Vermeide Politik und Religion beim ersten Date. Humor und Wärme sind essentiell. Zeichen der Zuneigung in der Öffentlichkeit sind akzeptabel. Familie ist wichtig."
+  },
+  {
+    "id": "date_etiquette_latam-ja",
+    "category": "date_etiquette_latam",
+    "language": "ja",
+    "text": "ラテンアメリカのデートエチケット：頬にキスで挨拶。身体的接触は普通。招待した人が支払うのが一般的。10-15分の遅刻は許容範囲。外見への褒め言葉は歓迎される。家に招かれたら小さなプレゼントを持参。初デートでは政治・宗教の話題を避ける。ユーモアと温かさが重要。公の場での愛情表現は許容される。家族は重要なトピック。"
+  },
+  {
+    "id": "date_etiquette_latam-zh",
+    "category": "date_etiquette_latam",
+    "language": "zh",
+    "text": "拉丁美洲约会礼仪：以脸颊亲吻问候。身体接触是正常的。邀请者通常付账。迟到10-15分钟是可以接受的。外貌赞美受欢迎。被邀请到家里时带小礼物。初次约会避免政治和宗教话题。幽默和热情很重要。公开表示亲密是可以接受的。家庭是重要话题。"
+  },
+  {
+    "id": "date_etiquette_latam-ru",
+    "category": "date_etiquette_latam",
+    "language": "ru",
+    "text": "Этикет свиданий в Латинской Америке: Приветствуйте поцелуем в щёку. Физический контакт — норма. Приглашающий обычно платит. Опоздание на 10-15 минут допустимо. Комплименты внешности приветствуются. Принесите небольшой подарок, если приглашены домой. Избегайте политики и религии на первом свидании. Юмор и теплота важны. Публичные проявления чувств приемлемы. Семья — важная тема."
+  },
+  {
+    "id": "date_etiquette_latam-ar",
+    "category": "date_etiquette_latam",
+    "language": "ar",
+    "text": "آداب المواعدة في أمريكا اللاتينية: حيّ بقبلة على الخد. الاتصال الجسدي طبيعي. من يدعو عادة يدفع. التأخر 10-15 دقيقة مقبول. المجاملات على المظهر مرحب بها. أحضر هدية صغيرة إذا دُعيت للمنزل. تجنب السياسة والدين في اللقاء الأول. الفكاهة والدفء مهمان. إظهار المشاعر في الأماكن العامة مقبول. العائلة موضوع مهم."
+  },
+  {
+    "id": "date_etiquette_latam-id",
+    "category": "date_etiquette_latam",
+    "language": "id",
+    "text": "Etiket Kencan di Amerika Latin: Sapa dengan ciuman pipi. Kontak fisik dan kedekatan itu normal. Yang mengundang biasanya membayar. Terlambat 10-15 menit dapat diterima. Pujian tentang penampilan disambut baik. Bawa hadiah kecil jika diundang ke rumah. Hindari politik dan agama di kencan pertama. Humor dan kehangatan penting. Menunjukkan kasih sayang di depan umum dapat diterima. Keluarga adalah topik penting."
+  },
+  {
+    "id": "date_etiquette_europe-en",
+    "category": "date_etiquette_europe",
+    "language": "en",
+    "text": "European Dating Etiquette: Varies by country but generally: be punctual (especially Northern Europe — Germany, Scandinavia). Splitting the bill is common and expected in many countries. Physical contact is more reserved initially (especially UK, Scandinavia, Germany). Dress well — Europeans notice fashion details. Wine knowledge is appreciated in France, Italy, Spain. Eye contact is important — looking away seems dishonest. Avoid being overly enthusiastic too fast (seems superficial). Small talk is less common in Germany/Scandinavia — they prefer meaningful topics. In Southern Europe (Italy, Spain, Greece): more warmth, touch, and expressiveness is normal. Flowers are appreciated but avoid chrysanthemums (funeral flowers in many countries). Being cultured (knowing art, music, food) impresses. Privacy is valued — don't share relationship details on social media too early."
+  },
+  {
+    "id": "date_etiquette_europe-es",
+    "category": "date_etiquette_europe",
+    "language": "es",
+    "text": "Etiqueta de Citas en Europa: Varía por país pero en general: sé puntual (especialmente Norte de Europa). Dividir la cuenta es común. El contacto físico es más reservado al inicio (especialmente UK, Escandinavia, Alemania). Vístete bien — los europeos notan detalles de moda. Conocer de vinos se aprecia en Francia, Italia, España. El contacto visual es importante. Evita ser excesivamente entusiasta demasiado rápido (parece superficial). La charla superficial es menos común en Alemania/Escandinavia — prefieren temas significativos. En Europa del Sur (Italia, España, Grecia): más calidez y expresividad. Las flores se aprecian pero evita crisantemos (flores funerarias). Ser culto (arte, música, gastronomía) impresiona. La privacidad se valora."
+  },
+  {
+    "id": "date_etiquette_europe-pt",
+    "category": "date_etiquette_europe",
+    "language": "pt",
+    "text": "Etiqueta de Encontros na Europa: Varia por país mas geralmente: seja pontual. Dividir a conta é comum. Contato físico é mais reservado inicialmente. Vista-se bem. Conhecimento de vinhos é apreciado na França, Itália, Espanha. Contato visual é importante. Evite ser excessivamente entusiasta rápido demais. No Sul da Europa: mais calor e expressividade. Flores são apreciadas mas evite crisântemos. Ser culto impressiona. Privacidade é valorizada."
+  },
+  {
+    "id": "date_etiquette_europe-fr",
+    "category": "date_etiquette_europe",
+    "language": "fr",
+    "text": "Étiquette des rendez-vous en Europe : Soyez ponctuel. Partager l addition est courant. Le contact physique est plus réservé au début. Habillez-vous bien. La connaissance du vin est appréciée. Le contact visuel est important. Évitez d être trop enthousiaste trop vite. En Europe du Sud : plus de chaleur et d expressivité. Les fleurs sont appréciées mais évitez les chrysanthèmes. Être cultivé impressionne. La vie privée est valorisée."
+  },
+  {
+    "id": "date_etiquette_europe-de",
+    "category": "date_etiquette_europe",
+    "language": "de",
+    "text": "Dating-Etikette in Europa: Sei pünktlich (besonders in Nordeuropa). Die Rechnung teilen ist üblich. Körperkontakt ist anfangs reservierter. Kleide dich gut — Europäer bemerken Mode-Details. Weinkenntnis wird geschätzt. Augenkontakt ist wichtig. Vermeide übertriebene Begeisterung (wirkt oberflächlich). Smalltalk ist in Deutschland/Skandinavien weniger üblich — bedeutungsvolle Themen bevorzugt. In Südeuropa: mehr Wärme und Ausdrucksstärke. Blumen werden geschätzt, aber vermeide Chrysanthemen. Gebildet sein beeindruckt. Privatsphäre wird geschätzt."
+  },
+  {
+    "id": "date_etiquette_europe-ja",
+    "category": "date_etiquette_europe",
+    "language": "ja",
+    "text": "ヨーロッパのデートエチケット：時間厳守（特に北ヨーロッパ）。割り勘が一般的。身体的接触は最初控えめ。身だしなみに気を配る。ワインの知識が評価される（フランス、イタリア、スペイン）。アイコンタクトが重要。過度な熱意は避ける。ドイツ/北欧では世間話より深い話を好む。南ヨーロッパでは温かさと表現力が普通。花は喜ばれるが菊は避ける（葬儀の花）。教養があると印象的。プライバシーを重視。"
+  },
+  {
+    "id": "date_etiquette_europe-zh",
+    "category": "date_etiquette_europe",
+    "language": "zh",
+    "text": "欧洲约会礼仪：准时（特别是北欧）。AA制很常见。身体接触初期较为保守。穿着讲究。葡萄酒知识受欢迎（法国、意大利、西班牙）。眼神交流很重要。避免过度热情。德国/北欧不喜欢闲聊，更喜欢有意义的话题。南欧更热情开放。花受欢迎但避免菊花（丧花）。有文化素养会加分。重视隐私。"
+  },
+  {
+    "id": "date_etiquette_europe-ru",
+    "category": "date_etiquette_europe",
+    "language": "ru",
+    "text": "Этикет свиданий в Европе: Будьте пунктуальны (особенно Северная Европа). Разделить счёт — норма. Физический контакт сначала сдержанный. Одевайтесь хорошо. Знание вин ценится. Зрительный контакт важен. Избегайте чрезмерного энтузиазма. В Германии/Скандинавии предпочитают содержательные темы. В Южной Европе: больше тепла. Цветы приятны, но избегайте хризантем. Образованность впечатляет. Конфиденциальность ценится."
+  },
+  {
+    "id": "date_etiquette_europe-ar",
+    "category": "date_etiquette_europe",
+    "language": "ar",
+    "text": "آداب المواعدة في أوروبا: كن دقيقاً في المواعيد. تقسيم الحساب شائع. الاتصال الجسدي أكثر تحفظاً في البداية. اهتم بمظهرك. معرفة النبيذ مقدّرة. التواصل البصري مهم. تجنب الحماس المفرط. في ألمانيا/الدول الإسكندنافية يفضلون مواضيع عميقة. في جنوب أوروبا: أكثر دفئاً. الزهور محل تقدير لكن تجنب الأقحوان. الثقافة تثير الإعجاب. الخصوصية مقدّرة."
+  },
+  {
+    "id": "date_etiquette_europe-id",
+    "category": "date_etiquette_europe",
+    "language": "id",
+    "text": "Etiket Kencan di Eropa: Tepat waktu (terutama Eropa Utara). Membagi tagihan umum dilakukan. Kontak fisik awalnya lebih terjaga. Berpakaian rapi. Pengetahuan wine dihargai. Kontak mata penting. Hindari antusiasme berlebihan. Di Jerman/Skandinavia lebih suka topik bermakna. Di Eropa Selatan: lebih hangat dan ekspresif. Bunga dihargai tapi hindari krisan. Berpengetahuan luas mengesankan. Privasi dihargai."
+  },
+  {
+    "id": "date_etiquette_asia-en",
+    "category": "date_etiquette_asia",
+    "language": "en",
+    "text": "Asian Dating Etiquette: Varies greatly but key principles: Indirect communication is valued — reading between the lines matters more than directness. In Japan: punctuality is critical, avoid physical contact on early dates, gift-giving etiquette matters (present with both hands, avoid sets of 4), silence is comfortable not awkward. In China: family approval is important early, the man traditionally pays, red is lucky for gifts. In Korea: couple culture is strong (matching outfits, 100-day anniversaries), age hierarchy matters (use formal speech with elders), \"skinship\" (casual touch) develops gradually. In India: family involvement is normal, public displays of affection are conservative, ask about dietary restrictions (vegetarian is common). Generally: respect hierarchy and age, modesty is valued, don't rush physical intimacy, showing interest in their culture/food/language impresses greatly. Avoid controversial political topics."
+  },
+  {
+    "id": "date_etiquette_asia-es",
+    "category": "date_etiquette_asia",
+    "language": "es",
+    "text": "Etiqueta de Citas en Asia: Varía mucho pero principios clave: La comunicación indirecta es valorada — leer entre líneas importa más que la franqueza. En Japón: puntualidad es crítica, evita contacto físico en primeras citas, la etiqueta de regalos importa (presenta con ambas manos, evita sets de 4), el silencio es cómodo. En China: la aprobación familiar es importante temprano, el hombre tradicionalmente paga, rojo es buena suerte. En Corea: cultura de pareja fuerte (outfits matching, aniversarios de 100 días), jerarquía de edad importa. En India: la participación familiar es normal, muestras de afecto conservadoras, pregunta por restricciones alimentarias. En general: respeta jerarquía y edad, modestia se valora, no apresures la intimidad física, mostrar interés en su cultura/comida/idioma impresiona mucho."
+  },
+  {
+    "id": "date_etiquette_asia-pt",
+    "category": "date_etiquette_asia",
+    "language": "pt",
+    "text": "Etiqueta de Encontros na Ásia: Varia muito mas princípios-chave: Comunicação indireta é valorizada. No Japão: pontualidade é crítica, evite contato físico, etiqueta de presentes importa (apresente com ambas as mãos, evite conjuntos de 4). Na China: aprovação familiar é importante, o homem tradicionalmente paga, vermelho dá sorte. Na Coreia: cultura de casal forte, hierarquia de idade importa. Na Índia: envolvimento familiar é normal, afeto público é conservador. Em geral: respeite hierarquia e idade, modéstia é valorizada, não apresse intimidade física, mostrar interesse na cultura impressiona muito."
+  },
+  {
+    "id": "date_etiquette_asia-fr",
+    "category": "date_etiquette_asia",
+    "language": "fr",
+    "text": "Étiquette des rendez-vous en Asie : La communication indirecte est valorisée. Au Japon : ponctualité critique, évitez le contact physique, étiquette des cadeaux importante. En Chine : approbation familiale importante, l homme paie traditionnellement, le rouge porte bonheur. En Corée : culture de couple forte, hiérarchie d âge importante. En Inde : implication familiale normale, affection publique conservatrice. En général : respectez la hiérarchie, la modestie est appréciée, ne précipitez pas l intimité, montrer de l intérêt pour leur culture impressionne."
+  },
+  {
+    "id": "date_etiquette_asia-de",
+    "category": "date_etiquette_asia",
+    "language": "de",
+    "text": "Dating-Etikette in Asien: Indirekte Kommunikation wird geschätzt. In Japan: Pünktlichkeit ist kritisch, vermeide Körperkontakt, Geschenk-Etikette wichtig (mit beiden Händen überreichen, keine 4er-Sets). In China: Familienzustimmung wichtig, Mann zahlt traditionell, Rot bringt Glück. In Korea: starke Paarkultur, Altershierarchie wichtig. In Indien: Familienbeteiligung normal, öffentliche Zuneigung konservativ. Allgemein: Hierarchie und Alter respektieren, Bescheidenheit geschätzt, Intimität nicht überstürzen, Interesse an Kultur beeindruckt."
+  },
+  {
+    "id": "date_etiquette_asia-ja",
+    "category": "date_etiquette_asia",
+    "language": "ja",
+    "text": "アジアのデートエチケット：間接的なコミュニケーションが重視される。日本：時間厳守が重要、初期デートでの身体的接触を避ける、贈り物のエチケットが大切（両手で渡す、4の数を避ける）、沈黙は快適。中国：家族の承認が早い段階で重要、男性が伝統的に支払う、赤は幸運。韓国：カップル文化が強い（ペアルック、100日記念日）、年齢の序列が重要。インド：家族の関与が普通、公での愛情表現は控えめ。一般的に：序列と年齢を尊重、謙虚さが大切、身体的親密さを急がない、文化への関心は好印象。"
+  },
+  {
+    "id": "date_etiquette_asia-zh",
+    "category": "date_etiquette_asia",
+    "language": "zh",
+    "text": "亚洲约会礼仪：间接沟通受重视。日本：守时至关重要，初期约会避免身体接触，送礼礼仪重要（双手递送，避免4的数字）。中国：家人认可很重要，男方传统上付账，红色代表吉祥。韩国：情侣文化浓厚（情侣装、百天纪念），年龄等级重要。印度：家庭参与正常，公开表示亲密较保守。总体：尊重等级和年龄，谦虚受重视，不要急于亲密接触，对文化的兴趣会留下好印象。"
+  },
+  {
+    "id": "date_etiquette_asia-ru",
+    "category": "date_etiquette_asia",
+    "language": "ru",
+    "text": "Этикет свиданий в Азии: Непрямое общение ценится. В Японии: пунктуальность критична, избегайте физического контакта, этикет подарков важен (дарите обеими руками, избегайте наборов из 4). В Китае: одобрение семьи важно, мужчина традиционно платит, красный — к удаче. В Корее: сильная парная культура, иерархия возраста важна. В Индии: участие семьи нормально, публичная нежность сдержанна. Общее: уважайте иерархию, скромность ценится, не торопите физическую близость, интерес к культуре впечатляет."
+  },
+  {
+    "id": "date_etiquette_asia-ar",
+    "category": "date_etiquette_asia",
+    "language": "ar",
+    "text": "آداب المواعدة في آسيا: التواصل غير المباشر مقدّر. في اليابان: الالتزام بالمواعيد حاسم، تجنب الاتصال الجسدي، آداب تقديم الهدايا مهمة. في الصين: موافقة العائلة مهمة مبكراً، الرجل يدفع تقليدياً، الأحمر يجلب الحظ. في كوريا: ثقافة الأزواج قوية، التسلسل الهرمي للعمر مهم. في الهند: مشاركة العائلة طبيعية. بشكل عام: احترم التسلسل والعمر، التواضع مقدّر، لا تتسرع في العلاقة الحميمة، إظهار الاهتمام بثقافتهم يثير الإعجاب."
+  },
+  {
+    "id": "date_etiquette_asia-id",
+    "category": "date_etiquette_asia",
+    "language": "id",
+    "text": "Etiket Kencan di Asia: Komunikasi tidak langsung dihargai. Di Jepang: ketepatan waktu kritis, hindari kontak fisik, etiket hadiah penting (berikan dengan kedua tangan, hindari set 4). Di China: persetujuan keluarga penting, pria tradisional membayar, merah membawa keberuntungan. Di Korea: budaya pasangan kuat, hierarki usia penting. Di India: keterlibatan keluarga normal, kasih sayang publik konservatif. Secara umum: hormati hierarki dan usia, kesopanan dihargai, jangan terburu-buru keintiman, menunjukkan minat pada budaya mereka sangat mengesankan."
+  },
+  {
+    "id": "date_etiquette_middleeast-en",
+    "category": "date_etiquette_middleeast",
+    "language": "en",
+    "text": "Middle Eastern Dating Etiquette: Family approval and involvement are central. Modesty in dress and behavior is highly valued. Public displays of affection are generally inappropriate. The man traditionally pays and is expected to be chivalrous. Religious and cultural values heavily influence dating norms. Offering food/drinks is a sign of hospitality — always accept graciously. Respect gender-specific social norms. Avoid alcohol if uncertain about preferences. Conversation topics: family, career, ambitions are safe. Avoid: criticizing religion, politics, or cultural practices. Gift-giving is appreciated — sweets, flowers (not yellow — symbolizes separation in some cultures). Patience is valued — relationships develop more slowly and formally."
+  },
+  {
+    "id": "date_etiquette_middleeast-es",
+    "category": "date_etiquette_middleeast",
+    "language": "es",
+    "text": "Etiqueta de Citas en Medio Oriente: La aprobación familiar es central. La modestia en vestimenta y comportamiento es muy valorada. Las muestras de afecto en público son generalmente inapropiadas. El hombre tradicionalmente paga. Los valores religiosos influyen fuertemente. Ofrecer comida/bebidas es hospitalidad — acepta con gracia. Respeta normas de género. Evita alcohol si no estás seguro. Temas seguros: familia, carrera, ambiciones. Evita: criticar religión, política o prácticas culturales. Los regalos se aprecian — dulces, flores (no amarillas). La paciencia es valorada — las relaciones se desarrollan más lento."
+  },
+  {
+    "id": "date_etiquette_middleeast-pt",
+    "category": "date_etiquette_middleeast",
+    "language": "pt",
+    "text": "Etiqueta de Encontros no Oriente Médio: Aprovação familiar é central. Modéstia é muito valorizada. Demonstrações públicas de afeto geralmente inadequadas. O homem tradicionalmente paga. Valores religiosos influenciam fortemente. Oferecer comida é hospitalidade. Respeite normas de gênero. Temas seguros: família, carreira. Evite criticar religião ou política. Presentes são apreciados — doces, flores (não amarelas). Paciência é valorizada."
+  },
+  {
+    "id": "date_etiquette_middleeast-fr",
+    "category": "date_etiquette_middleeast",
+    "language": "fr",
+    "text": "Étiquette au Moyen-Orient : L approbation familiale est centrale. La modestie est très valorisée. Les démonstrations publiques d affection sont inappropriées. L homme paie traditionnellement. Les valeurs religieuses influencent fortement. Offrir nourriture/boissons est hospitalier. Respectez les normes de genre. Sujets sûrs : famille, carrière. Évitez de critiquer religion ou politique. Les cadeaux sont appréciés. La patience est valorisée."
+  },
+  {
+    "id": "date_etiquette_middleeast-de",
+    "category": "date_etiquette_middleeast",
+    "language": "de",
+    "text": "Dating-Etikette im Nahen Osten: Familienzustimmung ist zentral. Bescheidenheit in Kleidung und Verhalten wird hoch geschätzt. Öffentliche Zuneigung ist unangemessen. Der Mann zahlt traditionell. Religiöse Werte beeinflussen stark. Essen/Getränke anbieten ist Gastfreundschaft. Respektiere geschlechterspezifische Normen. Sichere Themen: Familie, Karriere. Vermeide Kritik an Religion oder Politik. Geschenke werden geschätzt. Geduld wird geschätzt."
+  },
+  {
+    "id": "date_etiquette_middleeast-ja",
+    "category": "date_etiquette_middleeast",
+    "language": "ja",
+    "text": "中東のデートエチケット：家族の承認が中心的。服装と行動の慎ましさが非常に重視される。公での愛情表現は一般的に不適切。男性が伝統的に支払う。宗教的価値観が大きく影響。食べ物を提供するのはもてなしの証。ジェンダー規範を尊重。安全な話題：家族、キャリア。宗教や政治の批判を避ける。贈り物は喜ばれる。忍耐が大切 — 関係はゆっくり発展する。"
+  },
+  {
+    "id": "date_etiquette_middleeast-zh",
+    "category": "date_etiquette_middleeast",
+    "language": "zh",
+    "text": "中东约会礼仪：家庭认可是核心。着装和行为的谦虚非常重要。公开表示亲密通常不合适。男方传统上付账。宗教价值观影响很大。提供食物/饮料是待客之道。尊重性别规范。安全话题：家庭、事业。避免批评宗教或政治。礼物受欢迎——甜点、花（不要黄色）。耐心很重要——关系发展较慢。"
+  },
+  {
+    "id": "date_etiquette_middleeast-ru",
+    "category": "date_etiquette_middleeast",
+    "language": "ru",
+    "text": "Этикет свиданий на Ближнем Востоке: Одобрение семьи — центральное. Скромность в одежде и поведении ценится. Публичные проявления чувств неуместны. Мужчина традиционно платит. Религиозные ценности сильно влияют. Предложение еды — знак гостеприимства. Уважайте гендерные нормы. Безопасные темы: семья, карьера. Избегайте критики религии или политики. Подарки ценятся. Терпение важно."
+  },
+  {
+    "id": "date_etiquette_middleeast-ar",
+    "category": "date_etiquette_middleeast",
+    "language": "ar",
+    "text": "آداب المواعدة في الشرق الأوسط: موافقة العائلة أساسية. الاحتشام في الملبس والسلوك مقدّر جداً. إظهار المشاعر في الأماكن العامة غير لائق عموماً. الرجل يدفع تقليدياً. القيم الدينية تؤثر بشكل كبير. تقديم الطعام/المشروبات علامة كرم الضيافة — اقبل بلطف. احترم الأعراف الخاصة بالجنسين. مواضيع آمنة: العائلة، المهنة، الطموحات. تجنب انتقاد الدين أو السياسة. الهدايا محل تقدير — حلويات، زهور (ليس أصفر). الصبر مقدّر — العلاقات تتطور ببطء."
+  },
+  {
+    "id": "date_etiquette_middleeast-id",
+    "category": "date_etiquette_middleeast",
+    "language": "id",
+    "text": "Etiket Kencan di Timur Tengah: Persetujuan keluarga adalah pusat. Kesopanan dalam berpakaian dan berperilaku sangat dihargai. Menunjukkan kasih sayang di depan umum umumnya tidak pantas. Pria secara tradisional membayar. Nilai-nilai agama sangat mempengaruhi. Menawarkan makanan/minuman adalah tanda keramahan. Hormati norma gender. Topik aman: keluarga, karier. Hindari mengkritik agama atau politik. Hadiah dihargai. Kesabaran dihargai."
+  },
+  {
+    "id": "date_etiquette_northamerica-en",
+    "category": "date_etiquette_northamerica",
+    "language": "en",
+    "text": "North American Dating Etiquette: Splitting the bill is common and expected (especially on first dates). Personal space is valued — don't stand too close initially. Be punctual. Direct communication is appreciated — say what you mean. Texting etiquette: don't play games with response times. Casual dating (seeing multiple people) is normal until exclusivity is discussed. Tipping 18-20% at restaurants is expected. Consent culture is strong — always ask before escalating physical contact. Small talk is normal and expected. Topics to avoid early: salary, marriage timeline, politics. Ghosting is unfortunately common but considered rude. \"Going Dutch\" is totally acceptable. Dating apps are mainstream and not stigmatized."
+  },
+  {
+    "id": "date_etiquette_northamerica-es",
+    "category": "date_etiquette_northamerica",
+    "language": "es",
+    "text": "Etiqueta de Citas en Norteamérica: Dividir la cuenta es común (especialmente en primera cita). El espacio personal se valora. Sé puntual. La comunicación directa se aprecia. Etiqueta de mensajes: no juegues con los tiempos de respuesta. Salir con varias personas es normal hasta hablar de exclusividad. Propina 18-20% en restaurantes. La cultura del consentimiento es fuerte. La charla casual es normal. Evita temprano: salario, timeline de matrimonio, política. El ghosting es común pero considerado grosero. \"Ir a medias\" es aceptable. Apps de citas son mainstream."
+  },
+  {
+    "id": "date_etiquette_northamerica-pt",
+    "category": "date_etiquette_northamerica",
+    "language": "pt",
+    "text": "Etiqueta de Encontros na América do Norte: Dividir a conta é comum. Espaço pessoal é valorizado. Seja pontual. Comunicação direta é apreciada. Sair com várias pessoas é normal até discutir exclusividade. Gorjeta 18-20% esperada. Cultura de consentimento é forte. Conversa casual é normal. Evite cedo: salário, casamento, política. Ghosting é comum mas considerado rude. AA é aceitável. Apps de namoro são mainstream."
+  },
+  {
+    "id": "date_etiquette_northamerica-fr",
+    "category": "date_etiquette_northamerica",
+    "language": "fr",
+    "text": "Étiquette en Amérique du Nord : Partager l addition est courant. L espace personnel est valorisé. Soyez ponctuel. La communication directe est appréciée. Sortir avec plusieurs personnes est normal jusqu à discussion d exclusivité. Pourboire 18-20%. Culture du consentement forte. Conversation légère normale. Évitez tôt : salaire, mariage, politique. Le ghosting est courant mais mal vu."
+  },
+  {
+    "id": "date_etiquette_northamerica-de",
+    "category": "date_etiquette_northamerica",
+    "language": "de",
+    "text": "Dating-Etikette in Nordamerika: Rechnung teilen ist üblich. Persönlicher Raum wird geschätzt. Sei pünktlich. Direkte Kommunikation geschätzt. Casual Dating (mehrere Personen treffen) ist normal bis Exklusivität besprochen wird. Trinkgeld 18-20%. Einverständniskultur ist stark. Smalltalk ist normal. Vermeide früh: Gehalt, Heirat, Politik. Ghosting ist häufig aber unhöflich."
+  },
+  {
+    "id": "date_etiquette_northamerica-ja",
+    "category": "date_etiquette_northamerica",
+    "language": "ja",
+    "text": "北米のデートエチケット：割り勘が一般的。パーソナルスペースが大切。時間厳守。直接的なコミュニケーションが評価される。排他性を話し合うまで複数の人とデートするのは普通。チップ18-20%が期待される。同意の文化が強い。世間話は普通。早い段階で避ける話題：給料、結婚のタイムライン、政治。"
+  },
+  {
+    "id": "date_etiquette_northamerica-zh",
+    "category": "date_etiquette_northamerica",
+    "language": "zh",
+    "text": "北美约会礼仪：AA制很常见。个人空间受重视。守时。直接沟通受欢迎。在讨论排他性之前约多个人是正常的。餐厅小费18-20%。同意文化很强。闲聊是正常的。早期避免话题：薪水、结婚时间线、政治。"
+  },
+  {
+    "id": "date_etiquette_northamerica-ru",
+    "category": "date_etiquette_northamerica",
+    "language": "ru",
+    "text": "Этикет свиданий в Северной Америке: Делить счёт — норма. Личное пространство ценится. Будьте пунктуальны. Прямое общение приветствуется. Встречаться с несколькими людьми нормально до обсуждения эксклюзивности. Чаевые 18-20%. Культура согласия сильна. Светская беседа нормальна. Избегайте рано: зарплата, сроки свадьбы, политика."
+  },
+  {
+    "id": "date_etiquette_northamerica-ar",
+    "category": "date_etiquette_northamerica",
+    "language": "ar",
+    "text": "آداب المواعدة في أمريكا الشمالية: تقسيم الحساب شائع. المساحة الشخصية مقدّرة. كن دقيقاً في المواعيد. التواصل المباشر مقدّر. مواعدة عدة أشخاص طبيعية حتى مناقشة الحصرية. إكرامية 18-20%. ثقافة الموافقة قوية. المحادثة العادية طبيعية. تجنب مبكراً: الراتب، الزواج، السياسة."
+  },
+  {
+    "id": "date_etiquette_northamerica-id",
+    "category": "date_etiquette_northamerica",
+    "language": "id",
+    "text": "Etiket Kencan di Amerika Utara: Membagi tagihan umum. Ruang pribadi dihargai. Tepat waktu. Komunikasi langsung dihargai. Berkencan dengan beberapa orang normal hingga membahas eksklusivitas. Tip 18-20%. Budaya persetujuan kuat. Obrolan ringan normal. Hindari awal: gaji, pernikahan, politik."
   }
 ]

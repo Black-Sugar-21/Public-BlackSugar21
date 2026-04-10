@@ -5,10 +5,12 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
 exports.sendTestNotification = onCall(async (request) => {
+  if (!request.auth) throw new Error('Authentication required');
   const {userId, title, body} = request.data;
 
-  if (!userId) {
-    throw new Error('userId is required');
+  // Only allow users to send test notifications to themselves
+  if (!userId || userId !== request.auth.uid) {
+    throw new Error('Can only send test notifications to yourself');
   }
 
   logger.info('Sending test notification', {userId, title, body});
@@ -292,8 +294,8 @@ exports.sendTestNotificationToUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userId, title, body, data: extraData} = request.data || {};
-    const targetId = userId || request.auth.uid;
+    const {title, body, data: extraData} = request.data || {};
+    const targetId = request.auth.uid; // Only allow self-targeting
 
     const db = admin.firestore();
     const userDoc = await db.collection('users').doc(targetId).get();

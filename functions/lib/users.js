@@ -41,15 +41,35 @@ exports.unmatchUser = onCall(
     // Borrar el documento del match
     await matchRef.delete();
 
-    // También borrar de la subcollección swipes si existe
-    if (otherUserId) {
+    // Borrar swipes + likes + passed de AMBOS usuarios para reset completo
+    // Así ambos deben darse like de nuevo para hacer match
+    const resolvedOtherUserId = otherUserId || usersMatched.find((uid) => uid !== currentUserId);
+    if (resolvedOtherUserId) {
       await Promise.allSettled([
-        db.collection('users').doc(currentUserId).collection('swipes').doc(otherUserId).delete(),
-        db.collection('users').doc(otherUserId).collection('swipes').doc(currentUserId).delete(),
+        // ── Subcollections (documents) ──
+        db.collection('users').doc(currentUserId).collection('swipes').doc(resolvedOtherUserId).delete(),
+        db.collection('users').doc(resolvedOtherUserId).collection('swipes').doc(currentUserId).delete(),
+        db.collection('users').doc(currentUserId).collection('liked').doc(resolvedOtherUserId).delete(),
+        db.collection('users').doc(resolvedOtherUserId).collection('liked').doc(currentUserId).delete(),
+        db.collection('users').doc(currentUserId).collection('passed').doc(resolvedOtherUserId).delete(),
+        db.collection('users').doc(resolvedOtherUserId).collection('passed').doc(currentUserId).delete(),
+        db.collection('users').doc(currentUserId).collection('superLiked').doc(resolvedOtherUserId).delete(),
+        db.collection('users').doc(resolvedOtherUserId).collection('superLiked').doc(currentUserId).delete(),
+        // ── Array fields on user documents (CRITICAL: without this, mutual like in array triggers auto-match) ──
+        db.collection('users').doc(currentUserId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(resolvedOtherUserId),
+          passed: admin.firestore.FieldValue.arrayRemove(resolvedOtherUserId),
+          superLiked: admin.firestore.FieldValue.arrayRemove(resolvedOtherUserId),
+        }),
+        db.collection('users').doc(resolvedOtherUserId).update({
+          liked: admin.firestore.FieldValue.arrayRemove(currentUserId),
+          passed: admin.firestore.FieldValue.arrayRemove(currentUserId),
+          superLiked: admin.firestore.FieldValue.arrayRemove(currentUserId),
+        }),
       ]);
     }
 
-    logger.info(`[unmatchUser] Match ${matchId} deleted, ${messagesDeleted} messages removed`);
+    logger.info(`[unmatchUser] Match ${matchId} deleted, ${messagesDeleted} messages removed, likes/swipes/passed cleared`);
     return {success: true, messagesDeleted};
   },
 );

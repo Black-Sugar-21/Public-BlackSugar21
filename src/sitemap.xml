@@ -2,37 +2,43 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.blacksugar21.com/</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://www.blacksugar21.com/features</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.blacksugar21.com/terms</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://www.blacksugar21.com/privacy</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://www.blacksugar21.com/safety-standards</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://www.blacksugar21.com/moderation-policy</loc>
-    <lastmod>2026-03-29</lastmod>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.blacksugar21.com/data-deletion</loc>
+    <lastmod>2026-04-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

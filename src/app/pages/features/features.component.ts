@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslationService } from '../../translation.service';
 import { RouterModule } from '@angular/router';
+import { SeoService } from '../../services/seo.service';
 
 @Component({
   selector: 'app-features',
@@ -10,8 +11,16 @@ import { RouterModule } from '@angular/router';
   templateUrl: './features.component.html',
   styleUrls: ['./features.component.css']
 })
-export class FeaturesComponent {
-  constructor(public translate: TranslationService) {}
+export class FeaturesComponent implements OnInit {
+  constructor(public translate: TranslationService, private seo: SeoService) {}
+
+  ngOnInit() {
+    this.seo.update({
+      title: 'AI Features - Black Sugar 21',
+      description: 'Descubre las funciones de inteligencia artificial de Black Sugar 21: Coach personal IA, sugerencias de citas, icebreakers inteligentes y moderación automática.',
+      url: '/features',
+    });
+  }
 
   t(key: string): string {
     return this.translate.translate(key);

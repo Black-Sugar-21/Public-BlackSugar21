@@ -9,6 +9,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding, trackAICall } = require('./shared');
 const { MODERATION_BLACKLIST, SEXUAL_BLACKLIST_TERMS } = require('./notifications');
 
+/** Safely extract text from Gemini result */
+function safeResponseText(result) {
+  try { return result?.response?.text() || ''; }
+  catch (e) { logger.warn(`[safeResponseText] Failed: ${e.message}`); return ''; }
+}
+
 // --- Moderation config & RAG ---
 const MOD_RAG_COLLECTION = 'moderationKnowledge';
 const MOD_RAG_TOP_K = 4;
@@ -176,12 +182,12 @@ function buildProfileImagePrompt(lang, isSpanish, expectedGender) {
   if (expectedGender !== null && expectedGender !== undefined) {
     if (isSpanish) {
       genderInstruction = expectedGender
-        ? '\n- El género de la persona NO corresponde al esperado (se esperaba MASCULINO)'
-        : '\n- El género de la persona NO corresponde al esperado (se esperaba FEMENINO)';
+        ? '\n- OBLIGATORIO: Si la persona principal en la foto es MUJER, RECHAZAR con category "gender_mismatch" (se esperaba MASCULINO). Verificar rasgos faciales.'
+        : '\n- OBLIGATORIO: Si la persona principal en la foto es HOMBRE, RECHAZAR con category "gender_mismatch" (se esperaba FEMENINO). Verificar rasgos faciales.';
     } else {
       genderInstruction = expectedGender
-        ? '\n- The person\'s gender does NOT match the expected one (expected MALE)'
-        : '\n- The person\'s gender does NOT match the expected one (expected FEMALE)';
+        ? '\n- MANDATORY: If the main person in the photo is FEMALE, REJECT with category "gender_mismatch" (expected MALE). Check facial features.'
+        : '\n- MANDATORY: If the main person in the photo is MALE, REJECT with category "gender_mismatch" (expected FEMALE). Check facial features.';
     }
   }
 
@@ -219,7 +225,7 @@ Responde SOLO en formato JSON:
     "reason": "explicación breve en español si se rechaza",
     "confidence": 0.0-1.0,
     "categories": ["lista", "de", "problemas", "en", "español"],
-    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|approved"
+    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|gender_mismatch|approved"
 }`;
   }
 
@@ -249,7 +255,7 @@ Respond ONLY in JSON format:
     "reason": "brief explanation if rejected",
     "confidence": 0.0-1.0,
     "categories": ["list", "of", "issues"],
-    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|approved"
+    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|gender_mismatch|approved"
 }`;
 }
 
@@ -546,7 +552,7 @@ exports.moderateProfileImage = onCall(
         {inlineData: {data: imageBase64, mimeType: 'image/jpeg'}},
       ]);
 
-      const responseText = result.response.text();
+      const responseText = safeResponseText(result);
       logger.info(`[moderateProfileImage] Gemini response: ${responseText.substring(0, 200)}`);
 
       const parsed = parseGeminiJsonResponse(responseText);
@@ -557,6 +563,14 @@ exports.moderateProfileImage = onCall(
         ? Math.max(0, Math.min(1, parsed.confidence)) : (approved ? 1.0 : 0.9);
       const categories = Array.isArray(parsed.categories) ? parsed.categories.filter((c) => typeof c === 'string') : [];
       const category = parsed.category || (categories.length > 0 ? categories[0] : (approved ? 'approved' : 'other'));
+
+      // Server-side enforcement: gender_mismatch MUST reject even if Gemini approved
+      if (expectedGender !== null && expectedGender !== undefined) {
+        if (category === 'gender_mismatch' || categories.includes('gender_mismatch')) {
+          logger.info(`[moderateProfileImage] Gender mismatch enforced (expected=${expectedGender ? 'male' : 'female'})`);
+          return {approved: false, reason: reason || 'gender_mismatch', confidence, categories: [...categories, 'gender_mismatch'], category: 'gender_mismatch'};
+        }
+      }
 
       return {approved, reason, confidence, categories, category};
     } catch (error) {
@@ -611,7 +625,7 @@ exports.moderateMessage = onCall(
         : buildMessageModerationPrompt(message, lang, isSpanish, ragContext);
 
       const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const responseText = safeResponseText(result);
       logger.info(`[moderateMessage] Gemini response: ${responseText.substring(0, 200)}`);
 
       const parsed = parseGeminiJsonResponse(responseText);
@@ -887,7 +901,7 @@ Respond ONLY with valid JSON (no markdown):
       const modStart = Date.now();
       const result = await model.generateContent(prompt);
       trackAICall({functionName: 'autoModerateMessage', model: AI_MODEL_LITE, operation: 'classify', usage: result.response.usageMetadata, latencyMs: Date.now() - modStart});
-      const responseText = result.response.text().trim();
+      const responseText = safeResponseText(result).trim();
       const cleanText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const rawAnalysis = JSON.parse(cleanText);
 
@@ -929,7 +943,7 @@ Respond ONLY with valid JSON (no markdown):
             else if (catFpRate > 0.15) effectiveThreshold = Math.min(85, baseConfidenceThreshold + 10);
           }
         }
-      } catch (_) { /* non-critical — use base threshold */ }
+      } catch (fpErr) { logger.warn(`[autoModerateMessage] FP rate lookup error: ${fpErr.message}`); }
 
       const isAllowed = analysis.category === 'SAFE' || (analysis.confidence || 0) < effectiveThreshold;
       const moderationResult = {
@@ -1303,7 +1317,7 @@ Return JSON:
 }`;
 
       const result = await model.generateContent(prompt);
-      const parsed = parseGeminiJsonResponse(result.response.text());
+      const parsed = parseGeminiJsonResponse(safeResponseText(result));
 
       if (!parsed || !parsed.chunks || parsed.chunks.length === 0) {
         logger.warn('[updateModerationKnowledge] Gemini returned no chunks');
@@ -1419,7 +1433,7 @@ exports.resolveDisputesDaily = onSchedule(
             const cc = insight.data().categoryCounts || {};
             categoryFpRate = cc[category] > 0 ? (cd[category] || 0) / cc[category] : 0;
           }
-        } catch (_) { /* continue */ }
+        } catch (fpErr) { logger.warn(`[resolveDisputesDaily] FP rate lookup error: ${fpErr.message}`); }
 
         if (disputeType === 'false_positive' && categoryFpRate < maxFpRate && disputes.length < minDisputes * 2) {
           continue; // Not enough evidence
@@ -1459,7 +1473,7 @@ ${examples}
 Write a clear rule that ${disputeType === 'false_positive' ? 'prevents this type of false positive' : 'catches this type of violation'}.`;
 
             const chunkResult = await model.generateContent(chunkPrompt);
-            const chunkText = chunkResult.response.text();
+            const chunkText = safeResponseText(chunkResult);
 
             const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});
             const embResult = await embModel.embedContent({content: {parts: [{text: chunkText}]}, taskType: 'RETRIEVAL_DOCUMENT'});
@@ -1546,7 +1560,7 @@ ${disputeSummary}
 Generate concise rules (100-200 words each) as plain text. Focus on reducing false positives for normal dating conversation.`;
 
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const text = safeResponseText(result);
 
       // Simple: store the entire output as one chunk
       const embModel = genAI.getGenerativeModel({model: 'gemini-embedding-001'});

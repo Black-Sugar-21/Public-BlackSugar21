@@ -268,8 +268,6 @@ exports.onMessageCreated = onDocumentCreated(
         timestamp: Date.now().toString(),
       },
       token: fcmToken,
-      // collapseKey: múltiples mensajes del mismo match reemplazan la notificación anterior
-      collapseKey: matchId,
       apns: {
         headers: {
           // iOS: reemplaza la notificación anterior del mismo match (no acumula)

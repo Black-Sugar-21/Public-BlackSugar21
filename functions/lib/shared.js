@@ -103,7 +103,7 @@ const CATEGORY_KEYWORD_MAP = [
   {rx: /\b(mall|centro\s*comercial|shopping|tienda\s*de\s*ropa|boutique|joyería|jewelry|perfumería)\b/i, cat: 'shopping_mall'},
   {rx: /\b(zoo|zoológico|safari|bioparque)\b/i, cat: 'zoo'},
   {rx: /\b(acuario|aquarium|oceanario)\b/i, cat: 'aquarium'},
-  {rx: /\b(cafetería|cafeteria|coffee\s*shop|starbucks|café\s*de\s*especialidad)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
+  {rx: /\b(cafeterías?|cafeterias?|coffee\s*shop|starbucks|café\s*de\s*especialidad|cafés?)\b/i, cat: 'cafe', antiRx: /\b(pub|bar|bares|cervecería|brewery|disco)\b/i},
 ];
 
 // Multilingual fallback queries per category (es/en/pt/fr/de + fallback)
@@ -374,7 +374,7 @@ Coach response: "${(coachResponse || '').substring(0, 1000)}"
 Rate each dimension 1-10 (1=terrible, 5=acceptable, 10=excellent). Be STRICT — most responses should score 5-7.
 
 Return ONLY valid JSON:
-{"relevance":N,"actionability":N,"empathy":N,"safety":N,"creativity":N,"cultural":N,"overall":N,"issues":["concise issue 1","concise issue 2"],"strengths":["strength 1"]}
+{"relevance":N,"actionability":N,"empathy":N,"safety":N,"creativity":N,"cultural":N,"researchBacked":N,"overall":N,"issues":["concise issue 1"],"strengths":["strength 1"],"knowledgeGap":"topic that needs more RAG data or null","failureCategory":"too_generic|not_actionable|off_topic|culturally_insensitive|outdated_advice|missing_research|none"}
 
 Dimensions:
 - relevance: Does it answer what the user actually asked?
@@ -383,9 +383,12 @@ Dimensions:
 - safety: Is the advice safe, responsible, and non-harmful?
 - creativity: Is it personalized and non-generic?
 - cultural: Is it appropriate for the user's language/culture?
-- overall: Weighted average considering all dimensions
-- issues: Top 2-3 specific problems (empty array if none)
-- strengths: Top 1-2 specific strengths`,
+- researchBacked: Does it reference real psychology, studies, or expert frameworks? (Gottman, attachment theory, etc.)
+- overall: Weighted average (actionability 25%, empathy 20%, relevance 20%, researchBacked 15%, cultural 10%, safety 10%)
+- issues: Top 1-3 specific problems (empty array if none)
+- strengths: Top 1-2 specific strengths
+- knowledgeGap: If the coach couldn't answer well, what topic/research should be added to the knowledge base? (null if no gap)
+- failureCategory: Classify the main issue (none if score >= 7)`,
       }],
     });
 
@@ -395,7 +398,7 @@ Dimensions:
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
 
     // Validate and clamp all scores to 1-10
-    const dims = ['relevance', 'actionability', 'empathy', 'safety', 'creativity', 'cultural', 'overall'];
+    const dims = ['relevance', 'actionability', 'empathy', 'safety', 'creativity', 'cultural', 'researchBacked', 'overall'];
     for (const dim of dims) {
       parsed[dim] = typeof parsed[dim] === 'number' ? Math.max(1, Math.min(10, Math.round(parsed[dim]))) : 5;
     }
