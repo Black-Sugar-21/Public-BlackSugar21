@@ -884,14 +884,11 @@ Example: ["phrase 1", "phrase 2", ...]`;
             const lmMaxIntermediate = lmPsConfig.maxPlacesIntermediate || 60;
             const center = lmHasLocation ? {latitude: lmLat, longitude: lmLng} : null;
             const lmCat = requestCategory && categoryQueryMap[requestCategory] ? requestCategory : null;
-            // Use type filter from validated lmCat, or directly from CATEGORY_TO_PLACES_TYPE if
-            // requestCategory is known but missing from categoryQueryMap (e.g. Remote Config override)
-            const lmTypeKey = lmCat || (requestCategory && CATEGORY_TO_PLACES_TYPE[requestCategory] ? requestCategory : null);
-            // CATEGORY_TO_PLACES_TYPE now stores an array — use all types for parallel searches
-            const rawTypeEntry = lmTypeKey ? CATEGORY_TO_PLACES_TYPE[lmTypeKey] : null;
-            const lmAllTypes = rawTypeEntry ? (Array.isArray(rawTypeEntry) ? rawTypeEntry : [rawTypeEntry]) : null;
+            // GLOBAL: never apply type filter — rely on multilingual text queries.
+            // See main search block for full explanation of cultural coverage strategy.
+            const lmAllTypes = null;
             // Keep single-type ref for logging/fallback compatibility
-            const lmIncludedType = lmAllTypes ? [lmAllTypes[0]] : null;
+            // lmIncludedType is no longer used — GLOBAL strategy never applies type filter
             // Retrieve cached cuisineType from initial search (if any)
             const cachedCuisine = (_lmCacheData && _lmCacheData.intent && _lmCacheData.intent.cuisineType) || null;
             let lmQueries;
@@ -950,9 +947,9 @@ Example: ["phrase 1", "phrase 2", ...]`;
               stepsUsed++;
               lmLastRadius = stepRadius || 0;
               const radiusMeters = stepRadius ? Math.min(lmMaxR, stepRadius) : null;
-              // Build all (query × type) combinations for parallel fetch; cap at 12 to avoid API quota bursts
+              // Build all (query × type) combinations for parallel fetch; cap at 8 for category coverage
               const searchPairs = lmAllTypes
-                ? lmQueries.flatMap((q) => lmAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
+                ? lmQueries.flatMap((q) => lmAllTypes.map((t) => ({q, t: [t]}))).slice(0, 8)
                 : lmQueries.map((q) => ({q, t: null}));
               const res = await Promise.all(
                 searchPairs.map(({q, t}) => placesTextSearch(q, center, radiusMeters, lang, null, perQ, lmUseRestriction, t).catch(() => ({places: []}))),
@@ -969,11 +966,9 @@ Example: ["phrase 1", "phrase 2", ...]`;
 
             logger.info(`[dateCoachChat] loadMore progressive done: ${allRawPlaces.length} places in ${stepsUsed}/${effectiveSteps.length} steps, cat=${lmCat || 'any'}`);
 
-            // Fallback: if type filter yielded 0 results (sparse/rare categories like zoo, aquarium,
-            // spa, bowling_alley or regional differences in Google Places type tagging),
-            // retry once at max radius without includedType — text queries are specific enough.
-            if (allRawPlaces.length === 0 && lmIncludedType !== null) {
-              logger.info(`[dateCoachChat] loadMore 0 results with includedType=${lmIncludedType[0]}, retrying without type filter`);
+            // Fallback: if 0 results at maximum radius, no more we can do
+            // (global text-based search already covers all cultures)
+            if (false) {
               const fallbackRadius = lmHasLocation ? Math.min(lmMaxR, Math.max(...progressiveSteps)) : null;
               const fallbackRes = await Promise.all(
                 lmQueries.map((q) => placesTextSearch(q, center, fallbackRadius, lang, null, perQ, lmUseRestriction, null)
@@ -1802,26 +1797,14 @@ Return JSON with these fields:
 
           let queries;
           const effectiveCategory = requestCategory || null;
-          // Determine the Google Places includedType(s) for category-specific searches.
-          // CATEGORY_TO_PLACES_TYPE now stores arrays — use all types for parallel coverage.
-          let searchAllTypes = null; // array of type strings, or null = no filter
-          if (effectiveCategory && CATEGORY_TO_PLACES_TYPE[effectiveCategory]) {
-            const entry = CATEGORY_TO_PLACES_TYPE[effectiveCategory];
-            searchAllTypes = Array.isArray(entry) ? entry : [entry];
-          } else if (isUserPlaceSearch && extractedIntent && extractedIntent.googleCategory) {
-            const intentCat = normalizeCategory(extractedIntent.googleCategory);
-            // For generic city searches (e.g. "places in Concepcion"), use multi-category search
-            // to maximize category diversity. Only lock to a single category when the user
-            // explicitly asked for a specific type (e.g. "restaurants in Temuco").
-            const isGenericCitySearch = locationOverridden && extractedIntent.placeQueries &&
-              extractedIntent.placeQueries.some((q) => typeof q === 'string' &&
-                /lugar|place|spot|venue|sitio|endroit|lieu|sortir|ort|ausgehen|platz|local|sair|atividade|passeio|opcion|activit|cita|date|rendez|salir|hacer|tempat|kencan|jalan|pergi|donde\s*ir|que\s*hacer|things?\s*to\s*do|where\s*to/i.test(q));
-            if (!isGenericCitySearch && intentCat && CATEGORY_TO_PLACES_TYPE[intentCat]) {
-              const entry = CATEGORY_TO_PLACES_TYPE[intentCat];
-              searchAllTypes = Array.isArray(entry) ? entry : [entry];
-            }
-            // For generic searches, searchAllTypes stays null → Google returns diverse types naturally
-          }
+          // GLOBAL SEARCH STRATEGY:
+          // We NEVER apply Google Places `includedType` filter because it's culturally biased.
+          // Google tags venues differently per country (e.g., Chilean "pub" = western_restaurant,
+          // Japanese izakaya = bar, Argentine "bar notable" = restaurant).
+          // Instead, we rely exclusively on rich multilingual text queries that match venue
+          // names, descriptions, and local vocabulary in 20+ languages.
+          // This ensures global coverage regardless of Google's regional tagging conventions.
+          const searchAllTypes = null; // Always null — no type filter for global cultural coverage
 
           if (effectiveCategory && categoryQueryMap[effectiveCategory]) {
             // Category filter — run 3 queries: canonical + split terms for diversity
@@ -1957,10 +1940,11 @@ Return JSON with these fields:
             const radiusMeters = stepRadius ? Math.min(maxR, stepRadius) : null;
             lastRadius = stepRadius || 0;
 
-            // Build (query × type) pairs; cap queries to 4 max, then cap pairs at 12
-            const cappedQueries = queries.slice(0, 4); // Max 4 parallel queries
+            // Build (query × type) pairs; cap queries to 2 max, then cap pairs at 8
+            // (higher cap ensures categories with many types like bar=4 types still get coverage)
+            const cappedQueries = queries.slice(0, 2); // Max 2 parallel queries (cost optimization)
             const mainPairs = searchAllTypes
-              ? cappedQueries.flatMap((q) => searchAllTypes.map((t) => ({q, t: [t]}))).slice(0, 12)
+              ? cappedQueries.flatMap((q) => searchAllTypes.map((t) => ({q, t: [t]}))).slice(0, 8)
               : cappedQueries.map((q) => ({q, t: null}));
             totalApiCalls += mainPairs.length;
             const results = await Promise.all(
@@ -1977,6 +1961,24 @@ Return JSON with these fields:
             logger.info(`[dateCoachChat] Progressive radius: ${radiusMeters}m → ${newPlaces.length} new places (total: ${allRawPlaces.length}, target: ${minTarget})`);
 
             if (allRawPlaces.length >= minTarget) break;
+          }
+
+          // Fallback: if type filter yielded <5 results, retry at max radius without includedType
+          // (region-specific venues may not be tagged with the expected Google Places type)
+          if (allRawPlaces.length < 5 && searchAllTypes && queries.length > 0) {
+            logger.info(`[dateCoachChat] Only ${allRawPlaces.length} results with type filter, retrying without includedType`);
+            const fallbackRadius = Math.min(maxR, Math.max(...progressiveSteps));
+            const fallbackResults = await Promise.all(
+              queries.slice(0, 2).map((q) => placesTextSearch(q, center, fallbackRadius, lang, null, perQuery, useRestriction, null).catch(() => ({places: []}))),
+            );
+            totalApiCalls += queries.slice(0, 2).length;
+            const fallbackPlaces = fallbackResults.flatMap((r) => r.places).filter((p) => {
+              if (!p.id || allUniqueIds.has(p.id)) return false;
+              allUniqueIds.add(p.id);
+              return true;
+            });
+            allRawPlaces = [...allRawPlaces, ...fallbackPlaces];
+            logger.info(`[dateCoachChat] Fallback (no type): +${fallbackPlaces.length} new places (total: ${allRawPlaces.length})`);
           }
 
           logger.info(`[dateCoachChat] Places API calls made: ${totalApiCalls} (${radiusIterations} radius iterations)`);

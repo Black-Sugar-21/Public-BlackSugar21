@@ -150,23 +150,32 @@ function fuzzyMatchPlace(title, geminiPlaceId, byIdLookup, byNameLookup, allPlac
  * Se usan en búsquedas paralelas con deduplicación por place.id.
  * Referencia: https://developers.google.com/maps/documentation/places/web-service/place-types
  */
+// CRITICAL: Generic types MUST be first in each array.
+// With cap=8 pairs (2 queries × 4 types), only the first 4 types are covered.
+// Google Places tags venues differently per country — generic types (bar, restaurant)
+// have global coverage, while specific types (pub, pizza_restaurant) are region-specific.
 const CATEGORY_TO_PLACES_TYPE = {
   cafe: [
     'cafe', 'coffee_shop',
   ],
   restaurant: [
+    // Generic first — covers 95% of restaurants in all countries
     'restaurant',
+    // Most common specific types (global coverage)
+    'italian_restaurant', 'mexican_restaurant', 'japanese_restaurant',
+    // Rest (lower priority, region-specific)
     'american_restaurant', 'brazilian_restaurant', 'chinese_restaurant', 'french_restaurant',
-    'greek_restaurant', 'indian_restaurant', 'indonesian_restaurant', 'italian_restaurant',
-    'japanese_restaurant', 'korean_restaurant', 'latin_american_restaurant',
-    'lebanese_restaurant', 'mediterranean_restaurant', 'mexican_restaurant',
+    'greek_restaurant', 'indian_restaurant', 'indonesian_restaurant',
+    'korean_restaurant', 'latin_american_restaurant',
+    'lebanese_restaurant', 'mediterranean_restaurant',
     'middle_eastern_restaurant', 'pizza_restaurant', 'ramen_restaurant',
     'sandwich_shop', 'seafood_restaurant', 'spanish_restaurant', 'steak_house',
     'sushi_restaurant', 'thai_restaurant', 'turkish_restaurant', 'vietnamese_restaurant',
     'hamburger_restaurant', 'brunch_restaurant', 'fast_food_restaurant',
   ],
   bar: [
-    'bar', 'wine_bar', 'cocktail_bar', 'pub',
+    // Generic first — Latam/Asia venues often tagged as 'bar' only
+    'bar', 'cocktail_bar', 'wine_bar', 'pub',
   ],
   night_club: [
     'night_club',
@@ -175,32 +184,34 @@ const CATEGORY_TO_PLACES_TYPE = {
     'movie_theater', 'drive_in_movie_theater',
   ],
   park: [
-    'park', 'national_park', 'botanical_garden', 'nature_preserve',
-    'hiking_area', 'tourist_attraction', 'cultural_landmark', 'scenic_point',
-    'plaza', 'campground',
+    // Generic first — cubre mayoría de parques en todos los países
+    'park', 'tourist_attraction', 'plaza', 'botanical_garden',
+    'national_park', 'nature_preserve',
+    'hiking_area', 'cultural_landmark', 'scenic_point', 'campground',
   ],
   museum: [
-    'museum', 'cultural_center', 'history_museum',
+    'museum', 'art_gallery', 'cultural_center', 'history_museum',
     'natural_history_museum', 'science_museum', 'childrens_museum',
   ],
   bowling_alley: [
-    'bowling_alley', 'amusement_center', 'amusement_park',
-    'billiard_hall', 'escape_room', 'arcade_game_center',
+    'bowling_alley', 'amusement_center', 'arcade_game_center', 'escape_room',
+    'amusement_park', 'billiard_hall',
   ],
   art_gallery: [
     'art_gallery', 'art_studio',
   ],
   bakery: [
-    'bakery', 'pastry_shop', 'confectionery', 'candy_store',
-    'dessert_shop', 'ice_cream_shop', 'donut_shop',
+    // Generic first — bakery covers most cases, ice_cream_shop is very common
+    'bakery', 'pastry_shop', 'ice_cream_shop', 'dessert_shop',
+    'confectionery', 'candy_store', 'donut_shop',
   ],
   shopping_mall: [
-    'shopping_mall', 'shopping_center', 'department_store', 'outlet_mall',
-    'market', 'clothing_store',
+    'shopping_mall', 'department_store', 'shopping_center', 'market',
+    'outlet_mall', 'clothing_store',
   ],
   spa: [
-    'spa', 'wellness_center', 'beauty_salon',
-    'massage_therapist', 'sauna',
+    'spa', 'beauty_salon', 'massage_therapist', 'wellness_center',
+    'sauna',
   ],
   aquarium: [
     'aquarium',
@@ -229,8 +240,8 @@ async function getPlacesSearchConfig() {
     radiusSteps: [100000, 130000, 180000, 250000, 300000],
     perQueryResults: 20,
     maxPlacesIntermediate: 60,
-    queriesWithCategory: 3,
-    queriesWithoutCategory: 5,
+    queriesWithCategory: 2,
+    queriesWithoutCategory: 3,
     useRestriction: true,
     photoMaxHeightPx: 400,
     photosPerPlace: 5,
@@ -239,8 +250,8 @@ async function getPlacesSearchConfig() {
     defaultLanguage: 'es',
     defaultCategoryQueryCount: 4,
     categoryQueryMap: null,
-    progressiveRadiusSteps: [15000, 30000, 60000, 120000, 200000, 300000],
-    minPlacesTarget: 30,
+    progressiveRadiusSteps: [15000, 60000, 200000],
+    minPlacesTarget: 15,
     minRadius: 3000,
     maxRadius: 300000,
     loadMoreDefaultBaseRadius: 60000,
@@ -279,58 +290,230 @@ async function getPlacesSearchConfig() {
 }
 
 /**
- * Default category query map — multilingual search terms per iOS category.
- * Includes EN, ES, PT, FR, DE, IT, ID, JA, ZH, AR so Google Places finds
- * venues in their local language regardless of the user's language setting.
+ * Default category query map — multilingual + culturally aware search terms.
+ * Each category includes local vocabulary per country so Google Places returns
+ * venues that match local culture, not just literal translations.
+ *
+ * Covered cultures:
+ * - Latam: AR, BO, BR, CL, CO, CR, CU, EC, GT, MX, PA, PE, PY, UY, VE
+ * - English: UK, US, CA, AU, NZ, IE
+ * - Europe: ES, FR, DE, IT, PT, NL, PL, RU
+ * - Asia: JP, CN, KR, TH, VN, ID, PH, IN
+ * - Middle East: SA, AE, EG, TR, LB
  */
 const DEFAULT_CATEGORY_QUERY_MAP = {
   cafe: 'café coffee shop cafetería coffeehouse specialty coffee ' +
-    'starbucks dunkin tim hortons costa coffee peets ' +
-    'koffie kafe kaffee caffè kafeterya 咖啡 カフェ مقهى',
-  restaurant: 'restaurant restaurante bistro trattoria steakhouse ' +
+    // Latam
+    'cafetería cafecito café de especialidad ' +
+    // English
+    'starbucks dunkin tim hortons costa coffee peets blue bottle ' +
+    // Europe
+    'kaffee caffè caffetteria kaffeehaus koffie bar italiano ' +
+    // Asia
+    '喫茶店 カフェ 咖啡馆 咖啡厅 카페 quán cafe kopitiam warung kopi ' +
+    // Middle East
+    'مقهى قهوة çay bahçesi kahveci',
+  restaurant: 'restaurant restaurante bistro trattoria steakhouse eatery dining ' +
+    // Latam specific
+    'restorán picada fonda parrilla parrillada asador churrasquería comedor ' +
+    'marisquería cevichería empanadería lomotón sanguchería ' +
+    // Chile specific
+    'restorán chileno picada chilena cocinería ' +
+    // Argentina
+    'parrilla argentina bodegón ' +
+    // Brazil
+    'restaurante churrascaria botequim lanchonete boteco ' +
+    // Mexico
+    'fonda taquería cantina mexicana torta ' +
+    // Peru
+    'picantería cevichería anticuchería chifa ' +
+    // Spain
+    'taberna mesón casa de comidas tasca chiringuito ' +
+    // English
     'mcdonalds burger king kfc subway pizza hut dominos wendys taco bell chipotle ' +
-    'restaurante bistrô ristorante Restaurant churrascaria ' +
-    'レストラン 餐厅 مطعم warung rumah makan',
-  bar: 'bar pub cervecería brewery cocktail lounge wine bar taproom ' +
-    'brasserie Kneipe birreria taberna pivo bar sake bar ' +
-    'バー 酒吧 حانة warung bir',
-  night_club: 'nightclub discoteca discotheque dance club electronic music club ' +
-    'dance floor DJ night spot live music venue karaoke club nocturno boate ' +
-    'boîte de nuit Nachtclub tanzclub malam klub malam ' +
-    'ナイトクラブ 夜总会 ملهى ليلي',
+    'gastropub diner steakhouse ' +
+    // Europe
+    'ristorante trattoria osteria pizzeria Restaurant brasserie ' +
+    'restoran speisekarte ' +
+    // Asia
+    'レストラン 食堂 居酒屋 餐厅 餐馆 饭店 식당 음식점 ' +
+    'quán ăn nhà hàng rumah makan warung kedai ' +
+    // Middle East
+    'مطعم مطاعم lokanta restoran',
+  bar: 'bar pub cervecería brewery cocktail lounge wine bar taproom gastropub ' +
+    // Latam — IMPORTANT: in Chile/Argentina "bar" includes restoranes sociales
+    'cantina cervecería artesanal birrería coctelería rooftop bar ' +
+    'bar de copas resto-bar restobar speakeasy ' +
+    // Chile specific — where people go on weeknights
+    'resto pub picada nocturna terraza ' +
+    // Argentina
+    'boliche bar notable resto-bar ' +
+    // Brazil
+    'boteco botequim pé-sujo cervejaria ' +
+    // Mexico
+    'cantina pulquería mezcalería ' +
+    // Peru
+    'peña chicha bar ' +
+    // English
+    'sports bar dive bar tiki bar craft beer tap room ' +
+    // Europe
+    'brasserie bistrot Kneipe Bierstube birreria taberna pivnice ' +
+    'irish pub english pub british pub ' +
+    // Asia — izakaya is Japanese pub-equivalent
+    '居酒屋 バー 酒吧 酒馆 술집 포장마차 ' +
+    'quán nhậu quán bia warung bir ' +
+    // Middle East — shisha lounges are social evening spots
+    'حانة شيشة أرجيلة bar de narguile narghile bar lounge',
+  night_club: 'nightclub discoteca discotheque dance club electronic music venue ' +
+    // Latam
+    'boliche bailable discoteca carrete ' +
+    // Chile/Argentina
+    'carrete bailable after ' +
+    // Brazil
+    'balada boate casa noturna ' +
+    // Mexico
+    'antro bar de copas ' +
+    // English
+    'dance club DJ night spot live music venue EDM rave ' +
+    // Europe
+    'boîte de nuit Nachtclub Diskothek tanzclub club notturno discoteca ' +
+    // Asia
+    'ナイトクラブ クラブ 夜店 夜总会 클럽 ' +
+    'klub malam ' +
+    // Middle East
+    'ملهى ليلي كلوب gece kulübü',
   movie_theater: 'movie theater cinema cine multiplex sala de cine ' +
-    'cinéma Kino cinematografo bioscoop sinema ' +
-    '映画館 电影院 سينما',
-  park: 'park parque jardín botánico botanical garden plaza mirador ' +
-    'parc jardin Stadtpark giardino taman kebun raya ' +
-    '公园 parque nacional 公園 حديقة taman kota',
+    // Latam
+    'cine multisala cineplex cinepolis cinemark hoyts movistar ' +
+    // English
+    'imax drive-in cineplex amc regal ' +
+    // Europe
+    'cinéma Kino Filmtheater cinematografo cineteca ' +
+    // Asia
+    '映画館 シネマ 电影院 영화관 rạp chiếu phim bioskop ' +
+    // Middle East
+    'سينما دار عرض sinema',
+  park: 'park parque jardín botánico botanical garden plaza mirador viewpoint ' +
+    // Latam
+    'parque parque nacional plaza paseo alameda mirador laguna cerro ' +
+    // Chile — places like Cerro San Cristóbal, Parque Bicentenario
+    'cerro parque metropolitano paseo peatonal ' +
+    // Argentina — plazas are very social
+    'plaza pública parque urbano reserva ecológica ' +
+    // Brazil
+    'praça parque jardim mirante ' +
+    // Mexico
+    'zócalo alameda parque ecológico ' +
+    // Europe
+    'parc jardin Stadtpark öffentlicher Park giardino pubblico ' +
+    // Asia
+    '公園 公园 국립공원 公园 ' +
+    'taman kebun raya công viên ' +
+    // Middle East
+    'حديقة متنزه park bahçe',
   museum: 'museum museo musée Kunstmuseum museo nazionale muzeum ' +
-    'cultural center centro cultural centro histórico ' +
-    '博物館 博物馆 متحف museum sejarah',
-  bowling_alley: 'bowling boliche bowling alley arcade billar laser tag ' +
-    'piste de bowling Bowlingbahn bocciodromo escape room ' +
-    'ボウリング 保龄球 بولينج area bermain',
-  art_gallery: 'art gallery galería de arte exhibition contemporary art ' +
-    "galerie d'art Kunstgalerie galleria d'arte pinacoteca " +
-    '美術館 艺术画廊 معرض فني galeri seni',
+    // Latam
+    'museo histórico museo de arte museo interactivo centro cultural ' +
+    'pinacoteca palacio cultural casa museo ' +
+    // English
+    'national museum history museum art museum science museum ' +
+    // Europe
+    'Museum Kunsthalle palazzo museo civico ' +
+    // Asia
+    '博物館 博物馆 미술관 박물관 bảo tàng museum ' +
+    // Middle East
+    'متحف دار الآثار müze',
+  bowling_alley: 'bowling boliche bowling alley arcade billar laser tag escape room ' +
+    // Latam
+    'bolera billar pool parque de diversiones sala de juegos ' +
+    'karaoke mini golf paintball trampolín laser ' +
+    // English
+    'arcade entertainment center family fun center chuck e cheese dave and busters ' +
+    // Europe
+    'piste de bowling Bowlingbahn Vergnügungszentrum bocciodromo ' +
+    'sala giochi salle de jeux ' +
+    // Asia
+    'ボウリング 保龄球 볼링장 ゲームセンター 游戏厅 오락실 ' +
+    'arena bermain tempat hiburan ' +
+    // Middle East
+    'بولينج صالة ألعاب bowling salonu oyun salonu',
+  art_gallery: 'art gallery galería de arte exhibition contemporary art modern art ' +
+    // Latam
+    'galería de arte arte contemporáneo sala de exposiciones exposición ' +
+    // Europe
+    "galerie d'art Kunstgalerie Kunsthalle galleria d'arte pinacoteca " +
+    // Asia
+    '美術館 画廊 艺术画廊 갤러리 phòng tranh ' +
+    // Middle East
+    'معرض فني صالة عرض فنية sanat galerisi galeri seni',
   bakery: 'bakery panadería pastelería patisserie confitería repostería ' +
-    'krispy kreme cinnabon mister donut dunkin donuts ' +
-    'boulangerie Bäckerei panificio toko roti donut pastry shop ' +
-    'ベーカリー 面包店 مخبز kue',
-  shopping_mall: 'shopping mall centro comercial outlet department store ' +
-    'centre commercial Einkaufszentrum centro commerciale ' +
-    'pusat perbelanjaan mall plaza boutique ' +
-    'ショッピングモール 购物中心 مركز تسوق',
-  spa: 'spa wellness masajes termas sauna relax centro de bienestar ' +
-    'salon beauté Wellnesszentrum centro benessere pijat ' +
-    'onsen bathhouse beauty salon hammam ' +
-    'スパ 水疗 سبا pijat refleksi',
-  aquarium: 'aquarium acuario oceanario sea life marine ' +
-    'aquarium Aquarium acquario oceanarium ' +
-    '水族館 水族馆 أكواريوم akuarium',
-  zoo: 'zoo zoológico safari park wildlife sanctuary bioparque ' +
-    'zoo jardin zoologique Tierpark giardino zoologico ' +
-    '動物園 动物园 حديقة حيوان kebun binatang',
+    // Latam
+    'panadería pastelería amasandería confitería repostería dulcería ' +
+    // Chile — amasandería is very typical
+    'amasandería panificadora ' +
+    // Argentina
+    'panadería confitería facturas ' +
+    // Brazil
+    'padaria confeitaria doceria ' +
+    // Mexico
+    'panadería pastelería repostería churrería ' +
+    // English
+    'krispy kreme cinnabon mister donut dunkin donuts bread shop pastry shop ' +
+    // Europe
+    'boulangerie pâtisserie Bäckerei Konditorei panificio forno ' +
+    // Asia
+    'ベーカリー パン屋 和菓子 面包店 烘焙 제과점 tiệm bánh toko roti ' +
+    // Middle East
+    'مخبز حلويات pastane fırın',
+  shopping_mall: 'shopping mall centro comercial outlet department store retail ' +
+    // Latam
+    'centro comercial mall galería comercial outlet ' +
+    // Chile
+    'mall plaza costanera ' +
+    // Argentina
+    'shopping galería ' +
+    // Brazil
+    'shopping center mercado municipal ' +
+    // Europe
+    'centre commercial Einkaufszentrum centro commerciale galleria commerciale ' +
+    // Asia
+    'ショッピングモール 购物中心 百货公司 쇼핑몰 trung tâm thương mại ' +
+    'pusat perbelanjaan mall ' +
+    // Middle East
+    'مركز تسوق مول alışveriş merkezi',
+  spa: 'spa wellness massage masajes termas sauna relax wellness center ' +
+    // Latam
+    'masoterapia masajes relajantes centro de relajación termas ' +
+    // Chile — termas are very cultural
+    'termas hot springs aguas termales ' +
+    // Japan — onsen is essential
+    '温泉 銭湯 スパ エステ ' +
+    // Asia
+    'pijat refleksi reflexology 찜질방 마사지 spa massage ' +
+    // Middle East — hammam is essential
+    'حمام مغربي حمام بخاري hammam Türk hamamı ' +
+    // Europe
+    'spa balneario thermes Wellnesszentrum centro benessere terme ' +
+    // English
+    'day spa thermal spa thai massage aromatherapy ayurveda',
+  aquarium: 'aquarium acuario oceanario sea life marine ocean world ' +
+    // Latam
+    'acuario oceanográfico ' +
+    // Europe
+    'Aquarium acquario oceanarium aquarium marin ' +
+    // Asia
+    '水族館 水族馆 아쿠아리움 thủy cung akuarium ' +
+    // Middle East
+    'أكواريوم akvaryum',
+  zoo: 'zoo zoológico safari park wildlife sanctuary bioparque animal park ' +
+    // Latam
+    'zoológico bioparque parque zoológico reserva de fauna ' +
+    // Europe
+    'jardin zoologique Tierpark Zoo giardino zoologico parco faunistico ' +
+    // Asia
+    '動物園 动物园 동물원 vườn thú kebun binatang ' +
+    // Middle East
+    'حديقة حيوان hayvanat bahçesi',
 };
 
 /**
@@ -1086,9 +1269,59 @@ function detectBrandType(query) {
  * @param {boolean} useRestriction - true to use locationRestriction (hard filter) instead of locationBias
  * @returns {Promise<{places:Array, nextPageToken:string|null}>}
  */
+// Firestore-backed geographic cache (persists 24h, shared across all users and CF instances)
+// Collection: placesCache/{cacheKey} — auto-expires via TTL policy or manual check
+const PLACES_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// In-memory L1 cache (fast path — avoids Firestore read if same CF instance)
+const _placesL1Cache = new Map();
+const _PLACES_L1_TTL = 15 * 60 * 1000; // 15 min in-memory
+const _PLACES_L1_MAX = 100;
+
+function _getGeoCacheKey(textQuery, center, radiusMeters, languageCode, includedTypes) {
+  const lat = center ? Math.round(center.latitude * 100) / 100 : 0; // ~1km precision
+  const lng = center ? Math.round(center.longitude * 100) / 100 : 0;
+  const r = Math.round((radiusMeters || 0) / 1000); // Round to km
+  const type = includedTypes ? includedTypes[0] : '';
+  return `${textQuery}|${lat},${lng}|${r}|${languageCode || 'es'}|${type}`;
+}
+
+// Sanitize cache key for Firestore document ID (no /, max 1500 bytes)
+function _sanitizeCacheKey(key) {
+  return key.replace(/\//g, '_').replace(/\s+/g, '_').substring(0, 200);
+}
+
 async function placesTextSearch(textQuery, center, radiusMeters, languageCode, pageToken, maxResults = 20, useRestriction = false, includedTypes = null) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY not configured');
+
+  // Check cache: L1 in-memory → L2 Firestore (skip if pagination token)
+  if (!pageToken && center) {
+    const cacheKey = _getGeoCacheKey(textQuery, center, radiusMeters, languageCode, includedTypes);
+    const docId = _sanitizeCacheKey(cacheKey);
+
+    // L1: in-memory (fast, same CF instance)
+    const l1 = _placesL1Cache.get(docId);
+    if (l1 && (Date.now() - l1.time) < _PLACES_L1_TTL) {
+      return l1.data;
+    }
+
+    // L2: Firestore (persistent, shared across instances)
+    try {
+      const cacheDoc = await admin.firestore().collection('placesCache').doc(docId).get();
+      if (cacheDoc.exists) {
+        const cached = cacheDoc.data();
+        const cachedTime = cached.timestamp?.toMillis?.() || 0;
+        if ((Date.now() - cachedTime) < PLACES_CACHE_TTL_MS) {
+          const result = {places: cached.places || [], nextPageToken: null};
+          // Warm L1
+          _placesL1Cache.set(docId, {data: result, time: Date.now()});
+          return result;
+        }
+      }
+    } catch (cacheErr) {
+      // Cache miss — proceed to API call
+    }
+  }
 
   const body = {
     textQuery,
@@ -1179,10 +1412,51 @@ async function placesTextSearch(textQuery, center, radiusMeters, languageCode, p
   }
 
   const data = await resp.json();
-  return {
+  const result = {
     places: data.places || [],
     nextPageToken: data.nextPageToken || null,
   };
+
+  // Write to L1 + L2 cache (skip pagination results)
+  if (!pageToken && center && result.places.length > 0) {
+    const cacheKey = _getGeoCacheKey(textQuery, center, radiusMeters, languageCode, includedTypes);
+    const docId = _sanitizeCacheKey(cacheKey);
+
+    // L1: in-memory
+    if (_placesL1Cache.size >= _PLACES_L1_MAX) {
+      const oldest = _placesL1Cache.keys().next().value;
+      _placesL1Cache.delete(oldest);
+    }
+    _placesL1Cache.set(docId, {data: result, time: Date.now()});
+
+    // L2: Firestore (fire-and-forget, don't block response)
+    admin.firestore().collection('placesCache').doc(docId).set({
+      places: result.places.map((p) => ({
+        id: p.id,
+        displayName: p.displayName,
+        formattedAddress: p.formattedAddress,
+        location: p.location,
+        rating: p.rating || null,
+        userRatingCount: p.userRatingCount || null,
+        priceLevel: p.priceLevel || null,
+        types: (p.types || []).slice(0, 5),
+        photos: (p.photos || []).slice(0, 2),
+        primaryType: p.primaryType || null,
+        primaryTypeDisplayName: p.primaryTypeDisplayName || null,
+        regularOpeningHours: p.regularOpeningHours || null,
+        websiteUri: p.websiteUri || null,
+        googleMapsUri: p.googleMapsUri || null,
+      })),
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      query: textQuery,
+      lat: Math.round(center.latitude * 100) / 100,
+      lng: Math.round(center.longitude * 100) / 100,
+      radiusKm: Math.round((radiusMeters || 0) / 1000),
+      lang: languageCode || 'es',
+    }).catch((err) => logger.warn(`[placesCache] Write failed: ${err.message}`));
+  }
+
+  return result;
 }
 
 /**

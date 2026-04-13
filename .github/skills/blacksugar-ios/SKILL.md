@@ -41,7 +41,7 @@ userData["birthDate"]               = birthDate
 userData["bio"]                     = bio
 userData["male"]                    = male
 userData["orientation"]             = orientation.rawValue  // "men"|"women"|"both" LOWERCASE
-userData["userType"]                = userType.rawValue     // "SUGAR_DADDY"|"SUGAR_MOMMY"|"SUGAR_BABY" (Firestore raw, UI: 💎 Elite / 🌟 Prime)
+userData["userType"]                = userType.rawValue     // "ELITE"|"ELITE"|"PRIME" (Firestore raw, UI: 💎 Elite / 🌟 Prime)
 userData["pictures"]                = pictures
 userData["liked"]                   = []
 userData["passed"]                  = []
@@ -166,9 +166,9 @@ Analytics.logEvent("swipe_failed_pending_retry",   parameters: ["user_id": id, "
 // domain/profile/UserType.swift
 enum UserType: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
-    case sugarDaddy = "SUGAR_DADDY"   // 💎 Elite (hombre)
-    case sugarMommy = "SUGAR_MOMMY"   // 💎 Elite (mujer)
-    case sugarBaby  = "SUGAR_BABY"    // 🌟 Prime
+    case elite = "ELITE"   // 💎 Elite (hombre)
+    case elite = "ELITE"   // 💎 Elite (mujer)
+    case prime  = "PRIME"    // 🌟 Prime
 
     var emoji: String       // 💎 o 🌟
     var displayName: String // "Elite" o "Prime" (desde RemoteConfigService)
@@ -178,13 +178,13 @@ enum UserType: String, CaseIterable, Codable, Identifiable {
 ```
 
 **UI muestra solo 2 opciones**: 💎 Elite y 🌟 Prime
-- Si elige **Elite**: backend asigna `SUGAR_DADDY` (hombre) o `SUGAR_MOMMY` (mujer) automáticamente según género
-- Si elige **Prime**: backend asigna `SUGAR_BABY`
+- Si elige **Elite**: backend asigna `ELITE` (hombre) o `ELITE` (mujer) automáticamente según género
+- Si elige **Prime**: backend asigna `PRIME`
 - Botón "?" abre modal `UserTypeInfoSheet` con descripción de cada tipo
 - Onboarding: `OnboardingUserTypeView.swift` → `resolveUserType(for: "elite")` mapea según `coordinator.userData.male`
 - EditProfile: `EditProfileView.swift` → `selectElite()` mapea según `userGender == "man"` (Constants.genderOptions)
 - Badge en SwipeView/ProfileDetailsSheet: `"\(userType.emoji) \(userType.displayName)"` → "💎 Elite" o "🌟 Prime"
-- Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+- Firestore rawValues **NO cambian**: `ELITE`, `ELITE`, `PRIME`
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite"

@@ -67,7 +67,7 @@ Modera texto (mensajes de chat o biografias) con Gemini AI + RAG.
 
 - Memory: 256MiB, Timeout: 30s, Secrets: `GEMINI_API_KEY`
 - Pipeline: `getModerationConfig()` -> `retrieveModerationKnowledge()` (RAG) -> prompt builder -> Gemini `AI_MODEL_LITE`
-- Contexto: "This is a sugar dating app. Flirting and lifestyle discussion is NORMAL and ALLOWED."
+- Contexto: "This is a lifestyle dating app. Flirting and lifestyle discussion is NORMAL and ALLOWED."
 - Biografia: rechaza contacto personal, spam, hate speech, amenazas
 - Mensaje: rechaza acoso, sexual explicito no solicitado, scams, amenazas
 
@@ -445,7 +445,7 @@ Reglas generales de moderacion, definiciones de categorias, umbrales, y guias de
 
 ### `sugar-moderation-context.json` (146 lineas)
 
-Contexto especifico de sugar dating: que es normal/permitido en la app, patrones de evasion comunes, reglas de moderacion de biografias, y guias de contexto cultural.
+Contexto especifico de lifestyle dating: que es normal/permitido en la app, patrones de evasion comunes, reglas de moderacion de biografias, y guias de contexto cultural.
 
 ### Indexing Script
 
@@ -512,7 +512,7 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 
 ### Knowledge Base
 - `scripts/moderation-knowledge/moderation-rules.json` — Reglas generales (295 lineas)
-- `scripts/moderation-knowledge/sugar-moderation-context.json` — Contexto sugar dating (146 lineas)
+- `scripts/moderation-knowledge/sugar-moderation-context.json` — Contexto lifestyle dating (146 lineas)
 - `scripts/index-moderation-knowledge.js` — Script de indexacion
 
 ### Firestore Collections
@@ -613,6 +613,6 @@ Contexto especifico de sugar dating: que es normal/permitido en la app, patrones
 - Moderation system verified stable, no changes needed
 - All "sugar" references removed from backend prompts (coach.js, moderation.js) — Elite/Prime rebrand
 - `reviewer_uid` moved from hardcoded UID to Remote Config (comma-separated Set)
-- Elite/Prime rebranding complete — no "sugar daddy/mommy/baby" in user-facing text
+- Elite/Prime rebranding complete — no "elite/mommy/baby" in user-facing text
 - AI Icebreakers: conversation starters generated server-side are NOT moderated (trusted source)
 - Android: 35+ operations moved to Dispatchers.IO across 12 ViewModels (no moderation impact)

@@ -173,9 +173,9 @@ analyticsService.logSwipeFailedPendingRetry(userId, action)  // "like"|"super_li
 ```kotlin
 // profile/model/UserType.kt
 enum class UserType(val displayName: String) {
-    SUGAR_DADDY("Elite"),   // 💎 (hombre)
-    SUGAR_MOMMY("Elite"),   // 💎 (mujer)
-    SUGAR_BABY("Prime"),    // 🌟
+    ELITE("Elite"),   // 💎 (hombre)
+    ELITE("Elite"),   // 💎 (mujer)
+    PRIME("Prime"),    // 🌟
 
     val emoji: String       // "💎" o "🌟"
     val minimumAge: Int     // 18 para todos
@@ -185,13 +185,13 @@ enum class UserType(val displayName: String) {
 ```
 
 **UI muestra solo 2 opciones**: 💎 Elite y 🌟 Prime
-- Si elige **Elite**: `eliteIndex = if (genderIndex == 0) 1 else 2` → SUGAR_DADDY (hombre) o SUGAR_MOMMY (mujer)
-- Si elige **Prime**: index 0 → SUGAR_BABY
+- Si elige **Elite**: `eliteIndex = if (genderIndex == 0) 1 else 2` → ELITE (hombre) o ELITE (mujer)
+- Si elige **Prime**: index 0 → PRIME
 - Botón "?" abre AlertDialog con descripción de cada tipo
 - Onboarding: `UserTypeStepScreen.kt` → `eliteIndex` resuelve según `genderIndex`
 - Badge en ProfileCardView: `"💎 Elite"` o `"🌟 Prime"` (emoji inline)
 - Dialog en ProfileCardView: usa `contains("Elite")` / `contains("Prime")` para match
-- Firestore rawValues **NO cambian**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+- Firestore rawValues **NO cambian**: `ELITE`, `ELITE`, `PRIME`
 - Descripciones (10 idiomas): Elite = "compartir estilo de vida y sorprender", Prime = "conexiones significativas y que me sorprendan"
 - Chat restriction: Solo Elite puede enviar primer mensaje. Prime ve "Only Elite users can start the conversation"
 - Labels: `user_type_sugar_daddy_label` = "Elite", `user_type_sugar_daddy_mommy_label` = "Elite" (corregido de "Elite/Mommy")

@@ -87,7 +87,7 @@ Leido por CFs del Coach. Cache 5 min. Cambiar sin redeploy.
 | `personalityTone` | String | `"warm, supportive, encouraging but honest..."` | Tono de personalidad |
 | `responseStyle` | Object | `{maxParagraphs:4, useEmojis:true, formalityLevel:"casual_professional", encouragementLevel:"high"}` | Formato y estilo |
 | `allowedTopics` | Array | ~70 temas | Lista de temas permitidos |
-| `coachingSpecializations` | Object | Claves: `SUGAR_DADDY` (💎 Elite), `SUGAR_MOMMY` (💎 Elite), `SUGAR_BABY` (🌟 Prime) | Guia especifica por userType (WHEN SINGLE / WHEN IN A RELATIONSHIP) |
+| `coachingSpecializations` | Object | Claves: `ELITE` (💎 Elite), `ELITE` (💎 Elite), `PRIME` (🌟 Prime) | Guia especifica por userType (WHEN SINGLE / WHEN IN A RELATIONSHIP) |
 | `stagePrompts` | Object | Claves: `no_conversation_yet`, `just_started_talking`, `getting_to_know`, `building_connection`, `active_conversation` | Prompts por etapa de relacion |
 | `blockedTopics` | Array | Lista de temas off-topic | Deteccion de off-topic |
 | `offTopicMessages` | Object | 10 idiomas | Mensajes de redireccion localizados |

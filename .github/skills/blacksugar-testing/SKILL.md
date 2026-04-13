@@ -127,7 +127,7 @@ interface MatchUser {
   profile: {
     name: string;
     gender: 'male' | 'female';
-    userType: 'SUGAR_DADDY' | 'SUGAR_MOMMY' | 'SUGAR_BABY'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
+    userType: 'ELITE' | 'ELITE' | 'PRIME'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
     age: number;
     city: string;
     createdAt: Timestamp;
@@ -169,7 +169,7 @@ interface DiscoveryProfile {
   profile: {
     name: string;  // "FirstName LastName"
     gender: 'male' | 'female';
-    userType: 'SUGAR_DADDY' | 'SUGAR_MOMMY' | 'SUGAR_BABY'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
+    userType: 'ELITE' | 'ELITE' | 'PRIME'; // UI: 💎 Elite / 💎 Elite / 🌟 Prime
     age: number;  // 22-40
     city: string;  // Santiago, Valparaíso, Concepción, Viña del Mar
     bio: string;  // From predefined list
@@ -578,10 +578,10 @@ await matchRef.update({
 // Check userType logic:
 if (CURRENT_USER.name === 'Daniel') {
   // Daniel es hombre, mostrar mujeres (🌟 Prime / 💎 Elite)
-  userType = isMale ? 'SUGAR_DADDY' : (i % 3 === 0 ? 'SUGAR_MOMMY' : 'SUGAR_BABY');
+  userType = isMale ? 'ELITE' : (i % 3 === 0 ? 'ELITE' : 'PRIME');
 } else {
   // Rosita es mujer, mostrar hombres (💎 Elite)
-  userType = isMale ? 'SUGAR_DADDY' : 'SUGAR_BABY';
+  userType = isMale ? 'ELITE' : 'PRIME';
 }
 ```
 
@@ -744,8 +744,8 @@ async function createSpecificScenario() {
   const oldUsers = createUsersWithAge(35, 40);
   
   // Mix userTypes
-  const babies = createUsersWithType('SUGAR_BABY');
-  const daddies = createUsersWithType('SUGAR_DADDY');
+  const babies = createUsersWithType('PRIME');
+  const daddies = createUsersWithType('ELITE');
   
   // Create matches with specific patterns
   await createMatchesBetween(youngUsers, oldUsers);

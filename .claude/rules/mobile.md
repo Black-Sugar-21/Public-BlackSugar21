@@ -70,12 +70,12 @@ core/             ← cache, performance, utils compartidos
 ## UserType — UI vs Backend
 
 **UI muestra 2 opciones**: 💎 Elite y 🌟 Prime
-**Backend almacena 3 valores**: `SUGAR_DADDY`, `SUGAR_MOMMY`, `SUGAR_BABY`
+**Backend almacena 3 valores**: `ELITE`, `ELITE`, `PRIME`
 
 | UI | Hombre → Firestore | Mujer → Firestore |
 |----|--------------------|--------------------|
-| 💎 Elite | `SUGAR_DADDY` | `SUGAR_MOMMY` |
-| 🌟 Prime | `SUGAR_BABY` | `SUGAR_BABY` |
+| 💎 Elite | `ELITE` | `ELITE` |
+| 🌟 Prime | `PRIME` | `PRIME` |
 
 - iOS: `resolveUserType()` / `selectElite()` mapea según género
 - Android: `eliteIndex = if (genderIndex == 0) 1 else 2` en mapper
@@ -91,8 +91,8 @@ core/             ← cache, performance, utils compartidos
 3. **Nuevo campo en perfil de usuario** → reflejarlo en `editprofile` de ambas apps
 4. **Cambio en lógica de matching** → verificar paridad en `MatchingScoreCalculator` (iOS) y `core/matching/` (Android)
 5. **Push notifications** → `core/fcm/` (Android) debe recibir el mismo payload que el handler de iOS
-6. **Cambio en UserType UI** → verificar que Firestore sigue recibiendo `SUGAR_DADDY`/`SUGAR_MOMMY`/`SUGAR_BABY`
-7. **Chat primer mensaje** → Solo Elite (SUGAR_DADDY/SUGAR_MOMMY) puede iniciar. Prime (SUGAR_BABY) espera. Validación usa `userTypesAtMatch` (tipo original al matchear, inmutable)
+6. **Cambio en UserType UI** → verificar que Firestore sigue recibiendo `ELITE`/`ELITE`/`PRIME`
+7. **Chat primer mensaje** → Solo Elite (ELITE/ELITE) puede iniciar. Prime (PRIME) espera. Validación usa `userTypesAtMatch` (tipo original al matchear, inmutable)
 8. **AI Icebreakers en chat vacío** → CF `generateIcebreakers` genera 3 sugerencias cuando `messages.isEmpty`. Tap pre-llena input. iOS: `typingMessage`, Android: `suggestedText`. Guard `icebreakersLoaded` previene calls repetidos. Fail silently en error de red.
 9. **Safety Check-In** → Controlado por RC `enable_safety_checkin` (default false). iOS: `RemoteConfigService.isSafetyCheckInEnabled()`. Android: `FirebaseRemoteConfig.getBoolean("enable_safety_checkin")`.
 10. **Reviewer location** → Skip `updateUserLocation()` para reviewer UID. iOS: `isReviewerUid()`. Android: RC `reviewer_uid` split. Ubicación fija Santiago (-33.4489, -70.6693).

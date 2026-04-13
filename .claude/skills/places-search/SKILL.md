@@ -184,3 +184,16 @@ Cuando el usuario menciona otra ciudad (ej. "quiero ir a Buenos Aires"), el fluj
 
 21 campos configurables. Ver skill `remote-config` para detalle completo.
 Cache de configuracion: 5 minutos via `getPlacesSearchConfig()`.
+
+## Client-side race condition (infinite scroll) — 2026-04-12
+
+**Bug histórico**: Al cambiar categoría mientras `loadMore` estaba en vuelo, los resultados aparecían/desaparecían.
+
+**Fix en clientes** (no en CFs):
+- Request versioning (`placesRequestVersion`) en iOS `ChatView.swift` y Android `ChatViewModel.kt`
+- Job cancellation (`categoryLoadJob`, `loadMoreJob`) en Android
+- Task capture + stale-response guard en iOS
+- Dedupe defensiva por `placeId` en UI (`PlaceSuggestionsSheet.kt`, `PlaceSuggestionsView.swift`)
+- `_dateSuggestions.value = emptyList()` inmediato al cambiar categoría (no al recibir respuesta)
+
+**Las CFs no necesitan cambios** — el bug era 100% client-side.

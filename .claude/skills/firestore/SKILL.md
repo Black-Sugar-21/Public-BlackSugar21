@@ -14,7 +14,7 @@ description: Esquema completo de Firestore de BlackSugar21 — todas las colecci
 ### `users/{userId}`
 
 ```
-name, age, bio, gender (bool: male=true), userType (SUGAR_DADDY|SUGAR_BABY|SUGAR_MOMMY)
+name, age, bio, gender (bool: male=true), userType (ELITE|PRIME|ELITE)
 email, phoneNumber, photoURL, pictureNames [String], pictureCount
 latitude, longitude, g (geohash — SIEMPRE "g", NUNCA "geohash"), city, country, countryCode
 orientation ("men"|"women"|"both" — SIEMPRE lowercase)
@@ -52,7 +52,7 @@ timestamp (Timestamp) — orden principal en match list
 lastMessage (String), lastMessageSeq (Number — monotonically increasing, incremented by CF on each message, used by read cache to detect new messages), lastMessageTimestamp (Timestamp), lastMessageSenderId (String — userId of last message sender)
 createdAt, messageCount
 lastSeenTimestamps {userId: Timestamp} — Map of userId → serverTimestamp. Updated when user opens/exits chat (marks messages as read). Both iOS and Android update with FieldValue.serverTimestamp()
-userTypesAtMatch {userId: String} — Original user types at time of match (e.g. SUGAR_DADDY, SUGAR_BABY)
+userTypesAtMatch {userId: String} — Original user types at time of match (e.g. ELITE, PRIME)
 isTest — para matches de prueba
 ```
 
@@ -546,7 +546,7 @@ Written by web tester auto-enrollment modal. Used for beta tester management.
 55. **Foreground recovery restart listener**: Foreground recovery (app returning from background) must restart match listener on both platforms. iOS: `scenePhase .active`, Android: `Lifecycle.Event.ON_START`
 56. **Story throttle**: 3 seconds minimum between story refreshes on both platforms. Prevents rapid-fire Firestore reads on scroll/tab switch
 57. **Photo verification throttle**: 5 minutes minimum between photo verifications on both platforms. Prevents abuse of moderation pipeline
-58. **First message restriction**: Only Elite (SUGAR_DADDY/SUGAR_MOMMY) can send the first message in a match, not Prime (SUGAR_BABY). Enforced by Security Rules AND client-side UI (disable send button for Prime until Elite sends first)
+58. **First message restriction**: Only Elite (ELITE/ELITE) can send the first message in a match, not Prime (PRIME). Enforced by Security Rules AND client-side UI (disable send button for Prime until Elite sends first)
 59. **FirestoreUser model completeness**: FirestoreUser model must include ALL fields present in Firestore documents to avoid CustomClassMapper warnings (pictureNames, pictureCount, lastCoachResetDate, isReviewer, isTest, createdAt, geohash)
 60. **Cloud Functions config safety**: Every CF that reads coach_config must call `getCoachConfig()` — never use bare `config` variable. Audited 2026-04-01: only getCoachHistory had this bug (fixed)
 61. **Independent evaluator zero-cost guard**: `evaluateCoachResponses` must skip when no new messages exist (`messagesSnap.empty → return`), already-evaluated messages (`independentEvalDone → skip`), and after sampling (`candidates.length === 0 → return`)
