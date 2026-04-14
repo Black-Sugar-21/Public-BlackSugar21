@@ -452,22 +452,37 @@ exports.simulateSituation = onCall(
         buildPersonaProfile(db, otherDoc.data(), 'B', messagesSnap, otherUserId),
       ]);
     } else {
-      // Sin match: persona genérico para el interlocutor
-      logger.info(`[simulateSituation] Building generic persona for user ${userId.substring(0, 8)} (no match)`);
+      // Sin match: usar personas genéricos sin llamar a buildPersonaProfile
+      // (que intenta buscar en coachChats y puede fallar)
+      logger.info(`[simulateSituation] Using generic personas for user ${userId.substring(0, 8)} (no match)`);
       const userDoc = await db.collection('users').doc(userId).get();
       if (!userDoc.exists) throw new HttpsError('not-found', 'User profile not found');
       const userData = userDoc.data();
       if (!userData) throw new HttpsError('not-found', 'User data is empty');
 
-      logger.info(`[simulateSituation] User data loaded: name=${userData.name}, userType=${userData.userType}`);
+      // Build user persona manually without async calls
+      const interests = (userData.interests || []).map(i =>
+        i.replace(/^interest_/, '').replace(/_/g, ' ')
+      );
+      userPersona = {
+        role: 'A',
+        name: userData.name || 'You',
+        age: userData.birthDate
+          ? Math.floor((Date.now() - userData.birthDate.toDate().getTime()) / (1000 * 60 * 60 * 24 * 365))
+          : null,
+        userType: userData.userType || 'PRIME',
+        bio: (userData.bio || '').substring(0, 400),
+        interests,
+        attachmentStyle: 'secure',  // Safe default
+        commStyle: 'direct',         // Safe default
+        archetype: {},               // Will be resolved in buildAgentSystemPrompt
+        realMessages: [],
+        similarMessages: [],
+        avgMessageLength: 60,
+      };
+      logger.info(`[simulateSituation] User persona built manually: ${userPersona.name}`);
 
-      // Empty QuerySnapshot mock for buildPersonaProfile (user has no match conversation)
-      const emptySnap = {docs: [], empty: true, size: 0};
-      userPersona = await buildPersonaProfile(db, userData, 'A', emptySnap, userId);
-      logger.info(`[simulateSituation] User persona built: ${userPersona.name} (${userPersona.attachmentStyle}/${userPersona.commStyle})`);
-
-      // Generic persona for unmatched simulation
-      // Let buildAgentSystemPrompt resolve the archetype using secure_playful as default
+      // Generic persona for the other party in unmatched simulation
       matchPersona = {
         name: 'them',
         bio: '',
