@@ -52,6 +52,32 @@ const SITUATION_TYPES = [
 
 const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 
+// Fallback approaches when Gemini API fails or returns invalid JSON
+function generateApproachesFallback() {
+  return [
+    {
+      id: '1',
+      tone: 'direct',
+      phrase: 'I wanted to talk with you about this. Can we chat?',
+    },
+    {
+      id: '2',
+      tone: 'playful',
+      phrase: 'Hey, got a few minutes? There\'s something on my mind.',
+    },
+    {
+      id: '3',
+      tone: 'romantic_vulnerable',
+      phrase: 'I\'ve been thinking about you, and I want to be honest about how I feel.',
+    },
+    {
+      id: '4',
+      tone: 'grounded_honest',
+      phrase: 'I think we should talk about this. I care about us and want to understand each other better.',
+    },
+  ];
+}
+
 // Safety guardrail patterns — when any of these match the user's situation,
 // we return an ethical block WITHOUT consuming rate limit or calling Gemini.
 const COERCIVE_PATTERNS = [
@@ -201,7 +227,7 @@ async function generateApproaches(genAI, situation, matchPersona, userLang) {
     const langInstr = getLanguageInstruction(userLang);
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_NAME,
-      generationConfig: {maxOutputTokens: 500, temperature: 0.85, responseMimeType: 'application/json'},
+      generationConfig: {maxOutputTokens: 1200, temperature: 0.85, responseMimeType: 'application/json'},
     });
 
     const prompt = `You are a dating coach helping a user rehearse how to say something to their match.
@@ -232,21 +258,17 @@ Respond ONLY with JSON in this shape:
     const text = result?.response?.text();
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      logger.warn('[generateApproaches] Gemini returned empty response');
-      throw new Error('Gemini API returned empty response');
+      logger.warn('[generateApproaches] Gemini returned empty response, using fallback');
+      return generateApproachesFallback();
     }
 
     const parsed = parseGeminiJsonResponse(text);
-    if (!parsed) {
-      logger.warn('[generateApproaches] Failed to parse Gemini response as JSON');
-      throw new Error('Failed to parse Gemini response as valid JSON');
+    if (!parsed || !Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
+      logger.warn('[generateApproaches] Failed to parse valid approaches, using fallback');
+      return generateApproachesFallback();
     }
 
-    const approaches = Array.isArray(parsed?.approaches) ? parsed.approaches : [];
-    if (approaches.length === 0) {
-      logger.warn('[generateApproaches] No approaches returned from Gemini');
-      throw new Error('No approaches returned from Gemini');
-    }
+    const approaches = parsed.approaches;
 
     // Normalize — guarantee 4 approaches in fixed order
     const byTone = new Map();
