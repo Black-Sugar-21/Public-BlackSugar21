@@ -40,7 +40,6 @@ const {
   queryPsychologyRAG,
   getSimulationConfig,
   isSimulationAllowed,
-  BEHAVIOR_ARCHETYPES,
 } = require('./simulation');
 
 // ---------------------------------------------------------------------------
@@ -454,23 +453,27 @@ exports.simulateSituation = onCall(
       ]);
     } else {
       // Sin match: persona genérico para el interlocutor
+      logger.info(`[simulateSituation] Building generic persona for user ${userId.substring(0, 8)} (no match)`);
       const userDoc = await db.collection('users').doc(userId).get();
       if (!userDoc.exists) throw new HttpsError('not-found', 'User profile not found');
       const userData = userDoc.data();
       if (!userData) throw new HttpsError('not-found', 'User data is empty');
 
+      logger.info(`[simulateSituation] User data loaded: name=${userData.name}, userType=${userData.userType}`);
+
       // Empty QuerySnapshot mock for buildPersonaProfile (user has no match conversation)
       const emptySnap = {docs: [], empty: true, size: 0};
       userPersona = await buildPersonaProfile(db, userData, 'A', emptySnap, userId);
+      logger.info(`[simulateSituation] User persona built: ${userPersona.name} (${userPersona.attachmentStyle}/${userPersona.commStyle})`);
 
       // Generic persona for unmatched simulation
+      // Let buildAgentSystemPrompt resolve the archetype using secure_playful as default
       matchPersona = {
         name: 'them',
         bio: '',
         interests: [],
         attachmentStyle: 'secure',
         commStyle: 'direct',
-        archetype: BEHAVIOR_ARCHETYPES['secure_direct'] || BEHAVIOR_ARCHETYPES['secure_playful'] || {},
         realMessages: [],
         similarMessages: [],
         avgMessageLength: 60,
@@ -485,8 +488,11 @@ exports.simulateSituation = onCall(
     const situationType = await classifySituation(genAI, trimmed, lang);
 
     // ── Step 2: Generate 4 approaches (NAME, one call) ──────────────────
+    logger.info(`[simulateSituation] Generating approaches for ${matchPersona.name}...`);
     const approaches = await generateApproaches(genAI, trimmed, matchPersona, lang);
+    logger.info(`[simulateSituation] Generated ${approaches.length} approaches`);
     const validApproaches = approaches.filter(a => a.phrase && a.phrase.length > 0);
+    logger.info(`[simulateSituation] Valid approaches: ${validApproaches.length}`);
     if (validApproaches.length === 0) {
       throw new HttpsError('internal', 'Failed to generate approaches');
     }
