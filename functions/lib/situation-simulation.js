@@ -197,13 +197,14 @@ Respond with JSON: {"type": "<category>"}`;
 }
 
 async function generateApproaches(genAI, situation, matchPersona, userLang) {
-  const langInstr = getLanguageInstruction(userLang);
-  const model = genAI.getGenerativeModel({
-    model: AI_MODEL_NAME,
-    generationConfig: {maxOutputTokens: 500, temperature: 0.85, responseMimeType: 'application/json'},
-  });
+  try {
+    const langInstr = getLanguageInstruction(userLang);
+    const model = genAI.getGenerativeModel({
+      model: AI_MODEL_NAME,
+      generationConfig: {maxOutputTokens: 500, temperature: 0.85, responseMimeType: 'application/json'},
+    });
 
-  const prompt = `You are a dating coach helping a user rehearse how to say something to their match.
+    const prompt = `You are a dating coach helping a user rehearse how to say something to their match.
 
 User wants to express: "${situation}"
 
@@ -227,21 +228,40 @@ ${langInstr}
 Respond ONLY with JSON in this shape:
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
-  const result = await model.generateContent(prompt);
-  const text = result?.response?.text() || '';
-  const parsed = parseGeminiJsonResponse(text);
+    const result = await model.generateContent(prompt);
+    const text = result?.response?.text();
 
-  const approaches = Array.isArray(parsed?.approaches) ? parsed.approaches : [];
-  // Normalize — guarantee 4 approaches in fixed order
-  const byTone = new Map();
-  for (const a of approaches) {
-    if (a && typeof a.phrase === 'string' && a.tone) byTone.set(a.tone, a.phrase.trim());
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      logger.warn('[generateApproaches] Gemini returned empty response');
+      throw new Error('Gemini API returned empty response');
+    }
+
+    const parsed = parseGeminiJsonResponse(text);
+    if (!parsed) {
+      logger.warn('[generateApproaches] Failed to parse Gemini response as JSON');
+      throw new Error('Failed to parse Gemini response as valid JSON');
+    }
+
+    const approaches = Array.isArray(parsed?.approaches) ? parsed.approaches : [];
+    if (approaches.length === 0) {
+      logger.warn('[generateApproaches] No approaches returned from Gemini');
+      throw new Error('No approaches returned from Gemini');
+    }
+
+    // Normalize — guarantee 4 approaches in fixed order
+    const byTone = new Map();
+    for (const a of approaches) {
+      if (a && typeof a.phrase === 'string' && a.tone) byTone.set(a.tone, a.phrase.trim());
+    }
+    return FIXED_TONES.map((tone, i) => ({
+      id: String(i + 1),
+      tone,
+      phrase: byTone.get(tone) || approaches[i]?.phrase || '',
+    }));
+  } catch (e) {
+    logger.error('[situationSim] generateApproaches failed:', e.message);
+    throw e; // Re-throw so parent catches and returns proper error message
   }
-  return FIXED_TONES.map((tone, i) => ({
-    id: String(i + 1),
-    tone,
-    phrase: byTone.get(tone) || approaches[i]?.phrase || '',
-  }));
 }
 
 async function buildFinalCoachTip(genAI, situation, winningApproach, matchPersona, ragChunks, userLang) {
@@ -294,11 +314,14 @@ exports.simulateSituation = onCall(
     secrets: [geminiApiKey],
   },
   async (request) => {
+    let userId = null;
+    let matchId = null;
     try {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required');
+      if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required');
 
-    const userId = request.auth.uid;
-    const {situation, matchId, userLanguage} = request.data || {};
+    userId = request.auth.uid;
+    const {situation, userLanguage} = request.data || {};
+    matchId = (request.data?.matchId) || null;
 
     // ── Language validation ──────────────────────────────────────────────
     const SUPPORTED_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'ar', 'id'];
@@ -343,23 +366,9 @@ exports.simulateSituation = onCall(
       };
     }
 
-    // ── Remote Config gate (reuse simulation_config) ────────────────────
-    const simConfig = await getSimulationConfig();
-    if (!isSimulationAllowed(userId, simConfig)) {
-      const notAvailableMsg = {
-        en: '🔮 Situation rehearsal is in beta. It will be available to all users soon.',
-        es: '🔮 El ensayo de situaciones está en beta. Pronto estará disponible para todos los usuarios.',
-        pt: '🔮 O ensaio de situações está em beta. Em breve estará disponível para todos.',
-        fr: '🔮 La répétition de situations est en bêta. Disponible pour tous bientôt.',
-        de: '🔮 Situationsproben sind in der Beta-Phase. Bald für alle verfügbar.',
-        ja: '🔮 シチュエーション・リハーサルはベータ版です。',
-        zh: '🔮 情境预演功能处于测试阶段。',
-        ru: '🔮 Репетиция ситуаций в бета-версии.',
-        ar: '🔮 التدريب على المواقف في مرحلة تجريبية.',
-        id: '🔮 Simulasi situasi dalam versi beta.',
-      };
-      throw new HttpsError('permission-denied', notAvailableMsg[lang] || notAvailableMsg.en);
-    }
+    // ── Feature is available to all users (no Remote Config gate) ────────
+    // Situation Simulation is a public feature, unlike Relationship Simulation
+    // which uses Remote Config for beta testing
 
     // ── Cache check BEFORE rate limit ───────────────────────────────────
     const situationHash = crypto.createHash('sha256')

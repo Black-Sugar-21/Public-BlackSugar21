@@ -36,8 +36,8 @@ const SIM_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 const SIM_CONFIG_DEFAULTS = {
   enabled: true,          // Global kill switch
-  betaMode: true,         // true = only allowedUserIds; false = all users
-  allowedUserIds: '',     // Comma-separated UIDs, empty = all (only when betaMode=false)
+  betaMode: false,        // false = all users can use; true = only allowedUserIds
+  allowedUserIds: '',     // Comma-separated UIDs (only used when betaMode=true)
   simulationCount: 10,    // Simulations to run (5-10)
   roundsPerSim: 6,        // Rounds per simulation (4-8)
   maxPerDay: 3,           // Rate limit per user per day

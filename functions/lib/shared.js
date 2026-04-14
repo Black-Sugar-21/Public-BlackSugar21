@@ -65,7 +65,13 @@ function normalizeCategory(cat) {
 const categoryEmojiMap = {cafe: '☕', restaurant: '🍽️', bar: '🍺', night_club: '💃', movie_theater: '🎬', park: '🌳', museum: '🏛️', bowling_alley: '🎳', art_gallery: '🎨', bakery: '🥐', shopping_mall: '🛍️', spa: '💆', aquarium: '🐠', zoo: '🦁'};
 
 function parseGeminiJsonResponse(responseText) {
+  if (!responseText || typeof responseText !== 'string') {
+    return null;
+  }
   let cleanText = responseText.trim();
+  if (!cleanText) {
+    return null;
+  }
   const jsonBlockMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonBlockMatch) {
     cleanText = jsonBlockMatch[1];
@@ -80,7 +86,15 @@ function parseGeminiJsonResponse(responseText) {
       cleanText = cleanText.substring(startIdx, endIdx + 1);
     }
   }
-  return JSON.parse(cleanText);
+  if (!cleanText || !cleanText.includes('{')) {
+    return null;
+  }
+  try {
+    return JSON.parse(cleanText);
+  } catch (err) {
+    logger.warn(`[parseGeminiJsonResponse] Failed to parse: ${cleanText.substring(0, 100)}`);
+    return null;
+  }
 }
 
 // ── Anti-Hallucination Validation Layer ────────────────────────────────────
