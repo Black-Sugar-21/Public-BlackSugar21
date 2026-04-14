@@ -111,6 +111,49 @@ const SITUATION_MAX_PER_DAY = 10;
 // Cache TTL for situation simulations (6 hours)
 const SITUATION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+// Remote Config defaults for Situation Simulation
+const SITUATION_SIM_CONFIG_DEFAULTS = {
+  enabled: true,
+  maxPerDay: 10,
+  maxCharsMinimum: 5,
+  maxCharsMaximum: 500,
+  temperature: 0.85,
+  maxOutputTokens: 1200,
+  cacheMinutes: 360,
+  fallbackApproachesEnabled: true,
+};
+
+// Remote Config cache for situation_simulation_config
+let _situationSimConfigCache = null;
+let _situationSimConfigCacheTime = 0;
+const SITUATION_SIM_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+async function getSituationSimulationConfig() {
+  // Return cached config if fresh
+  if (_situationSimConfigCache && (Date.now() - _situationSimConfigCacheTime) < SITUATION_SIM_CONFIG_CACHE_TTL) {
+    return _situationSimConfigCache;
+  }
+
+  try {
+    const rc = admin.remoteConfig();
+    const template = await rc.getTemplate();
+    const param = template.parameters['situation_simulation_config'];
+    if (param?.defaultValue?.value) {
+      const rcConfig = JSON.parse(param.defaultValue.value);
+      _situationSimConfigCache = {...SITUATION_SIM_CONFIG_DEFAULTS, ...rcConfig};
+      _situationSimConfigCacheTime = Date.now();
+      return _situationSimConfigCache;
+    }
+  } catch (err) {
+    logger.warn(`[getSituationSimulationConfig] RC read failed, using defaults: ${err.message}`);
+  }
+
+  // Fallback to defaults if RC read fails
+  _situationSimConfigCache = SITUATION_SIM_CONFIG_DEFAULTS;
+  _situationSimConfigCacheTime = Date.now();
+  return _situationSimConfigCache;
+}
+
 // ---------------------------------------------------------------------------
 // Reaction scoring — multilingual positive/negative signals
 // Adapted from detectRebellion() signals but focused on 1-on-1 reactions.
@@ -371,6 +414,12 @@ exports.simulateSituation = onCall(
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('internal', 'AI service unavailable');
 
+    // ── Load Remote Config for Situation Simulation ──────────────────────
+    const config = await getSituationSimulationConfig();
+    if (!config.enabled) {
+      throw new HttpsError('unavailable', 'Situation Simulation is currently unavailable');
+    }
+
     // ── Safety guardrail FIRST (before rate limit, before cache) ───────
     if (COERCIVE_PATTERNS.some(p => p.test(trimmed))) {
       logger.info(`[simulateSituation] Ethical block for user ${userId.substring(0, 8)}`);
@@ -415,11 +464,11 @@ exports.simulateSituation = onCall(
       logger.warn('[simulateSituation] cache read failed (non-fatal):', e.message);
     }
 
-    // ── Atomic rate limit (10/day/user) ─────────────────────────────────
+    // ── Atomic rate limit (configurable via Remote Config) ───────────────
     const today = new Date().toISOString().substring(0, 10);
     const usageRef = db.collection('users').doc(userId)
       .collection('situationSimulationUsage').doc(today);
-    const maxPerDay = SITUATION_MAX_PER_DAY;
+    const maxPerDay = config.maxPerDay;
 
     let rateLimitPassed = false;
     try {
