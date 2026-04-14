@@ -684,20 +684,30 @@ async function buildPersonaProfile(db, userData, role, messagesSnap, ownUserId) 
     : null;
 
   // Own real messages from the match conversation
-  const ownMessages = messagesSnap.docs
-    .filter(d => d.data().senderId === ownUserId && d.data().type !== 'ephemeral')
-    .map(d => (d.data().message || '').trim())
+  // Defensive: handle both Firestore QuerySnapshot and mock/empty snap objects
+  const docs = (messagesSnap && messagesSnap.docs) ? messagesSnap.docs : [];
+  const ownMessages = (Array.isArray(docs) ? docs : [])
+    .filter(d => {
+      const data = d.data && d.data() ? d.data() : {};
+      return data.senderId === ownUserId && data.type !== 'ephemeral';
+    })
+    .map(d => {
+      const data = d.data && d.data() ? d.data() : {};
+      return (data.message || '').trim();
+    })
     .filter(m => m.length > 2)
     .slice(0, 12);
 
-  const attachmentStyle = inferAttachmentStyle(userData.bio, interests);
+  const attachmentStyle = inferAttachmentStyle(userData.bio || '', interests);
   const commStyle       = inferCommStyle(ownMessages);
   const archetype       = resolveArchetype(attachmentStyle, commStyle);
 
   // Fetch similar users for behavioral enrichment
+  // Defensive: userData.userType might be missing
+  const userType = userData.userType || 'PRIME';
   const similarMessages = await fetchSimilarUserMessages(
     db,
-    userData.userType,
+    userType,
     interests,
     age ? [age - 5, age + 5] : [20, 45],
     ownUserId,

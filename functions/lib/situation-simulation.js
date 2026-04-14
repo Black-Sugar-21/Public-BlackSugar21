@@ -40,6 +40,7 @@ const {
   queryPsychologyRAG,
   getSimulationConfig,
   isSimulationAllowed,
+  BEHAVIOR_ARCHETYPES,
 } = require('./simulation');
 
 // ---------------------------------------------------------------------------
@@ -294,6 +295,7 @@ exports.simulateSituation = onCall(
     secrets: [geminiApiKey],
   },
   async (request) => {
+    try {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required');
 
     const userId = request.auth.uid;
@@ -454,15 +456,24 @@ exports.simulateSituation = onCall(
       // Sin match: persona genérico para el interlocutor
       const userDoc = await db.collection('users').doc(userId).get();
       if (!userDoc.exists) throw new HttpsError('not-found', 'User profile not found');
+      const userData = userDoc.data();
+      if (!userData) throw new HttpsError('not-found', 'User data is empty');
 
-      const nullSnap = {docs: [], empty: true};
-      userPersona = await buildPersonaProfile(db, userDoc.data(), 'A', nullSnap, userId);
+      // Empty QuerySnapshot mock for buildPersonaProfile (user has no match conversation)
+      const emptySnap = {docs: [], empty: true, size: 0};
+      userPersona = await buildPersonaProfile(db, userData, 'A', emptySnap, userId);
+
+      // Generic persona for unmatched simulation
       matchPersona = {
         name: 'them',
         bio: '',
         interests: [],
         attachmentStyle: 'secure',
         commStyle: 'direct',
+        archetype: BEHAVIOR_ARCHETYPES['secure_direct'] || BEHAVIOR_ARCHETYPES['secure_playful'] || {},
+        realMessages: [],
+        similarMessages: [],
+        avgMessageLength: 60,
       };
     }
 
@@ -627,5 +638,23 @@ exports.simulateSituation = onCall(
       ...finalReport,
       generatedAt: Date.now(),
     };
+    } catch (error) {
+      const userIdDebug = (userId && typeof userId === 'string' ? userId.substring(0, 8) : 'unknown');
+      const matchIdDebug = (matchId && typeof matchId === 'string' ? matchId.substring(0, 8) : 'none');
+
+      logger.error(`[simulateSituation] Error for user=${userIdDebug} match=${matchIdDebug}: ${error.message}`, {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+
+      // If it's already an HttpsError, re-throw it
+      if (error.code && error.code.startsWith('functions/')) {
+        throw error;
+      }
+
+      // Otherwise, wrap in internal error with the actual message for debugging
+      throw new HttpsError('internal', `Error: ${error.message}`);
+    }
   },
 );
