@@ -591,7 +591,8 @@ exports.simulateSituation = onCall(
       userId,
     });
 
-    logger.info(`[simulateSituation] Complete for user ${userId.substring(0, 8)} match ${matchId.substring(0, 8)} type=${situationType} best=${bestApproachId}`);
+    const matchIdDebug = (matchId && typeof matchId === 'string' ? matchId.substring(0, 8) : 'generic');
+    logger.info(`[simulateSituation] Complete for user ${userId.substring(0, 8)} match=${matchIdDebug} type=${situationType} best=${bestApproachId}`);
 
     // Return without the server timestamp sentinel (Firestore-internal),
     // and include fromCache=false so clients can distinguish.
