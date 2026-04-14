@@ -292,7 +292,10 @@ Each approach uses one of these FIXED tones, in this exact order:
   4. grounded_honest — calm, real, low-pressure
 
 Each phrase must be 1-2 sentences, natural, first-person, as if the user typed it themselves.
+
 ${langInstr}
+
+⚠️ ALL phrases MUST be in the user's language, NOT English. Every phrase must feel native to that language.
 
 Respond ONLY with JSON in this shape:
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
@@ -606,7 +609,8 @@ exports.simulateSituation = onCall(
     const reactionResults = await Promise.all(validApproaches.map(async (approach) => {
       try {
         const systemPrompt = buildAgentSystemPrompt(matchPersona, userPersona, situationContext, lang);
-        const fullPrompt = `${systemPrompt}\n\n${userPersona.name} just said: "${approach.phrase}"\n\nRespond as ${matchPersona.name}, in 1-2 sentences, first person only:`;
+        const langInstr = getLanguageInstruction(lang);
+        const fullPrompt = `${systemPrompt}\n\n${userPersona.name} just said: "${approach.phrase}"\n\nRespond as ${matchPersona.name}, in 1-2 sentences, first person only.\n\n${langInstr}`;
         const reactionText = await generateAgentTurn(reactionModel, fullPrompt, 10000);
         return {approach, reactionText: (reactionText || '').trim()};
       } catch (e) {

@@ -14,15 +14,18 @@ const AI_MODEL_LITE = 'gemini-2.5-flash-lite';
 // ─── Shared Helper Functions ─────────────────────────────────────────────────
 
 function getLanguageInstruction(lang) {
-  if (lang.startsWith('zh')) return '重要提示：请用中文回答所有内容。';
-  if (lang.startsWith('ar')) return 'مهم: أجب على كل شيء بالعربية.';
-  if (lang.startsWith('id') || lang.startsWith('ms')) return 'PENTING: Jawab SEMUA dalam Bahasa Indonesia.';
-  if (lang.startsWith('pt')) return 'IMPORTANTE: Responda TUDO em português.';
-  if (lang.startsWith('fr')) return 'IMPORTANT: Répondez à TOUT en français.';
-  if (lang.startsWith('ja')) return '重要：すべて日本語で回答してください。';
-  if (lang.startsWith('ru')) return 'ВАЖНО: Отвечайте на ВСЁ на русском языке.';
-  if (lang.startsWith('de')) return 'WICHTIG: Antworten Sie auf ALLES auf Deutsch.';
-  if (lang.startsWith('es')) return 'IMPORTANTE: Responde TODO en ESPAÑOL.';
+  // NOTE: These instructions are critical — they must be at the END of the prompt
+  // to override any other language directives. Gemini must generate ALL content
+  // (phrases, reactions, insights) in the user's language, never English.
+  if (lang.startsWith('zh')) return '⚠️ CRITICAL: 必须用中文生成所有内容，包括短语、反应、教练建议。绝不能用英文。';
+  if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية فقط. لا تستخدم الإنجليزية أبداً.';
+  if (lang.startsWith('id') || lang.startsWith('ms')) return '⚠️ KRITIS: SEMUA konten harus dalam Bahasa Indonesia. Jangan gunakan Bahasa Inggris.';
+  if (lang.startsWith('pt')) return '⚠️ CRÍTICO: TODO conteúdo DEVE estar em português. Nunca em inglês.';
+  if (lang.startsWith('fr')) return '⚠️ CRITIQUE: TOUT le contenu DOIT être en français. Jamais en anglais.';
+  if (lang.startsWith('ja')) return '⚠️ 重要：すべてのコンテンツは日本語ONLY。英語は絶対に使わないでください。';
+  if (lang.startsWith('ru')) return '⚠️ КРИТИЧНО: Все содержимое ТОЛЬКО на русском. Никогда не используйте английский.';
+  if (lang.startsWith('de')) return '⚠️ KRITISCH: ALLES Inhalte NUR auf Deutsch. Nie auf Englisch.';
+  if (lang.startsWith('es')) return '⚠️ CRÍTICO: TODO el contenido DEBE estar en español. Nunca en inglés. Las frases, reacciones y consejos deben estar en español.';
   return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';
 }
 
