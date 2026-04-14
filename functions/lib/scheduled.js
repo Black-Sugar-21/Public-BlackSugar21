@@ -335,6 +335,9 @@ exports.resetCoachMessages = onSchedule(
           batch.update(doc.ref, {
             coachMessagesRemaining: DAILY_COACH_MESSAGES,
             lastCoachResetDate: admin.firestore.Timestamp.now(),
+            // Reset proactive coach nudge daily counter at the same local midnight
+            // as coach messages. Safe to reset globally — the nudge window is flexible.
+            coachNudgeCountToday: 0,
           });
           batchCount++;
           resetCount++;

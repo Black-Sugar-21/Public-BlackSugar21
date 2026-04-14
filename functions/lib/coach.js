@@ -685,6 +685,448 @@ exports.dateCoachChat = onCall(
       const coachMessagesRemaining = typeof creditData.coachMessagesRemaining === 'number'
         ? creditData.coachMessagesRemaining : (config.dailyCredits || 3);
 
+      // ── Situation rehearsal intent detection (no credits deducted, no save) ──
+      // More SPECIFIC than SIMULATION_TRIGGERS — must run first so "cómo le digo que la amo"
+      // routes to situation rehearsal, not full relationship simulation.
+      //
+      // Covers 16+ languages with regional variants, informal/formal registers,
+      // cultural-specific situations, LGBTQ+ framings, and a semantic fallback.
+      //
+      // Languages: EN, ES, PT, FR, DE, IT, NL, PL, TR, JA, KO, ZH, RU, AR, HI, TH, VI, TL, ID, HE, FA, EL, SV, NO, DA, FI
+      // Regional: ES (MX/AR/CL/CO/PE/VE/CU/DO/UY/ES), EN (US/UK/AU/IN/ZA),
+      //           PT (BR/PT/AO), FR (FR/QC/BE), AR (MSA/EG/Gulf/Levantine/Maghrebi), ZH (simplified/traditional)
+      //
+      // Situational coverage:
+      //   - Confessions (love, feelings, crushes)
+      //   - Reach-outs after silence (ghosting recovery)
+      //   - Escalations (asking out, proposing dates, exclusivity, moving in, marriage)
+      //   - Repair/apology (after fights, mistakes, misunderstandings)
+      //   - Boundaries (need space, slow down, work schedule conflicts)
+      //   - LGBTQ+ specific (coming out, gender identity conversations)
+      //   - Cultural (meeting parents/family — critical in Latino/Asian/Arab/Indian cultures)
+      //   - Sensitive topics (mental health, past relationships, financial situation, children, religion)
+      //   - Long-distance and scheduling conflicts
+      //   - Jealousy, insecurity, vulnerability
+      //   - First physical moves (first kiss, holding hands, intimacy)
+      //   - Breakups and transitions
+      //   - Polyamory / open relationships
+      //   - Explicit verb "rehearse" / "ensayar" in any language
+      const SITUATION_TRIGGERS = [
+        // ══════════════════════════════════════════════════════════════════
+        // ES — Latin American + European Spanish (all regional variants)
+        // ══════════════════════════════════════════════════════════════════
+        // Neutral + Spain
+        /c[oó]mo le (digo|dig[ao]|dir[ée])/i, /c[oó]mo le habl[oaé]/i,
+        /qu[eé] le (digo|escribo|mando|env[ií]o|cuento|pongo)/i,
+        /c[oó]mo le pregunto/i, /c[oó]mo le propongo/i, /c[oó]mo le pido/i,
+        /c[oó]mo le cuento/i, /c[oó]mo le explico/i, /c[oó]mo le aviso/i,
+        /c[oó]mo (la|lo) (contacto|recontacto|abordo|enfrento)/i,
+        /c[oó]mo retom(ar|o)/i, /c[oó]mo (retomo|retom[ée])/i,
+        /c[oó]mo me disculpo/i, /c[oó]mo le pido perd[oó]n/i,
+        /ay[uú]dame a (decir|escribir|hablar|explicar|pedir)/i,
+        /ens[aá]y(ar|o|a)/i,
+        /quiero (decirle|contarle|preguntarle|escribirle|proponerle|pedirle|confesarle)/i,
+        /necesito (decirle|contarle|hablar con|preguntarle)/i,
+        /qu[eé] hago si/i, /qu[eé] pasa si/i,
+        // Regional MX: "qué le pongo" (send message), "qué le tiro"
+        /qu[eé] le (pongo|tiro|lanzo)/i,
+        // Regional AR/UY: "qué le mando", "cómo le caigo"
+        /c[oó]mo le caigo/i, /c[oó]mo lo encaro/i,
+        // Regional CL: "cómo le pico", "qué le tiro"
+        /c[oó]mo le pico/i,
+        // Regional CO/VE: "cómo le echo el cuento", "cómo le paro bolas"
+        /(echo|echa|echar|echarle)( le)?( el)? cuento/i,
+        // ES: introducing/presenting (padres, amigos, familia)
+        /c[oó]mo (le )?presento (a )?(mi|mis|la|lo)/i,
+        // ES: "cómo le cuento" with clitic — already covered; add contarle variants
+        /(qué|que|cómo|como) contarle/i,
+        // Cultural: meeting parents (HIGH importance in Latino culture)
+        /c[oó]mo (conocer|presentar|saludar) (a )?(sus|los) (padres|pap[aá]s|pap[áa]s|familia|fam)/i,
+        /c[oó]mo le presento (a )?(mis|los) (padres|pap[aá]s|familia)/i,
+        // Cultural: coming out / LGBTQ+
+        /c[oó]mo le digo que soy (gay|lesbi|bi|trans|queer|no.?binari)/i,
+        /c[oó]mo salgo del cl[oó]set/i,
+        // Sensitive topics
+        /c[oó]mo le hablo de mi ex/i, /c[oó]mo le cuento de mi ex/i,
+        /c[oó]mo le digo que tengo (hijos|hij[ao]|ansiedad|depresi[oó]n|una condici[oó]n)/i,
+        /c[oó]mo le cuento lo de mi/i,
+        // First moves
+        /c[oó]mo (la|lo) beso/i, /c[oó]mo doy el primer paso/i,
+        /c[oó]mo le tomo la mano/i,
+        // Breakups
+        /c[oó]mo (termino|corto) con/i, /c[oó]mo le digo que quiero terminar/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // EN — US/UK/AU/IN/ZA/CA + informal+formal
+        // ══════════════════════════════════════════════════════════════════
+        /how (do|should|can|could|would|might) i (tell|say|ask|text|message|write|send|approach|bring up|confess|apologi[sz]e|break up|ghost|reach out)/i,
+        /how to (tell|say|ask|text|message|write|approach|confess|apologi[sz]e|break up|respond|reply|start)/i,
+        /what (do|should|can|could|would) i (say|tell|text|write|send|ask|do)/i,
+        /what if i (said|told|asked|texted|wrote|sent)/i,
+        /help me (tell|say|write|text|ask|approach|confess|apologi[sz]e|respond|reach out|word)/i,
+        /i (want|need) to (tell|say|confess|ask|text|write|bring up|talk about)/i,
+        /i'?m (trying|wanting|planning) to (tell|say|ask|confess|bring up)/i,
+        /how do i (break the news|break it|break up|come out|open up|set boundar|get (back )?in touch|reconnect)/i,
+        /rehearse/i, /practice (saying|telling|asking|the conversation)/i, /role.?play (this|it)/i,
+        // LGBTQ+ specific
+        /how do i come out to (her|him|them)/i, /coming out to (my|the)/i,
+        // Cultural: meeting parents (also highly relevant in Indian/South Asian cultures)
+        /how (do|should) i meet (her|his|their) (parents|family|folks|people)/i,
+        /meet the parents/i,
+        // Sensitive
+        /how do i (tell|bring up|talk about) (my|the) (ex|past relationship|kids|children|mental health|anxiety|depression|diagnosis|religion|faith|finances|money|job loss)/i,
+        // Dating app specific
+        /what should my (first message|opener|first text) be/i,
+        /how to (ask (her|him|them) out|get a second date|make a move|flirt|text back)/i,
+        /i don'?t know what to (say|write|tell)/i,
+        /should i (text|message|call|reach out|apologi[sz]e)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // PT — Brazilian + European Portuguese + Angolan
+        // ══════════════════════════════════════════════════════════════════
+        /como (eu )?(digo|falo|pergunto|conto|explico|aviso|convido|proponho|pe[çc]o)/i,
+        /o que (eu )?(digo|falo|escrevo|mando|envio|conto)/i,
+        /me ajuda a (dizer|falar|escrever|perguntar|contar|explicar|pedir)/i,
+        /quero (dizer|falar|contar|perguntar|escrever|propor|confessar)/i,
+        /preciso (dizer|falar|contar|perguntar)/i,
+        /como (retom(ar|o)|voltar a (falar|conversar|contactar))/i,
+        /como peço desculpa/i, /como me desculpo/i,
+        /o que fa[çc]o se/i, /e se eu (disser|falar|contar)/i,
+        /como (terminar|acabar) com/i, /como (termino|acabo) com/i,
+        // BR slang
+        /como (eu )?mando (uma|uma mensagem|zap)/i,
+        // Cultural: family / parents
+        /como (conhe[çc]o|apresento) (a )?(fam[ií]lia|os pais|meus pais|a m[ãa]e|o pai)/i,
+        // LGBTQ+
+        /como (eu )?digo que sou (gay|l[ée]sbica|bi|trans)/i, /como saio do arm[áa]rio/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // FR — France + Québec + Belgium + Switzerland
+        // ══════════════════════════════════════════════════════════════════
+        /comment (je )?(lui )?(dis|parle|demande|raconte|explique|propose|avoue|d[ée]clare)/i,
+        /qu'est-ce que je (dis|[ée]cris|envoie|fais|lui dis)/i,
+        /aide-moi à (lui )?(dire|[ée]crire|parler|demander|avouer|m'excuser|répondre|envoyer)/i,
+        /comment (je )?m'excuse/i, /comment présenter mes excuses/i,
+        /comment (relancer|reprendre contact|renouer)/i,
+        /je veux (lui )?(dire|demander|parler|avouer|raconter|confier)/i,
+        /je (dois|voudrais|souhaite) lui (dire|parler|avouer|demander)/i,
+        /et si je (disais|lui disais|lui demandais)/i,
+        // Cultural: meeting parents
+        /comment rencontrer (ses|les) parents/i, /comment (me pr[ée]senter à|rencontrer) sa famille/i,
+        // LGBTQ+
+        /comment (faire mon )?coming.?out/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // DE — Germany + Austria + Switzerland
+        // ══════════════════════════════════════════════════════════════════
+        /wie (sag|sage|frag|frage|schreib|schreibe|erkläre|gestehe) ich (ihr|ihm|ihnen|es ihr|es ihm)/i,
+        /was (soll|sollte|könnte|würde) ich (sagen|schreiben|fragen|tun|ihr sagen|ihm sagen)/i,
+        /hilf mir (zu sagen|zu schreiben|zu fragen|beim (sagen|schreiben))/i,
+        /wie (entschuldige|melde) ich mich( wieder)?/i,
+        /ich (möchte|will|muss) (ihr|ihm|ihnen) (sagen|schreiben|gestehen|beichten|erzählen)/i,
+        /wie (gehe ich das an|fange ich an|spreche ich (sie|ihn|das) an)/i,
+        /soll ich (sie|ihn) (anschreiben|anrufen|fragen|treffen)/i,
+        // Cultural
+        /wie lerne ich (ihre|seine) (eltern|familie) kennen/i,
+        /wie mache ich (mein )?coming.?out/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // IT — Italian
+        // ══════════════════════════════════════════════════════════════════
+        /come (le|gli|glielo) (dico|scrivo|chiedo|racconto|spiego|confesso)/i,
+        /cosa (le|gli) (dico|scrivo|devo dire|dovrei dire)/i,
+        /aiutami a (dir(e|le|gli)|scrivere|chiedere|confessare|rispondere|parlare)/i,
+        /voglio (dirle|dirgli|chiederle|chiedergli|confessare)/i,
+        /come (mi scuso|chiedo scusa|riprendo i contatti)/i,
+        /come (la|lo) (affronto|riconquisto)/i,
+        /come (faccio|dovrei fare) a/i,
+        /come (conosco|incontro) (i suoi|la sua) (genitori|famiglia)/i,
+        /come (faccio il )?coming.?out/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // NL — Dutch + Flemish
+        // ══════════════════════════════════════════════════════════════════
+        /hoe (vertel|zeg|vraag|schrijf) ik (het|haar|hem)/i,
+        /wat (moet|zou) ik (haar|hem|het)?\s*(zeggen|schrijven|vragen|doen|vertellen|sturen)/i,
+        /help me (te )?(zeggen|vertellen|schrijven|vragen)/i,
+        /hoe (bied|maak) ik (mijn )?excuses/i,
+        /ik wil (haar|hem) (vertellen|zeggen|vragen)/i,
+        /hoe (ontmoet ik|leer ik) (haar|zijn) (ouders|familie) (kennen)?/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // PL — Polish
+        // ══════════════════════════════════════════════════════════════════
+        /jak (jej|mu) (powiedzieć|napisać|zapytać|wyznać|wytłumaczyć)/i,
+        /co (mam|powinienem|powinnam) (jej|mu) (powiedzieć|napisać)/i,
+        /pomóż mi (powiedzieć|napisać|zapytać)/i,
+        /chcę (jej|mu) (powiedzieć|wyznać|zapytać)/i,
+        /jak (przeprosić|nawiązać kontakt ponownie|odezwać się)/i,
+        /jak poznać (jej|jego) (rodziców|rodzinę)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // TR — Turkish
+        // ══════════════════════════════════════════════════════════════════
+        /nasıl (ona )?(söylerim|söylesem|derim|yazarım|soracağım|anlatırım)/i,
+        /ne (söyleyeyim|diyeyim|yazayım|yapayım)( ona)?/i,
+        /ona (söylemek|anlatmak|sormak|yazmak) istiyorum/i,
+        /nasıl (özür dilerim|tekrar ulaşırım|tekrar yazarım)/i,
+        /ailesiyle nasıl tanışırım/i, /ailesini nasıl tanırım/i,
+        /(ona )?ne yazsam/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // EL — Greek
+        // ══════════════════════════════════════════════════════════════════
+        /πώς (της|του) (λέω|πω|γράψω|ρωτήσω)/i,
+        /τι (να (της|του) πω|να γράψω)/i,
+        /βοήθησέ με να (πω|γράψω|ρωτήσω)/i,
+        /θέλω να (της|του) (πω|γράψω|ζητήσω)/i,
+        /πώς ζητάω συγγνώμη/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // SV/NO/DA/FI — Nordic
+        // ══════════════════════════════════════════════════════════════════
+        // Swedish
+        /hur (säger|skriver|frågar|berättar) jag (till )?(henne|honom)/i,
+        /vad (ska|borde) jag (säga|skriva|fråga)/i,
+        // Norwegian
+        /hvordan (sier|skriver|spør) jeg (til )?(henne|ham)/i,
+        /hva (skal|bør) jeg (si|skrive|spørre)/i,
+        // Danish
+        /hvordan (siger|skriver|spørger) jeg (til )?(hende|ham)/i,
+        /hvad (skal|bør) jeg (sige|skrive|spørge)/i,
+        // Finnish
+        /miten (sanon|kerron|kysyn|kirjoitan) (hänelle)/i,
+        /mitä (sanoisin|kirjoittaisin|kysyisin)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // JA — Japanese (polite + casual + 本音/建前 nuance)
+        // ══════════════════════════════════════════════════════════════════
+        /どう(言|伝|話|誘|切り出|書|送|返事|謝)/,                        // no required space
+        /何て(言|伝|送|返|書)/,
+        /どうやって(伝|言|話|誘|謝|告白|再連絡)/,
+        /どう.*(伝え|言え|話せ|謝れ|書け)/,                                // how do I tell/say/talk — loose order
+        /(彼女|彼|あの子|あのひと).*(どう|なんて).*(言|伝|誘|返)/,
+        /リハーサル/, /練習.*(会話|言い方|伝え|返信)/,
+        /(謝|告白|誘|再会|復縁|別れ).*どう/,
+        /どう切り出/,
+        /言いたいんだけど/, /伝えたいんだけど/,
+        /親に会.*どう/, /親に.*どう.*会/,                                 // meeting parents (both orders)
+        /親.*(紹介|挨拶).*どう/,                                          // introducing to parents
+        /カミングアウト/,                                                  // coming out
+        /本音.*どう(言|伝)/,                                              // honest feelings
+        /先に.*(メッセージ|LINE|返信)/,                                    // first message
+
+        // ══════════════════════════════════════════════════════════════════
+        // KO — Korean (hierarchy + 눈치 social awareness)
+        // ══════════════════════════════════════════════════════════════════
+        /어떻게 (말|얘기|문자|메시지|전화|고백|사과)/,
+        /뭐라고 (말|말해|문자|답)/,
+        /어떡하지/,                                                       // "what do I do"
+        /도와(줘|주세요).*(말|문자|고백|사과)/,
+        /(말|고백|사과|문자|연락).*하고 싶/,
+        /(부모님|가족).*(어떻게|처음|만나)/,                               // meeting parents
+        /커밍아웃/,                                                       // coming out
+        /연락.*다시.*어떻게/,
+        /(헤어지|이별).*어떻게/,                                          // breaking up
+
+        // ══════════════════════════════════════════════════════════════════
+        // ZH — Mandarin (simplified + traditional) + Cantonese
+        // ══════════════════════════════════════════════════════════════════
+        /怎[么麼](跟|對|和|给|給).*(说|說|讲|講|聊|告訴|告诉)/,
+        /(该|該|应该|應該).*(怎[么麼]|如何).*(说|說|讲|講|告訴|告诉|回)/,
+        /(帮|幫).*(我|我一下).*(说|說|講|講|告诉|告訴|寫|写)/,
+        /(如何|怎[么麼]|怎樣|怎样).*(告白|道歉|邀|約|约|挽回|分手|出柜|出櫃)/,
+        /我想(跟|對|和).*(说|說|講|讲|告訴|告诉)/,
+        /(該|该)怎[么麼](说|說|回|做)/,
+        /(演練|排練|演练|排练|練習對話|练习对话)/,
+        /见家长|見家長|见父母|見父母/,                                     // meeting parents (critical in Chinese culture)
+        /(出柜|出櫃)/,                                                    // coming out
+        /(挽回|复合|復合).*怎[么麼]/,                                     // getting back together
+        // Cantonese
+        /點(同|向|對).*(講|說)/i, /點樣(講|同佢講|同佢說)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // RU — Russian + Ukrainian hybrid
+        // ══════════════════════════════════════════════════════════════════
+        /как (ей|ему|им) (сказать|написать|признать|объяснить|рассказать|спросить)/i,
+        /что (ей|ему) (сказать|написать|ответить)/i,
+        /помоги (сказать|написать|спросить|объяснить|признат)/i,
+        /как (извинит|попросить прощ|помирит|наладит)/i,
+        /как спросить/i, /как пригласить/i,
+        /я хочу (ей|ему) (сказать|написать|признаться|объяснить)/i,
+        /как возобновить (разговор|общение|отношения)/i,
+        /как снова (написать|связат)/i,
+        /как познакомиться с (её|его) (родителями|семьёй|семьей)/i,
+        /каминг.?аут/i,                                                  // coming out
+        /как расстаться/i, /как (сказать|объявить) о разрыве/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // AR — Arabic (MSA + Egyptian + Gulf + Levantine + Maghrebi)
+        // ══════════════════════════════════════════════════════════════════
+        /كيف (أقول|اقول|أخبر|اخبر|أسأل|اسأل|أكتب|اكتب|أدعو) (ل)?(ها|ه|هم)/,
+        /ماذا (أقول|اقول|أكتب|اكتب) (ل)?(ها|ه)/,
+        /شو (أقول|أقوله|بدي قول|لازم قول)/,                               // Levantine
+        /ازاي (أقول|اقول|أقوله|اكلم)/,                                    // Egyptian
+        /كيفاش (نقول|نكتب)/,                                              // Maghrebi
+        /(ساعدني|عاوني|ساعدوني) (أقول|أخبر|أكتب|أسأل)/,
+        /كيف (أعتذر|اعتذر|أطلب السماح)/,
+        /كيف (أدعو|ادعو)ها/,
+        /كيف (أتواصل|اتواصل) مجدد/, /كيف (أرجع|ارجع) أكلمها/,
+        /أريد (أن )?(أقول|أخبر|أعترف|أطلب)/,
+        /بدي (قولها|قوله|اكتبلها|اتواصل)/,                                 // Levantine/Gulf
+        /(كيف|ازاي) أقابل (أهلها|عيلتها|اسرتها|والدها|والديها)/,         // meeting family (HIGH in Arab culture)
+        /إعلان (الخروج|المثلية)/,                                          // coming out
+
+        // ══════════════════════════════════════════════════════════════════
+        // HE — Hebrew
+        // ══════════════════════════════════════════════════════════════════
+        /איך (אני )?(אגיד|אומר|אכתוב|אשאל) ל(ה|ו|הם)/,
+        /מה (להגיד|לכתוב|לשאול|לספר) ל(ה|ו)/,
+        /עזר(י|ו) לי (להגיד|לכתוב|לשאול)/,
+        /איך (להתנצל|לחזור ולדבר|להזמין)/,
+        /אני רוצ(ה|ה) (להגיד|לספר|לשאול|להודות)/,
+
+        // ══════════════════════════════════════════════════════════════════
+        // FA — Persian/Farsi
+        // ══════════════════════════════════════════════════════════════════
+        /چطور (بهش|بش|به (او|اون)) (بگم|بگویم|بنویسم|بپرسم)/,
+        /(چی|چه) (بگم|بنویسم|بهش بگم)/,
+        /کمکم کن (بگم|بنویسم|بپرسم)/,
+        /می.?خوام (بهش|بش) (بگم|بنویسم|بگویم)/,
+        /چطور (عذرخواهی|دوباره رابطه)/,
+
+        // ══════════════════════════════════════════════════════════════════
+        // HI — Hindi (arranged vs love marriage is huge context)
+        // ══════════════════════════════════════════════════════════════════
+        /कैसे (कहूं|बोलूं|बताऊं|पूछूं|लिखूं)/,
+        /क्या (कहूं|बोलूं|बताऊं|लिखूं|कहना चाहिए)/,
+        /मुझे (कैसे|क्या) (कहना|बताना|पूछना)/,
+        /मदद (करो|चाहिए).*(कहने|बताने|लिखने)/,
+        /(माफी|माफ़ी) कैसे (मांगू|मांगूं)/,
+        /(घर वालों|परिवार|माता.?पिता).*(कैसे|कब).*(बताऊं|मिलवाऊं)/,      // telling family (critical in Indian culture)
+        // Hinglish
+        /how do i (tell|say) (usse|use|usko)/i,
+        /(kaise|kese) (boloon|bolun|kahun|batau)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // TH — Thai
+        // ══════════════════════════════════════════════════════════════════
+        /จะ(บอก|พูด|ถาม|เขียน).*(เธอ|เขา|ยังไง|อย่างไร)/,
+        /(ควร|น่าจะ)(บอก|พูด|ส่ง)(อะไร|ยังไง)/,
+        /ช่วย(บอก|พูด|เขียน)/,
+        /(ขอโทษ|ขอคืนดี).*ยังไง/,
+        /อยาก(บอก|สารภาพ|ถาม)/,
+
+        // ══════════════════════════════════════════════════════════════════
+        // VI — Vietnamese
+        // ══════════════════════════════════════════════════════════════════
+        /làm sao (để )?(nói|bảo|nhắn|hỏi|viết|tỏ tình|xin lỗi) (với )?(cô ấy|anh ấy|em ấy)/i,
+        /nói (gì|sao) (với|cho) (cô ấy|anh ấy|em ấy)/i,
+        /nhắn (gì|sao) (cho|với) (cô ấy|anh ấy|em ấy)/i,
+        /giúp (tôi|mình|em) (nói|nhắn|viết|hỏi)/i,
+        /(muốn|cần) (nói|nhắn|hỏi|tỏ tình)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // TL / FIL — Tagalog / Filipino
+        // ══════════════════════════════════════════════════════════════════
+        /paano (ko )?(sasabihin|itatanong|sulatan|kakausapin)/i,
+        /(ano|anong) (ko )?(sasabihin|ichachat|ipapadala|itatanong)/i,
+        /tulungan (mo|mo ako) (magsabi|magsulat|magtanong)/i,
+        /gusto kong (sabihin|itanong|ikumpisal|ipaalam)/i,
+        /paano (humingi ng tawad|mag.?sorry)/i,
+
+        // ══════════════════════════════════════════════════════════════════
+        // ID — Indonesian (formal + slang: gue/lo, aku/kamu)
+        // ══════════════════════════════════════════════════════════════════
+        /bagaimana (aku )?(bilang|bilangin|ngomong|mengatakan|bertanya|menanyakan|menulis)/i,
+        /gimana (aku|gue|w)( )?(bilang|ngomong|ngasih tau|nanya|nulis|minta maaf)/i,
+        /apa yang (harus|sebaiknya)( aku| gue)? (bilang|ngomong|tulis|kirim|tanya)/i,
+        /bantu (aku|gue)( )?(bilang|ngomong|nulis|nanya|minta maaf)/i,
+        /gimana cara (minta maaf|ngajak|nanya|ngajakin|ngobrolin|ngomong|mulai)/i,
+        /(aku|gue) (mau|ingin) (bilang|ngomong|bertanya|ngajak)/i,
+        /latihan (percakap|ngobrol|dialog)/i,
+        /gimana (kenalin|memperkenalkan).*(orangtua|keluarga|ortu)/i,    // meeting parents
+        /coming.?out/i,
+      ];
+
+      // Semantic fallback: catches situation intent even when the user's wording
+      // doesn't match an exact regex. Activates when matchId is present AND the
+      // message combines a question word with a relationship action verb in any language.
+      const QUESTION_WORDS = /\b(c[oó]mo|qu[eé]|como|que|how|what|should|what if|wie|was|comment|qu'est|quoi|come|cosa|hoe|wat|jak|co|nasıl|ne|πώς|τι|hur|hvordan|hvad|miten|mitä|как|что|کیف|ماذا|शो|كيف|شو|ازاي|چطور|چی|कैसे|क्या|ยังไง|อะไร|làm sao|nói gì|paano|anong|bagaimana|gimana|apa|어떻게|뭐라고|怎么|怎麼|什么|什麼|如何|どう|何て|どうやって)\b/iu;
+      // Action verbs — NO word boundaries at the end so Spanish/Portuguese/Italian
+      // clitic forms match: "decirle", "contarle", "preguntarle", "dirgli", "dizer-lhe"
+      const ACTION_VERBS = /(\b|^)(dec[ií]r(le|selo)?|decirle|habl[ao]r?(le)?|habl[oa]|pregunt[aáoeéió](r|rle|r[sl]e|r)?|cont[aáoeéió](r|rle|rme|r[sl]e|r)?|escrib[aáoeéi](r|rle|rme|rnos|r)?|mand[aáoeé](r|rle|arle)?|envi[aáoeé](r|arle)?|propon[eéoer](le|rle)?|confes[aáoeér](arle|arme)?|disculp|perd[oó]n|saluda|present(o|ar|arle|arla)|invit(ar|o|arle)|cont[aá]rselo|tell|say|ask|text|message|write|send|respond|reply|propose|confess|apologi[sz]e|reach|contact|talk|explain|bring up|word|introduce|dire|parl(er|arle)|demander|écrire|envoyer|proposer|avouer|pr[ée]senter|sagen|schreiben|fragen|gestehen|entschuldig|antworten|anschreiben|parlare|scrivere|chiedere|risponder[ea]?|confessare|presentare|invit(are|o)|dizer|falar|escrever|perguntar|cont(ar|arlhe)|propor|apresentar|pedir desculpa|zeggen|vertellen|schrijven|vragen|powied|napis|pyta|prze|söyle|yaz|sor|özür|сказать|написать|спросить|рассказать|признат|извинит|ответ|قول|اخبار|اكتب|اسأل|اعتذر|להגיד|לכתוב|לשאול|להתנצל|बताऊं|कहूं|लिखूं|पूछूं|माफी|บอก|พูด|เขียน|ถาม|nói|viết|hỏi|xin lỗi|sabih|sulat|tanong|bilang|tulis|tanya|ngomong|말|얘기|문자|고백|사과|說|說話|寫|告訴|問|告白|道歉|言う|書く|伝える|聞く|謝|بگم|بنویسم|بپرسم|عذرخواه)(\b|$|[a-záéíóú]*)/iu;
+      // Relationship context markers — "her", "him", "them", match name, "mi match"
+      const RELATIONSHIP_CONTEXT = /\b(match|crush|novi[oa]|ex|date|girl|boy|wom[ae]n|man|mujer|hombre|chica|chico|cita|ella|él|her|him|them|elle|lui|sie|ihr|ihn|彼女|彼|그녀|그 사람|她|他|ей|ему|لها|له|हिम|हर|เธอ|เขา|cô ấy|anh ấy)\b/iu;
+
+      const hasQuestionWord = QUESTION_WORDS.test(message);
+      const hasActionVerb = ACTION_VERBS.test(message);
+      const hasRelationshipContext = RELATIONSHIP_CONTEXT.test(message);
+
+      // Fallback fires ONLY when all 3 signals are present (high precision, low recall)
+      const semanticSituationMatch = hasQuestionWord && hasActionVerb && hasRelationshipContext;
+      if (matchId && !loadMoreActivities && !loadMoreSuggestions &&
+          (SITUATION_TRIGGERS.some(r => r.test(message)) || semanticSituationMatch)) {
+        const situationMsg = {
+          en: "I can rehearse this situation with you. Want me to simulate 4 approaches and show you how your match might respond?",
+          es: 'Puedo ensayar esta situación contigo. ¿Quieres que simule 4 enfoques y te muestre cómo podría responder tu match?',
+          pt: 'Posso ensaiar essa situação com você. Quer que eu simule 4 abordagens e mostre como seu match poderia reagir?',
+          fr: "Je peux répéter cette situation avec toi. Tu veux que je simule 4 approches et te montre comment ton match pourrait réagir ?",
+          de: 'Ich kann diese Situation mit dir proben. Soll ich 4 Ansätze simulieren und dir zeigen, wie dein Match reagieren könnte?',
+          ja: 'この状況を一緒にリハーサルできます。4つのアプローチをシミュレートして、相手の反応を見せましょうか？',
+          zh: '我可以和你一起演练这个情境。要不要我模拟4种方式，看看你的match会如何回应？',
+          ru: 'Я могу отрепетировать эту ситуацию с тобой. Хочешь, я смоделирую 4 подхода и покажу, как твой match может отреагировать?',
+          ar: 'يمكنني التدرب على هذا الموقف معك. هل تريد أن أحاكي 4 طرق وأريك كيف قد يرد شريكك؟',
+          id: 'Aku bisa melatih situasi ini bersamamu. Mau aku simulasikan 4 pendekatan dan tunjukkan bagaimana match-mu mungkin merespons?',
+        };
+        return {
+          success: true,
+          reply: situationMsg[lang] || situationMsg.en,
+          situationMode: true,
+          situationDraft: message,
+          matchId,
+          suggestions: [
+            lang.startsWith('es') ? '✨ Ensayar esta situación' : '✨ Rehearse this',
+            lang.startsWith('es') ? '✏️ Reescribir' : '✏️ Rewrite',
+          ],
+          coachMessagesRemaining,
+        };
+      }
+      // ── End situation rehearsal intent detection ──────────────────────
+
+      // ── Simulation intent detection (no credits deducted, no save) ──────
+      // Inspired by Black Mirror "Hang the DJ" — runs 10 simulations of the match
+      // and counts how many show genuine connection (rebellion signal).
+      const SIMULATION_TRIGGERS = [
+        /simul[ae]/i, /predic/i, /how.*would.*go/i, /what.*happen/i,
+        /cómo.*iría/i, /qué.*pasaría/i, /qué.*ocurrir/i, /cómo.*evolucion/i,
+        /compatib/i, /quimica/i, /chemistry/i, /analiz/i,
+        /what.*future/i, /cuál.*futuro/i, /future.*us/i,
+        /hang the dj/i, /parallel/i, /simulation/i,
+      ];
+      if (matchId && !loadMoreActivities && !loadMoreSuggestions &&
+          SIMULATION_TRIGGERS.some(r => r.test(message))) {
+        const simMsg = {
+          es: '🔮 Puedo correr 10 simulaciones de tu conexión con este match — como en "Hang the DJ". Analizo cómo reaccionarían en distintos escenarios y te digo cuántas terminaron eligiéndose mutuamente.\n\n¿Quieres que lo haga?',
+          en: '🔮 I can run 10 simulations of your connection with this match — like a "Hang the DJ" experiment. I\'ll analyze how you\'d react across different scenarios and tell you how many times you chose each other.\n\nWant me to run it?',
+          pt: '🔮 Posso rodar 10 simulações da sua conexão com esse match. Vou analisar como vocês reagiriam em diferentes cenários e dizer quantas vezes se escolheram mutuamente.\n\nQuer que eu faça?',
+          fr: '🔮 Je peux lancer 10 simulations de votre connexion avec ce match. J\'analyse comment vous réagiriez dans différents scénarios et combien de fois vous vous êtes choisis mutuellement.\n\nVous voulez que je le fasse?',
+        };
+        return {
+          success: true,
+          reply: simMsg[lang] || simMsg.en,
+          simulationMode: true,
+          matchId,
+          suggestions: [
+            lang.startsWith('es') ? '✨ Sí, corre las simulaciones' : '✨ Yes, run the simulations',
+            lang.startsWith('es') ? '📊 Ver compatibilidad' : '📊 See compatibility',
+            lang.startsWith('es') ? '❓ ¿Cómo funciona?' : '❓ How does it work?',
+          ],
+          coachMessagesRemaining,
+        };
+      }
+      // ── End simulation intent detection ───────────────────────────────
+
       if (!loadMoreActivities && !loadMoreSuggestions && coachMessagesRemaining <= 0) {
         const noCreditsMsg = {
           en: "You've used all your daily coach messages. They'll reset at midnight! ✨",

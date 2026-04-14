@@ -26,6 +26,9 @@ const modules = [
   './lib/testers',
   './lib/analytics',
   './lib/discovery-feed',
+  './lib/simulation',
+  './lib/situation-simulation',
+  './lib/coach-nudge-agent',
 ];
 
 modules.forEach(mod => {

@@ -117,6 +117,90 @@ Practical advice for navigating attachment dynamics on dating apps.`,
 
 Each chunk should help someone navigate cross-cultural dating with respect and awareness.`,
   },
+  attachment_secure_behavior: {
+    title: 'Secure Attachment — Real Behavior Patterns',
+    searchQuery: 'secure attachment style behavior communication dating relationship patterns',
+    prompt: `Generate 8 expert chunks describing how people with SECURE ATTACHMENT STYLE actually behave in dating scenarios. Use Amir Levine "Attached" + Gottman research.
+
+Cover these specific situations with realistic dialogue examples:
+- First date: how they open, what they ask, comfort with silence
+- Conflict: how they approach ("soft startup"), repair attempts, non-defensive listening
+- 3 months in: how they balance independence and togetherness
+- Long-term planning: how they compromise and communicate needs
+- When partner pulls away: how they respond without panic
+
+Each chunk must include:
+1. The behavioral pattern (what they DO)
+2. Sample phrases they might say (realistic dialogue)
+3. Why this comes from secure attachment (brief theory)
+4. Contrast with anxious/avoidant reaction to same situation
+
+Focus on REALISTIC, SPECIFIC behavior — not generic "communicate openly" advice.`,
+  },
+
+  attachment_anxious_behavior: {
+    title: 'Anxious Attachment — Real Behavior Patterns',
+    searchQuery: 'anxious preoccupied attachment style dating behavior protest behaviors hyperactivation',
+    prompt: `Generate 8 expert chunks describing how people with ANXIOUS ATTACHMENT style actually behave in dating. Use Amir Levine "Attached" + Sue Johnson EFT research.
+
+Cover these situations with realistic, authentic dialogue:
+- First date: nervous energy, over-sharing, excessive questions
+- Silence/slow responses: activation, checking phone, "protest behaviors"
+- Conflict: pursuer dynamic, fear of abandonment, reassurance-seeking
+- Good moments: intense joy, idealization, "high highs"
+- Texting patterns: long messages, frequent follow-ups, emoji use
+
+Each chunk must include:
+1. The behavioral pattern (authentic, not pathologized)
+2. Realistic sample phrases/texts they might send
+3. The underlying fear driving the behavior
+4. How a partner can respond helpfully
+
+IMPORTANT: Frame anxious attachment with empathy — these are real, valid feelings, not flaws.`,
+  },
+
+  attachment_avoidant_behavior: {
+    title: 'Avoidant Attachment — Real Behavior Patterns',
+    searchQuery: 'avoidant dismissive attachment style dating behavior deactivation strategies withdrawal',
+    prompt: `Generate 8 expert chunks describing how people with AVOIDANT ATTACHMENT style actually behave in dating. Use Amir Levine "Attached" + research on deactivation strategies.
+
+Cover these situations with realistic dialogue:
+- First date: keeps it light, deflects personal questions, exits before depth
+- When things get serious: emotional withdrawal, "I need space", sudden coldness
+- Conflict: stonewalling, minimizing, "I'm fine" when not fine
+- Texting: short responses, long delays, avoids deep conversation over text
+- Long-term: fear of losing freedom, "phantom ex" nostalgia, commitment ambivalence
+
+Each chunk must include:
+1. The behavioral pattern (the "deactivation strategy")
+2. Realistic sample phrases/texts
+3. The underlying protection mechanism (fear of engulfment, not lack of caring)
+4. What this looks like to the anxious partner (and how to bridge it)
+
+Frame with compassion — avoidant behavior is protection, not rejection.`,
+  },
+
+  simulation_archetypes: {
+    title: 'Dating Personality Archetypes — Communication in Action',
+    searchQuery: 'dating personality types communication patterns relationship compatibility research',
+    prompt: `Generate 10 expert chunks describing how different COMBINATIONS of attachment and communication styles interact in relationships. Use attachment theory + Gottman + Helen Fisher research.
+
+Focus on these archetypal pairings:
+1. Secure + Direct meets Anxious + Verbose: what happens on date 1, month 3, first conflict
+2. Avoidant + Reserved meets Anxious + Playful: attraction, push-pull, breaking point
+3. Two Secure + Playful: what makes this work, what challenges arise
+4. Anxious + Direct meets Avoidant + Verbose: paradox of words without emotional access
+5. Secure + Verbose meets Avoidant + Reserved: how the gap gets bridged or breaks
+
+Each chunk must:
+1. Describe the initial attraction between the two styles
+2. Show a realistic dialogue excerpt (3-4 exchanges) from a specific scenario
+3. Name the main risk point for this pairing
+4. Give one actionable bridge strategy
+
+These are used to build realistic AI persona agents for relationship simulation — make the dialogue authentic and specific.`,
+  },
+
   sugar_dating: {
     title: 'Sugar Dating Etiquette',
     searchQuery: 'sugar dating etiquette expectations communication boundaries respect',
