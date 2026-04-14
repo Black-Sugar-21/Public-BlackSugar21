@@ -298,7 +298,14 @@ exports.simulateSituation = onCall(
 
     const userId = request.auth.uid;
     const {situation, matchId, userLanguage} = request.data || {};
-    const lang = (userLanguage || 'en').toLowerCase();
+
+    // ── Language validation ──────────────────────────────────────────────
+    const SUPPORTED_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'ar', 'id'];
+    const requestedLang = (userLanguage || 'en').toLowerCase();
+    const lang = SUPPORTED_LANGS.includes(requestedLang) ? requestedLang : 'en';
+    if (requestedLang !== 'en' && !SUPPORTED_LANGS.includes(requestedLang)) {
+      logger.warn(`[simulateSituation] Unsupported language "${requestedLang}" for user ${userId.substring(0, 8)}, defaulting to English`);
+    }
 
     // ── Input validation ────────────────────────────────────────────────
     if (!situation || typeof situation !== 'string') {
@@ -495,6 +502,26 @@ exports.simulateSituation = onCall(
         return {approach, reactionText: ''};
       }
     }));
+
+    // ── Validate reaction quality ────────────────────────────────────────
+    const failedReactions = reactionResults.filter(
+      r => !r.reactionText || r.reactionText.trim().length === 0
+    ).length;
+    if (failedReactions > 2) {
+      const failureMsg = {
+        en: '🔮 Unable to generate realistic reactions right now. Try again in a moment.',
+        es: '🔮 No puedo generar reacciones realistas en este momento. Intenta de nuevo.',
+        pt: '🔮 Não consigo gerar reações realistas agora. Tente novamente.',
+        fr: '🔮 Impossible de générer des réactions réalistes maintenant. Réessayez.',
+        de: '🔮 Kann im Moment keine realistischen Reaktionen generieren. Bitte versuchen Sie es erneut.',
+        ja: '🔮 現在、現実的な反応を生成できません。もう一度お試しください。',
+        zh: '🔮 现在无法生成真实的反应。请重试。',
+        ru: '🔮 Не могу сгенерировать реалистичные реакции. Повторите попытку.',
+        ar: '🔮 لا يمكنني إنشاء ردود حقيقية الآن. حاول مرة أخرى.',
+        id: '🔮 Tidak dapat menghasilkan reaksi realistis sekarang. Coba lagi.',
+      };
+      throw new HttpsError('internal', failureMsg[lang] || failureMsg.en);
+    }
 
     // ── Step 4: Score each reaction ─────────────────────────────────────
     const scored = reactionResults.map(({approach, reactionText}) => {
