@@ -22,9 +22,61 @@ const {
   GoogleGenerativeAI,
   getLanguageInstruction,
   parseGeminiJsonResponse,
+  trackAICall,
 } = require('./shared');
 
 const db = admin.firestore();
+
+/**
+ * Analytics tracking for multi-universe simulations
+ * Stores: error counts, total cost, duration by stage, success rate
+ */
+async function trackMultiUniverseAnalytics(userId, matchId, result) {
+  try {
+    const today = new Date().toISOString().substring(0, 10);
+    const analyticsRef = db.collection('aiAnalytics').doc('multiverse').collection('daily').doc(today);
+
+    const update = {
+      date: today,
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      successCount: admin.firestore.FieldValue.increment(result.success ? 1 : 0),
+      errorCount: admin.firestore.FieldValue.increment(result.success ? 0 : 1),
+      totalCost: admin.firestore.FieldValue.increment(result.estimatedCost || 0),
+      totalDuration: admin.firestore.FieldValue.increment(result.duration || 0),
+      successfulStages: admin.firestore.FieldValue.increment(result.successfulStages || 0),
+      failedStages: admin.firestore.FieldValue.increment(result.failedStages || 0),
+    };
+
+    // Add error detail if failed
+    if (!result.success && result.errorReason) {
+      update.lastError = {
+        reason: result.errorReason,
+        failedStage: result.failedStage || 'unknown',
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      };
+    }
+
+    await analyticsRef.set(update, { merge: true }).catch(e =>
+      logger.warn('[Analytics] Failed to write daily stats:', e.message)
+    );
+
+    // Also track per-user metrics
+    const userAnalyticsRef = db.collection('users').doc(userId).collection('multiverseAnalytics').doc(today);
+    await userAnalyticsRef.set({
+      matchId,
+      success: result.success,
+      cost: result.estimatedCost || 0,
+      duration: result.duration || 0,
+      score: result.compatibilityScore || null,
+      errorReason: result.errorReason || null,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true }).catch(e =>
+      logger.warn('[Analytics] Failed to write user stats:', e.message)
+    );
+  } catch (e) {
+    logger.warn('[Analytics] Tracking failed:', e.message);
+  }
+}
 
 /**
  * 5 predefined relationship stages for multi-universe testing.
@@ -123,15 +175,32 @@ async function getMultiUniverseConfig() {
 exports.simulateMultiUniverse = onCall(
   { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300 },
   async (request) => {
+    const startTime = Date.now();
     const userId = request.auth?.uid;
     if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
 
     const { matchId, userLanguage = 'en' } = request.data;
     if (!matchId) throw new HttpsError('invalid-argument', 'matchId is required');
 
+    let analyticsData = {
+      userId: userId.substring(0, 4), // anonymize
+      matchId: matchId.substring(0, 4),
+      success: false,
+      duration: 0,
+      estimatedCost: 0,
+      successfulStages: 0,
+      failedStages: 0,
+      errorReason: null,
+      failedStage: null,
+    };
+
     try {
+      logger.info(`[MultiUniverse] START: userId=${userId.substring(0, 4)}, match=${matchId.substring(0, 4)}, lang=${userLanguage}`);
+
       // Step 0: Load config from Remote Config
+      const configStart = Date.now();
       const config = await getMultiUniverseConfig();
+      logger.info(`[MultiUniverse] Config loaded in ${Date.now() - configStart}ms`);
 
       // Step 1: Rate limit CHECK (don't increment yet — wait for successful generation)
       const today = new Date().toISOString().substring(0, 10);
@@ -141,7 +210,12 @@ exports.simulateMultiUniverse = onCall(
       const maxPerDay = config.maxPerDay || 3;
       const usageDoc = await usageRef.get();
       const currentCount = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
+      logger.info(`[MultiUniverse] Rate limit check: ${currentCount}/${maxPerDay}`);
+
       if (currentCount >= maxPerDay) {
+        logger.warn(`[MultiUniverse] Rate limit exceeded for user`);
+        analyticsData.errorReason = 'rate_limit_exceeded';
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
         throw new HttpsError(
           'resource-exhausted',
           `Daily limit reached. You can run ${maxPerDay} multi-universe tests per day.`
@@ -154,22 +228,34 @@ exports.simulateMultiUniverse = onCall(
         .collection('multiUniverseCache').doc(cacheKey).get();
 
       if (cacheDoc.exists && cacheDoc.data().cacheExpire > Date.now()) {
-        logger.info(`[MultiUniverse] Cache hit for match ${matchId}`);
+        logger.info(`[MultiUniverse] CACHE HIT for match ${matchId.substring(0, 8)}`);
+        analyticsData.success = true;
+        analyticsData.duration = Date.now() - startTime;
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
         return { ...cacheDoc.data(), fromCache: true };
       }
+      logger.info(`[MultiUniverse] No valid cache found`);
 
       // Step 3: Load match profile
       const matchDoc = await db.collection('users').doc(matchId).get();
       if (!matchDoc.exists) {
+        logger.error(`[MultiUniverse] Match not found: ${matchId}`);
+        analyticsData.errorReason = 'match_not_found';
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
         throw new HttpsError('not-found', 'Match not found');
       }
       const matchName = matchDoc.data().name || 'Your Match';
+      logger.info(`[MultiUniverse] Loaded match: ${matchName}`);
 
       // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
       const stages = [];
+      let totalTokens = 0;
+      const stageDurations = {};
+
       for (const stage of MULTI_UNIVERSE_STAGES) {
+        const stageStart = Date.now();
         try {
-          logger.info(`[MultiUniverse] Running stage ${stage.id} for match ${matchId.substring(0, 8)}...`);
+          logger.info(`[MultiUniverse] ▶️ Stage ${stage.id} (${stage.order}/5)...`);
 
           // Call simulateSituation internally via admin SDK
           // This simulates how the user would approach this relationship stage
@@ -177,7 +263,11 @@ exports.simulateMultiUniverse = onCall(
             db, userId, matchId, stage.situation, userLanguage
           );
 
+          const stageDuration = Date.now() - stageStart;
+          stageDurations[stage.id] = stageDuration;
+
           if (!situationResponse.success || !situationResponse.approaches || situationResponse.approaches.length === 0) {
+            logger.error(`[MultiUniverse] Stage ${stage.id} returned no approaches`);
             throw new Error('No valid approaches returned from situation simulation');
           }
 
@@ -202,11 +292,27 @@ exports.simulateMultiUniverse = onCall(
             psyInsights: situationResponse.psychInsights || 'Compatible communication patterns emerging',
           };
           stages.push(stageResult);
+          analyticsData.successfulStages++;
+
+          logger.info(`[MultiUniverse] ✅ Stage ${stage.id}: score=${avgReactionScore.toFixed(1)}, duration=${stageDuration}ms`);
+
+          // Track tokens if available
+          if (situationResponse.tokens) {
+            totalTokens += situationResponse.tokens;
+          }
 
           // 200ms pause between stages to avoid rate limit (soft throttle)
           await new Promise(resolve => setTimeout(resolve, 200));
         } catch (e) {
-          logger.warn(`[MultiUniverse] Stage ${stage.id} failed:`, e.message);
+          const stageDuration = Date.now() - stageStart;
+          stageDurations[stage.id] = stageDuration;
+          logger.error(`[MultiUniverse] ❌ Stage ${stage.id} failed after ${stageDuration}ms:`, e.message, e.stack);
+
+          analyticsData.failedStages++;
+          if (!analyticsData.failedStage) {
+            analyticsData.failedStage = stage.id;
+          }
+
           stages.push({
             stageId: stage.id,
             stageLabel: stage.stageLabel,
@@ -219,20 +325,25 @@ exports.simulateMultiUniverse = onCall(
       }
 
       const successfulStages = stages.filter(s => !s.error);
+      logger.info(`[MultiUniverse] Completed: ${successfulStages.length}/5 stages successful`);
 
       // Step 5: Calculate compatibility
       const { score, stars, label } = calculateCompatibility(successfulStages, userLanguage);
 
       // CRITICAL: If all stages failed, don't cache and throw error instead
       if (successfulStages.length === 0) {
+        logger.error(`[MultiUniverse] ALL STAGES FAILED`);
+        analyticsData.errorReason = 'all_stages_failed';
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
         throw new HttpsError(
           'internal',
-          'All relationship stages failed to simulate. Please try again.'
+          'Unable to test all relationship stages. Please try again in a moment.'
         );
       }
 
       // Step 6: Generate insights
       const insights = generateInsights(successfulStages, label);
+      logger.info(`[MultiUniverse] Generated ${insights.length} insights, score=${score}`);
 
       // Step 7: Build response
       const cacheMinutes = config.cacheMinutes || (180 * 24 * 60); // 6 months in minutes by default
@@ -258,7 +369,8 @@ exports.simulateMultiUniverse = onCall(
       if (hasDecentScore) {
         await db.collection('users').doc(userId)
           .collection('multiUniverseCache').doc(cacheKey).set(result, { merge: true })
-          .catch(e => logger.warn('Cache write failed:', e.message));
+          .catch(e => logger.warn('[MultiUniverse] Cache write failed:', e.message));
+        logger.info(`[MultiUniverse] Cached result (score=${score})`);
       } else {
         logger.info('[MultiUniverse] Not caching: all scores < 5 (low quality result)');
       }
@@ -268,13 +380,35 @@ exports.simulateMultiUniverse = onCall(
       await usageRef.set(
         { count: currentCount + 1, lastUsed: new Date().toISOString() },
         { merge: true }
-      ).catch(e => logger.warn('Rate limit increment failed:', e.message));
+      ).catch(e => logger.warn('[MultiUniverse] Rate limit increment failed:', e.message));
+      logger.info(`[MultiUniverse] Rate limit incremented: ${currentCount + 1}/${maxPerDay}`);
+
+      // Estimate cost: ~0.000075 per input token, ~0.0003 per output token (Gemini 2.5 Flash pricing)
+      const estimatedCost = (totalTokens * 0.000075) + (successfulStages.length * 100 * 0.0003);
+      analyticsData.success = true;
+      analyticsData.duration = Date.now() - startTime;
+      analyticsData.estimatedCost = estimatedCost;
+      analyticsData.compatibilityScore = score;
+
+      logger.info(`[MultiUniverse] ✨ SUCCESS: score=${score}, cost≈$${estimatedCost.toFixed(4)}, duration=${analyticsData.duration}ms`);
+      await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
 
       return { ...result, fromCache: false };
     } catch (e) {
-      if (e instanceof HttpsError) throw e;
-      logger.error('Multi-universe simulation error:', e);
-      throw new HttpsError('internal', 'Simulation failed. Try again.');
+      analyticsData.duration = Date.now() - startTime;
+
+      if (e instanceof HttpsError) {
+        logger.error(`[MultiUniverse] HttpsError (${e.code}): ${e.message}`);
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        throw e;
+      }
+
+      logger.error('[MultiUniverse] Unexpected error:', e.message, e.stack);
+      analyticsData.errorReason = 'unexpected_error';
+      analyticsData.errorMessage = e.message;
+      await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+
+      throw new HttpsError('internal', 'Simulation failed. Please try again.');
     }
   }
 );
@@ -285,13 +419,19 @@ exports.simulateMultiUniverse = onCall(
  * So calling Gemini directly here doesn't consume user's situation simulation quota.
  */
 async function callSituationSimulationInternal(db, userId, matchId, situation, userLanguage) {
+  const callStart = Date.now();
   try {
+    logger.info(`[SituationInternal] Starting Gemini call for: ${situation.substring(0, 50)}...`);
+
     // Generate 4 approaches using Gemini
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage);
 
+    const callDuration = Date.now() - callStart;
+    logger.info(`[SituationInternal] Gemini call completed in ${callDuration}ms`);
+
     if (!approaches || approaches.length === 0) {
-      logger.warn('[MultiUniverse] Gemini returned empty approaches, using fallback');
+      logger.warn(`[SituationInternal] Gemini returned empty approaches, using fallback`);
       return {
         success: true,
         situation,
@@ -301,19 +441,26 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         bestApproachId: '1',
         coachTip: 'Communication is key in this stage.',
         psychInsights: 'Focus on authenticity and openness.',
+        tokens: 0,
       };
     }
 
+    logger.info(`[SituationInternal] Generated ${approaches.length} approaches`);
+
     // Score each approach (simulate match reaction)
-    const approachesWithScores = approaches.map((app, idx) => ({
-      id: app.id,
-      tone: app.tone,
-      phrase: app.phrase,
-      matchReaction: generateMatchReaction(app.tone, situation, userLanguage),
-      successScore: scoreApproach(app.phrase, situation, userLanguage),
-      signals: ['warmth', 'reciprocation', 'openness'],
-      recommendedFor: idx === 0 ? 'Direct opener' : null,
-    }));
+    const approachesWithScores = approaches.map((app, idx) => {
+      const score = scoreApproach(app.phrase, situation, userLanguage);
+      logger.info(`[SituationInternal] Approach ${app.id} (${app.tone}): score=${score}`);
+      return {
+        id: app.id,
+        tone: app.tone,
+        phrase: app.phrase,
+        matchReaction: generateMatchReaction(app.tone, situation, userLanguage),
+        successScore: score,
+        signals: ['warmth', 'reciprocation', 'openness'],
+        recommendedFor: idx === 0 ? 'Direct opener' : null,
+      };
+    });
 
     return {
       success: true,
@@ -324,9 +471,12 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       bestApproachId: approachesWithScores[0]?.id || '1',
       coachTip: 'Each approach showcases different emotional strengths in this stage.',
       psychInsights: 'The variety tests compatibility across communication styles.',
+      tokens: approaches.length * 150, // rough estimate
     };
   } catch (e) {
-    logger.error(`[MultiUniverse] Internal situation call failed:`, e.message);
+    const callDuration = Date.now() - callStart;
+    logger.error(`[SituationInternal] Failed after ${callDuration}ms: ${e.message}`, e.stack);
+
     // Fallback to basic approaches if Gemini fails
     return {
       success: true,
@@ -337,6 +487,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       bestApproachId: '1',
       coachTip: 'Communication is important at this stage.',
       psychInsights: 'Genuine connection develops through authentic dialogue.',
+      tokens: 0,
     };
   }
 }
@@ -345,7 +496,9 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
  * Generate 4 approaches using Gemini (direct Gemini call, not via CF)
  */
 async function generateApproachesForMultiverse(genAI, situation, userLang) {
+  const callStart = Date.now();
   try {
+    logger.info(`[Gemini] Initializing model: ${AI_MODEL_NAME}`);
     const langInstr = getLanguageInstruction(userLang);
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_NAME,
@@ -378,6 +531,8 @@ Each phrase must be 1-2 sentences, natural, first-person. ${langInstr}
 Respond ONLY with JSON:
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
+    logger.info(`[Gemini] Prompt size: ${prompt.length} chars, language: ${userLang}`);
+
     // Timeout: if Gemini takes > 25 seconds, fail gracefully
     const geminiPromise = model.generateContent(prompt);
     const timeoutPromise = new Promise((_, reject) =>
@@ -387,39 +542,60 @@ Respond ONLY with JSON:
     let result;
     try {
       result = await Promise.race([geminiPromise, timeoutPromise]);
+      logger.info(`[Gemini] Content generation succeeded`);
     } catch (timeoutErr) {
-      logger.warn('[generateApproachesForMultiverse] Gemini timeout:', timeoutErr.message);
+      logger.error('[Gemini] TIMEOUT after 25s:', timeoutErr.message);
       return generateApproachesFallback();
     }
 
     const text = result?.response?.text();
+    logger.info(`[Gemini] Response size: ${(text || '').length} chars`);
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      logger.warn('[generateApproachesForMultiverse] Gemini returned empty response');
+      logger.error(`[Gemini] Empty response body`);
       return generateApproachesFallback();
     }
 
+    // Log response preview (first 200 chars)
+    logger.info(`[Gemini] Response preview: ${text.substring(0, 200)}`);
+
     const parsed = parseGeminiJsonResponse(text);
-    if (!parsed || !Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
-      logger.warn('[generateApproachesForMultiverse] Failed to parse valid approaches');
+    if (!parsed) {
+      logger.error(`[Gemini] Failed to parse JSON from response`);
+      logger.debug(`[Gemini] Raw response was: ${text}`);
       return generateApproachesFallback();
     }
+
+    if (!Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
+      logger.error(`[Gemini] Parsed JSON but no approaches array found`);
+      logger.debug(`[Gemini] Parsed object: ${JSON.stringify(parsed)}`);
+      return generateApproachesFallback();
+    }
+
+    logger.info(`[Gemini] Parsed ${parsed.approaches.length} approaches`);
 
     const approaches = parsed.approaches;
     const byTone = new Map();
     for (const a of approaches) {
       if (a && typeof a.phrase === 'string' && a.tone) {
         byTone.set(a.tone, a.phrase.trim());
+        logger.info(`[Gemini] ✓ Tone "${a.tone}": "${a.phrase.substring(0, 40)}..."`);
+      } else {
+        logger.warn(`[Gemini] Invalid approach object:`, JSON.stringify(a));
       }
     }
 
-    return FIXED_TONES.map((tone, i) => ({
+    const result_approaches = FIXED_TONES.map((tone, i) => ({
       id: String(i + 1),
       tone,
       phrase: byTone.get(tone) || approaches[i]?.phrase || '',
     }));
+
+    logger.info(`[Gemini] Finalized ${result_approaches.length} approaches in ${Date.now() - callStart}ms`);
+    return result_approaches;
   } catch (e) {
-    logger.error('[generateApproachesForMultiverse] Gemini call failed:', e.message);
+    logger.error(`[Gemini] Error after ${Date.now() - callStart}ms:`, e.message);
+    if (e.stack) logger.error(`[Gemini] Stack:`, e.stack);
     return generateApproachesFallback();
   }
 }
