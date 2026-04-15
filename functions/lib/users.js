@@ -386,29 +386,44 @@ exports.deleteUserData = onCall(
 
     try {
       // 1. Borrar el documento principal del usuario
-      await db.collection('users').doc(targetUserId).delete().catch(() => {});
+      await db.collection('users').doc(targetUserId).delete().catch((e) => {
+        logger.warn(`[deleteUserData] Failed to delete user doc: ${e.message}`);
+      });
 
       // 2. Borrar matches del usuario y borrar mensajes
       const matchesSnap = await db.collection('matches')
         .where('usersMatched', 'array-contains', targetUserId)
-        .get().catch(() => ({docs: []}));
+        .get().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to fetch matches: ${e.message}`);
+          return {docs: []};
+        });
 
       for (const matchDoc of matchesSnap.docs) {
-        const msgs = await matchDoc.ref.collection('messages').limit(500).get().catch(() => ({docs: [], empty: true}));
+        const msgs = await matchDoc.ref.collection('messages').limit(500).get().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to fetch match messages: ${e.message}`);
+          return {docs: [], empty: true};
+        });
         if (!msgs.empty) {
           const batch = db.batch();
           msgs.docs.forEach((m) => batch.delete(m.ref));
           await batch.commit();
         }
-        await matchDoc.ref.delete().catch(() => {});
+        await matchDoc.ref.delete().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to delete match doc: ${e.message}`);
+        });
       }
 
       // 3. Borrar likes del usuario
-      await db.collection('likes').doc(targetUserId).delete().catch(() => {});
+      await db.collection('likes').doc(targetUserId).delete().catch((e) => {
+        logger.warn(`[deleteUserData] Failed to delete likes doc: ${e.message}`);
+      });
 
       // 4. Borrar swipes
       const swipesSnap = await db.collection('users').doc(targetUserId)
-        .collection('swipes').limit(500).get().catch(() => ({docs: [], empty: true}));
+        .collection('swipes').limit(500).get().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to fetch swipes: ${e.message}`);
+          return {docs: [], empty: true};
+        });
       if (!swipesSnap.empty) {
         const batch = db.batch();
         swipesSnap.docs.forEach((d) => batch.delete(d.ref));
@@ -418,7 +433,10 @@ exports.deleteUserData = onCall(
       // 5. Borrar reportes donde el usuario es el reportado
       const reportsSnap = await db.collection('reports')
         .where('reportedUserId', '==', targetUserId)
-        .limit(100).get().catch(() => ({docs: [], empty: true}));
+        .limit(100).get().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to fetch reports: ${e.message}`);
+          return {docs: [], empty: true};
+        });
       if (!reportsSnap.empty) {
         const batch = db.batch();
         reportsSnap.docs.forEach((d) => batch.delete(d.ref));
@@ -427,13 +445,18 @@ exports.deleteUserData = onCall(
 
       // 6. Borrar coach chat history
       const coachMsgs = await db.collection('coachChats').doc(targetUserId)
-        .collection('messages').limit(500).get().catch(() => ({docs: [], empty: true}));
+        .collection('messages').limit(500).get().catch((e) => {
+          logger.warn(`[deleteUserData] Failed to fetch coach messages: ${e.message}`);
+          return {docs: [], empty: true};
+        });
       if (!coachMsgs.empty) {
         const batch = db.batch();
         coachMsgs.docs.forEach((d) => batch.delete(d.ref));
         await batch.commit();
       }
-      await db.collection('coachChats').doc(targetUserId).delete().catch(() => {});
+      await db.collection('coachChats').doc(targetUserId).delete().catch((e) => {
+        logger.warn(`[deleteUserData] Failed to delete coachChats doc: ${e.message}`);
+      });
 
       // 7. Borrar el usuario de Firebase Auth (última acción — punto de no retorno)
       await admin.auth().deleteUser(targetUserId);

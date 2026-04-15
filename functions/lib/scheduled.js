@@ -133,7 +133,9 @@ exports.resetDailyLikes = onSchedule(
         });
         notifCount += response.successCount;
         // Clean up invalid tokens (non-blocking)
-        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
+        cleanupStaleTokens(response, tokenBatch, db).catch((e) => {
+        logger.warn(`[scheduled] Cleanup stale tokens failed: ${e.message}`);
+      });
       } catch (err) {
         logger.error(`[resetDailyLikes] Notification batch error:`, err);
       }
@@ -240,7 +242,9 @@ exports.resetSuperLikes = onSchedule(
           }},
         });
         notifCount += response.successCount;
-        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
+        cleanupStaleTokens(response, tokenBatch, db).catch((e) => {
+        logger.warn(`[scheduled] Cleanup stale tokens failed: ${e.message}`);
+      });
       } catch (err) {
         logger.error(`[resetSuperLikes] Notification batch error:`, err);
       }
@@ -374,7 +378,9 @@ exports.resetCoachMessages = onSchedule(
           }},
         });
         notifCount += response.successCount;
-        cleanupStaleTokens(response, tokenBatch, db).catch(() => {});
+        cleanupStaleTokens(response, tokenBatch, db).catch((e) => {
+        logger.warn(`[scheduled] Cleanup stale tokens failed: ${e.message}`);
+      });
       } catch (err) {
         logger.error(`[resetCoachMessages] Notification batch error:`, err);
       }
@@ -509,7 +515,9 @@ exports.processScheduledDeletions = onSchedule(
         try {
           const bucket = admin.storage().bucket();
           const [files] = await bucket.getFiles({prefix: `users/${doc.id}/`});
-          await Promise.all(files.map((f) => f.delete().catch(() => {})));
+          await Promise.all(files.map((f) => f.delete().catch((e) => {
+            logger.warn(`[processScheduledDeletions] Failed to delete file: ${e.message}`);
+          })));
         } catch (storageErr) {
           logger.warn(`[processScheduledDeletions] Storage cleanup failed for ${doc.id}: ${storageErr.message}`);
         }
@@ -518,7 +526,9 @@ exports.processScheduledDeletions = onSchedule(
         await doc.ref.delete();
 
         // 6. Borrar de Firebase Auth
-        await admin.auth().deleteUser(doc.id).catch(() => {});
+        await admin.auth().deleteUser(doc.id).catch((e) => {
+          logger.error(`[processScheduledDeletions] CRITICAL: Failed to delete Auth user ${doc.id}: ${e.message}`);
+        });
 
         deletedCount++;
         logger.info(`[processScheduledDeletions] Deleted user ${doc.id}`);

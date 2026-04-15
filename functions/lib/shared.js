@@ -323,7 +323,9 @@ function trackAICall({functionName, model, operation, usage, latencyMs, error, u
       [`models.${model.replace(/\./g, '_')}.tokens`]: admin.firestore.FieldValue.increment(totalTokens),
       [`models.${model.replace(/\./g, '_')}.costUsd`]: admin.firestore.FieldValue.increment(costUsd),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, {merge: true}).catch(() => {});
+    }, {merge: true}).catch((e) => {
+      logger.warn(`[trackAICall] Failed to write daily analytics: ${e.message}`);
+    });
 
     // Per-operation detail (sampled to avoid Firestore overload)
     if (Math.random() < 0.2 || error) { // 20% sample + all errors
@@ -334,7 +336,9 @@ function trackAICall({functionName, model, operation, usage, latencyMs, error, u
         error: error || null,
         userId: userId || null,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      }).catch(() => {});
+      }).catch((e) => {
+        logger.warn(`[trackAICall] Failed to write detailed analytics: ${e.message}`);
+      });
     }
   } catch (_) {
     // Analytics must NEVER crash the main function

@@ -391,7 +391,8 @@ exports.simulateMultiUniverse = onCall(
           }
         }
         logger.info(`[MultiUniverse] ✓ Match loaded: ${matchName} (${matchId.substring(0, 8)}...)`);
-      logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
+        logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
+      }
 
       // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
       const stages = [];

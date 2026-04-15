@@ -69,10 +69,22 @@ exports.sendTestNotification = onCall(async (request) => {
  * Llamar desde la app cuando se obtiene/actualiza el token
  */
 exports.updateFCMToken = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
+  }
+
   const {userId, fcmToken} = request.data;
 
   if (!userId || !fcmToken) {
     throw new Error('userId and fcmToken are required');
+  }
+
+  if (request.auth.uid !== userId) {
+    logger.warn('FCM token update attempt by unauthorized user', {
+      requesterId: request.auth.uid,
+      targetUserId: userId
+    });
+    throw new HttpsError('permission-denied', 'Can only update your own FCM token');
   }
 
   logger.info('Updating FCM token', {userId});

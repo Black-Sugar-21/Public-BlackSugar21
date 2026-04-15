@@ -1297,7 +1297,9 @@ Example: ["phrase 1", "phrase 2", ...]`;
               }));
               // Update cache with newly returned placeIds (non-blocking)
               const newReturned = [...(_lmCacheData.returnedPlaceIds || []), ...batch.filter((rp) => rp.placeId).map((rp) => rp.placeId)];
-              db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').update({returnedPlaceIds: newReturned}).catch(() => {});
+              db.collection('coachChats').doc(userId).collection('placesCache').doc('latest').update({returnedPlaceIds: newReturned}).catch((e) => {
+                logger.warn(`[dateCoachChat] Failed to update placesCache: ${e.message}`);
+              });
               logger.info(`[dateCoachChat] loadMore served ${cachedActivities.length} from cache (${available.length - batch.length} remaining)`);
               return {
                 success: true,
@@ -2482,9 +2484,13 @@ Return JSON with these fields:
           promptTuningInstructions = `\nDYNAMIC COACHING IMPROVEMENTS (auto-generated from independent evaluation):\n${instrList}\n`;
           // Track usage
           if (!tuning.appliedAt) {
-            promptTuningDoc.ref.update({appliedAt: admin.firestore.FieldValue.serverTimestamp(), appliedCount: 1}).catch(() => {});
+            promptTuningDoc.ref.update({appliedAt: admin.firestore.FieldValue.serverTimestamp(), appliedCount: 1}).catch((e) => {
+              logger.warn(`[dateCoachChat] Failed to update promptTuning (first): ${e.message}`);
+            });
           } else {
-            promptTuningDoc.ref.update({appliedCount: admin.firestore.FieldValue.increment(1)}).catch(() => {});
+            promptTuningDoc.ref.update({appliedCount: admin.firestore.FieldValue.increment(1)}).catch((e) => {
+              logger.warn(`[dateCoachChat] Failed to update promptTuning (increment): ${e.message}`);
+            });
           }
         }
       }
@@ -3754,7 +3760,9 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
             selfEvalIssues: selfEvalData.issues || [],
             topics: geminiTopics,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          }).catch(() => {});
+          }).catch((e) => {
+            logger.warn(`[dateCoachChat] Failed to log coachEvaluations: ${e.message}`);
+          });
         }
 
         // 9. Update learning profile (non-critical — failure must not affect response)
