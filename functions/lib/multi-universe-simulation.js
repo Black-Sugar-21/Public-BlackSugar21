@@ -237,15 +237,29 @@ exports.simulateMultiUniverse = onCall(
       logger.info(`[MultiUniverse] No valid cache found`);
 
       // Step 3: Load match profile
+      logger.info(`[MultiUniverse] Loading match document: ${matchId.substring(0, 8)}... (${matchId.length} chars)`);
       const matchDoc = await db.collection('users').doc(matchId).get();
       if (!matchDoc.exists) {
-        logger.error(`[MultiUniverse] Match not found: ${matchId}`);
+        logger.error(`[MultiUniverse] Match NOT FOUND: ${matchId}`);
+        logger.error(`[MultiUniverse] Match lookup details:`);
+        logger.error(`  - Collection: users`);
+        logger.error(`  - DocId: ${matchId}`);
+        logger.error(`  - DocId length: ${matchId.length}`);
+        logger.error(`  - First 4 chars: ${matchId.substring(0, 4)}`);
+
+        // Try to find what matches DO exist for debugging
+        const allUsersSnap = await db.collection('users').limit(3).get();
+        logger.error(`[MultiUniverse] Sample existing users: ${allUsersSnap.docs.map(d => d.id.substring(0, 8) + '...').join(', ')}`);
+
         analyticsData.errorReason = 'match_not_found';
+        analyticsData.failedStage = 'load_match';
         await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
-        throw new HttpsError('not-found', 'Match not found');
+        throw new HttpsError('not-found', `Match profile not found (ID: ${matchId.substring(0, 8)}...)`);
       }
-      const matchName = matchDoc.data().name || 'Your Match';
-      logger.info(`[MultiUniverse] Loaded match: ${matchName}`);
+      const matchData = matchDoc.data();
+      const matchName = matchData?.name || 'Your Match';
+      logger.info(`[MultiUniverse] ✓ Match loaded: ${matchName} (${matchId.substring(0, 8)}...)`);
+      logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
 
       // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
       const stages = [];
