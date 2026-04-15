@@ -1,5 +1,191 @@
 {
   "parameters": {
+    "ai_model_config": {
+      "defaultValue": {
+        "value": "{\"HIGH_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.3,\"maxTokens\":2048,\"functions\":[\"moderateMessage\",\"analyzeReport\",\"autoDetectFakeProfile\",\"calculateSafetyScore\",\"detectProfileRedFlags\"]},\"MEDIUM_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.7,\"maxTokens\":1024,\"functions\":[\"generateSmartReply\",\"getDateSuggestions\",\"analyzeConversationChemistry\",\"getDatingAdvice\",\"predictOptimalMessageTime\"]},\"LOW_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.9,\"maxTokens\":512,\"functions\":[\"generateIcebreakers\",\"optimizeProfilePhotos\",\"analyzeProfileWithAI\"]}}"
+      },
+      "valueType": "JSON"
+    },
+    "ai_moderation_confidence_threshold": {
+      "defaultValue": {
+        "value": "0.80"
+      },
+      "valueType": "NUMBER"
+    },
+    "bulk_query_batch_size": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "valueType": "NUMBER"
+    },
+    "coach_config": {
+      "defaultValue": {
+        "value": "{\"enabled\":true,\"maxMessageLength\":2000,\"historyLimit\":10,\"maxActivities\":30,\"maxSuggestions\":12,\"maxReplyLength\":5000,\"rateLimitPerHour\":30,\"temperature\":0.9,\"maxTokens\":1024,\"learningEnabled\":true,\"personalityTone\":\"Eres como ese amigo que siempre sabe qué decir. Hablas con confianza pero sin sonar pedante. Usas humor sutil cuando es apropiado. Eres directo pero empático — si algo no funciona, lo dices con tacto. Celebras los pequeños logros. Responde en el idioma del usuario.\",\"blockedTopics\":[\"politics\",\"religion\",\"coding\",\"programming\",\"math\",\"science homework\",\"medical advice\",\"legal advice\",\"financial advice\",\"gambling\",\"drugs\",\"weapons\",\"hacking\",\"cheating strategies\",\"manipulation tactics\",\"revenge\",\"stalking\",\"explicit sexual content\",\"pornography\",\"self-harm\",\"terrorism\",\"illegal activities\"],\"additionalGuidelines\":\"\",\"dailyCredits\":3,\"placeSearch\":{\"enableWithoutLocation\":true,\"minActivitiesForPlaceSearch\":6,\"defaultRadius\":100000,\"minRadius\":3000,\"maxRadius\":300000,\"radiusSteps\":[100000,130000,180000,250000,300000],\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"maxOutputTokensBudget\":4096,\"cuisineAlternatives\":{\"arabic\":\"turkish, lebanese, mediterranean, middle eastern\",\"chinese\":\"asian, japanese, korean, vietnamese, thai\",\"italian\":\"mediterranean, french, spanish, pizza\",\"mexican\":\"latin american, tex-mex, peruvian, colombian\",\"japanese\":\"asian, korean, chinese, sushi\",\"thai\":\"asian, vietnamese, chinese, indian\",\"indian\":\"thai, middle eastern, pakistani, nepalese\",\"peruvian\":\"latin american, mexican, japanese-peruvian (nikkei), ceviche\",\"korean\":\"asian, japanese, chinese, bbq\",\"french\":\"mediterranean, italian, european, bistro\",\"greek\":\"mediterranean, turkish, lebanese\",\"turkish\":\"arabic, lebanese, mediterranean, middle eastern\",\"vietnamese\":\"asian, thai, chinese, pho\",\"brazilian\":\"latin american, steakhouse, churrasco\",\"mediterranean\":\"greek, italian, turkish, lebanese\",\"asian\":\"chinese, japanese, thai, korean, vietnamese\",\"vegan\":\"vegetarian, organic, healthy, plant-based\",\"vegetarian\":\"vegan, organic, healthy, salad\",\"fusion\":\"contemporary, creative, international, eclectic\",\"ethiopian\":\"african, middle eastern, eritrean\",\"moroccan\":\"north african, mediterranean, middle eastern\",\"lebanese\":\"arabic, mediterranean, turkish, middle eastern\",\"pakistani\":\"indian, middle eastern, south asian\",\"nepalese\":\"indian, tibetan, south asian\",\"cuban\":\"latin american, caribbean, mexican\",\"colombian\":\"latin american, peruvian, mexican\",\"argentinian\":\"latin american, steakhouse, italian\",\"spanish\":\"mediterranean, italian, tapas\",\"hawaiian\":\"asian, pacific, poke, seafood\",\"caribbean\":\"latin american, cuban, jamaican, tropical\",\"african\":\"ethiopian, moroccan, west african, nigerian\",\"jamaican\":\"caribbean, latin american, tropical\",\"tibetan\":\"nepalese, indian, chinese, asian\",\"filipino\":\"asian, southeast asian, pacific\",\"malaysian\":\"asian, southeast asian, thai, indonesian\",\"indonesian\":\"asian, southeast asian, malaysian, thai\",\"sri_lankan\":\"indian, south asian, curry\",\"tex_mex\":\"mexican, american, latin\",\"southern\":\"american, comfort food, bbq, soul food\",\"cajun\":\"southern, american, creole, seafood\",\"kosher\":\"israeli, middle eastern, mediterranean\",\"halal\":\"arabic, middle eastern, turkish, indian\",\"gluten_free\":\"healthy, organic, vegan, vegetarian\",\"raw\":\"vegan, healthy, organic, plant-based\",\"brunch\":\"cafe, breakfast, bistro, american\",\"tapas\":\"spanish, mediterranean, wine bar\",\"sushi\":\"japanese, asian, seafood\",\"ramen\":\"japanese, asian, noodle\",\"pho\":\"vietnamese, asian, noodle\",\"curry\":\"indian, thai, japanese, asian\",\"bbq\":\"american, korean, brazilian, steakhouse\",\"seafood\":\"mediterranean, japanese, coastal, fish\",\"steakhouse\":\"argentinian, brazilian, american, grill\",\"noodles\":\"asian, chinese, japanese, vietnamese, ramen\",\"dumplings\":\"chinese, asian, japanese, korean\",\"tacos\":\"mexican, latin, tex-mex\",\"pizza\":\"italian, american, fast food\",\"creole\":\"cajun, southern, caribbean, french\",\"persian\":\"middle eastern, turkish, arabic, mediterranean\"},\"cuisineFallbackQueries\":{\"arabic\":\"mediterranean restaurant\",\"chinese\":\"asian restaurant\",\"italian\":\"mediterranean restaurant\",\"mexican\":\"latin restaurant\",\"japanese\":\"asian restaurant\",\"thai\":\"asian restaurant\",\"indian\":\"curry restaurant\",\"peruvian\":\"ceviche restaurant\",\"korean\":\"asian restaurant\",\"french\":\"bistro\",\"greek\":\"mediterranean restaurant\",\"turkish\":\"kebab restaurant\",\"vietnamese\":\"pho restaurant\",\"brazilian\":\"steakhouse\",\"vegan\":\"vegetarian restaurant\",\"vegetarian\":\"healthy restaurant\",\"ethiopian\":\"african restaurant\",\"moroccan\":\"mediterranean restaurant\",\"lebanese\":\"mediterranean restaurant\",\"pakistani\":\"indian restaurant\",\"cuban\":\"latin restaurant\",\"colombian\":\"latin restaurant\",\"argentinian\":\"steakhouse\",\"spanish\":\"tapas restaurant\",\"hawaiian\":\"poke restaurant\",\"mediterranean\":\"italian restaurant\",\"asian\":\"chinese restaurant\",\"fusion\":\"international restaurant\",\"nepalese\":\"indian restaurant\",\"caribbean\":\"tropical restaurant\",\"african\":\"ethiopian restaurant\",\"jamaican\":\"caribbean restaurant\",\"tibetan\":\"nepalese restaurant\",\"filipino\":\"asian restaurant\",\"malaysian\":\"asian restaurant\",\"indonesian\":\"asian restaurant\",\"sri_lankan\":\"indian restaurant\",\"tex_mex\":\"mexican restaurant\",\"southern\":\"bbq restaurant\",\"cajun\":\"seafood restaurant\",\"kosher\":\"mediterranean restaurant\",\"halal\":\"middle eastern restaurant\",\"gluten_free\":\"healthy restaurant\",\"raw\":\"vegan restaurant\",\"brunch\":\"cafe brunch\",\"tapas\":\"spanish restaurant\",\"sushi\":\"sushi restaurant\",\"ramen\":\"ramen shop\",\"pho\":\"pho restaurant\",\"curry\":\"curry restaurant\",\"bbq\":\"bbq restaurant\",\"seafood\":\"seafood restaurant\",\"steakhouse\":\"steakhouse\",\"noodles\":\"noodle restaurant\",\"dumplings\":\"dumpling restaurant\",\"tacos\":\"taco restaurant\",\"pizza\":\"pizzeria\",\"creole\":\"cajun restaurant\",\"persian\":\"persian restaurant\"},\"shopFallbacks\":{\"bakery\":[\"chocolatería\",\"pastelería\",\"confitería\",\"bombonería\",\"heladería\",\"dulcería\",\"repostería\",\"chocolate shop\",\"bakery\",\"pastry shop\",\"candy shop\",\"sweet shop\",\"ice cream shop\",\"confectionery\",\"donut shop\",\"cupcake shop\",\"chocolaterie\",\"pâtisserie\",\"boulangerie\",\"confiserie\",\"glacier\",\"salon de thé\",\"Schokoladenladen\",\"Konditorei\",\"Bäckerei\",\"Confiserie\",\"Eisdiele\",\"Pralinengeschäft\",\"chocolateria\",\"confeitaria\",\"padaria\",\"doceria\",\"sorveteria\",\"brigadeiro\",\"チョコレート店\",\"ケーキ屋\",\"パティスリー\",\"和菓子屋\",\"アイスクリーム\",\"スイーツ\",\"巧克力店\",\"蛋糕店\",\"面包店\",\"甜品店\",\"冰淇淋店\",\"кондитерская\",\"шоколадный магазин\",\"пекарня\",\"мороженое\",\"محل شوكولاتة\",\"حلويات\",\"مخبز\",\"آيس كريم\",\"toko cokelat\",\"toko kue\",\"bakery\",\"es krim\",\"toko roti\"],\"shopping_mall\":[\"florería\",\"floristería\",\"joyería\",\"perfumería\",\"tienda de regalos\",\"boutique\",\"vinoteca\",\"licorería\",\"tienda de ropa\",\"relojería\",\"tienda de peluches\",\"flower shop\",\"florist\",\"jewelry store\",\"jeweler\",\"perfume shop\",\"gift shop\",\"boutique\",\"wine shop\",\"liquor store\",\"clothing store\",\"watch shop\",\"teddy bear shop\",\"fleuriste\",\"bijouterie\",\"parfumerie\",\"boutique cadeaux\",\"cave à vin\",\"magasin de vêtements\",\"horlogerie\",\"Blumenladen\",\"Juwelier\",\"Parfümerie\",\"Geschenkeladen\",\"Weinhandlung\",\"Bekleidungsgeschäft\",\"Uhrengeschäft\",\"floricultura\",\"joalheria\",\"perfumaria\",\"loja de presentes\",\"boutique\",\"loja de vinhos\",\"loja de roupas\",\"花屋\",\"ジュエリーショップ\",\"香水店\",\"ギフトショップ\",\"ワインショップ\",\"ブティック\",\"花店\",\"珠宝店\",\"香水店\",\"礼品店\",\"酒庄\",\"精品店\",\"服装店\",\"цветочный магазин\",\"ювелирный магазин\",\"парфюмерия\",\"магазин подарков\",\"винный магазин\",\"бутик\",\"محل زهور\",\"محل مجوهرات\",\"محل عطور\",\"محل هدايا\",\"محل ملابس\",\"محل نبيذ\",\"toko bunga\",\"toko perhiasan\",\"toko parfum\",\"toko hadiah\",\"toko pakaian\",\"toko anggur\",\"butik\"],\"cafe\":[\"cafetería\",\"café\",\"café de especialidad\",\"casa de té\",\"bubble tea\",\"coffee shop\",\"cafe\",\"specialty coffee\",\"tea house\",\"bubble tea\",\"espresso bar\",\"matcha cafe\",\"café\",\"salon de café\",\"torréfacteur\",\"maison de thé\",\"Café\",\"Kaffeehaus\",\"Teehaus\",\"Rösterei\",\"Eiscafé\",\"cafeteria\",\"café\",\"casa de chá\",\"café especial\",\"カフェ\",\"コーヒーショップ\",\"喫茶店\",\"紅茶専門店\",\"タピオカ\",\"抹茶カフェ\",\"咖啡店\",\"咖啡馆\",\"茶馆\",\"奶茶店\",\"珍珠奶茶\",\"кофейня\",\"кафе\",\"чайная\",\"кофе с собой\",\"مقهى\",\"كافيه\",\"بيت شاي\",\"kedai kopi\",\"kafe\",\"warung kopi\",\"teh tarik\",\"bubble tea\"],\"bar\":[\"bar\",\"cervecería\",\"coctelería\",\"wine bar\",\"vinoteca\",\"pub\",\"terraza\",\"rooftop bar\",\"mezcalería\",\"tequilería\",\"bar\",\"cocktail bar\",\"wine bar\",\"brewery\",\"pub\",\"taproom\",\"rooftop bar\",\"speakeasy\",\"sports bar\",\"lounge\",\"beer garden\",\"bar\",\"bar à cocktails\",\"bar à vin\",\"brasserie\",\"pub\",\"terrasse\",\"Bar\",\"Cocktailbar\",\"Weinbar\",\"Biergarten\",\"Kneipe\",\"Brauerei\",\"Dachterrasse\",\"bar\",\"cervejaria\",\"pub\",\"bar de coquetéis\",\"bar de vinhos\",\"choperia\",\"バー\",\"カクテルバー\",\"ワインバー\",\"居酒屋\",\"ビアガーデン\",\"ルーフトップバー\",\"酒吧\",\"鸡尾酒吧\",\"葡萄酒吧\",\"啤酒花园\",\"屋顶酒吧\",\"居酒屋\",\"бар\",\"коктейльный бар\",\"винный бар\",\"пивной бар\",\"паб\",\"крафтовая пивоварня\",\"بار\",\"بار كوكتيل\",\"بار نبيذ\",\"حانة\",\"bar\",\"bar koktail\",\"bar anggur\",\"pub\",\"rooftop bar\",\"warung bir\"],\"spa\":[\"spa\",\"masajes\",\"centro de bienestar\",\"salón de belleza\",\"termas\",\"sauna\",\"spa\",\"massage\",\"wellness center\",\"beauty salon\",\"hot springs\",\"sauna\",\"facial\",\"nail salon\",\"spa\",\"massage\",\"centre de bien-être\",\"salon de beauté\",\"hammam\",\"thermes\",\"Spa\",\"Massage\",\"Wellnesscenter\",\"Schönheitssalon\",\"Therme\",\"Sauna\",\"spa\",\"massagem\",\"centro de bem-estar\",\"salão de beleza\",\"termas\",\"スパ\",\"マッサージ\",\"エステ\",\"温泉\",\"サウナ\",\"ネイルサロン\",\"水疗\",\"按摩\",\"美容院\",\"温泉\",\"桑拿\",\"спа\",\"массаж\",\"салон красоты\",\"баня\",\"сауна\",\"سبا\",\"مساج\",\"صالون تجميل\",\"حمام\",\"spa\",\"pijat\",\"salon kecantikan\",\"sauna\",\"refleksi\"],\"park\":[\"parque\",\"jardín botánico\",\"mirador\",\"sendero\",\"playa\",\"plaza\",\"lago\",\"park\",\"botanical garden\",\"viewpoint\",\"hiking trail\",\"beach\",\"plaza\",\"lake\",\"picnic area\",\"parc\",\"jardin botanique\",\"belvédère\",\"sentier\",\"plage\",\"lac\",\"Park\",\"Botanischer Garten\",\"Aussichtspunkt\",\"Wanderweg\",\"Strand\",\"See\",\"parque\",\"jardim botânico\",\"mirante\",\"trilha\",\"praia\",\"lago\",\"公園\",\"植物園\",\"展望台\",\"ハイキング\",\"ビーチ\",\"湖\",\"公园\",\"植物园\",\"观景台\",\"远足\",\"海滩\",\"湖\",\"парк\",\"ботанический сад\",\"смотровая площадка\",\"пляж\",\"озеро\",\"حديقة\",\"حديقة نباتية\",\"شاطئ\",\"بحيرة\",\"taman\",\"kebun raya\",\"pantai\",\"danau\",\"taman kota\"],\"restaurant\":[\"restaurante\",\"comida\",\"cena romántica\",\"almuerzo\",\"brunch\",\"bistro\",\"parrilla\",\"asador\",\"marisquería\",\"cevichería\",\"food truck\",\"restaurant\",\"dining\",\"romantic dinner\",\"lunch spot\",\"brunch\",\"bistro\",\"grill\",\"steakhouse\",\"seafood\",\"food court\",\"food truck\",\"restaurant\",\"dîner romantique\",\"déjeuner\",\"brunch\",\"bistro\",\"brasserie\",\"fruits de mer\",\"Restaurant\",\"romantisches Abendessen\",\"Mittagessen\",\"Brunch\",\"Bistro\",\"Grillrestaurant\",\"Fischrestaurant\",\"restaurante\",\"jantar romântico\",\"almoço\",\"brunch\",\"churrascaria\",\"frutos do mar\",\"レストラン\",\"ディナー\",\"ランチ\",\"ブランチ\",\"焼肉\",\"寿司屋\",\"居酒屋\",\"食堂\",\"餐厅\",\"晚餐\",\"午餐\",\"早午餐\",\"烧烤\",\"火锅\",\"海鲜\",\"美食广场\",\"ресторан\",\"романтический ужин\",\"обед\",\"бранч\",\"гриль\",\"морепродукты\",\"مطعم\",\"عشاء رومانسي\",\"غداء\",\"مشويات\",\"مأكولات بحرية\",\"restoran\",\"makan malam romantis\",\"makan siang\",\"brunch\",\"warung\",\"seafood\",\"rumah makan\"],\"night_club\":[\"discoteca\",\"club nocturno\",\"disco\",\"pista de baile\",\"club\",\"antro\",\"fiesta\",\"after party\",\"nightclub\",\"dance club\",\"disco\",\"dance floor\",\"club\",\"party venue\",\"lounge\",\"after hours\",\"boîte de nuit\",\"discothèque\",\"club\",\"piste de danse\",\"soirée\",\"Nachtclub\",\"Diskothek\",\"Club\",\"Tanzfläche\",\"Party\",\"boate\",\"casa noturna\",\"balada\",\"clube\",\"pista de dança\",\"ナイトクラブ\",\"クラブ\",\"ディスコ\",\"ダンスフロア\",\"夜总会\",\"酒吧\",\"舞厅\",\"迪斯科\",\"派对\",\"ночной клуб\",\"дискотека\",\"танцпол\",\"клуб\",\"вечеринка\",\"ملهى ليلي\",\"ديسكو\",\"نادي\",\"حفلة\",\"klub malam\",\"diskotik\",\"dansa\",\"pesta\",\"clubbing\"],\"movie_theater\":[\"cine\",\"cinema\",\"sala de cine\",\"película\",\"autocine\",\"cine de arte\",\"función\",\"movie theater\",\"cinema\",\"movies\",\"film\",\"drive-in\",\"art house cinema\",\"IMAX\",\"screening\",\"cinéma\",\"salle de cinéma\",\"film\",\"séance\",\"cinéma en plein air\",\"Kino\",\"Filmtheater\",\"Autokino\",\"IMAX\",\"Programmkino\",\"cinema\",\"filme\",\"sessão\",\"cinema ao ar livre\",\"映画館\",\"シネマ\",\"映画\",\"IMAX\",\"ドライブインシアター\",\"电影院\",\"影院\",\"电影\",\"IMAX\",\"露天电影\",\"кинотеатр\",\"кино\",\"фильм\",\"IMAX\",\"автокинотеатр\",\"سينما\",\"فيلم\",\"صالة سينما\",\"bioskop\",\"film\",\"layar lebar\",\"IMAX\"],\"museum\":[\"museo\",\"exposición\",\"galería\",\"centro cultural\",\"museo de arte\",\"museo de historia\",\"planetario\",\"museum\",\"exhibition\",\"gallery\",\"cultural center\",\"art museum\",\"history museum\",\"planetarium\",\"science museum\",\"musée\",\"exposition\",\"centre culturel\",\"musée d'art\",\"planétarium\",\"Museum\",\"Ausstellung\",\"Kulturzentrum\",\"Kunstmuseum\",\"Planetarium\",\"museu\",\"exposição\",\"centro cultural\",\"museu de arte\",\"planetário\",\"博物館\",\"美術館\",\"展覧会\",\"文化センター\",\"プラネタリウム\",\"博物馆\",\"展览\",\"文化中心\",\"美术馆\",\"天文馆\",\"музей\",\"выставка\",\"культурный центр\",\"планетарий\",\"متحف\",\"معرض\",\"مركز ثقافي\",\"قبة فلكية\",\"museum\",\"pameran\",\"pusat budaya\",\"planetarium\"],\"bowling_alley\":[\"bowling\",\"boliche\",\"bolera\",\"billar\",\"arcade\",\"escape room\",\"laser tag\",\"mini golf\",\"go kart\",\"paintball\",\"bowling\",\"bowling alley\",\"billiards\",\"pool hall\",\"arcade\",\"escape room\",\"laser tag\",\"mini golf\",\"go kart\",\"trampoline park\",\"axe throwing\",\"bowling\",\"billard\",\"arcade\",\"escape game\",\"laser game\",\"mini golf\",\"karting\",\"Bowling\",\"Bowlingbahn\",\"Billard\",\"Spielhalle\",\"Escape Room\",\"Lasertag\",\"Minigolf\",\"Kartbahn\",\"boliche\",\"bilhar\",\"arcade\",\"escape room\",\"laser tag\",\"mini golf\",\"kart\",\"ボウリング\",\"ビリヤード\",\"ゲームセンター\",\"脱出ゲーム\",\"カラオケ\",\"カート\",\"保龄球\",\"台球\",\"电玩城\",\"密室逃脱\",\"卡丁车\",\"蹦床\",\"боулинг\",\"бильярд\",\"аркада\",\"квест\",\"лазертаг\",\"картинг\",\"بولينج\",\"بلياردو\",\"ألعاب\",\"غرفة هروب\",\"bowling\",\"biliar\",\"arcade\",\"escape room\",\"go kart\",\"trampolin\"],\"art_gallery\":[\"galería de arte\",\"exposición de arte\",\"arte contemporáneo\",\"estudio de arte\",\"taller de pintura\",\"cerámica\",\"art gallery\",\"art exhibition\",\"contemporary art\",\"art studio\",\"painting class\",\"pottery\",\"ceramics workshop\",\"galerie d'art\",\"exposition\",\"art contemporain\",\"atelier\",\"cours de peinture\",\"Kunstgalerie\",\"Kunstausstellung\",\"Atelier\",\"Malkurs\",\"Keramik\",\"galeria de arte\",\"exposição\",\"arte contemporânea\",\"ateliê\",\"cerâmica\",\"ギャラリー\",\"アート\",\"美術展\",\"陶芸\",\"絵画教室\",\"画廊\",\"艺术展\",\"当代艺术\",\"陶艺\",\"绘画\",\"галерея\",\"выставка\",\"арт-студия\",\"мастер-класс\",\"керамика\",\"معرض فني\",\"فن معاصر\",\"استوديو فني\",\"galeri seni\",\"pameran seni\",\"studio seni\",\"keramik\"],\"aquarium\":[\"acuario\",\"oceanario\",\"vida marina\",\"acuario interactivo\",\"aquarium\",\"oceanarium\",\"sea life\",\"marine aquarium\",\"ocean park\",\"aquarium\",\"océanarium\",\"vie marine\",\"Aquarium\",\"Ozeanarium\",\"Meeresaquarium\",\"aquário\",\"oceanário\",\"vida marinha\",\"水族館\",\"海遊館\",\"アクアリウム\",\"水族馆\",\"海洋馆\",\"海洋公园\",\"аквариум\",\"океанариум\",\"أكواريوم\",\"حوض أسماك\",\"حديقة مائية\",\"akuarium\",\"taman laut\",\"sea world\"],\"zoo\":[\"zoológico\",\"zoo\",\"safari\",\"bioparque\",\"reserva animal\",\"granja interactiva\",\"zoo\",\"zoological park\",\"safari park\",\"wildlife sanctuary\",\"animal reserve\",\"petting zoo\",\"zoo\",\"jardin zoologique\",\"safari\",\"parc animalier\",\"réserve\",\"Zoo\",\"Tierpark\",\"Wildpark\",\"Safari\",\"Streichelzoo\",\"zoológico\",\"zoo\",\"safári\",\"reserva animal\",\"動物園\",\"サファリパーク\",\"動物ふれあい\",\"动物园\",\"野生动物园\",\"动物乐园\",\"зоопарк\",\"сафари\",\"заповедник\",\"حديقة حيوان\",\"سفاري\",\"محمية\",\"kebun binatang\",\"taman safari\",\"taman margasatwa\"]},\"purchaseExtraTerms\":\"\"},\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.25,\"fetchMultiplier\":2,\"collection\":\"coachKnowledge\",\"promptHeader\":\"SUGAR DATING EXPERT KNOWLEDGE BASE (use this curated sugar dating and relationship advice to personalize your response — reference specific tips about sugar dynamics, arrangements, boundaries, safety, and etiquette when relevant):\"},\"intentExtraction\":{\"temperature\":0.1,\"maxTokens\":512,\"supportedCuisines\":[\"african\",\"arabic\",\"argentinian\",\"asian\",\"bbq\",\"brazilian\",\"brunch\",\"cajun\",\"caribbean\",\"chinese\",\"colombian\",\"creole\",\"cuban\",\"curry\",\"dumplings\",\"ethiopian\",\"filipino\",\"french\",\"fusion\",\"gluten_free\",\"greek\",\"halal\",\"hawaiian\",\"indian\",\"indonesian\",\"italian\",\"jamaican\",\"japanese\",\"korean\",\"kosher\",\"lebanese\",\"malaysian\",\"mediterranean\",\"mexican\",\"moroccan\",\"nepalese\",\"noodles\",\"pakistani\",\"persian\",\"peruvian\",\"pho\",\"pizza\",\"ramen\",\"raw\",\"seafood\",\"southern\",\"spanish\",\"sri_lankan\",\"steakhouse\",\"sushi\",\"tacos\",\"tapas\",\"tex_mex\",\"thai\",\"tibetan\",\"turkish\",\"vegan\",\"vegetarian\",\"vietnamese\"]},\"ragAutoUpdate\":{\"enabled\":true,\"enableSearchGrounding\":true,\"minNegativeFeedback\":1,\"maxNewChunksPerWeek\":10},\"qualityAnalysis\":{\"lowSatisfactionThreshold\":60},\"tips\":{\"geminiCallThreshold\":5,\"scoreDeltaThreshold\":10,\"maxCacheAgeMinutes\":30,\"baseScore\":55,\"scoreMin\":0,\"scoreMax\":100},\"selfEvaluation\":{\"enabled\":true,\"minScoreToReturn\":5,\"sampleRate\":0.3},\"dailyMicroUpdate\":{\"enabled\":true,\"minFeedback\":3,\"maxChunksPerDay\":3},\"ragEffectivenessTracking\":{\"enabled\":true},\"responseStyle\":{\"maxParagraphs\":3},\"stagePrompts\":{\"no_conversation_yet\":\"NEW match, zero messages. Respond with EXACTLY: 1) One-line profile analysis of the match. 2) Two personalized openers (one casual, one creative) referencing their bio/interests. 3) One-line explanation of WHY each works. 4) Best time to send. If user is anxious, normalize nerves first.\",\"just_started_talking\":\"Early chat (1-5 messages). Respond with: 1) Assessment of conversation momentum. 2) Two specific open-ended questions they can ask based on match profile. 3) One personal story they could share to build trust. 4) Warning signs to watch for. Keep it brief — they need quick actionable tips.\",\"getting_to_know\":\"Getting to know phase (5-20 messages). Respond with: 1) Is it time to suggest meeting? Yes/No with reasoning. 2) Two date ideas based on shared interests. 3) One way to deepen the conversation beyond surface level. 4) How to propose meeting up naturally.\",\"building_connection\":\"Real connection forming (20-50 messages). Respond with: 1) Relationship stage assessment. 2) Specific next step (video call, date, exclusivity talk). 3) One vulnerability-building suggestion. 4) If already met: plan for next date.\",\"active_conversation\":\"Active relationship (50+ messages or dating). Focus on: maintaining spark, creative date ideas, milestone navigation (DTR, meeting family, anniversaries). Always suggest a PLACE or ACTIVITY. If conflict: healthy communication framework. If routine: surprise ideas.\",\"stalled\":\"\"},\"offTopicMessages\":{\"en\":\"I get it, that is an interesting topic! 😄 But my superpower is dating and relationships. How about I help you with your profile, plan an amazing date, or craft the perfect message?\",\"es\":\"Entiendo tu curiosidad sobre eso 😄 Pero mi superpoder son las citas y relaciones. ¿Te ayudo a mejorar tu perfil, planear una cita increíble, o escribir el mensaje perfecto?\",\"pt\":\"Entendo sua curiosidade sobre isso 😄 Mas meu superpoder são encontros e relacionamentos. Posso te ajudar a melhorar seu perfil, planejar um encontro incrível ou escrever a mensagem perfeita?\",\"fr\":\"Je comprends ta curiosité 😄 Mais mon super pouvoir, ce sont les rendez-vous et les relations. Je peux t aider à améliorer ton profil, planifier un rendez-vous génial ou écrire le message parfait ?\",\"de\":\"Ich verstehe deine Neugier 😄 Aber meine Superkraft sind Dates und Beziehungen. Soll ich dir helfen, dein Profil zu verbessern, ein tolles Date zu planen oder die perfekte Nachricht zu schreiben?\",\"ja\":\"その話題に興味があるのはわかります 😄 でも私のスーパーパワーはデートと恋愛です。プロフィールの改善、素敵なデートの計画、完璧なメッセージの作成をお手伝いしましょうか？\",\"zh\":\"我理解你的好奇心 😄 但我的超能力是约会和恋爱关系。我可以帮你改善个人资料、策划精彩的约会，或者写出完美的消息？\",\"ru\":\"Понимаю твоё любопытство 😄 Но моя суперсила — свидания и отношения. Давай помогу улучшить профиль, спланировать крутое свидание или написать идеальное сообщение?\",\"ar\":\"أفهم فضولك حول ذلك 😄 لكن قوتي الخارقة هي المواعدة والعلاقات. هل أساعدك في تحسين ملفك الشخصي أو التخطيط لموعد رائع أو كتابة الرسالة المثالية؟\",\"id\":\"Aku paham keingintahuanmu 😄 Tapi kekuatan superku adalah kencan dan hubungan. Mau kubantu memperbaiki profilmu, merencanakan kencan keren, atau menulis pesan yang sempurna?\"},\"clarificationChips\":{\"en\":[\"☕ At a cafe\",\"🍺 At a bar/pub\",\"💃 At a nightclub\",\"🌳 At a park\",\"💬 Via chat/app\",\"🍽️ At a restaurant\"],\"es\":[\"☕ En un café\",\"🍺 En un bar/pub\",\"💃 En una discoteca\",\"🌳 En un parque\",\"💬 Por chat/app\",\"🍽️ En un restaurante\"],\"pt\":[\"☕ Em um café\",\"🍺 Em um bar/pub\",\"💃 Em uma balada\",\"🌳 Em um parque\",\"💬 Por chat/app\",\"🍽️ Em um restaurante\"],\"fr\":[\"☕ Dans un café\",\"🍺 Dans un bar/pub\",\"💃 En boîte de nuit\",\"🌳 Dans un parc\",\"💬 Par chat/app\",\"🍽️ Au restaurant\"],\"de\":[\"☕ In einem Café\",\"🍺 In einer Bar/Pub\",\"💃 In einem Club\",\"🌳 In einem Park\",\"💬 Per Chat/App\",\"🍽️ Im Restaurant\"],\"ja\":[\"☕ カフェで\",\"🍺 バーで\",\"💃 クラブで\",\"🌳 公園で\",\"💬 チャット/アプリで\",\"🍽️ レストランで\"],\"zh\":[\"☕ 咖啡厅\",\"🍺 酒吧\",\"💃 夜店\",\"🌳 公园\",\"💬 聊天/App\",\"🍽️ 餐厅\"],\"ru\":[\"☕ В кафе\",\"🍺 В баре/пабе\",\"💃 В клубе\",\"🌳 В парке\",\"💬 В чате/приложении\",\"🍽️ В ресторане\"],\"ar\":[\"☕ في مقهى\",\"🍺 في بار/حانة\",\"💃 في ملهى ليلي\",\"🌳 في حديقة\",\"💬 عبر الدردشة\",\"🍽️ في مطعم\"],\"id\":[\"☕ Di kafe\",\"🍺 Di bar/pub\",\"💃 Di klub malam\",\"🌳 Di taman\",\"💬 Via chat/app\",\"🍽️ Di restoran\"]},\"coachNudgeEnabled\":true,\"coachNudgeMaxPerDay\":2,\"coachNudgeCooldownHoursPerMatch\":48,\"coachNudgeSilenceMinHours\":24,\"coachNudgeSilenceMaxHours\":72,\"coachNudgeQuietHourStart\":22,\"coachNudgeQuietHourEnd\":9,\"coachNudgeMinMessageCount\":3,\"coachNudgeMaxMatchesPerRun\":450}"
+      },
+      "description": "Dynamic configuration for AI Date Coach (server-side only). Controls behavior, limits, guardrails, content policies, and learning system without redeployment.",
+      "valueType": "JSON"
+    },
+    "coach_daily_credits": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Daily coach credits (range 1-100). CF resetCoachMessages reads from coach_config.dailyCredits. This key is for client-side UI threshold.",
+      "valueType": "NUMBER"
+    },
+    "coach_max_input_length": {
+      "defaultValue": {
+        "value": "2000"
+      },
+      "description": "Max input length for Coach Chat (range 100-10000). Read by Android RemoteConfigManager + iOS RemoteConfigService.",
+      "valueType": "NUMBER"
+    },
+    "compatibility_weights": {
+      "defaultValue": {
+        "value": "{\"age\":0.20,\"engagement\":0.20,\"responseRate\":0.15,\"selectivity\":0.15,\"matchQuality\":0.15,\"safety\":0.10,\"premium\":0.05}"
+      },
+      "description": " Pesos para el algoritmo de compatibilidad. La suma debe ser 1.0",
+      "valueType": "JSON"
+    },
+    "daily_likes_limit": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "valueType": "NUMBER"
+    },
+    "daily_super_likes_limit": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "valueType": "NUMBER"
+    },
+    "date_suggestions_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Habilitar o deshabilitar el sistema de sugerencias de lugares para citas",
+      "valueType": "BOOLEAN"
+    },
+    "date_suggestions_max_distance_km": {
+      "defaultValue": {
+        "value": "80"
+      },
+      "description": "Distancia máxima en kilómetros para buscar lugares para citas (80 km = 49.7 millas)",
+      "valueType": "NUMBER"
+    },
+    "debug_allowed_emails": {
+      "defaultValue": {
+        "value": "[\"ro.es4075@gmail.com\",\"dverdugo85@gmail.com\"]"
+      },
+      "description": "white list user email receive notificacion debug mode android",
+      "valueType": "JSON"
+    },
+    "enable_bio_ai_suggestions": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "sugerencia bio IA",
+      "valueType": "BOOLEAN"
+    },
+    "enable_screen_protection": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": " security screen",
+      "valueType": "STRING"
+    },
+    "image_moderation_config": {
+      "defaultValue": {
+        "value": "{\"confidenceThreshold\":80,\"autoRejectThreshold\":90,\"enabledChecks\":{\"nudity\":true,\"violence\":true,\"fakeProfiles\":true,\"underage\":true,\"multiplePeople\":true,\"lowQuality\":false,\"helmet\":false,\"faceMask\":false,\"sunglasses\":false,\"backToCamera\":false,\"distantFullBody\":false},\"genderVerification\":{\"enabled\":true,\"confidenceThreshold\":70}}"
+      },
+      "valueType": "JSON"
+    },
+    "matching_scoring_weights": {
+      "defaultValue": {
+        "value": "{\"distance\":0.30,\"age\":0.20,\"profileQuality\":0.20,\"activity\":0.15,\"superLike\":0.10,\"freshness\":0.05}"
+      },
+      "valueType": "JSON"
+    },
+    "max_search_radius_km": {
+      "defaultValue": {
+        "value": "200"
+      },
+      "valueType": "NUMBER"
+    },
+    "minimum_age_by_country": {
+      "defaultValue": {
+        "value": "{\"US\":18,\"GB\":18,\"CA\":18,\"AU\":18,\"JP\":18,\"KR\":19,\"TH\":20,\"DE\":18,\"FR\":18,\"ES\":18,\"IT\":18,\"PT\":18,\"BR\":18,\"MX\":18,\"AR\":18,\"CL\":18,\"CO\":18,\"PE\":18,\"SA\":21,\"AE\":21,\"IN\":18,\"CN\":18,\"RU\":18,\"default\":18}"
+      },
+      "valueType": "JSON"
+    },
+    "moderation_config": {
+      "defaultValue": {
+        "value": "{\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.2,\"fetchMultiplier\":2,\"collection\":\"moderationKnowledge\"},\"ragAutoUpdate\":{\"enabled\":true,\"enableSearchGrounding\":true,\"minAcceptedDisputes\":1,\"maxNewChunksPerWeek\":7},\"qualityAnalysis\":{\"falsePositiveWarningThreshold\":20,\"minDisputesForPattern\":3},\"disputeRateLimitMs\":10000,\"autoDisputeResolution\":{\"enabled\":true,\"minDisputes\":3,\"maxFpRate\":0.25,\"autoUpdateRag\":true},\"dailyMicroUpdate\":{\"enabled\":true,\"minDisputes\":3,\"maxChunksPerDay\":2}}"
+      },
+      "description": "Dynamic configuration for Moderation RAG (server-side only). Controls RAG pipeline parameters for moderateMessage and autoModerateMessage. Kill switch: rag.enabled=false. Tunable without redeployment.",
+      "valueType": "JSON"
+    },
+    "moderation_image_jpeg_quality": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Calidad JPEG para moderacion con IA (rango valido: 20-100). Controla compresion de imagen enviada a Cloud Functions.",
+      "valueType": "NUMBER"
+    },
+    "moderation_image_max_dimension": {
+      "defaultValue": {
+        "value": "512"
+      },
+      "description": "Dimension maxima de imagen para moderacion con IA (rango valido: 256-1024). Reduce payload enviado a Cloud Functions.",
+      "valueType": "NUMBER"
+    },
+    "offense_system_config": {
+      "defaultValue": {
+        "value": "{\"offenseWeightLow\":1,\"offenseWeightMedium\":3,\"offenseWeightHigh\":5,\"penaltyDivisor\":50,\"penaltyMax\":0.95,\"decayDays\":14,\"decayRate\":0.2}"
+      },
+      "description": "Configuración completa del sistema de penalización por comportamiento ofensivo",
+      "valueType": "JSON"
+    },
+    "places_search_config": {
+      "defaultValue": {
+        "value": "{\"enabled\":true,\"radiusSteps\":[100000,130000,180000,250000,300000],\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"queriesWithCategory\":2,\"queriesWithoutCategory\":3,\"useRestriction\":true,\"photoMaxHeightPx\":400,\"photosPerPlace\":5,\"travelSpeedKmH\":40,\"maxLoadCount\":20,\"defaultLanguage\":\"es\",\"defaultCategoryQueryCount\":4,\"progressiveRadiusSteps\":[15000,60000,200000],\"minPlacesTarget\":15}"
+      },
+      "description": "Config dinamica busqueda lugares ChatView. radiusSteps, perQueryResults, maxPlacesIntermediate, queries count, useRestriction, photos, travel, limits. Server-side only.",
+      "valueType": "JSON"
+    },
+    "privacy_url": {
+      "defaultValue": {
+        "value": "https://www.blacksugar21.com/privacy"
+      },
+      "description": "URL for Privacy Policy page",
+      "valueType": "STRING"
+    },
+    "profile_reappear_cooldown_days": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "valueType": "NUMBER"
+    },
+    "reviewer_test_code": {
+      "defaultValue": {
+        "value": "123456"
+      },
+      "description": "Código de verificación para el test phone del reviewer Apple/Google",
+      "valueType": "STRING"
+    },
+    "reviewer_test_phone": {
+      "defaultValue": {
+        "value": "+16505550123"
+      },
+      "description": "Número de teléfono de prueba para revisores Apple/Google. Rango 555-01XX reservado para ficción.",
+      "valueType": "STRING"
+    },
+    "reviewer_uid": {
+      "defaultValue": {
+        "value": "IlG6U9cfcOcnKJvEv4tAD4IZ0513,g4Zbr8tEguMcpZonw72xM5MGse32,T2bAVpPEkfS5IUpwip2n1H5dsHX2"
+      },
+      "description": "UIDs del reviewer exentos de screen protection y que ven test profiles (comma-separated)",
+      "valueType": "STRING"
+    },
     "store_url_android": {
       "defaultValue": {
         "value": "https://play.google.com/apps/internaltest/4701541622558266346"
@@ -14,117 +200,6 @@
       "description": "store url ios",
       "valueType": "STRING"
     },
-    "moderation_image_jpeg_quality": {
-      "defaultValue": {
-        "value": "50"
-      },
-      "description": "Calidad JPEG para moderacion con IA (rango valido: 20-100). Controla compresion de imagen enviada a Cloud Functions.",
-      "valueType": "NUMBER"
-    },
-    "date_suggestions_enabled": {
-      "defaultValue": {
-        "value": "true"
-      },
-      "description": "[DEPRECATED — usar places_search_config.enabled] Habilitar o deshabilitar el sistema de sugerencias de lugares para citas",
-      "valueType": "BOOLEAN"
-    },
-    "places_search_config": {
-      "defaultValue": {
-        "value": "{\"enabled\":true,\"radiusSteps\":[100000,130000,180000,250000,300000],\"progressiveRadiusSteps\":[15000,30000,60000,120000,200000,300000],\"minPlacesTarget\":30,\"minRadius\":3000,\"maxRadius\":300000,\"loadMoreDefaultBaseRadius\":60000,\"loadMoreExpansionBase\":2,\"loadMoreMaxExpansionStep\":4,\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"queriesWithCategory\":3,\"queriesWithoutCategory\":5,\"useRestriction\":true,\"photoMaxHeightPx\":400,\"photosPerPlace\":5,\"travelSpeedKmH\":40,\"maxLoadCount\":20,\"defaultLanguage\":\"es\",\"defaultCategoryQueryCount\":4}"
-      },
-      "description": "Configuración dinámica de búsqueda de lugares para citas (ChatView). Progressive radius strategy (homologado con Coach IA): progressiveRadiusSteps (búsqueda inicial), minPlacesTarget, minRadius, maxRadius, loadMoreDefaultBaseRadius/ExpansionBase/MaxExpansionStep (loadMore exponencial). radiusSteps: radios para pageToken path (backward compat). perQueryResults: resultados por query Google Places. maxPlacesIntermediate: cap de places únicos. queriesWithCategory/WithoutCategory: queries paralelas. useRestriction: hard/soft geo filter. photoMaxHeightPx: altura fotos. photosPerPlace: max fotos por lugar. travelSpeedKmH: velocidad estimada viaje. maxLoadCount: clamp loadCount. defaultLanguage: idioma fallback. defaultCategoryQueryCount: queries con categoría. categoryQueryMap: (opcional) objeto {category: queryTerms} para override dinámico — si null usa fallback hardcodeado con 14 categorías bilingües.",
-      "valueType": "JSON"
-    },
-    "ai_moderation_confidence_threshold": {
-      "defaultValue": {
-        "value": "0.80"
-      },
-      "valueType": "NUMBER"
-    },
-    "daily_super_likes_limit": {
-      "defaultValue": {
-        "value": "5"
-      },
-      "valueType": "NUMBER"
-    },
-    "enable_screen_protection": {
-      "defaultValue": {
-        "value": "true"
-      },
-      "description": " security screen",
-      "valueType": "STRING"
-    },
-    "ai_model_config": {
-      "defaultValue": {
-        "value": "{\"HIGH_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.3,\"maxTokens\":2048,\"functions\":[\"moderateMessage\",\"analyzeReport\",\"autoDetectFakeProfile\",\"calculateSafetyScore\",\"detectProfileRedFlags\"]},\"MEDIUM_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.7,\"maxTokens\":1024,\"functions\":[\"generateSmartReply\",\"getDateSuggestions\",\"analyzeConversationChemistry\",\"getDatingAdvice\",\"predictOptimalMessageTime\"]},\"LOW_PRIORITY\":{\"model\":\"gemini-2.0-flash\",\"temperature\":0.9,\"maxTokens\":512,\"functions\":[\"generateIcebreakers\",\"optimizeProfilePhotos\",\"analyzeProfileWithAI\"]}}"
-      },
-      "valueType": "JSON"
-    },
-    "matching_scoring_weights": {
-      "defaultValue": {
-        "value": "{\"distance\":0.30,\"age\":0.20,\"profileQuality\":0.20,\"activity\":0.15,\"superLike\":0.10,\"freshness\":0.05}"
-      },
-      "valueType": "JSON"
-    },
-    "compatibility_weights": {
-      "defaultValue": {
-        "value": "{\"age\":0.20,\"engagement\":0.20,\"responseRate\":0.15,\"selectivity\":0.15,\"matchQuality\":0.15,\"safety\":0.10,\"premium\":0.05}"
-      },
-      "description": " Pesos para el algoritmo de compatibilidad. La suma debe ser 1.0",
-      "valueType": "JSON"
-    },
-    "enable_bio_ai_suggestions": {
-      "defaultValue": {
-        "value": "true"
-      },
-      "description": "sugerencia bio IA",
-      "valueType": "BOOLEAN"
-    },
-    "date_suggestions_max_distance_km": {
-      "defaultValue": {
-        "value": "80"
-      },
-      "description": "Distancia máxima en kilómetros para buscar lugares para citas (80 km = 49.7 millas)",
-      "valueType": "NUMBER"
-    },
-    "profile_reappear_cooldown_days": {
-      "defaultValue": {
-        "value": "14"
-      },
-      "valueType": "NUMBER"
-    },
-    "max_search_radius_km": {
-      "defaultValue": {
-        "value": "200"
-      },
-      "valueType": "NUMBER"
-    },
-    "image_moderation_config": {
-      "defaultValue": {
-        "value": "{\"confidenceThreshold\":80,\"autoRejectThreshold\":90,\"enabledChecks\":{\"nudity\":true,\"violence\":true,\"fakeProfiles\":true,\"underage\":true,\"multiplePeople\":true,\"lowQuality\":false,\"helmet\":false,\"faceMask\":false,\"sunglasses\":false,\"backToCamera\":false,\"distantFullBody\":false},\"genderVerification\":{\"enabled\":true,\"confidenceThreshold\":70}}"
-      },
-      "valueType": "JSON"
-    },
-    "moderation_config": {
-      "defaultValue": {
-        "value": "{\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.2,\"fetchMultiplier\":4,\"collection\":\"moderationKnowledge\"}}"
-      },
-      "description": "Dynamic configuration for Moderation RAG (server-side only). Controls RAG pipeline parameters for moderateMessage and autoModerateMessage. Kill switch: rag.enabled=false. Tunable without redeployment.",
-      "valueType": "JSON"
-    },
-    "moderation_image_max_dimension": {
-      "defaultValue": {
-        "value": "512"
-      },
-      "description": "Dimension maxima de imagen para moderacion con IA (rango valido: 256-1024). Reduce payload enviado a Cloud Functions.",
-      "valueType": "NUMBER"
-    },
-    "bulk_query_batch_size": {
-      "defaultValue": {
-        "value": "30"
-      },
-      "valueType": "NUMBER"
-    },
     "terms_url": {
       "defaultValue": {
         "value": "https://www.blacksugar21.com/terms"
@@ -132,80 +207,54 @@
       "description": "URL for Terms and Conditions page",
       "valueType": "STRING"
     },
-    "offense_system_config": {
+    "user_type_label_daddy": {
       "defaultValue": {
-        "value": "{\"offenseWeightLow\":1,\"offenseWeightMedium\":3,\"offenseWeightHigh\":5,\"penaltyDivisor\":50,\"penaltyMax\":0.95,\"decayDays\":14,\"decayRate\":0.2}"
+        "value": "Elite"
       },
-      "description": "Configuración completa del sistema de penalización por comportamiento ofensivo",
-      "valueType": "JSON"
-    },
-    "reviewer_uid": {
-      "defaultValue": {
-        "value": "g4Zbr8tEguMcpZonw72xM5MGse32"
-      },
-      "description": "UID del reviewer exento de protección de pantalla. Configurable sin redeploy.",
+      "description": "Display label for SUGAR_DADDY user type. Change without deploy.",
       "valueType": "STRING"
     },
-    "reviewer_test_phone": {
+    "user_type_label_mommy": {
       "defaultValue": {
-        "value": "+16505550123"
+        "value": "Elite"
       },
-      "description": "Número de teléfono de prueba para revisores Apple/Google. Rango 555-01XX reservado para ficción.",
+      "description": "Display label for SUGAR_MOMMY user type. Change without deploy.",
       "valueType": "STRING"
     },
-    "debug_allowed_emails": {
+    "user_type_label_baby": {
       "defaultValue": {
-        "value": "[\"ro.es4075@gmail.com\",\"dverdugo85@gmail.com\"]"
+        "value": "Prime"
       },
-      "description": "white list user email receive notificacion debug mode android",
-      "valueType": "JSON"
-    },
-    "reviewer_test_code": {
-      "defaultValue": {
-        "value": "123456"
-      },
-      "description": "Código de verificación para el test phone del reviewer Apple/Google",
+      "description": "Display label for SUGAR_BABY user type. Change without deploy.",
       "valueType": "STRING"
     },
-    "privacy_url": {
+    "enable_safety_checkin": {
       "defaultValue": {
-        "value": "https://www.blacksugar21.com/privacy"
+        "value": "false"
       },
-      "description": "URL for Privacy Policy page",
+      "description": "Enable Safety Check-In feature in chat menu. Default false — enable when ready for production.",
       "valueType": "STRING"
     },
-    "daily_likes_limit": {
+    "simulation_config": {
       "defaultValue": {
-        "value": "100"
+        "value": "{\"enabled\":true,\"betaMode\":false,\"allowedUserIds\":\"sU8xLiwQWNXmbYdR63p1uO6TSm72,IlG6U9cfcOcnKJvEv4tAD4IZ0513,T2bAVpPEkfS5IUpwip2n1H5dsHX2\",\"simulationCount\":10,\"roundsPerSim\":6,\"maxPerDay\":3,\"maxTurnTokens\":120,\"turnTemperature\":0.88}"
       },
-      "valueType": "NUMBER"
+      "description": "Relationship Simulation Engine (Hang the DJ). betaMode=true: only allowedUserIds. betaMode=false: all users. allowedUserIds: comma-separated UIDs.",
+      "valueType": "STRING"
     },
-    "minimum_age_by_country": {
+    "situation_simulation_config": {
       "defaultValue": {
-        "value": "{\"US\":18,\"GB\":18,\"CA\":18,\"AU\":18,\"JP\":18,\"KR\":19,\"TH\":20,\"DE\":18,\"FR\":18,\"ES\":18,\"IT\":18,\"PT\":18,\"BR\":18,\"MX\":18,\"AR\":18,\"CL\":18,\"CO\":18,\"PE\":18,\"SA\":21,\"AE\":21,\"IN\":18,\"CN\":18,\"RU\":18,\"default\":18}"
+        "value": "{\"enabled\":true,\"maxPerDay\":10,\"maxCharsMinimum\":5,\"maxCharsMaximum\":500,\"temperature\":0.85,\"maxOutputTokens\":1200,\"cacheMinutes\":360,\"fallbackApproachesEnabled\":true}"
       },
+      "description": "Situation Simulation feature config — adjustable without redeploy. v1.2.0+",
+      "valueType": "STRING"
+    },
+    "multiverse_config": {
+      "defaultValue": {
+        "value": "{\"enabled\":true,\"maxPerDay\":3,\"cacheMinutes\":262080}"
+      },
+      "description": "Dynamic configuration for Multi-Universe Relationship Simulator (5-stage compatibility testing). enabled: global kill switch. maxPerDay: 3 simulations per user per day (rate limit). cacheMinutes: 262080 = 6 months cache duration. Cache TTL: 5 minutes.",
       "valueType": "JSON"
-    },
-    "coach_config": {
-      "defaultValue": {
-        "value": "{\"enabled\":true,\"maxMessageLength\":2000,\"historyLimit\":10,\"maxActivities\":30,\"maxSuggestions\":3,\"maxReplyLength\":5000,\"rateLimitPerHour\":30,\"temperature\":0.9,\"maxTokens\":2048,\"learningEnabled\":true,\"personalityTone\":\"warm, supportive, encouraging but honest\",\"blockedTopics\":[\"politics\",\"religion\",\"coding\",\"programming\",\"math\",\"science homework\",\"medical advice\",\"legal advice\",\"financial advice\",\"gambling\",\"drugs\",\"weapons\",\"hacking\",\"cheating strategies\",\"manipulation tactics\",\"revenge\",\"stalking\",\"explicit sexual content\",\"pornography\",\"self-harm\",\"terrorism\",\"illegal activities\"],\"additionalGuidelines\":\"\",\"dailyCredits\":5,\"placeSearch\":{\"enableWithoutLocation\":true,\"minActivitiesForPlaceSearch\":6,\"defaultRadius\":100000,\"minRadius\":3000,\"maxRadius\":300000,\"radiusSteps\":[100000,130000,180000,250000,300000],\"progressiveRadiusSteps\":[15000,30000,60000,120000,200000,300000],\"minPlacesTarget\":30,\"loadMoreDefaultBaseRadius\":60000,\"loadMoreExpansionBase\":2,\"loadMoreMaxExpansionStep\":4,\"perQueryResults\":20,\"maxPlacesIntermediate\":60,\"maxOutputTokensBudget\":8192},\"rag\":{\"enabled\":true,\"topK\":5,\"minScore\":0.25,\"fetchMultiplier\":3,\"collection\":\"coachKnowledge\",\"promptHeader\":\"SUGAR DATING EXPERT KNOWLEDGE BASE (use this curated sugar dating and relationship advice to personalize your response — reference specific tips about sugar dynamics, arrangements, boundaries, safety, and etiquette when relevant):\"}}"
-      },
-      "description": "Dynamic configuration for AI Date Coach (server-side only). Controls behavior, limits, guardrails, content policies, and learning system without redeployment.",
-      "valueType": "JSON"
-    },
-    "coach_max_input_length": {
-      "defaultValue": {
-        "value": "2000"
-      },
-      "description": "Max input length for Coach Chat (range 100-10000). Read by Android RemoteConfigManager + iOS RemoteConfigService.",
-      "valueType": "NUMBER"
-    },
-    "coach_daily_credits": {
-      "defaultValue": {
-        "value": "5"
-      },
-      "description": "Daily coach credits (range 1-100). CF resetCoachMessages reads from coach_config.dailyCredits. This key is for client-side UI threshold.",
-      "valueType": "NUMBER"
     }
   }
 }
