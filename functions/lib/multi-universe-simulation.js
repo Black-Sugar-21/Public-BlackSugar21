@@ -191,6 +191,29 @@ function getLocalizedStageLabel(stageId, language = 'en') {
   return labels[language] || labels['en']; // Fallback to English
 }
 
+/**
+ * Solo mode partner names (Ideal Partner / Pareja ideal / etc.)
+ */
+const SOLO_MODE_NAMES = {
+  en: 'Ideal Partner',
+  es: 'Pareja ideal',
+  pt: 'Parceiro ideal',
+  fr: 'Partenaire idéal',
+  de: 'Idealer Partner',
+  ja: '理想のパートナー',
+  zh: '理想伴侣',
+  ru: 'Идеальный партнер',
+  ar: 'الشريك المثالي',
+  id: 'Pasangan ideal',
+};
+
+/**
+ * Get localized solo mode partner name based on language
+ */
+function getLocalizedSoloName(language = 'en') {
+  return SOLO_MODE_NAMES[language] || SOLO_MODE_NAMES['en'];
+}
+
 // Remote Config defaults for multi-universe simulation
 const MULTIVERSE_CONFIG_DEFAULTS = {
   enabled: true,
@@ -255,12 +278,12 @@ exports.simulateMultiUniverse = onCall(
     const userId = request.auth?.uid;
     if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
 
-    const { matchId, userLanguage = 'en' } = request.data;
-    if (!matchId) throw new HttpsError('invalid-argument', 'matchId is required');
+    const { matchId = "", userLanguage = 'en' } = request.data;
+    const isSoloMode = !matchId;  // Empty matchId = solo practice mode
 
     let analyticsData = {
       userId: userId.substring(0, 4), // anonymize
-      matchId: matchId.substring(0, 4),
+      matchId: isSoloMode ? "solo" : matchId.substring(0, 4),
       success: false,
       duration: 0,
       estimatedCost: 0,
@@ -271,7 +294,7 @@ exports.simulateMultiUniverse = onCall(
     };
 
     try {
-      logger.info(`[MultiUniverse] START: userId=${userId.substring(0, 4)}, match=${matchId.substring(0, 4)}, lang=${userLanguage}`);
+      logger.info(`[MultiUniverse] START: userId=${userId.substring(0, 4)}, mode=${isSoloMode ? 'SOLO' : `match=${matchId.substring(0, 4)}`}, lang=${userLanguage}`);
 
       // Step 0: Load config from Remote Config
       const configStart = Date.now();
@@ -284,7 +307,7 @@ exports.simulateMultiUniverse = onCall(
       if (!userDoc.exists) {
         logger.error(`[MultiUniverse] User document not found: ${userId}`);
         analyticsData.errorReason = 'user_not_found';
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw new HttpsError('not-found', 'User profile not found');
       }
 
@@ -295,7 +318,7 @@ exports.simulateMultiUniverse = onCall(
       if (remainingCredits <= 0) {
         logger.warn(`[MultiUniverse] Rate limit exceeded for user (no credits left)`);
         analyticsData.errorReason = 'rate_limit_exceeded';
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw new HttpsError(
           'resource-exhausted',
           `Daily limit reached. You have used all your Coach IA credits for today. Come back tomorrow for 3 fresh credits.`
@@ -303,12 +326,12 @@ exports.simulateMultiUniverse = onCall(
       }
 
       // Step 2: Check cache (valid for 6 months)
-      const cacheKey = `multiverse_${matchId}`;
+      const cacheKey = isSoloMode ? 'multiverse_solo' : `multiverse_${matchId}`;
       const cacheDoc = await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).get();
 
       if (cacheDoc.exists && cacheDoc.data().cacheExpire > Date.now()) {
-        logger.info(`[MultiUniverse] CACHE HIT for match ${matchId.substring(0, 8)}`);
+        logger.info(`[MultiUniverse] CACHE HIT for ${isSoloMode ? 'SOLO' : `match ${matchId.substring(0, 8)}`}`);
         const cachedResult = cacheDoc.data();
 
         // Re-localize stage labels for current user language (cache might have different language)
@@ -319,47 +342,55 @@ exports.simulateMultiUniverse = onCall(
 
         analyticsData.success = true;
         analyticsData.duration = Date.now() - startTime;
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         return { ...cachedResult, stages: localizedStages, fromCache: true };
       }
       logger.info(`[MultiUniverse] No valid cache found`);
 
-      // Step 3: Load match document (from /matches/{matchId}, not /users/{matchId})
-      logger.info(`[MultiUniverse] Loading match document: ${matchId.substring(0, 8)}... (${matchId.length} chars)`);
-      const matchDoc = await db.collection('matches').doc(matchId).get();
-      if (!matchDoc.exists) {
-        logger.error(`[MultiUniverse] Match NOT FOUND in /matches collection: ${matchId}`);
-        logger.error(`[MultiUniverse] Match lookup details:`);
-        logger.error(`  - Collection: matches`);
-        logger.error(`  - DocId: ${matchId}`);
-        logger.error(`  - DocId length: ${matchId.length}`);
-        logger.error(`  - First 4 chars: ${matchId.substring(0, 4)}`);
-
-        // Try to find what matches DO exist for debugging
-        const allMatchesSnap = await db.collection('matches').limit(3).get();
-        logger.error(`[MultiUniverse] Sample existing matches: ${allMatchesSnap.docs.map(d => d.id.substring(0, 8) + '...').join(', ')}`);
-
-        analyticsData.errorReason = 'match_not_found';
-        analyticsData.failedStage = 'load_match';
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
-        throw new HttpsError('not-found', `Match not found (ID: ${matchId.substring(0, 8)}...)`);
-      }
-      const matchData = matchDoc.data();
-      const otherUserId = matchData?.usersMatched?.find((uid) => uid !== userId);
-
-      // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
+      // Step 3: Load match document (or use default name for solo mode)
       let matchName = 'Your Match';
-      if (otherUserId) {
-        try {
-          const otherUserDoc = await db.collection('users').doc(otherUserId).get();
-          if (otherUserDoc.exists) {
-            matchName = otherUserDoc.data()?.name || 'Your Match';
-          }
-        } catch (e) {
-          logger.warn(`[MultiUniverse] Could not load other user profile for name, using default`);
+
+      if (isSoloMode) {
+        // Solo mode: use localized default name
+        const soloNameKey = 'coach-multiverse-solo-name';  // Localize if needed
+        matchName = getLocalizedSoloName(userLanguage);
+        logger.info(`[MultiUniverse] ✓ Solo mode: using "${matchName}"`);
+      } else {
+        // Real match mode: load from Firestore
+        logger.info(`[MultiUniverse] Loading match document: ${matchId.substring(0, 8)}... (${matchId.length} chars)`);
+        const matchDoc = await db.collection('matches').doc(matchId).get();
+        if (!matchDoc.exists) {
+          logger.error(`[MultiUniverse] Match NOT FOUND in /matches collection: ${matchId}`);
+          logger.error(`[MultiUniverse] Match lookup details:`);
+          logger.error(`  - Collection: matches`);
+          logger.error(`  - DocId: ${matchId}`);
+          logger.error(`  - DocId length: ${matchId.length}`);
+          logger.error(`  - First 4 chars: ${matchId.substring(0, 4)}`);
+
+          // Try to find what matches DO exist for debugging
+          const allMatchesSnap = await db.collection('matches').limit(3).get();
+          logger.error(`[MultiUniverse] Sample existing matches: ${allMatchesSnap.docs.map(d => d.id.substring(0, 8) + '...').join(', ')}`);
+
+          analyticsData.errorReason = 'match_not_found';
+          analyticsData.failedStage = 'load_match';
+          await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
+          throw new HttpsError('not-found', `Match not found (ID: ${matchId.substring(0, 8)}...)`);
         }
-      }
-      logger.info(`[MultiUniverse] ✓ Match loaded: ${matchName} (${matchId.substring(0, 8)}...)`);
+        const matchData = matchDoc.data();
+        const otherUserId = matchData?.usersMatched?.find((uid) => uid !== userId);
+
+        // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
+        if (otherUserId) {
+          try {
+            const otherUserDoc = await db.collection('users').doc(otherUserId).get();
+            if (otherUserDoc.exists) {
+              matchName = otherUserDoc.data()?.name || 'Your Match';
+            }
+          } catch (e) {
+            logger.warn(`[MultiUniverse] Could not load other user profile for name, using default`);
+          }
+        }
+        logger.info(`[MultiUniverse] ✓ Match loaded: ${matchName} (${matchId.substring(0, 8)}...)`);
       logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
 
       // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
@@ -450,7 +481,7 @@ exports.simulateMultiUniverse = onCall(
       if (successfulStages.length === 0) {
         logger.error(`[MultiUniverse] ALL STAGES FAILED`);
         analyticsData.errorReason = 'all_stages_failed';
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw new HttpsError(
           'internal',
           'Unable to test all relationship stages. Please try again in a moment.'
@@ -507,7 +538,7 @@ exports.simulateMultiUniverse = onCall(
       analyticsData.compatibilityScore = score;
 
       logger.info(`[MultiUniverse] ✨ SUCCESS: score=${score}, cost≈$${estimatedCost.toFixed(4)}, duration=${analyticsData.duration}ms`);
-      await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+      await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
 
       return { ...result, fromCache: false };
     } catch (e) {
@@ -515,14 +546,14 @@ exports.simulateMultiUniverse = onCall(
 
       if (e instanceof HttpsError) {
         logger.error(`[MultiUniverse] HttpsError (${e.code}): ${e.message}`);
-        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw e;
       }
 
       logger.error('[MultiUniverse] Unexpected error:', e.message, e.stack);
       analyticsData.errorReason = 'unexpected_error';
       analyticsData.errorMessage = e.message;
-      await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+      await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
 
       throw new HttpsError('internal', 'Simulation failed. Please try again.');
     }
