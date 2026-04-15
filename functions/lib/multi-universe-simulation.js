@@ -186,6 +186,14 @@ exports.simulateMultiUniverse = onCall(
       // Step 5: Calculate compatibility
       const { score, stars, label } = calculateCompatibility(successfulStages);
 
+      // CRITICAL: If all stages failed, don't cache and throw error instead
+      if (successfulStages.length === 0) {
+        throw new HttpsError(
+          'internal',
+          'All relationship stages failed to simulate. Please try again.'
+        );
+      }
+
       // Step 6: Generate insights
       const insights = generateInsights(successfulStages, label);
 
@@ -203,7 +211,7 @@ exports.simulateMultiUniverse = onCall(
         cacheExpire: Date.now() + (180 * 24 * 60 * 60 * 1000), // 6 months
       };
 
-      // Step 8: Cache for 6 months
+      // Step 8: Cache for 6 months (only if we have valid results)
       await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).set(result, { merge: true })
         .catch(e => logger.warn('Cache write failed:', e.message));
@@ -292,15 +300,22 @@ async function generateApproachesForMultiverse(genAI, situation, userLang) {
 
     const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 
-    const prompt = `You are a dating coach. Generate EXACTLY 4 distinct communication approaches for this multi-universe relationship stage test.
+    const prompt = `You are an inclusive dating coach. Generate EXACTLY 4 distinct communication approaches for a multi-universe relationship stage test.
+
+CRITICAL GUIDELINES:
+- Use completely gender-neutral language. NEVER assume the gender of either person.
+- Use "them/they/this person/partner" instead of "him/her/boyfriend/girlfriend".
+- This is a sugar dating context where there may be a significant age difference and a mutually beneficial arrangement. Phrases should be appropriate, respectful, and genuine while acknowledging this dynamic.
+- Phrases must work for ANY relationship type (heterosexual, same-sex, non-binary, polyamorous).
+- Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.
 
 User wants to express: "${situation}"
 
 Generate 4 approaches with FIXED tones in this exact order:
   1. direct — clear, confident, unambiguous
   2. playful — warm, light, a little humor
-  3. romantic_vulnerable — soft, honest about feelings
-  4. grounded_honest — calm, real, low-pressure
+  3. romantic_vulnerable — soft, honest about feelings (adjust intensity for cultural context)
+  4. grounded_honest — calm, real, low-pressure (respectful and genuine)
 
 Each phrase must be 1-2 sentences, natural, first-person. ${langInstr}
 
@@ -309,7 +324,20 @@ Each phrase must be 1-2 sentences, natural, first-person. ${langInstr}
 Respond ONLY with JSON:
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
-    const result = await model.generateContent(prompt);
+    // Timeout: if Gemini takes > 25 seconds, fail gracefully
+    const geminiPromise = model.generateContent(prompt);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout: exceeded 25 seconds')), 25000)
+    );
+
+    let result;
+    try {
+      result = await Promise.race([geminiPromise, timeoutPromise]);
+    } catch (timeoutErr) {
+      logger.warn('[generateApproachesForMultiverse] Gemini timeout:', timeoutErr.message);
+      return generateApproachesFallback();
+    }
+
     const text = result?.response?.text();
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
