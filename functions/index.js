@@ -28,6 +28,8 @@ const modules = [
   './lib/discovery-feed',
   './lib/simulation',
   './lib/situation-simulation',
+  './lib/multi-universe-simulation',
+  './lib/coach-quality-monitor',
   './lib/coach-nudge-agent',
 ];
 

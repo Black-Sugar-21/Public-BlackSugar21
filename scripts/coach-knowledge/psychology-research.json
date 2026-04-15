@@ -1,0 +1,248 @@
+[
+  {
+    "id": "attachment_secure_communication",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "Secure attachment in relationships means being comfortable with emotional closeness and direct communication. Express your needs clearly: 'I value our connection and want us to talk openly about what's happening between us.' This builds trust and security. Reference: Bowlby's Attachment Theory (1988)."
+  },
+  {
+    "id": "attachment_anxious_reassurance",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "If you tend to worry about abandonment or need reassurance, focus on playful and grounded approaches. Say: 'I enjoyed our last conversation and would love to keep this going. What are you up to?' instead of demanding reassurance. This creates security without appearing needy. Reference: Ainsworth et al., Patterns of Attachment (1978)."
+  },
+  {
+    "id": "attachment_avoidant_space",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "If your match seems independent and self-focused, give them space while showing genuine interest. Use grounded, authentic approaches: 'I like talking with you when you're available. No pressure, but I'd enjoy seeing you soon.' Avoidant partners value independence and dislike pressure."
+  },
+  {
+    "id": "gottman_four_horsemen_avoid",
+    "category": "psychology_gottman",
+    "language": "en",
+    "text": "Gottman's research shows criticism, contempt, defensiveness, and stonewalling predict relationship failure. Instead of 'You never respond,' try: 'I miss talking with you. I noticed you haven't replied and I'm wondering what's going on.' This expresses concern without blame. Reference: Why Marriages Succeed or Fail (1994)."
+  },
+  {
+    "id": "gottman_repair_attempts",
+    "category": "psychology_gottman",
+    "language": "en",
+    "text": "Repair attempts are gestures that prevent conflict from escalating. If tensions arise, try: 'I value you and I don't want us to get stuck on this. Can we talk about what's really bothering us?' Gottman's 40+ year research shows successful couples make repair attempts and accept them."
+  },
+  {
+    "id": "gottman_validation",
+    "category": "psychology_gottman",
+    "language": "en",
+    "text": "Validation strengthens relationships. Instead of dismissing your match's feelings, try: 'I hear that you're frustrated, and that makes sense given what happened. I want to understand more.' Validation doesn't mean agreement—it means respecting their experience. Reference: Gottman Institute research."
+  },
+  {
+    "id": "fisher_explorer_personality",
+    "category": "psychology_personality",
+    "language": "en",
+    "text": "Explorer personality types (dopamine-driven) value novelty, adventure, and independence. They respond well to: 'I think you're fascinating. Would you want to do something fun and spontaneous together?' Explorers seek excitement and new experiences in relationships. Reference: Helen Fisher, Why We Love (2009)."
+  },
+  {
+    "id": "fisher_builder_personality",
+    "category": "psychology_personality",
+    "language": "en",
+    "text": "Builder personality types (serotonin-driven) value loyalty, stability, and clear plans. They respond well to: 'I'd like to get to know you better. I think we could build something meaningful.' Builders appreciate clarity and commitment. Avoid game-playing or ambiguity. Reference: Helen Fisher, Why We Love (2009)."
+  },
+  {
+    "id": "fisher_director_personality",
+    "category": "psychology_personality",
+    "language": "en",
+    "text": "Director personality types (testosterone-driven) are logical, competitive, and direct. They respond to confident, straightforward communication: 'I'm interested in you. I think we'd work well together. Want to grab coffee and see?' Directors respect competence and decisiveness."
+  },
+  {
+    "id": "fisher_negotiator_personality",
+    "category": "psychology_personality",
+    "language": "en",
+    "text": "Negotiator personality types (estrogen-driven) are empathetic, intuitive, and value emotional connection. They respond to: 'I feel a real connection with you. I'd love to explore this more deeply.' Negotiators seek intimate conversation and emotional attunement. Share feelings, not just facts."
+  },
+  {
+    "id": "perel_desire_space",
+    "category": "psychology_perel",
+    "language": "en",
+    "text": "Esther Perel's research shows desire requires both security AND some mystery. Avoid being too available immediately. Balance responsiveness with independence: Reply meaningfully, but don't lose your own interests, friends, or goals. Mystery and individuality maintain attraction. Reference: Mating in Captivity (2006)."
+  },
+  {
+    "id": "perel_novelty_sustain",
+    "category": "psychology_perel",
+    "language": "en",
+    "text": "Perel emphasizes that successful long-term relationships need novelty. On early dates, suggest unique venues or activities: 'I know this amazing rooftop bar with a killer view. Would you want to check it out?' Novelty in dating sets the tone for sustained attraction later. Reference: The State of Affairs (2018)."
+  },
+  {
+    "id": "perel_ambivalence_normal",
+    "category": "psychology_perel",
+    "language": "en",
+    "text": "Perel teaches that ambivalence is normal in relationships—you can like someone and have doubts simultaneously. Don't panic if you're unsure early on. Instead of waiting for 100% certainty, try: 'I like you and I'm curious to see where this goes.' Ambivalence is healthy hesitation, not a red flag."
+  },
+  {
+    "id": "brown_vulnerability_trust",
+    "category": "psychology_vulnerability",
+    "language": "en",
+    "text": "Brené Brown's research shows vulnerability creates connection. Instead of appearing perfect, try: 'I'm nervous about saying this, but I really like you and I'd love to see you again.' Showing emotion builds trust faster than maintaining a perfect facade. Reference: Daring Greatly (2012)."
+  },
+  {
+    "id": "vulnerability_timing",
+    "category": "psychology_vulnerability",
+    "language": "en",
+    "text": "Timing matters with vulnerability. Early on, small emotional reveals work best: 'I had a rough week and talking with you helped.' As trust builds, share deeper feelings. Gradual vulnerability builds intimacy; sudden oversharing can overwhelm. Let the relationship earn your trust."
+  },
+  {
+    "id": "cognitive_rehearsal_confidence",
+    "category": "psychology_rehearsal",
+    "language": "en",
+    "text": "Cognitive rehearsal (practicing conversations mentally) activates the same neural pathways as real behavior. When you rehearse approaching your match, your brain prepares for the actual interaction. This reduces anxiety and increases confidence. Reference: Barsalou, Grounded Cognition (2008)."
+  },
+  {
+    "id": "self_efficacy_bandura",
+    "category": "psychology_self_efficacy",
+    "language": "en",
+    "text": "Albert Bandura's self-efficacy theory: believing you can succeed makes success more likely. When you practice communication (even in simulation), you internalize that you're capable. This mindset carries into real conversations. Build confidence through practice, not passive hoping."
+  },
+  {
+    "id": "tone_direct_assertiveness",
+    "category": "psychology_tones",
+    "language": "en",
+    "text": "Direct communication signals confidence and reduces misunderstanding. Use 'I' statements: 'I'm interested in you and I'd like to spend time together' instead of hints like 'You probably don't want to hang out.' Directness is attractive and avoids mixed signals. Reference: Alberti & Emmons, Your Perfect Right (1974)."
+  },
+  {
+    "id": "tone_playful_connection",
+    "category": "psychology_tones",
+    "language": "en",
+    "text": "Playful humor creates emotional regulation and bonding. Share a lighthearted joke or reference: 'I'm clearly obsessed with you given I've already forgotten to do my laundry 😄' Gottman research shows couples who laugh together have better conflict resolution and deeper intimacy."
+  },
+  {
+    "id": "tone_vulnerable_intimacy",
+    "category": "psychology_tones",
+    "language": "en",
+    "text": "Romantic vulnerability deepens intimacy quickly. Share authentic feelings: 'I don't usually say this, but I feel a real connection with you. That's rare for me.' Vulnerability activates oxytocin (bonding neurochemical) and invites reciprocal openness. This is intimate, not weak."
+  },
+  {
+    "id": "tone_grounded_honesty",
+    "category": "psychology_tones",
+    "language": "en",
+    "text": "Grounded honesty means expressing authenticity without drama. Say: 'I had a good time with you. I'd like to see you again, but I'm also taking things slow' instead of intense declarations. Authenticity reduces defensiveness and builds sustainable trust. Reference: Pennebaker, Writing to Heal (2004)."
+  },
+  {
+    "id": "psychology_first_message_impact",
+    "category": "psychology_initial_attraction",
+    "language": "en",
+    "text": "Research shows first messages should reference something specific about the other person's profile (not 'hey beautiful') and ask an open-ended question. Try: 'I saw you love hiking—what's your favorite trail?' This shows genuine interest and starts meaningful conversation. Reference: Finkel et al., Online Dating (2012)."
+  },
+  {
+    "id": "psychology_response_timing",
+    "category": "psychology_communication",
+    "language": "en",
+    "text": "Psychology shows response time impacts perceived interest and anxiety. A quick reply (within hours) signals interest; instant replies might seem desperate. Waiting days signals disinterest. Aim for responsive (reply same day) but not obsessive. This communicates healthy attachment."
+  },
+  {
+    "id": "psychology_attraction_similarity",
+    "category": "psychology_compatibility",
+    "language": "en",
+    "text": "Research shows we're attracted to similarity in values and communication style, not necessarily personality. If you're both thoughtful communicators, highlight that: 'I love that we can have deep conversations. Most people don't engage like this.' Similarity in communication style predicts relationship success. Reference: Assortative Mating research."
+  },
+  {
+    "id": "psychology_rejection_resilience",
+    "category": "psychology_resilience",
+    "language": "en",
+    "text": "Rejection is data, not disaster. Research shows people who take rejection less personally and learn from it are more successful in dating. If someone doesn't respond: 'Their loss' → move forward. Don't internalize rejection as personal failure. Growth requires exposure to rejection."
+  },
+  {
+    "id": "psychology_attachment_questions",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "Early questions that reveal attachment style: 'How do you prefer to spend free time?' (independence needs), 'What does a healthy relationship look like to you?' (emotional needs), 'How do you handle conflict?' (repair skills). These reveal compatibility without asking directly about attachment."
+  },
+  {
+    "id": "cultural_communication_styles",
+    "category": "psychology_culture",
+    "language": "en",
+    "text": "Communication effectiveness varies by culture. Direct styles (Germany, Israel) appreciate straight-to-the-point messages. Indirect cultures (Japan, Korea) prefer gradual relationship building. If unsure, observe their communication pace and match it initially, then gently express your style: 'I like being direct, is that okay?'"
+  },
+  {
+    "id": "psychology_date_venue_psychology",
+    "category": "psychology_environment",
+    "language": "en",
+    "text": "Research shows venue psychology impacts conversation and attraction. Unusual environments (art galleries, hiking) create novelty and positive arousal that transfers to your date. Comfortable environments (coffee, quiet bar) allow for deeper conversation. Match venue to desired interaction style. Reference: Dutton & Aron, Arousal & Attribution (1974)."
+  },
+  {
+    "id": "psychology_mirror_attunement",
+    "category": "psychology_connection",
+    "language": "en",
+    "text": "Mirror neurons activate when we attune to others' emotions and body language. Subtly match your date's pace, energy, and tone. If they're thoughtful, slow down. If they're energetic, match that. This creates subconscious rapport. Don't be obvious—genuine interest naturally creates mirroring."
+  },
+  {
+    "id": "psychology_scarcity_principle",
+    "category": "psychology_attraction",
+    "language": "en",
+    "text": "Scarcity increases perceived value. Being genuinely unavailable (due to work, friends, hobbies) makes you more attractive than being always available. You don't need games—just maintain your life. Mention: 'I'd love to see you, but I've got plans with friends Friday. How about Wednesday?' This signals healthy boundaries and self-respect."
+  },
+  {
+    "id": "psychology_oxytocin_bonding",
+    "category": "psychology_biochemistry",
+    "language": "en",
+    "text": "Oxytocin (the bonding hormone) is released through: physical touch, eye contact, vulnerability, and shared experiences. Early dating activities that build oxytocin: deep conversation, hand-holding, shared vulnerability. These create chemical bonds that make the relationship feel 'real' faster."
+  },
+  {
+    "id": "psychology_dopamine_novelty",
+    "category": "psychology_biochemistry",
+    "language": "en",
+    "text": "Dopamine drives new relationship energy and is activated by novelty and uncertainty. This is why early dating feels exciting. As relationships mature, maintain dopamine through surprises, adventures, and small uncertainties. Don't make yourself completely predictable."
+  },
+  {
+    "id": "psychology_attachment_questions_deep",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "Deeper questions revealing attachment (after a few dates): 'What does trust look like to you?' 'How do you handle distance or conflict?' 'What do you need from a partner?' Secure partners give thoughtful answers; anxious partners over-explain; avoidant partners minimize. Listen to patterns, not just words."
+  },
+  {
+    "id": "psychology_love_languages",
+    "category": "psychology_connection",
+    "language": "en",
+    "text": "Gary Chapman's 5 Love Languages are: words of affirmation, quality time, acts of service, receiving gifts, physical touch. Ask early: 'What makes you feel cared for?' or observe what they appreciate. Expressing love in their language creates stronger bonding than your preferred style. Reference: The 5 Love Languages (1992)."
+  },
+  {
+    "id": "psychology_red_flags_attachment",
+    "category": "psychology_red_flags",
+    "language": "en",
+    "text": "Red flags indicating insecure attachment: inconsistent communication (hot/cold), always blaming others for breakups, love-bombing early then disappearing, inability to compromise, dismissing your feelings. These patterns are fixable with awareness, but require work. Early recognition saves heartbreak."
+  },
+  {
+    "id": "psychology_relationship_stages",
+    "category": "psychology_development",
+    "language": "en",
+    "text": "Relationships progress through stages (Sternberg): 1) Infatuation (1-3 months—intense chemistry), 2) Building (3-12 months—real intimacy develops), 3) Commitment (1+ years—sustained partnership). Expecting stage 3 intimacy in stage 1 creates disappointment. Understand what each stage requires: now is time to build trust and compatibility."
+  },
+  {
+    "id": "psychology_conflict_repair",
+    "category": "psychology_conflict",
+    "language": "en",
+    "text": "Healthy conflict resolution starts with: 1) Take responsibility for your part ('I was defensive'), 2) Validate their feelings ('I understand why you're upset'), 3) Find compromise ('What would make this better for you?'). Couples who repair conflict quickly have stronger relationships. Reference: Gottman's Conflict Resolution Model."
+  },
+  {
+    "id": "psychology_expectation_management",
+    "category": "psychology_mindset",
+    "language": "en",
+    "text": "Unmet expectations create resentment. Early conversation about needs reduces conflict: 'I like communicating daily, is that cool?' 'I prefer to plan dates in advance' 'I need time with friends too.' Alignment on expectations predicts relationship satisfaction more than personality match."
+  },
+  {
+    "id": "psychology_healthy_independence",
+    "category": "psychology_attachment",
+    "language": "en",
+    "text": "Secure relationships are built on healthy independence. Maintain your hobbies, friends, and goals while building the relationship. Say: 'I love spending time with you AND I need time for myself too.' Partners who support each other's independence stay together longer. Codependence is a warning sign."
+  },
+  {
+    "id": "psychology_trust_building_timeline",
+    "category": "psychology_trust",
+    "language": "en",
+    "text": "Trust isn't built overnight—it develops through consistent, reliable behavior over time. Early trust-building: follow through on plans, communicate clearly, remember details they shared, be honest about feelings. Trust is earned through actions, not declarations. Research shows: 6 months of consistency builds real trust."
+  },
+  {
+    "id": "psychology_authenticity_risk",
+    "category": "psychology_vulnerability",
+    "language": "en",
+    "text": "Being authentic early is a calculated risk: you might be rejected for who you are, but you'll find someone who values you. Hiding yourself until 'later' means a future partner loves the false version. Say: 'I'm introverted and prefer one-on-one time' instead of forcing yourself to be extroverted. Real compatibility requires authenticity."
+  }
+]
