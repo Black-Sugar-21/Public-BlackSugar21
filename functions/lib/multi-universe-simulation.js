@@ -133,23 +133,20 @@ exports.simulateMultiUniverse = onCall(
       // Step 0: Load config from Remote Config
       const config = await getMultiUniverseConfig();
 
-      // Step 1: Rate limit check
+      // Step 1: Rate limit CHECK (don't increment yet — wait for successful generation)
       const today = new Date().toISOString().substring(0, 10);
       const usageRef = db.collection('users').doc(userId)
         .collection('multiUniverseUsage').doc(today);
 
       const maxPerDay = config.maxPerDay || 3;
-      await db.runTransaction(async (tx) => {
-        const usageDoc = await tx.get(usageRef);
-        const count = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
-        if (count >= maxPerDay) {
-          throw new HttpsError(
-            'resource-exhausted',
-            `Daily limit reached. You can run ${maxPerDay} multi-universe tests per day.`
-          );
-        }
-        tx.set(usageRef, { count: count + 1, lastUsed: new Date().toISOString() }, { merge: true });
-      });
+      const usageDoc = await usageRef.get();
+      const currentCount = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
+      if (currentCount >= maxPerDay) {
+        throw new HttpsError(
+          'resource-exhausted',
+          `Daily limit reached. You can run ${maxPerDay} multi-universe tests per day.`
+        );
+      }
 
       // Step 2: Check cache (valid for 6 months)
       const cacheKey = `multiverse_${matchId}`;
@@ -224,7 +221,7 @@ exports.simulateMultiUniverse = onCall(
       const successfulStages = stages.filter(s => !s.error);
 
       // Step 5: Calculate compatibility
-      const { score, stars, label } = calculateCompatibility(successfulStages);
+      const { score, stars, label } = calculateCompatibility(successfulStages, userLanguage);
 
       // CRITICAL: If all stages failed, don't cache and throw error instead
       if (successfulStages.length === 0) {
@@ -252,10 +249,26 @@ exports.simulateMultiUniverse = onCall(
         cacheExpire: Date.now() + (cacheMinutes * 60 * 1000), // Convert minutes to ms
       };
 
-      // Step 8: Cache for 6 months (only if we have valid results)
-      await db.collection('users').doc(userId)
-        .collection('multiUniverseCache').doc(cacheKey).set(result, { merge: true })
-        .catch(e => logger.warn('Cache write failed:', e.message));
+      // Step 8a: Cache for 6 months (only if we have valid results AND decent score)
+      // Don't cache if:
+      // 1. All stages failed (successfulStages.length === 0) — already checked at Step 5
+      // 2. All scores are < 5 (very poor compatibility) — too low quality to cache
+      const hasDecentScore = successfulStages.some(s => (s.avgReactionScore || 0) >= 5);
+
+      if (hasDecentScore) {
+        await db.collection('users').doc(userId)
+          .collection('multiUniverseCache').doc(cacheKey).set(result, { merge: true })
+          .catch(e => logger.warn('Cache write failed:', e.message));
+      } else {
+        logger.info('[MultiUniverse] Not caching: all scores < 5 (low quality result)');
+      }
+
+      // Step 8b: INCREMENT RATE LIMIT (only after successful generation)
+      // This ensures users only lose their daily credit if simulation actually completes
+      await usageRef.set(
+        { count: currentCount + 1, lastUsed: new Date().toISOString() },
+        { merge: true }
+      ).catch(e => logger.warn('Rate limit increment failed:', e.message));
 
       return { ...result, fromCache: false };
     } catch (e) {
@@ -512,9 +525,9 @@ function generateMatchReaction(tone, situation, language) {
  * - Base: average of stage scores (0-100)
  * - Bonus: consistency + growth trend
  */
-function calculateCompatibility(stages) {
+function calculateCompatibility(stages, userLanguage = 'en') {
   if (stages.length === 0) {
-    return { score: 0, stars: 0, label: 'Unable to calculate' };
+    return { score: 0, stars: 0, label: getCompatibilityLabel(0, userLanguage) };
   }
 
   const scores = stages.map(s => (s.avgReactionScore || 0) * 10); // Scale to 0-100
@@ -536,17 +549,91 @@ function calculateCompatibility(stages) {
 
   const score = Math.min(100, Math.round(baseScore + consistencyBonus + growthBonus));
   const stars = Math.round((score / 100) * 5 * 10) / 10;
-  const label = getCompatibilityLabel(score);
+  const label = getCompatibilityLabel(score, userLanguage);
 
   return { score, stars, label };
 }
 
-function getCompatibilityLabel(score) {
-  if (score >= 85) return '🌟 Excellent Match';
-  if (score >= 70) return '💚 Great Potential';
-  if (score >= 55) return '💛 Good Potential';
-  if (score >= 40) return '💙 Some Potential';
-  return '⚠️  Challenging Match';
+function getCompatibilityLabel(score, language = 'en') {
+  const labels = {
+    en: {
+      excellent: '🌟 Excellent Match',
+      great: '💚 Great Potential',
+      good: '💛 Good Potential',
+      some: '💙 Some Potential',
+      challenging: '⚠️  Challenging Match',
+    },
+    es: {
+      excellent: '🌟 Compatibilidad Excelente',
+      great: '💚 Gran Potencial',
+      good: '💛 Buen Potencial',
+      some: '💙 Algo de Potencial',
+      challenging: '⚠️  Relación Desafiante',
+    },
+    pt: {
+      excellent: '🌟 Compatibilidade Excelente',
+      great: '💚 Grande Potencial',
+      good: '💛 Bom Potencial',
+      some: '💙 Algum Potencial',
+      challenging: '⚠️  Relacionamento Desafiador',
+    },
+    fr: {
+      excellent: '🌟 Compatibilité Excellente',
+      great: '💚 Grand Potentiel',
+      good: '💛 Bon Potentiel',
+      some: '💙 Un Certain Potentiel',
+      challenging: '⚠️  Relation Défie',
+    },
+    de: {
+      excellent: '🌟 Ausgezeichnete Kompatibilität',
+      great: '💚 Großes Potenzial',
+      good: '💛 Gutes Potenzial',
+      some: '💙 Etwas Potenzial',
+      challenging: '⚠️  Herausfordernde Beziehung',
+    },
+    ja: {
+      excellent: '🌟 優れた相性',
+      great: '💚 大きな可能性',
+      good: '💛 良い可能性',
+      some: '💙 いくつかの可能性',
+      challenging: '⚠️  難しい関係',
+    },
+    zh: {
+      excellent: '🌟 完美相容',
+      great: '💚 很好的潜力',
+      good: '💛 不错的潜力',
+      some: '💙 有一定潜力',
+      challenging: '⚠️  具有挑战性的关系',
+    },
+    ru: {
+      excellent: '🌟 Отличная Совместимость',
+      great: '💚 Большой Потенциал',
+      good: '💛 Хороший Потенциал',
+      some: '💙 Некоторый Потенциал',
+      challenging: '⚠️  Сложные Отношения',
+    },
+    ar: {
+      excellent: '🌟 توافق ممتاز',
+      great: '💚 إمكانية عظيمة',
+      good: '💛 إمكانية جيدة',
+      some: '💙 إمكانية ما',
+      challenging: '⚠️  علاقة تحديات',
+    },
+    id: {
+      excellent: '🌟 Kompatibilitas Luar Biasa',
+      great: '💚 Potensi Besar',
+      good: '💛 Potensi Baik',
+      some: '💙 Beberapa Potensi',
+      challenging: '⚠️  Hubungan yang Menantang',
+    },
+  };
+
+  const langLabels = labels[language] || labels['en'];
+  if (score >= 85) return langLabels.excellent;
+  if (score >= 70) return langLabels.great;
+  if (score >= 55) return langLabels.good;
+  if (score >= 40) return langLabels.some;
+  return langLabels.challenging;
 }
 
 function generateInsights(stages, label) {
