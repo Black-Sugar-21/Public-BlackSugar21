@@ -236,28 +236,41 @@ exports.simulateMultiUniverse = onCall(
       }
       logger.info(`[MultiUniverse] No valid cache found`);
 
-      // Step 3: Load match profile
+      // Step 3: Load match document (from /matches/{matchId}, not /users/{matchId})
       logger.info(`[MultiUniverse] Loading match document: ${matchId.substring(0, 8)}... (${matchId.length} chars)`);
-      const matchDoc = await db.collection('users').doc(matchId).get();
+      const matchDoc = await db.collection('matches').doc(matchId).get();
       if (!matchDoc.exists) {
-        logger.error(`[MultiUniverse] Match NOT FOUND: ${matchId}`);
+        logger.error(`[MultiUniverse] Match NOT FOUND in /matches collection: ${matchId}`);
         logger.error(`[MultiUniverse] Match lookup details:`);
-        logger.error(`  - Collection: users`);
+        logger.error(`  - Collection: matches`);
         logger.error(`  - DocId: ${matchId}`);
         logger.error(`  - DocId length: ${matchId.length}`);
         logger.error(`  - First 4 chars: ${matchId.substring(0, 4)}`);
 
         // Try to find what matches DO exist for debugging
-        const allUsersSnap = await db.collection('users').limit(3).get();
-        logger.error(`[MultiUniverse] Sample existing users: ${allUsersSnap.docs.map(d => d.id.substring(0, 8) + '...').join(', ')}`);
+        const allMatchesSnap = await db.collection('matches').limit(3).get();
+        logger.error(`[MultiUniverse] Sample existing matches: ${allMatchesSnap.docs.map(d => d.id.substring(0, 8) + '...').join(', ')}`);
 
         analyticsData.errorReason = 'match_not_found';
         analyticsData.failedStage = 'load_match';
         await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
-        throw new HttpsError('not-found', `Match profile not found (ID: ${matchId.substring(0, 8)}...)`);
+        throw new HttpsError('not-found', `Match not found (ID: ${matchId.substring(0, 8)}...)`);
       }
       const matchData = matchDoc.data();
-      const matchName = matchData?.name || 'Your Match';
+      const otherUserId = matchData?.usersMatched?.find((uid: string) => uid !== userId);
+
+      // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
+      let matchName = 'Your Match';
+      if (otherUserId) {
+        try {
+          const otherUserDoc = await db.collection('users').doc(otherUserId).get();
+          if (otherUserDoc.exists) {
+            matchName = otherUserDoc.data()?.name || 'Your Match';
+          }
+        } catch (e) {
+          logger.warn(`[MultiUniverse] Could not load other user profile for name, using default`);
+        }
+      }
       logger.info(`[MultiUniverse] ✓ Match loaded: ${matchName} (${matchId.substring(0, 8)}...)`);
       logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
 
