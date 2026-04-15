@@ -115,6 +115,82 @@ const MULTI_UNIVERSE_STAGES = [
   },
 ];
 
+/**
+ * Stage labels in 10 languages
+ * Indexed by stageId, then language code
+ */
+const STAGE_LABELS_BY_LANGUAGE = {
+  initial_contact: {
+    en: 'First Contact',
+    es: 'Primer contacto',
+    pt: 'Primeiro contato',
+    fr: 'Premier contact',
+    de: 'Erstkontakt',
+    ja: '最初の接触',
+    zh: '初次接触',
+    ru: 'Первый контакт',
+    ar: 'التواصل الأول',
+    id: 'Kontak pertama',
+  },
+  getting_to_know: {
+    en: 'Getting to Know',
+    es: 'Conociéndose',
+    pt: 'Conhecendo-se',
+    fr: 'Apprendre à se connaître',
+    de: 'Kennenlernen',
+    ja: 'お互いを知る',
+    zh: '互相了解',
+    ru: 'Знакомство',
+    ar: 'التعارف',
+    id: 'Saling mengenal',
+  },
+  building_connection: {
+    en: 'Deep Connection',
+    es: 'Conexión profunda',
+    pt: 'Conexão profunda',
+    fr: 'Connexion profonde',
+    de: 'Tiefe Verbindung',
+    ja: '深い絆',
+    zh: '深度连接',
+    ru: 'Глубокая связь',
+    ar: 'الاتصال العميق',
+    id: 'Koneksi mendalam',
+  },
+  conflict_challenge: {
+    en: 'Challenge',
+    es: 'Desafío',
+    pt: 'Desafio',
+    fr: 'Défi',
+    de: 'Herausforderung',
+    ja: '試練',
+    zh: '挑战',
+    ru: 'Испытание',
+    ar: 'التحدي',
+    id: 'Tantangan',
+  },
+  commitment: {
+    en: 'Next Step',
+    es: 'Siguiente paso',
+    pt: 'Próximo passo',
+    fr: 'Prochaine étape',
+    de: 'Nächster Schritt',
+    ja: '次のステップ',
+    zh: '下一步',
+    ru: 'Следующий шаг',
+    ar: 'الخطوة التالية',
+    id: 'Langkah berikutnya',
+  },
+};
+
+/**
+ * Get localized stage label based on stageId and language
+ */
+function getLocalizedStageLabel(stageId, language = 'en') {
+  const labels = STAGE_LABELS_BY_LANGUAGE[stageId];
+  if (!labels) return stageId; // Fallback to stageId if not found
+  return labels[language] || labels['en']; // Fallback to English
+}
+
 // Remote Config defaults for multi-universe simulation
 const MULTIVERSE_CONFIG_DEFAULTS = {
   enabled: true,
@@ -202,23 +278,27 @@ exports.simulateMultiUniverse = onCall(
       const config = await getMultiUniverseConfig();
       logger.info(`[MultiUniverse] Config loaded in ${Date.now() - configStart}ms`);
 
-      // Step 1: Rate limit CHECK (don't increment yet — wait for successful generation)
-      const today = new Date().toISOString().substring(0, 10);
-      const usageRef = db.collection('users').doc(userId)
-        .collection('multiUniverseUsage').doc(today);
+      // Step 1: UNIFIED rate limit CHECK using coachMessagesRemaining
+      // Simulations use the same Coach IA credit pool (not a separate counter)
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        logger.error(`[MultiUniverse] User document not found: ${userId}`);
+        analyticsData.errorReason = 'user_not_found';
+        await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
+        throw new HttpsError('not-found', 'User profile not found');
+      }
 
-      const maxPerDay = config.maxPerDay || 3;
-      const usageDoc = await usageRef.get();
-      const currentCount = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
-      logger.info(`[MultiUniverse] Rate limit check: ${currentCount}/${maxPerDay}`);
+      const userData = userDoc.data();
+      const remainingCredits = userData?.coachMessagesRemaining ?? 3;
+      logger.info(`[MultiUniverse] Unified rate limit check: ${remainingCredits} credits remaining`);
 
-      if (currentCount >= maxPerDay) {
-        logger.warn(`[MultiUniverse] Rate limit exceeded for user`);
+      if (remainingCredits <= 0) {
+        logger.warn(`[MultiUniverse] Rate limit exceeded for user (no credits left)`);
         analyticsData.errorReason = 'rate_limit_exceeded';
         await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
         throw new HttpsError(
           'resource-exhausted',
-          `Daily limit reached. You can run ${maxPerDay} multi-universe tests per day.`
+          `Daily limit reached. You have used all your Coach IA credits for today. Come back tomorrow for 3 fresh credits.`
         );
       }
 
@@ -229,10 +309,18 @@ exports.simulateMultiUniverse = onCall(
 
       if (cacheDoc.exists && cacheDoc.data().cacheExpire > Date.now()) {
         logger.info(`[MultiUniverse] CACHE HIT for match ${matchId.substring(0, 8)}`);
+        const cachedResult = cacheDoc.data();
+
+        // Re-localize stage labels for current user language (cache might have different language)
+        const localizedStages = cachedResult.stages.map(stage => ({
+          ...stage,
+          stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage)
+        }));
+
         analyticsData.success = true;
         analyticsData.duration = Date.now() - startTime;
         await trackMultiUniverseAnalytics(userId, matchId, analyticsData);
-        return { ...cacheDoc.data(), fromCache: true };
+        return { ...cachedResult, stages: localizedStages, fromCache: true };
       }
       logger.info(`[MultiUniverse] No valid cache found`);
 
@@ -257,7 +345,7 @@ exports.simulateMultiUniverse = onCall(
         throw new HttpsError('not-found', `Match not found (ID: ${matchId.substring(0, 8)}...)`);
       }
       const matchData = matchDoc.data();
-      const otherUserId = matchData?.usersMatched?.find((uid: string) => uid !== userId);
+      const otherUserId = matchData?.usersMatched?.find((uid) => uid !== userId);
 
       // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
       let matchName = 'Your Match';
@@ -307,15 +395,16 @@ exports.simulateMultiUniverse = onCall(
             (b.successScore || 0) > (a.successScore || 0) ? b : a
           );
 
+          const localizedStageLabel = getLocalizedStageLabel(stage.id, userLanguage);
           const stageResult = {
             stageId: stage.id,
-            stageLabel: stage.stageLabel,
+            stageLabel: localizedStageLabel,
             order: stage.order,
             approaches: situationResponse.approaches,
             avgReactionScore: parseFloat(avgReactionScore.toFixed(2)),
             bestApproachId: bestApproach?.id || null,
             bestApproachPhrase: bestApproach?.phrase || '',
-            coachTip: situationResponse.coachTip || `Strong potential at ${stage.stageLabel}`,
+            coachTip: situationResponse.coachTip || `Strong potential at ${localizedStageLabel}`,
             psyInsights: situationResponse.psychInsights || 'Compatible communication patterns emerging',
           };
           stages.push(stageResult);
@@ -369,7 +458,7 @@ exports.simulateMultiUniverse = onCall(
       }
 
       // Step 6: Generate insights
-      const insights = generateInsights(successfulStages, label);
+      const insights = generateInsights(successfulStages, label, userLanguage);
       logger.info(`[MultiUniverse] Generated ${insights.length} insights, score=${score}`);
 
       // Step 7: Build response
@@ -402,13 +491,13 @@ exports.simulateMultiUniverse = onCall(
         logger.info('[MultiUniverse] Not caching: all scores < 5 (low quality result)');
       }
 
-      // Step 8b: INCREMENT RATE LIMIT (only after successful generation)
+      // Step 8: DECREMENT UNIFIED coachMessagesRemaining (only after successful generation)
       // This ensures users only lose their daily credit if simulation actually completes
-      await usageRef.set(
-        { count: currentCount + 1, lastUsed: new Date().toISOString() },
-        { merge: true }
-      ).catch(e => logger.warn('[MultiUniverse] Rate limit increment failed:', e.message));
-      logger.info(`[MultiUniverse] Rate limit incremented: ${currentCount + 1}/${maxPerDay}`);
+      // Simulations and regular Coach IA messages share the same credit pool
+      await db.collection('users').doc(userId).update({
+        coachMessagesRemaining: db.FieldValue.increment(-1)
+      }).catch(e => logger.warn('[MultiUniverse] Failed to decrement coach credits:', e.message));
+      logger.info(`[MultiUniverse] Coach credits decremented (unified counter)`);
 
       // Estimate cost: ~0.000075 per input token, ~0.0003 per output token (Gemini 2.5 Flash pricing)
       const estimatedCost = (totalTokens * 0.000075) + (successfulStages.length * 100 * 0.0003);
@@ -839,25 +928,99 @@ function getCompatibilityLabel(score, language = 'en') {
   return langLabels.challenging;
 }
 
-function generateInsights(stages, label) {
-  const insights = [];
-  if (stages.length === 0) return ['Unable to generate insights'];
+function generateInsights(stages, label, language = 'en') {
+  const insightLabels = {
+    en: {
+      overall: 'Overall:',
+      strongest: '💪 Strongest:',
+      challenge: '⚠️ Challenge:',
+      positive: '✨ Consistently positive interactions',
+      noInsights: 'Unable to generate insights',
+    },
+    es: {
+      overall: 'General:',
+      strongest: '💪 Más fuerte:',
+      challenge: '⚠️ Desafío:',
+      positive: '✨ Interacciones consistentemente positivas',
+      noInsights: 'No se pueden generar insights',
+    },
+    pt: {
+      overall: 'Geral:',
+      strongest: '💪 Mais forte:',
+      challenge: '⚠️ Desafio:',
+      positive: '✨ Interações consistentemente positivas',
+      noInsights: 'Não é possível gerar insights',
+    },
+    fr: {
+      overall: 'Global:',
+      strongest: '💪 Le plus fort:',
+      challenge: '⚠️ Défi:',
+      positive: '✨ Interactions constamment positives',
+      noInsights: 'Impossible de générer des insights',
+    },
+    de: {
+      overall: 'Insgesamt:',
+      strongest: '💪 Am stärksten:',
+      challenge: '⚠️ Herausforderung:',
+      positive: '✨ Durchweg positive Interaktionen',
+      noInsights: 'Keine Insights zu generieren',
+    },
+    ja: {
+      overall: '全体的に:',
+      strongest: '💪 最も強い:',
+      challenge: '⚠️ チャレンジ:',
+      positive: '✨ 一貫して肯定的なやり取り',
+      noInsights: 'インサイトを生成できません',
+    },
+    zh: {
+      overall: '总体:',
+      strongest: '💪 最强:',
+      challenge: '⚠️ 挑战:',
+      positive: '✨ 持续积极的互动',
+      noInsights: '无法生成洞察',
+    },
+    ru: {
+      overall: 'В целом:',
+      strongest: '💪 Самое сильное:',
+      challenge: '⚠️ Вызов:',
+      positive: '✨ Постоянно позитивные взаимодействия',
+      noInsights: 'Невозможно создать инсайты',
+    },
+    ar: {
+      overall: 'بشكل عام:',
+      strongest: '💪 الأقوى:',
+      challenge: '⚠️ التحدي:',
+      positive: '✨ تفاعلات إيجابية باستمرار',
+      noInsights: 'لا يمكن توليد رؤى',
+    },
+    id: {
+      overall: 'Keseluruhan:',
+      strongest: '💪 Terkuat:',
+      challenge: '⚠️ Tantangan:',
+      positive: '✨ Interaksi konsisten positif',
+      noInsights: 'Tidak dapat menghasilkan wawasan',
+    },
+  };
 
-  insights.push(`Overall: ${label}`);
+  const labels = insightLabels[language] || insightLabels['en'];
+  const insights = [];
+  if (stages.length === 0) return [labels.noInsights];
+
+  insights.push(`${labels.overall} ${label}`);
 
   const bestStage = stages.reduce((b, c) => (c.avgReactionScore || 0) > (b.avgReactionScore || 0) ? c : b);
   if (bestStage?.stageLabel) {
-    insights.push(`💪 Strongest: ${bestStage.stageLabel}`);
+    insights.push(`${labels.strongest} ${bestStage.stageLabel}`);
   }
 
   const weakStages = stages.filter(s => (s.avgReactionScore || 0) < 6);
   if (weakStages.length > 0) {
-    insights.push(`⚠️ Challenge: ${weakStages.map(s => s.stageLabel).join(', ')}`);
+    insights.push(`${labels.challenge} ${weakStages.map(s => s.stageLabel).join(', ')}`);
   }
 
   const scores = stages.map(s => s.avgReactionScore || 0);
   const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-  if (avgScore > 8) insights.push('✨ Consistently positive interactions');
+  if (avgScore > 8) insights.push(labels.positive);
 
   return insights.slice(0, 3);
 }
