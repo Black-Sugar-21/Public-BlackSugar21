@@ -63,7 +63,43 @@ const MULTI_UNIVERSE_STAGES = [
   },
 ];
 
-const RATE_LIMIT_CONFIG = { maxPerDay: 3 };
+// Remote Config defaults for multi-universe simulation
+const MULTIVERSE_CONFIG_DEFAULTS = {
+  enabled: true,
+  maxPerDay: 3,
+  cacheMinutes: 180 * 24 * 60, // 6 months in minutes
+};
+
+// Remote Config cache for simulation_config
+let _multiverseConfigCache = null;
+let _multiverseConfigCacheTime = 0;
+const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+async function getMultiUniverseConfig() {
+  // Return cached config if fresh
+  if (_multiverseConfigCache && (Date.now() - _multiverseConfigCacheTime) < MULTIVERSE_CONFIG_CACHE_TTL) {
+    return _multiverseConfigCache;
+  }
+
+  try {
+    const rc = admin.remoteConfig();
+    const template = await rc.getTemplate();
+    const param = template.parameters['simulation_config'];
+    if (param?.defaultValue?.value) {
+      const rcConfig = JSON.parse(param.defaultValue.value);
+      _multiverseConfigCache = { ...MULTIVERSE_CONFIG_DEFAULTS, ...rcConfig };
+      _multiverseConfigCacheTime = Date.now();
+      return _multiverseConfigCache;
+    }
+  } catch (err) {
+    logger.warn(`[getMultiUniverseConfig] RC read failed, using defaults: ${err.message}`);
+  }
+
+  // Fallback to defaults if RC read fails
+  _multiverseConfigCache = MULTIVERSE_CONFIG_DEFAULTS;
+  _multiverseConfigCacheTime = Date.now();
+  return _multiverseConfigCache;
+}
 
 /**
  * Cloud Function: Simulate Multi-Universe Compatibility Test
@@ -94,18 +130,22 @@ exports.simulateMultiUniverse = onCall(
     if (!matchId) throw new HttpsError('invalid-argument', 'matchId is required');
 
     try {
+      // Step 0: Load config from Remote Config
+      const config = await getMultiUniverseConfig();
+
       // Step 1: Rate limit check
       const today = new Date().toISOString().substring(0, 10);
       const usageRef = db.collection('users').doc(userId)
         .collection('multiUniverseUsage').doc(today);
 
+      const maxPerDay = config.maxPerDay || 3;
       await db.runTransaction(async (tx) => {
         const usageDoc = await tx.get(usageRef);
         const count = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
-        if (count >= RATE_LIMIT_CONFIG.maxPerDay) {
+        if (count >= maxPerDay) {
           throw new HttpsError(
             'resource-exhausted',
-            `Daily limit reached. You can run ${RATE_LIMIT_CONFIG.maxPerDay} multi-universe tests per day.`
+            `Daily limit reached. You can run ${maxPerDay} multi-universe tests per day.`
           );
         }
         tx.set(usageRef, { count: count + 1, lastUsed: new Date().toISOString() }, { merge: true });
@@ -198,6 +238,7 @@ exports.simulateMultiUniverse = onCall(
       const insights = generateInsights(successfulStages, label);
 
       // Step 7: Build response
+      const cacheMinutes = config.cacheMinutes || (180 * 24 * 60); // 6 months in minutes by default
       const result = {
         success: true,
         stages: stages.sort((a, b) => a.order - b.order),
@@ -208,7 +249,7 @@ exports.simulateMultiUniverse = onCall(
         matchName,
         matchId,
         generatedAt: Date.now(),
-        cacheExpire: Date.now() + (180 * 24 * 60 * 60 * 1000), // 6 months
+        cacheExpire: Date.now() + (cacheMinutes * 60 * 1000), // Convert minutes to ms
       };
 
       // Step 8: Cache for 6 months (only if we have valid results)
@@ -384,30 +425,82 @@ function generateApproachesFallback() {
 
 /**
  * Score an approach 0-10 based on tone and situation
+ * Language-agnostic: uses structural features instead of language-specific keywords
  */
 function scoreApproach(phrase, situation, language) {
   if (!phrase || phrase.length === 0) return 5;
 
+  // Base score: 6.0 for any valid phrase
   const baseScore = 6;
-  const sentenceCount = (phrase.match(/[.!?]/g) || []).length || 1;
-  const lengthBonus = Math.min(phrase.length / 50, 2);
-  const emotionalWords = (phrase.match(/feel|want|love|care|honest|authentic|genuine|real|true/gi) || []).length;
 
-  let score = baseScore + (emotionalWords * 0.5) + (lengthBonus / 2);
+  // Length bonus: longer, more thoughtful approaches score higher
+  // 50 chars = +0.5, 100 chars = +1.0, 150+ chars = +1.5 (max)
+  const lengthBonus = Math.min(phrase.length / 100, 1.5);
+
+  // Sentence variety bonus: multiple sentences show more structure
+  // 1 sentence = 0, 2 sentences = +0.5, 3+ = +1.0
+  const sentenceCount = Math.max(1, (phrase.match(/[.!?]/g) || []).length);
+  const sentenceBonus = sentenceCount > 1 ? Math.min((sentenceCount - 1) * 0.5, 1.0) : 0;
+
+  let score = baseScore + lengthBonus + (sentenceBonus * 0.3);
   score = Math.min(10, Math.max(4, score));
 
   return parseFloat(score.toFixed(1));
 }
 
 /**
- * Generate a simulated match reaction to an approach
+ * Generate a simulated match reaction to an approach (10 languages)
  */
 function generateMatchReaction(tone, situation, language) {
   const reactions = {
-    direct: { en: 'I appreciate your honesty. Yes, I want to talk about this.', es: 'Aprecio tu honestidad. Sí, quiero hablar de esto.' },
-    playful: { en: 'I like your energy! What\'s on your mind?', es: '¡Me encanta tu energía! ¿Qué tienes en mente?' },
-    romantic_vulnerable: { en: 'That\'s really sweet. I feel the same way.', es: 'Eso es muy lindo. Yo siento lo mismo.' },
-    grounded_honest: { en: 'I value that about you too. Let\'s talk.', es: 'Yo también valoro eso en ti. Hablemos.' },
+    direct: {
+      en: 'I appreciate your honesty. Yes, I want to talk about this.',
+      es: 'Aprecio tu honestidad. Sí, quiero hablar de esto.',
+      pt: 'Aprecio sua honestidade. Sim, quero conversar sobre isso.',
+      fr: 'J\'apprécie votre honnêteté. Oui, je veux en parler.',
+      de: 'Ich schätze deine Offenheit. Ja, ich möchte darüber sprechen.',
+      ja: 'あなたの正直さを評価します。はい、これについて話したいです。',
+      zh: '我欣赏你的诚实。是的，我想谈论这个。',
+      ru: 'Я ценю вашу честность. Да, я хочу об этом поговорить.',
+      ar: 'أقدر صراحتك. نعم، أريد أن أتحدث عن هذا.',
+      id: 'Saya menghargai kejujuran Anda. Ya, saya ingin membicarakannya.',
+    },
+    playful: {
+      en: 'I like your energy! What\'s on your mind?',
+      es: '¡Me encanta tu energía! ¿Qué tienes en mente?',
+      pt: 'Gosto da sua energia! O que você está pensando?',
+      fr: 'J\'aime votre énergie! Qu\'est-ce qui vous préoccupe?',
+      de: 'Mir gefällt deine Energie! Was geht dir im Kopf herum?',
+      ja: 'あなたのエネルギーが好きです！何を考えていますか？',
+      zh: '我喜欢你的能量！你在想什么？',
+      ru: 'Мне нравится ваша энергия! О чем вы думаете?',
+      ar: 'أحب طاقتك! ما الذي يشغل بالك؟',
+      id: 'Saya suka energi Anda! Apa yang ada di pikiran Anda?',
+    },
+    romantic_vulnerable: {
+      en: 'That\'s really sweet. I feel the same way.',
+      es: 'Eso es muy lindo. Yo siento lo mismo.',
+      pt: 'Isso é muito doce. Sinto o mesmo.',
+      fr: 'C\'est vraiment doux. Je ressens la même chose.',
+      de: 'Das ist wirklich süß. Ich fühle das gleiche.',
+      ja: 'それは本当に素敵です。私も同じように感じています。',
+      zh: '这真的很甜蜜。我感受到同样的感受。',
+      ru: 'Это действительно мило. Я чувствую то же самое.',
+      ar: 'هذا حقا لطيف جدا. أشعر بنفس الشيء.',
+      id: 'Itu benar-benar manis. Saya merasakan hal yang sama.',
+    },
+    grounded_honest: {
+      en: 'I value that about you too. Let\'s talk.',
+      es: 'Yo también valoro eso en ti. Hablemos.',
+      pt: 'Eu também valori isso em você. Vamos conversar.',
+      fr: 'J\'apprécie aussi cela chez vous. Parlons.',
+      de: 'Ich schätze das auch an dir. Lass uns reden.',
+      ja: 'わたしもあなたのそれを大事にしています。話しましょう。',
+      zh: '我也重视你的这一点。让我们聊天吧。',
+      ru: 'Я тоже ценю это в вас. Давайте поговорим.',
+      ar: 'أنا أيضا أقدر ذلك فيك. دعنا نتحدث.',
+      id: 'Saya juga menghargai itu tentang Anda. Mari kita bicara.',
+    },
   };
 
   const lang = language || 'en';
