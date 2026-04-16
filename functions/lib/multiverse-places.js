@@ -24,7 +24,7 @@ exports.getMultiUniversePlaces = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {category, userLanguage, radius, loadCount, excludePlaceIds, matchId} = request.data || {};
+    const {category, userLanguage, radius, loadCount, excludePlaceIds, matchId, searchQuery} = request.data || {};
 
     try {
       // Fetch current user's location from Firestore (server-side, no need to send from client)
@@ -63,14 +63,23 @@ exports.getMultiUniversePlaces = onCall(
       // Set of placeIds to exclude (for "load more" dedup)
       const excludeSet = new Set(Array.isArray(excludePlaceIds) ? excludePlaceIds : []);
 
-      // Build queries based on category
+      // Build queries based on searchQuery (free text) or category (predefined)
       let queries;
-      if (category && catQueryMap[category]) {
+      let includedTypes = null;
+      const trimmedSearch = (searchQuery || '').trim();
+
+      if (trimmedSearch.length >= 2) {
+        // Free text search: user typed a place name (e.g., "baque", "starbucks")
+        queries = [trimmedSearch];
+        logger.info(`[getMultiUniversePlaces] Text search: '${trimmedSearch}'`);
+      } else if (category && catQueryMap[category]) {
         // Specific category: primary + supplementary queries
         const supplementaryCount = Math.max(0, config.queriesWithCategory - 1);
         const allCats = Object.keys(catQueryMap).filter((c) => c !== category);
         const shuffledCats = [...allCats].sort(() => Math.random() - 0.5);
         queries = [catQueryMap[category], ...shuffledCats.slice(0, supplementaryCount).map((k) => catQueryMap[k])];
+        // Use Google Places type filter for category accuracy
+        includedTypes = CATEGORY_TO_PLACES_TYPE[category] ? CATEGORY_TO_PLACES_TYPE[category].slice(0, 4) : null;
         logger.info(`[getMultiUniversePlaces] Category '${category}' found. Using ${queries.length} queries`);
       } else {
         // No category: random diverse queries
@@ -78,15 +87,11 @@ exports.getMultiUniversePlaces = onCall(
         const allCats = Object.keys(catQueryMap);
         const shuffled = [...allCats].sort(() => Math.random() - 0.5);
         queries = shuffled.slice(0, queryCount).map((k) => catQueryMap[k]);
-        logger.info(`[getMultiUniversePlaces] Category '${category}' NOT found. Using ${queries.length} random queries`);
+        logger.info(`[getMultiUniversePlaces] No category/search. Using ${queries.length} random queries`);
       }
 
-      // Simple search at user's location with single radius (no progressive expansion for multi-universe)
+      // Simple search at user's location with single radius
       const radiusM = Math.min(maxR, userRadius);
-      // Use Google Places type filter to ensure category accuracy (e.g., "cafe" only returns cafes, not nightclubs)
-      const includedTypes = (category && CATEGORY_TO_PLACES_TYPE[category])
-        ? CATEGORY_TO_PLACES_TYPE[category].slice(0, 4)
-        : null;
       logger.info(`[getMultiUniversePlaces] Searching at radius=${radiusM / 1000}km from user location, types=${includedTypes ? includedTypes.join(',') : 'none'}`);
 
       const results = await Promise.all(
