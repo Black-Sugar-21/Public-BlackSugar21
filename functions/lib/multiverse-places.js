@@ -6,7 +6,7 @@ const { placesApiKey } = require('./shared');
 const {
   haversineKm, estimateTravelMin, getCategoryQueryMap, getPlacesSearchConfig,
   placesTextSearch, transformPlaceToSuggestion, extractInstagramFromWebsite,
-  scrapeInstagramMetrics, findInstagramViaSearch,
+  scrapeInstagramMetrics, findInstagramViaSearch, CATEGORY_TO_PLACES_TYPE,
 } = require('./places-helpers');
 
 /**
@@ -75,10 +75,14 @@ exports.getMultiUniversePlaces = onCall(
 
       // Simple search at user's location with single radius (no progressive expansion for multi-universe)
       const radiusM = Math.min(maxR, userRadius);
-      logger.info(`[getMultiUniversePlaces] Searching at radius=${radiusM / 1000}km from user location`);
+      // Use Google Places type filter to ensure category accuracy (e.g., "cafe" only returns cafes, not nightclubs)
+      const includedTypes = (category && CATEGORY_TO_PLACES_TYPE[category])
+        ? CATEGORY_TO_PLACES_TYPE[category].slice(0, 4)
+        : null;
+      logger.info(`[getMultiUniversePlaces] Searching at radius=${radiusM / 1000}km from user location, types=${includedTypes ? includedTypes.join(',') : 'none'}`);
 
       const results = await Promise.all(
-        queries.map((q) => placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction).catch((err) => {
+        queries.map((q) => placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, includedTypes).catch((err) => {
           logger.warn(`[getMultiUniversePlaces] Query failed: ${err.message}`);
           return {places: []};
         })),
