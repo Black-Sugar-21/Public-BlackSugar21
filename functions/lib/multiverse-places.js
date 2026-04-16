@@ -24,13 +24,21 @@ exports.getMultiUniversePlaces = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userLocation, category, userLanguage, radius, loadCount, excludePlaceIds, matchId} = request.data || {};
-
-    if (!userLocation || userLocation.latitude == null || userLocation.longitude == null) {
-      throw new Error('userLocation with latitude and longitude is required');
-    }
+    const {category, userLanguage, radius, loadCount, excludePlaceIds, matchId} = request.data || {};
 
     try {
+      // Fetch current user's location from Firestore (server-side, no need to send from client)
+      const currentUserDoc = await admin.firestore().collection('users').doc(request.auth.uid).get();
+      const currentUserData = currentUserDoc.data() || {};
+      const userLocation = {
+        latitude: currentUserData.latitude || 0,
+        longitude: currentUserData.longitude || 0,
+      };
+
+      if (userLocation.latitude === 0 && userLocation.longitude === 0) {
+        return {success: false, error: 'User location not available. Please enable location services.', suggestions: []};
+      }
+
       // Read dynamic config from Remote Config
       const config = await getPlacesSearchConfig();
       const catQueryMap = getCategoryQueryMap(config);
@@ -98,10 +106,10 @@ exports.getMultiUniversePlaces = onCall(
 
       logger.info(`[getMultiUniversePlaces] Results: ${unique.length}/${totalBeforeDedup} unique places (category='${category || 'all'}')`);
 
-      // Transform to suggestions
+      // Transform to suggestions — both locations fetched from Firestore (server-side)
       const userAsCurrentUser = {lat: userLocation.latitude, lng: userLocation.longitude, id: request.auth.uid};
 
-      // If matchId provided, fetch match user's location for travel time calculation
+      // If matchId provided, fetch partner's location from match document
       let userAsOtherUser = userAsCurrentUser; // Default: solo mode (same location)
       if (matchId) {
         try {
@@ -114,19 +122,13 @@ exports.getMultiUniversePlaces = onCall(
               const otherData = otherUserDoc.data() || {};
               if (otherData.latitude && otherData.longitude) {
                 userAsOtherUser = {lat: otherData.latitude, lng: otherData.longitude, id: otherUserId};
-                logger.info(`[getMultiUniversePlaces] Match mode: using partner location (${otherData.latitude.toFixed(2)},${otherData.longitude.toFixed(2)})`);
+                logger.info(`[getMultiUniversePlaces] Match mode: partner at (${otherData.latitude.toFixed(2)},${otherData.longitude.toFixed(2)})`);
               }
             }
           }
         } catch (err) {
           logger.warn(`[getMultiUniversePlaces] Failed to fetch match location: ${err.message}`);
         }
-      }
-
-      // Validate user coordinates are real (not 0,0 or null)
-      if (userAsCurrentUser.lat === 0 && userAsCurrentUser.lng === 0) {
-        logger.warn(`[getMultiUniversePlaces] User location is (0,0) — invalid coordinates`);
-        return {success: false, error: 'Invalid user location', suggestions: []};
       }
 
       // Batch-fetch cached Instagram data (avoid N+1 Firestore reads)
