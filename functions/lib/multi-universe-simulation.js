@@ -183,12 +183,24 @@ const STAGE_LABELS_BY_LANGUAGE = {
 };
 
 /**
+ * Normalize language code to 2-letter ISO 639-1 format
+ * Handles cases like "es-MX" → "es", "en-US" → "en", etc.
+ */
+function normalizeLanguageCode(lang) {
+  if (!lang) return 'en';
+  const normalized = lang.toLowerCase().substring(0, 2);
+  const validLanguages = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
+  return validLanguages.includes(normalized) ? normalized : 'en';
+}
+
+/**
  * Get localized stage label based on stageId and language
  */
 function getLocalizedStageLabel(stageId, language = 'en') {
+  const normalizedLang = normalizeLanguageCode(language);
   const labels = STAGE_LABELS_BY_LANGUAGE[stageId];
   if (!labels) return stageId; // Fallback to stageId if not found
-  return labels[language] || labels['en']; // Fallback to English
+  return labels[normalizedLang] || labels['en']; // Fallback to English
 }
 
 /**
@@ -211,7 +223,8 @@ const SOLO_MODE_NAMES = {
  * Get localized solo mode partner name based on language
  */
 function getLocalizedSoloName(language = 'en') {
-  return SOLO_MODE_NAMES[language] || SOLO_MODE_NAMES['en'];
+  const normalizedLang = normalizeLanguageCode(language);
+  return SOLO_MODE_NAMES[normalizedLang] || SOLO_MODE_NAMES['en'];
 }
 
 // Remote Config defaults for multi-universe simulation
@@ -278,7 +291,9 @@ exports.simulateMultiUniverse = onCall(
     const userId = request.auth?.uid;
     if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
 
-    const { matchId = "", userLanguage = 'en' } = request.data;
+    let { matchId = "", userLanguage = 'en' } = request.data;
+    // Normalize language code to 2-letter ISO 639-1 format (handles "es-MX" → "es")
+    userLanguage = normalizeLanguageCode(userLanguage);
     const isSoloMode = !matchId;  // Empty matchId = solo practice mode
 
     let analyticsData = {
@@ -330,20 +345,34 @@ exports.simulateMultiUniverse = onCall(
       const cacheDoc = await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).get();
 
-      if (cacheDoc.exists && cacheDoc.data().cacheExpire > Date.now()) {
-        logger.info(`[MultiUniverse] CACHE HIT for ${isSoloMode ? 'SOLO' : `match ${matchId.substring(0, 8)}`}`);
+      if (cacheDoc.exists) {
         const cachedResult = cacheDoc.data();
+        // Handle both old (JS timestamp) and new (Firestore Timestamp) formats for backward compatibility
+        let cacheExpireTime;
+        if (cachedResult.cacheExpire instanceof admin.firestore.Timestamp) {
+          cacheExpireTime = cachedResult.cacheExpire.toDate().getTime();
+        } else {
+          // Old format: JavaScript timestamp (number)
+          cacheExpireTime = cachedResult.cacheExpire;
+        }
 
-        // Re-localize stage labels for current user language (cache might have different language)
-        const localizedStages = cachedResult.stages.map(stage => ({
-          ...stage,
-          stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage)
-        }));
+        if (cacheExpireTime > Date.now()) {
+          logger.info(`[MultiUniverse] ✓ CACHE HIT (valid until ${new Date(cacheExpireTime).toISOString()})`);
+          logger.info(`[MultiUniverse] Mode: ${cachedResult.isSoloMode ? 'SOLO' : `match=${matchId.substring(0, 8)}`}`);
 
-        analyticsData.success = true;
-        analyticsData.duration = Date.now() - startTime;
-        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
-        return { ...cachedResult, stages: localizedStages, fromCache: true };
+          // Re-localize stage labels for current user language (cache might have different language)
+          const localizedStages = cachedResult.stages.map(stage => ({
+            ...stage,
+            stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage)
+          }));
+
+          analyticsData.success = true;
+          analyticsData.duration = Date.now() - startTime;
+          await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
+          return { ...cachedResult, stages: localizedStages, fromCache: true };
+        } else {
+          logger.info(`[MultiUniverse] Cache expired at ${new Date(cacheExpireTime).toISOString()}`);
+        }
       }
       logger.info(`[MultiUniverse] No valid cache found`);
 
@@ -461,9 +490,10 @@ exports.simulateMultiUniverse = onCall(
             analyticsData.failedStage = stage.id;
           }
 
+          const errorStageLabelLocalized = getLocalizedStageLabel(stage.id, userLanguage);
           stages.push({
             stageId: stage.id,
-            stageLabel: stage.stageLabel,
+            stageLabel: errorStageLabelLocalized,
             order: stage.order,
             error: e.message,
             approaches: [],
@@ -504,23 +534,57 @@ exports.simulateMultiUniverse = onCall(
         keyInsights: insights,
         matchName,
         matchId,
-        generatedAt: Date.now(),
-        cacheExpire: Date.now() + (cacheMinutes * 60 * 1000), // Convert minutes to ms
+        userLanguage, // Store language used for this generation
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(), // Server timestamp
+        // Note: cacheExpire is added during cache write step with Firestore Timestamp
       };
 
-      // Step 8a: Cache for 6 months (only if we have valid results AND decent score)
-      // Don't cache if:
-      // 1. All stages failed (successfulStages.length === 0) — already checked at Step 5
-      // 2. All scores are < 5 (very poor compatibility) — too low quality to cache
-      const hasDecentScore = successfulStages.some(s => (s.avgReactionScore || 0) >= 5);
+      // VALIDATION: Ensure result is complete before caching
+      if (!result.stages || result.stages.length === 0) {
+        logger.error(`[MultiUniverse] Validation failed: no stages in result`);
+        analyticsData.errorReason = 'invalid_result';
+        await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
+        throw new HttpsError('internal', 'Generated result is incomplete. Please try again.');
+      }
+      logger.info(`[MultiUniverse] Result validated: ${result.stages.length} stages, score=${score}`);
 
-      if (hasDecentScore) {
-        await db.collection('users').doc(userId)
-          .collection('multiUniverseCache').doc(cacheKey).set(result, { merge: true })
-          .catch(e => logger.warn('[MultiUniverse] Cache write failed:', e.message));
-        logger.info(`[MultiUniverse] Cached result (score=${score})`);
-      } else {
-        logger.info('[MultiUniverse] Not caching: all scores < 5 (low quality result)');
+      // Step 8a: Cache ALWAYS for 6 months (robust persistence to Firebase)
+      // We cache ALL successful simulations, regardless of score, because:
+      // 1. The simulation is expensive (Gemini calls, 5 stages)
+      // 2. Users should see consistent results when they revisit
+      // 3. Low scores are still valid feedback
+      // CRITICAL: Use Firestore Timestamps for cross-platform consistency
+      const cacheData = {
+        ...result,
+        cacheExpire: admin.firestore.Timestamp.fromDate(
+          new Date(Date.now() + (cacheMinutes * 60 * 1000))
+        ), // Firestore native timestamp
+        cachedAt: admin.firestore.FieldValue.serverTimestamp(),
+        isSoloMode,
+      };
+
+      // ROBUST PERSISTENCE with retry logic (up to 3 attempts)
+      let cacheWriteSuccess = false;
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await db.collection('users').doc(userId)
+            .collection('multiUniverseCache').doc(cacheKey).set(cacheData, { merge: true });
+          cacheWriteSuccess = true;
+          logger.info(`[MultiUniverse] ✓ Cached result on attempt ${attempt} (score=${score})`);
+          break;
+        } catch (e) {
+          lastError = e;
+          logger.warn(`[MultiUniverse] Cache write attempt ${attempt}/3 failed: ${e.message}`);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // Backoff: 100ms, 200ms
+          }
+        }
+      }
+
+      if (!cacheWriteSuccess) {
+        logger.error(`[MultiUniverse] FAILED to cache result after 3 attempts: ${lastError?.message}`);
+        // Still return result to user, but they won't benefit from cache next time
       }
 
       // Step 8: DECREMENT UNIFIED coachMessagesRemaining (only after successful generation)
@@ -585,9 +649,9 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         situation,
         situationType: 'other',
         matchName: 'Your Match',
-        approaches: generateApproachesFallback(),
+        approaches: generateApproachesFallback(userLanguage),
         bestApproachId: '1',
-        coachTip: 'Communication is key in this stage.',
+        coachTip: getLocalizedCoachTip('communication_foundation', userLanguage),
         psychInsights: 'Focus on authenticity and openness.',
         tokens: 0,
       };
@@ -617,7 +681,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       matchName: 'Your Match',
       approaches: approachesWithScores,
       bestApproachId: approachesWithScores[0]?.id || '1',
-      coachTip: 'Each approach showcases different emotional strengths in this stage.',
+      coachTip: getLocalizedCoachTip('approach_variety', userLanguage),
       psychInsights: 'The variety tests compatibility across communication styles.',
       tokens: approaches.length * 150, // rough estimate
     };
@@ -631,9 +695,9 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       situation,
       situationType: 'other',
       matchName: 'Your Match',
-      approaches: generateApproachesFallback(),
+      approaches: generateApproachesFallback(userLanguage),
       bestApproachId: '1',
-      coachTip: 'Communication is important at this stage.',
+      coachTip: getLocalizedCoachTip('communication_importance', userLanguage),
       psychInsights: 'Genuine connection develops through authentic dialogue.',
       tokens: 0,
     };
@@ -693,7 +757,7 @@ Respond ONLY with JSON:
       logger.info(`[Gemini] Content generation succeeded`);
     } catch (timeoutErr) {
       logger.error('[Gemini] TIMEOUT after 25s:', timeoutErr.message);
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     const text = result?.response?.text();
@@ -701,7 +765,7 @@ Respond ONLY with JSON:
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       logger.error(`[Gemini] Empty response body`);
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     // Log response preview (first 200 chars)
@@ -751,13 +815,119 @@ Respond ONLY with JSON:
 /**
  * Fallback approaches when Gemini fails or returns invalid response
  */
-function generateApproachesFallback() {
-  return [
-    { id: '1', tone: 'direct', phrase: 'I wanted to talk with you about something. Can we chat?' },
-    { id: '2', tone: 'playful', phrase: 'Hey, got a moment? There\'s something I want to say.' },
-    { id: '3', tone: 'romantic_vulnerable', phrase: 'I\'ve been thinking about you, and I want to be honest about how I feel.' },
-    { id: '4', tone: 'grounded_honest', phrase: 'I care about us and want to understand each other better.' },
-  ];
+function generateApproachesFallback(userLang = 'en') {
+  const fallbackPhrases = {
+    en: [
+      { id: '1', tone: 'direct', phrase: 'I wanted to talk with you about something. Can we chat?' },
+      { id: '2', tone: 'playful', phrase: 'Hey, got a moment? There\'s something I want to say.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'I\'ve been thinking about you, and I want to be honest about how I feel.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'I care about us and want to understand each other better.' },
+    ],
+    es: [
+      { id: '1', tone: 'direct', phrase: 'Quería hablar contigo sobre algo. ¿Podemos conversar?' },
+      { id: '2', tone: 'playful', phrase: 'Oye, ¿tienes un momento? Hay algo que quiero decir.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'He estado pensando en ti, y quiero ser honesto sobre cómo me siento.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Me importas y quiero que nos entendamos mejor.' },
+    ],
+    pt: [
+      { id: '1', tone: 'direct', phrase: 'Queria falar com você sobre algo. Podemos conversar?' },
+      { id: '2', tone: 'playful', phrase: 'Oie, tem um momento? Tem algo que quero dizer.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'Estive pensando em você, e quero ser honesto sobre como me sinto.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Você me importa e quero que nos entendamos melhor.' },
+    ],
+    fr: [
+      { id: '1', tone: 'direct', phrase: 'Je voulais te parler de quelque chose. On peut discuter?' },
+      { id: '2', tone: 'playful', phrase: 'Hé, tu as une minute? Il y a quelque chose que je veux dire.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'Je pense à toi, et je veux être honnête sur mes sentiments.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Tu m\'importes et je veux qu\'on se comprenne mieux.' },
+    ],
+    de: [
+      { id: '1', tone: 'direct', phrase: 'Ich wollte mit dir über etwas sprechen. Können wir reden?' },
+      { id: '2', tone: 'playful', phrase: 'Hey, hast du einen Moment? Es gibt etwas, das ich dir sagen möchte.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'Ich habe viel an dir gedacht und möchte dir ehrlich sagen, wie ich mich fühle.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Mir liegt an uns und ich möchte, dass wir uns besser verstehen.' },
+    ],
+    ja: [
+      { id: '1', tone: 'direct', phrase: 'あなたと何かについて話したいのです。話してもいいですか？' },
+      { id: '2', tone: 'playful', phrase: 'ねえ、ちょっと時間ある？言いたいことがあるんだ。' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'ずっとあなたのことを考えていて、本当の気持ちを伝えたいんです。' },
+      { id: '4', tone: 'grounded_honest', phrase: 'あなたのことが大事で、もっと理解し合いたいんです。' },
+    ],
+    zh: [
+      { id: '1', tone: 'direct', phrase: '我想和你谈论一些事情。我们可以聊天吗？' },
+      { id: '2', tone: 'playful', phrase: '嘿，你有时间吗？我想说点东西。' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: '我一直在想你，我想坦诚地告诉你我的感受。' },
+      { id: '4', tone: 'grounded_honest', phrase: '你对我很重要，我想让我们更相互了解。' },
+    ],
+    ru: [
+      { id: '1', tone: 'direct', phrase: 'Я хотел бы с вами поговорить. Можем ли мы поговорить?' },
+      { id: '2', tone: 'playful', phrase: 'Эй, у тебя есть минутка? Я хочу что-то сказать.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'Я много думал о тебе и хочу честно рассказать о своих чувствах.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Ты мне важен и я хочу, чтобы мы лучше друг друга поняли.' },
+    ],
+    ar: [
+      { id: '1', tone: 'direct', phrase: 'أريد أن أتحدث معك عن شيء. هل يمكننا التحدث؟' },
+      { id: '2', tone: 'playful', phrase: 'هيه، هل لديك لحظة؟ هناك شيء أريد أن أقوله.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'كنت أفكر فيك، وأريد أن أكون صادقاً بشأن شعوري.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'أنت مهم بالنسبة لي وأريد أن نتفاهم أكثر.' },
+    ],
+    id: [
+      { id: '1', tone: 'direct', phrase: 'Saya ingin berbicara dengan Anda tentang sesuatu. Bisakah kita berbincang?' },
+      { id: '2', tone: 'playful', phrase: 'Hei, punya sebentar? Ada sesuatu yang ingin saya katakan.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: 'Saya selalu memikirkan Anda, dan saya ingin jujur tentang perasaan saya.' },
+      { id: '4', tone: 'grounded_honest', phrase: 'Anda penting bagi saya dan saya ingin kita saling memahami lebih baik.' },
+    ],
+  };
+
+  const lang = fallbackPhrases[userLang] ? userLang : 'en';
+  return fallbackPhrases[lang];
+}
+
+/**
+ * Get localized coach tip for fallback scenarios (10 languages)
+ */
+function getLocalizedCoachTip(tipKey, userLang = 'en') {
+  const tips = {
+    communication_foundation: {
+      en: 'Communication is key in this stage.',
+      es: 'La comunicación es clave en esta etapa.',
+      pt: 'A comunicação é fundamental nesta fase.',
+      fr: 'La communication est essentielle à ce stade.',
+      de: 'Kommunikation ist in dieser Phase entscheidend.',
+      ja: 'この段階では、コミュニケーションが重要です。',
+      zh: '在这个阶段，沟通是关键。',
+      ru: 'На этом этапе общение — это ключ.',
+      ar: 'التواصل مفتاح النجاح في هذه المرحلة.',
+      id: 'Komunikasi adalah kunci di tahap ini.',
+    },
+    approach_variety: {
+      en: 'Each approach showcases different emotional strengths in this stage.',
+      es: 'Cada enfoque muestra diferentes fortalezas emocionales en esta etapa.',
+      pt: 'Cada abordagem mostra diferentes forças emocionais nesta fase.',
+      fr: 'Chaque approche met en avant différentes forces émotionnelles à ce stade.',
+      de: 'Jeder Ansatz zeigt unterschiedliche emotionale Stärken in dieser Phase.',
+      ja: '各アプローチは、この段階でさまざまな感情的な強さを示しています。',
+      zh: '每种方法在这个阶段都展示了不同的情感优势。',
+      ru: 'Каждый подход демонстрирует различные эмоциональные сильные стороны на этом этапе.',
+      ar: 'كل نهج يعرض نقاط قوة عاطفية مختلفة في هذه المرحلة.',
+      id: 'Setiap pendekatan menunjukkan kekuatan emosional yang berbeda di tahap ini.',
+    },
+    communication_importance: {
+      en: 'Communication is important at this stage.',
+      es: 'La comunicación es importante en esta etapa.',
+      pt: 'A comunicação é importante nesta fase.',
+      fr: 'La communication est importante à ce stade.',
+      de: 'Kommunikation ist in dieser Phase wichtig.',
+      ja: 'この段階では、コミュニケーションが大切です。',
+      zh: '在这个阶段，沟通很重要。',
+      ru: 'На этом этапе общение важно.',
+      ar: 'التواصل مهم في هذه المرحلة.',
+      id: 'Komunikasi penting di tahap ini.',
+    },
+  };
+
+  const tipTexts = tips[tipKey] || tips.communication_foundation;
+  return tipTexts[userLang] || tipTexts.en;
 }
 
 /**
@@ -961,6 +1131,7 @@ function getCompatibilityLabel(score, language = 'en') {
 }
 
 function generateInsights(stages, label, language = 'en') {
+  const normalizedLang = normalizeLanguageCode(language);
   const insightLabels = {
     en: {
       overall: 'Overall:',
@@ -1034,7 +1205,7 @@ function generateInsights(stages, label, language = 'en') {
     },
   };
 
-  const labels = insightLabels[language] || insightLabels['en'];
+  const labels = insightLabels[normalizedLang] || insightLabels['en'];
   const insights = [];
   if (stages.length === 0) return [labels.noInsights];
 
