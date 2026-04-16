@@ -1613,6 +1613,43 @@ function calculatePlaceScore({rating = null, reviewCount = null, igMetrics = nul
   return Math.round(gRating * 0.30 + gReviews * 0.25 + igScore * 0.30 + freshness * 0.15);
 }
 
+/**
+ * Build queries + per-query type filters for a category.
+ * Strategy:
+ * - <=3 types: one query per type (comprehensive, no cross-contamination)
+ * - >3 types: generic type + no-filter text query + 2nd type (broad coverage)
+ * - No category: random diverse queries without type filter
+ *
+ * @returns {{ queries: string[], typesPerQuery: (string|null)[] }}
+ */
+function buildCategoryQueries(category, catQueryMap, config) {
+  const allCats = Object.keys(catQueryMap);
+
+  if (category && catQueryMap[category]) {
+    const categoryTypes = CATEGORY_TO_PLACES_TYPE[category] || [];
+    const textQuery = catQueryMap[category];
+
+    if (categoryTypes.length === 0) {
+      return {queries: [textQuery], typesPerQuery: [null]};
+    } else if (categoryTypes.length <= 3) {
+      return {
+        queries: categoryTypes.map(() => textQuery),
+        typesPerQuery: [...categoryTypes],
+      };
+    } else {
+      return {
+        queries: [textQuery, textQuery, textQuery],
+        typesPerQuery: [categoryTypes[0], null, categoryTypes[1]],
+      };
+    }
+  } else {
+    const queryCount = config.queriesWithoutCategory || 3;
+    const shuffled = [...allCats].sort(() => Math.random() - 0.5);
+    const queries = shuffled.slice(0, queryCount).map((k) => catQueryMap[k]);
+    return {queries, typesPerQuery: queries.map(() => null)};
+  }
+}
+
 // --- Exported helpers (used by coach.js and places.js) ---
 module.exports = {
   calculateMidpoint,
@@ -1635,4 +1672,5 @@ module.exports = {
   extractInstagramFromWebsite,
   findInstagramViaSearch,
   scrapeInstagramMetrics,
+  buildCategoryQueries,
 };

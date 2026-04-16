@@ -8,6 +8,7 @@ const {
   fuzzyMatchPlace, getPlacesSearchConfig, getCategoryQueryMap,
   googlePriceLevelToString, sanitizeInstagramHandle, sanitizeWebsiteUrl,
   placesTextSearch, transformPlaceToSuggestion, detectBrandType,
+  CATEGORY_TO_PLACES_TYPE, buildCategoryQueries,
 } = require('./places-helpers');
 
 exports.getDateSuggestions = onCall(
@@ -56,23 +57,9 @@ exports.getDateSuggestions = onCall(
         return result;
       }
 
-      // Multi-query parallel search (dynamic query counts from config)
-      let queries;
-      if (category && catQueryMap[category]) {
-        // Specific category: primary + supplementary (queriesWithCategory - 1)
-        const supplementaryCount = Math.max(0, config.queriesWithCategory - 1);
-        const allCats = Object.keys(catQueryMap).filter((c) => c !== category);
-        const shuffledCats = [...allCats].sort(() => Math.random() - 0.5);
-        queries = [catQueryMap[category], ...shuffledCats.slice(0, supplementaryCount).map((k) => catQueryMap[k])];
-        logger.info(`[getDateSuggestions] Category '${category}' found in catQueryMap. Using ${queries.length} queries`);
-      } else {
-        // No category: random diverse category queries
-        const queryCount = config.queriesWithoutCategory;
-        const allCats = Object.keys(catQueryMap);
-        const shuffled = [...allCats].sort(() => Math.random() - 0.5);
-        queries = shuffled.slice(0, queryCount).map((k) => catQueryMap[k]);
-        logger.info(`[getDateSuggestions] Category '${category}' NOT in catQueryMap. Using ${queries.length} random queries`);
-      }
+      // Multi-query parallel search with per-type filtering
+      const {queries, typesPerQuery} = buildCategoryQueries(category, catQueryMap, config);
+      logger.info(`[getDateSuggestions] ${queries.length} queries, types=${typesPerQuery.filter(Boolean).join(',') || 'none'}`);
 
       // Progressive radius strategy (same as Coach IA — configurable via RC places_search_config):
       // Initial (step=0): start small (15km), expand progressively until minTarget results
@@ -102,10 +89,14 @@ exports.getDateSuggestions = onCall(
           const radiusM = Math.min(maxR, stepRadius);
           lastRadiusUsed = radiusM;
           const results = await Promise.all(
-            queries.map((q) => placesTextSearch(q, midpoint, radiusM, lang, null, maxResults, config.useRestriction).catch((err) => {
-              logger.warn(`[getDateSuggestions] Query failed at ${radiusM}m: ${err.message}`);
-              return {places: []};
-            })),
+            queries.map((q, i) => {
+              const singleType = typesPerQuery[i];
+              const typeArg = singleType ? [singleType] : null;
+              return placesTextSearch(q, midpoint, radiusM, lang, null, maxResults, config.useRestriction, typeArg).catch((err) => {
+                logger.warn(`[getDateSuggestions] Query failed at ${radiusM}m: ${err.message}`);
+                return {places: []};
+              });
+            }),
           );
           const totalBeforeDedup = results.reduce((sum, r) => sum + (r.places?.length || 0), 0);
           const newPlaces = results.flatMap((r) => r.places).filter((p) => {
@@ -127,7 +118,11 @@ exports.getDateSuggestions = onCall(
         lastRadiusUsed = lmRadius;
 
         const results = await Promise.all(
-          queries.map((q) => placesTextSearch(q, midpoint, lmRadius, lang, null, maxResults, config.useRestriction).catch(() => ({places: []}))),
+          queries.map((q, i) => {
+            const singleType = typesPerQuery[i];
+            const typeArg = singleType ? [singleType] : null;
+            return placesTextSearch(q, midpoint, lmRadius, lang, null, maxResults, config.useRestriction, typeArg).catch(() => ({places: []}));
+          }),
         );
         const seen = new Set();
         unique = results.flatMap((r) => r.places).filter((p) => {

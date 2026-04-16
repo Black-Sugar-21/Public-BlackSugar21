@@ -7,6 +7,7 @@ const {
   haversineKm, estimateTravelMin, getCategoryQueryMap, getPlacesSearchConfig,
   placesTextSearch, transformPlaceToSuggestion, extractInstagramFromWebsite,
   scrapeInstagramMetrics, findInstagramViaSearch, CATEGORY_TO_PLACES_TYPE,
+  buildCategoryQueries,
 } = require('./places-helpers');
 
 /**
@@ -63,53 +64,30 @@ exports.getMultiUniversePlaces = onCall(
       // Set of placeIds to exclude (for "load more" dedup)
       const excludeSet = new Set(Array.isArray(excludePlaceIds) ? excludePlaceIds : []);
 
-      // Build queries based on searchQuery (free text) or category (predefined)
-      let queries;
-      let includedTypes = null;
+      // Build queries with per-type filtering (shared logic with getDateSuggestions)
       const trimmedSearch = (searchQuery || '').trim();
+      let queries, typesPerQuery;
 
       if (trimmedSearch.length >= 2) {
         // Free text search: user typed a place name (e.g., "baque", "starbucks")
         queries = [trimmedSearch];
+        typesPerQuery = [null];
         logger.info(`[getMultiUniversePlaces] Text search: '${trimmedSearch}'`);
-      } else if (category && catQueryMap[category]) {
-        // Google Places includedType accepts ONE type per request
-        // Strategy: send parallel queries with different types for comprehensive coverage
-        const categoryTypes = CATEGORY_TO_PLACES_TYPE[category] || [];
-        const textQuery = catQueryMap[category];
-
-        if (categoryTypes.length <= 3) {
-          // Few types (cafe=2, night_club=1, aquarium=1): one query per type
-          queries = categoryTypes.map(() => textQuery);
-          includedTypes = [...categoryTypes];
-        } else {
-          // Many types (restaurant=29, park=10): use generic type + text query without filter
-          // First query: generic type (e.g., 'restaurant') catches most venues
-          // Second query: NO type filter — text query alone finds niche venues
-          // Third query: second most common type for variety
-          queries = [textQuery, textQuery, textQuery];
-          includedTypes = [categoryTypes[0], null, categoryTypes[1]];
-        }
-        logger.info(`[getMultiUniversePlaces] Category '${category}' → ${queries.length} queries, types=${includedTypes.filter(Boolean).join(',') || 'mixed'}`);
       } else {
-        // No category: random diverse queries
-        const queryCount = config.queriesWithoutCategory;
-        const allCats = Object.keys(catQueryMap);
-        const shuffled = [...allCats].sort(() => Math.random() - 0.5);
-        queries = shuffled.slice(0, queryCount).map((k) => catQueryMap[k]);
-        logger.info(`[getMultiUniversePlaces] No category/search. Using ${queries.length} random queries`);
+        const built = buildCategoryQueries(category, catQueryMap, config);
+        queries = built.queries;
+        typesPerQuery = built.typesPerQuery;
+        logger.info(`[getMultiUniversePlaces] ${queries.length} queries, types=${typesPerQuery.filter(Boolean).join(',') || 'none'}`);
       }
 
       // Simple search at user's location with single radius
       const radiusM = Math.min(maxR, userRadius);
-      logger.info(`[getMultiUniversePlaces] Searching at radius=${radiusM / 1000}km from user location, types=${includedTypes ? includedTypes.join(',') : 'none'}`);
 
       const results = await Promise.all(
         queries.map((q, i) => {
-          // Per-query type filter: null means no filter (broad text search)
-          const singleType = Array.isArray(includedTypes) ? includedTypes[i] : null;
-          const typeForQuery = singleType ? [singleType] : null;
-          return placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, typeForQuery).catch((err) => {
+          const singleType = typesPerQuery[i];
+          const typeArg = singleType ? [singleType] : null;
+          return placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, typeArg).catch((err) => {
             logger.warn(`[getMultiUniversePlaces] Query failed: ${err.message}`);
             return {places: []};
           });
