@@ -73,14 +73,18 @@ exports.getMultiUniversePlaces = onCall(
         queries = [trimmedSearch];
         logger.info(`[getMultiUniversePlaces] Text search: '${trimmedSearch}'`);
       } else if (category && catQueryMap[category]) {
-        // Specific category: primary + supplementary queries
-        const supplementaryCount = Math.max(0, config.queriesWithCategory - 1);
-        const allCats = Object.keys(catQueryMap).filter((c) => c !== category);
-        const shuffledCats = [...allCats].sort(() => Math.random() - 0.5);
-        queries = [catQueryMap[category], ...shuffledCats.slice(0, supplementaryCount).map((k) => catQueryMap[k])];
-        // Use Google Places type filter for category accuracy
-        includedTypes = CATEGORY_TO_PLACES_TYPE[category] ? CATEGORY_TO_PLACES_TYPE[category].slice(0, 4) : null;
-        logger.info(`[getMultiUniversePlaces] Category '${category}' found. Using ${queries.length} queries`);
+        // One query per place type for comprehensive results
+        // Google Places includedType only accepts ONE type, so we send parallel queries
+        const categoryTypes = CATEGORY_TO_PLACES_TYPE[category] || [];
+        const textQuery = catQueryMap[category];
+        if (categoryTypes.length > 0) {
+          // Send one query per type (e.g., cafe → "cafe query" + "coffee_shop query")
+          queries = categoryTypes.slice(0, 3).map(() => textQuery);
+          includedTypes = categoryTypes.slice(0, 3); // Will be used per-query below
+        } else {
+          queries = [textQuery];
+        }
+        logger.info(`[getMultiUniversePlaces] Category '${category}' → ${categoryTypes.slice(0, 3).join(',')} (${queries.length} queries)`);
       } else {
         // No category: random diverse queries
         const queryCount = config.queriesWithoutCategory;
@@ -95,10 +99,14 @@ exports.getMultiUniversePlaces = onCall(
       logger.info(`[getMultiUniversePlaces] Searching at radius=${radiusM / 1000}km from user location, types=${includedTypes ? includedTypes.join(',') : 'none'}`);
 
       const results = await Promise.all(
-        queries.map((q) => placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, includedTypes).catch((err) => {
-          logger.warn(`[getMultiUniversePlaces] Query failed: ${err.message}`);
-          return {places: []};
-        })),
+        queries.map((q, i) => {
+          // Per-query type filter: each query gets its own type from the array
+          const typeForQuery = Array.isArray(includedTypes) ? [includedTypes[i]] : includedTypes;
+          return placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, typeForQuery).catch((err) => {
+            logger.warn(`[getMultiUniversePlaces] Query failed: ${err.message}`);
+            return {places: []};
+          });
+        }),
       );
 
       const totalBeforeDedup = results.reduce((sum, r) => sum + (r.places?.length || 0), 0);
