@@ -1068,16 +1068,16 @@ exports.dateCoachChat = onCall(
       if (matchId && !loadMoreActivities && !loadMoreSuggestions &&
           (SITUATION_TRIGGERS.some(r => r.test(message)) || semanticSituationMatch)) {
         const situationMsg = {
-          en: "I can rehearse this situation with you. Want me to simulate 4 approaches and show you how your match might respond?",
-          es: 'Puedo ensayar esta situación contigo. ¿Quieres que simule 4 enfoques y te muestre cómo podría responder tu match?',
-          pt: 'Posso ensaiar essa situação com você. Quer que eu simule 4 abordagens e mostre como seu match poderia reagir?',
-          fr: "Je peux répéter cette situation avec toi. Tu veux que je simule 4 approches et te montre comment ton match pourrait réagir ?",
-          de: 'Ich kann diese Situation mit dir proben. Soll ich 4 Ansätze simulieren und dir zeigen, wie dein Match reagieren könnte?',
-          ja: 'この状況を一緒にリハーサルできます。4つのアプローチをシミュレートして、相手の反応を見せましょうか？',
-          zh: '我可以和你一起演练这个情境。要不要我模拟4种方式，看看你的match会如何回应？',
-          ru: 'Я могу отрепетировать эту ситуацию с тобой. Хочешь, я смоделирую 4 подхода и покажу, как твой match может отреагировать?',
-          ar: 'يمكنني التدرب على هذا الموقف معك. هل تريد أن أحاكي 4 طرق وأريك كيف قد يرد شريكك؟',
-          id: 'Aku bisa melatih situasi ini bersamamu. Mau aku simulasikan 4 pendekatan dan tunjukkan bagaimana match-mu mungkin merespons?',
+          en: "Want to practice what to say? I'll show you 4 ways to say it (direct, playful, romantic, honest) and how your match might react to each one.",
+          es: '¿Quieres practicar qué decir? Te muestro 4 formas de decirlo (directa, juguetona, romántica, honesta) y cómo podría reaccionar tu match a cada una.',
+          pt: 'Quer praticar o que dizer? Te mostro 4 formas de falar (direta, brincalhona, romântica, honesta) e como seu match pode reagir a cada uma.',
+          fr: "Tu veux t'entraîner à quoi dire ? Je te montre 4 façons de le dire (directe, joueuse, romantique, honnête) et comment ton match pourrait réagir.",
+          de: 'Willst du üben, was du sagen kannst? Ich zeige dir 4 Arten es zu sagen (direkt, verspielt, romantisch, ehrlich) und wie dein Match reagieren könnte.',
+          ja: '何を言うか練習したいですか？4つの伝え方（直接的・遊び心・ロマンチック・誠実）と、相手がどう反応するか見せます。',
+          zh: '想练习怎么说吗？我给你展示4种表达方式（直接、俏皮、浪漫、真诚），以及你的match可能如何回应。',
+          ru: 'Хочешь потренировать, что сказать? Покажу 4 способа (прямой, игривый, романтичный, честный) и как твой match может отреагировать.',
+          ar: 'تريد تتدرب على ماذا تقول؟ أريك 4 طرق للتعبير (مباشرة، مرحة، رومانسية، صادقة) وكيف قد يرد شريكك على كل واحدة.',
+          id: 'Mau latihan apa yang mau kamu bilang? Aku tunjukkan 4 cara mengatakannya (langsung, seru, romantis, jujur) dan bagaimana match-mu mungkin merespons.',
         };
         return {
           success: true,
