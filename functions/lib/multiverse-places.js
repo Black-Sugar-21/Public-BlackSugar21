@@ -73,18 +73,24 @@ exports.getMultiUniversePlaces = onCall(
         queries = [trimmedSearch];
         logger.info(`[getMultiUniversePlaces] Text search: '${trimmedSearch}'`);
       } else if (category && catQueryMap[category]) {
-        // One query per place type for comprehensive results
-        // Google Places includedType only accepts ONE type, so we send parallel queries
+        // Google Places includedType accepts ONE type per request
+        // Strategy: send parallel queries with different types for comprehensive coverage
         const categoryTypes = CATEGORY_TO_PLACES_TYPE[category] || [];
         const textQuery = catQueryMap[category];
-        if (categoryTypes.length > 0) {
-          // Send one query per type (e.g., cafe → "cafe query" + "coffee_shop query")
-          queries = categoryTypes.slice(0, 3).map(() => textQuery);
-          includedTypes = categoryTypes.slice(0, 3); // Will be used per-query below
+
+        if (categoryTypes.length <= 3) {
+          // Few types (cafe=2, night_club=1, aquarium=1): one query per type
+          queries = categoryTypes.map(() => textQuery);
+          includedTypes = [...categoryTypes];
         } else {
-          queries = [textQuery];
+          // Many types (restaurant=29, park=10): use generic type + text query without filter
+          // First query: generic type (e.g., 'restaurant') catches most venues
+          // Second query: NO type filter — text query alone finds niche venues
+          // Third query: second most common type for variety
+          queries = [textQuery, textQuery, textQuery];
+          includedTypes = [categoryTypes[0], null, categoryTypes[1]];
         }
-        logger.info(`[getMultiUniversePlaces] Category '${category}' → ${categoryTypes.slice(0, 3).join(',')} (${queries.length} queries)`);
+        logger.info(`[getMultiUniversePlaces] Category '${category}' → ${queries.length} queries, types=${includedTypes.filter(Boolean).join(',') || 'mixed'}`);
       } else {
         // No category: random diverse queries
         const queryCount = config.queriesWithoutCategory;
@@ -100,8 +106,9 @@ exports.getMultiUniversePlaces = onCall(
 
       const results = await Promise.all(
         queries.map((q, i) => {
-          // Per-query type filter: each query gets its own type from the array
-          const typeForQuery = Array.isArray(includedTypes) ? [includedTypes[i]] : includedTypes;
+          // Per-query type filter: null means no filter (broad text search)
+          const singleType = Array.isArray(includedTypes) ? includedTypes[i] : null;
+          const typeForQuery = singleType ? [singleType] : null;
           return placesTextSearch(q, userLocation, radiusM, lang, null, maxResults, config.useRestriction, typeForQuery).catch((err) => {
             logger.warn(`[getMultiUniversePlaces] Query failed: ${err.message}`);
             return {places: []};
