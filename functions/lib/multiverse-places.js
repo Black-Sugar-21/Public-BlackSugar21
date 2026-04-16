@@ -1,10 +1,12 @@
 'use strict';
 const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
+const admin = require('firebase-admin');
 const { placesApiKey } = require('./shared');
 const {
   haversineKm, estimateTravelMin, getCategoryQueryMap, getPlacesSearchConfig,
-  placesTextSearch, transformPlaceToSuggestion,
+  placesTextSearch, transformPlaceToSuggestion, extractInstagramFromWebsite,
+  scrapeInstagramMetrics, findInstagramViaSearch,
 } = require('./places-helpers');
 
 /**
@@ -102,6 +104,61 @@ exports.getMultiUniversePlaces = onCall(
       if (blockedByFilter > 0) {
         logger.warn(`[getMultiUniversePlaces] ${blockedByFilter} places filtered by isInappropriateVenue`);
       }
+
+      // Extract and scrape Instagram handles for places (in parallel, non-blocking)
+      const db = admin.firestore();
+      const instagramTasks = suggestions.map(async (suggestion) => {
+        try {
+          if (!suggestion.id) return;
+
+          let handle = null;
+          let source = null;
+
+          // Step 1: Try extracting from website HTML
+          if (suggestion.website) {
+            handle = await extractInstagramFromWebsite(suggestion.website);
+            if (handle) source = 'website';
+          }
+
+          // Step 2: Fallback to Google Search Grounding if not found
+          if (!handle && suggestion.address) {
+            handle = await findInstagramViaSearch(suggestion.name, suggestion.address, apiKey);
+            if (handle) source = 'search';
+          }
+
+          if (handle) {
+            // Scrape Instagram metrics in background
+            const metrics = await scrapeInstagramMetrics(handle);
+
+            // Cache results in Firestore (non-blocking)
+            await db.collection('placeInstagram').doc(suggestion.id).set({
+              placeId: suggestion.id,
+              placeName: suggestion.name || '',
+              instagram: handle,
+              source: source || 'unknown',
+              verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+              websiteUrl: suggestion.website || null,
+              ...(metrics ? {
+                followers: metrics.followers,
+                posts: metrics.posts,
+                lastPostDate: metrics.lastPostDate || null,
+                isActive: metrics.isActive,
+                isPrivate: metrics.isPrivate || false,
+                igScore: metrics.igScore || 0,
+              } : {}),
+            }).catch((err) => {
+              logger.warn(`[getMultiUniversePlaces] Failed to cache Instagram for place ${suggestion.id}: ${err.message}`);
+            });
+          }
+        } catch (err) {
+          logger.warn(`[getMultiUniversePlaces] Instagram scraping failed for place ${suggestion.id}: ${err.message}`);
+        }
+      });
+
+      // Fire off Instagram scraping tasks in background (don't wait for completion)
+      Promise.allSettled(instagramTasks).catch((err) => {
+        logger.warn(`[getMultiUniversePlaces] Background Instagram scraping error: ${err.message}`);
+      });
 
       suggestions.sort((a, b) => b.score - a.score);
 

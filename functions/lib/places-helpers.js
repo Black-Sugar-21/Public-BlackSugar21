@@ -1629,4 +1629,7 @@ module.exports = {
   transformPlaceToSuggestion,
   CATEGORY_TO_PLACES_TYPE,
   detectBrandType,
+  extractInstagramFromWebsite,
+  findInstagramViaSearch,
+  scrapeInstagramMetrics,
 };
