@@ -24,7 +24,7 @@ exports.getMultiUniversePlaces = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userLocation, category, userLanguage, radius, loadCount, excludePlaceIds} = request.data || {};
+    const {userLocation, category, userLanguage, radius, loadCount, excludePlaceIds, matchId} = request.data || {};
 
     if (!userLocation || userLocation.latitude == null || userLocation.longitude == null) {
       throw new Error('userLocation with latitude and longitude is required');
@@ -98,9 +98,30 @@ exports.getMultiUniversePlaces = onCall(
 
       logger.info(`[getMultiUniversePlaces] Results: ${unique.length}/${totalBeforeDedup} unique places (category='${category || 'all'}')`);
 
-      // Transform to suggestions (user location is both currentUser and otherUser for scoring purposes)
+      // Transform to suggestions
       const userAsCurrentUser = {lat: userLocation.latitude, lng: userLocation.longitude, id: request.auth.uid};
-      const userAsOtherUser = {lat: userLocation.latitude, lng: userLocation.longitude, id: request.auth.uid};
+
+      // If matchId provided, fetch match user's location for travel time calculation
+      let userAsOtherUser = userAsCurrentUser; // Default: solo mode (same location)
+      if (matchId) {
+        try {
+          const matchDoc = await admin.firestore().collection('matches').doc(matchId).get();
+          if (matchDoc.exists) {
+            const usersMatched = matchDoc.data().usersMatched || [];
+            const otherUserId = usersMatched.find((uid) => uid !== request.auth.uid);
+            if (otherUserId) {
+              const otherUserDoc = await admin.firestore().collection('users').doc(otherUserId).get();
+              const otherData = otherUserDoc.data() || {};
+              if (otherData.latitude && otherData.longitude) {
+                userAsOtherUser = {lat: otherData.latitude, lng: otherData.longitude, id: otherUserId};
+                logger.info(`[getMultiUniversePlaces] Match mode: using partner location (${otherData.latitude.toFixed(2)},${otherData.longitude.toFixed(2)})`);
+              }
+            }
+          }
+        } catch (err) {
+          logger.warn(`[getMultiUniversePlaces] Failed to fetch match location: ${err.message}`);
+        }
+      }
 
       // Validate user coordinates are real (not 0,0 or null)
       if (userAsCurrentUser.lat === 0 && userAsCurrentUser.lng === 0) {
@@ -138,7 +159,6 @@ exports.getMultiUniversePlaces = onCall(
       }
 
       // Extract and scrape Instagram handles for places (in parallel, non-blocking)
-      const db = admin.firestore();
       const instagramTasks = suggestions.map(async (suggestion) => {
         try {
           if (!suggestion.id) return;
