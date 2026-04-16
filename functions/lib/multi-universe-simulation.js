@@ -227,6 +227,42 @@ function getLocalizedSoloName(language = 'en') {
   return SOLO_MODE_NAMES[normalizedLang] || SOLO_MODE_NAMES['en'];
 }
 
+/**
+ * Fast translation helper for cached phrases to a different language
+ * Uses Gemini's translation capability to convert phrases when cache language differs
+ */
+async function translatePhraseToLanguage(phrase, fromLang, toLang) {
+  try {
+    if (!phrase || phrase.length === 0) return phrase;
+    if (fromLang === toLang) return phrase;
+
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash-lite', // Use lite for fast translation
+      generationConfig: { maxOutputTokens: 150, temperature: 0.3 }
+    });
+
+    const langNames = { en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French',
+                        de: 'German', ja: 'Japanese', zh: 'Chinese', ru: 'Russian',
+                        ar: 'Arabic', id: 'Indonesian' };
+
+    const prompt = `Translate this dating coaching phrase from ${langNames[fromLang] || 'English'} to ${langNames[toLang] || 'English'}. Keep tone and meaning identical. Return ONLY the translated phrase, nothing else:\n\n"${phrase}"`;
+
+    const result = await model.generateContent(prompt);
+    const translation = result?.response?.text()?.trim();
+
+    if (translation && translation.length > 0) {
+      logger.info(`[Translate] Converted phrase from ${fromLang} to ${toLang}`);
+      return translation;
+    }
+
+    return phrase; // Fallback to original if translation fails
+  } catch (e) {
+    logger.warn(`[Translate] Failed to translate from ${fromLang} to ${toLang}:`, e.message);
+    return phrase; // Fallback to original on any error
+  }
+}
+
 // Remote Config defaults for multi-universe simulation
 const MULTIVERSE_CONFIG_DEFAULTS = {
   enabled: true,
@@ -359,12 +395,28 @@ exports.simulateMultiUniverse = onCall(
         if (cacheExpireTime > Date.now()) {
           logger.info(`[MultiUniverse] ✓ CACHE HIT (valid until ${new Date(cacheExpireTime).toISOString()})`);
           logger.info(`[MultiUniverse] Mode: ${cachedResult.isSoloMode ? 'SOLO' : `match=${matchId.substring(0, 8)}`}`);
+          logger.info(`[MultiUniverse] Cached language: ${cachedResult.userLanguage}, Current user language: ${userLanguage}`);
 
-          // Re-localize stage labels for current user language (cache might have different language)
-          const localizedStages = cachedResult.stages.map(stage => ({
-            ...stage,
-            stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage)
-          }));
+          // Re-localize stage labels + re-generate approaches if language differs
+          // (cache might have different language than current user)
+          const localizedStages = await Promise.all(
+            cachedResult.stages.map(async stage => {
+              const shouldTranslate = cachedResult.userLanguage !== userLanguage;
+              return {
+                ...stage,
+                stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage),
+                // If cached content is in different language, translate phrase in new language
+                // This handles the case where cache was generated in English but user is Spanish
+                bestApproachPhrase: (shouldTranslate && stage.bestApproachPhrase)
+                  ? await translatePhraseToLanguage(stage.bestApproachPhrase, cachedResult.userLanguage || 'en', userLanguage)
+                  : stage.bestApproachPhrase,
+                // Similarly for coach tips
+                coachTip: (shouldTranslate && stage.coachTip)
+                  ? await translatePhraseToLanguage(stage.coachTip, cachedResult.userLanguage || 'en', userLanguage)
+                  : stage.coachTip
+              };
+            })
+          );
 
           analyticsData.success = true;
           analyticsData.duration = Date.now() - startTime;
