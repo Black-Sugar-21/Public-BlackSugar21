@@ -18,6 +18,7 @@ const modules = [
   './lib/ai-services',
   './lib/coach',
   './lib/places',
+  './lib/multiverse-places',
   './lib/scheduled',
   './lib/wingperson',
   './lib/geohash',

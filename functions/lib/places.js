@@ -64,12 +64,14 @@ exports.getDateSuggestions = onCall(
         const allCats = Object.keys(catQueryMap).filter((c) => c !== category);
         const shuffledCats = [...allCats].sort(() => Math.random() - 0.5);
         queries = [catQueryMap[category], ...shuffledCats.slice(0, supplementaryCount).map((k) => catQueryMap[k])];
+        logger.info(`[getDateSuggestions] Category '${category}' found in catQueryMap. Using ${queries.length} queries`);
       } else {
         // No category: random diverse category queries
         const queryCount = config.queriesWithoutCategory;
         const allCats = Object.keys(catQueryMap);
         const shuffled = [...allCats].sort(() => Math.random() - 0.5);
         queries = shuffled.slice(0, queryCount).map((k) => catQueryMap[k]);
+        logger.info(`[getDateSuggestions] Category '${category}' NOT in catQueryMap. Using ${queries.length} random queries`);
       }
 
       // Progressive radius strategy (same as Coach IA — configurable via RC places_search_config):
@@ -100,15 +102,19 @@ exports.getDateSuggestions = onCall(
           const radiusM = Math.min(maxR, stepRadius);
           lastRadiusUsed = radiusM;
           const results = await Promise.all(
-            queries.map((q) => placesTextSearch(q, midpoint, radiusM, lang, null, maxResults, config.useRestriction).catch(() => ({places: []}))),
+            queries.map((q) => placesTextSearch(q, midpoint, radiusM, lang, null, maxResults, config.useRestriction).catch((err) => {
+              logger.warn(`[getDateSuggestions] Query failed at ${radiusM}m: ${err.message}`);
+              return {places: []};
+            })),
           );
+          const totalBeforeDedup = results.reduce((sum, r) => sum + (r.places?.length || 0), 0);
           const newPlaces = results.flatMap((r) => r.places).filter((p) => {
             if (!p.id || allUniqueIds.has(p.id)) return false;
             allUniqueIds.add(p.id);
             return true;
           });
           allRawPlaces = [...allRawPlaces, ...newPlaces];
-          logger.info(`[getDateSuggestions] Progressive: ${radiusM}m → ${newPlaces.length} new (total: ${allRawPlaces.length}, target: ${minTarget})`);
+          logger.info(`[getDateSuggestions] Progressive: ${radiusM}m → ${newPlaces.length}/${totalBeforeDedup} new (total: ${allRawPlaces.length}/${minTarget}, category='${category || 'all'}')`);
           if (allRawPlaces.length >= minTarget) break;
         }
         unique = allRawPlaces.slice(0, maxPlaces);
@@ -131,11 +137,16 @@ exports.getDateSuggestions = onCall(
         }).slice(0, maxPlaces);
       }
 
-      const suggestions = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config)).filter(Boolean);
+      const filtered = unique.map((p) => transformPlaceToSuggestion(p, currentUser, otherUser, apiKey, config));
+      const suggestions = filtered.filter(Boolean);
+      const blockedByFilter = filtered.length - suggestions.length;
+      if (blockedByFilter > 0) {
+        logger.warn(`[getDateSuggestions] ${blockedByFilter} places filtered by isInappropriateVenue (category='${category || 'all'}')`);
+      }
       suggestions.sort((a, b) => b.score - a.score);
 
       const hasMore = lastRadiusUsed < maxR;
-      logger.info(`[getDateSuggestions] Found ${suggestions.length} places (radius=${lastRadiusUsed / 1000}km, step=${step}, hasMore=${hasMore})`);
+      logger.info(`[getDateSuggestions] Raw: ${unique.length} places → ${suggestions.length} after filtering (radius=${lastRadiusUsed / 1000}km, step=${step}, category='${category || 'all'}', hasMore=${hasMore})`);
       return {success: true, suggestions, hasMore};
     } catch (err) {
       logger.error(`[getDateSuggestions] Error: ${err.message}`);
