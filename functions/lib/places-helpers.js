@@ -1509,7 +1509,7 @@ function isInappropriateVenue(place) {
   return false;
 }
 
-async function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig) {
+function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig, igCacheMap) {
   // Filter out inappropriate venues before transforming
   if (isInappropriateVenue(place)) return null;
 
@@ -1533,17 +1533,8 @@ async function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey,
     }));
   }
 
-  // Fetch cached Instagram data from Firestore
-  let instagramData = null;
-  try {
-    const db = admin.firestore();
-    const cachedInst = await db.collection('placeInstagram').doc(place.id).get();
-    if (cachedInst.exists) {
-      instagramData = cachedInst.data();
-    }
-  } catch (err) {
-    logger.warn(`[transformPlaceToSuggestion] Failed to fetch Instagram for ${place.id}: ${err.message}`);
-  }
+  // Use pre-fetched Instagram cache map (batch loaded by caller) or null
+  const instagramData = igCacheMap ? igCacheMap.get(place.id) : null;
 
   return {
     name: place.displayName?.text || '',

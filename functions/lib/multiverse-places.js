@@ -108,7 +108,29 @@ exports.getMultiUniversePlaces = onCall(
         return {success: false, error: 'Invalid user location', suggestions: []};
       }
 
-      const filtered = await Promise.all(unique.map((p) => transformPlaceToSuggestion(p, userAsCurrentUser, userAsOtherUser, apiKey, config)));
+      // Batch-fetch cached Instagram data (avoid N+1 Firestore reads)
+      const db = admin.firestore();
+      const placeIds = unique.map((p) => p.id).filter(Boolean);
+      const igCacheMap = new Map();
+      if (placeIds.length > 0) {
+        const batches = [];
+        for (let i = 0; i < placeIds.length; i += 30) {
+          batches.push(placeIds.slice(i, i + 30));
+        }
+        const batchResults = await Promise.all(
+          batches.map((batch) =>
+            db.collection('placeInstagram').where('placeId', 'in', batch).get().catch(() => ({docs: []})),
+          ),
+        );
+        for (const snap of batchResults) {
+          for (const doc of snap.docs) {
+            igCacheMap.set(doc.id, doc.data());
+          }
+        }
+        logger.info(`[getMultiUniversePlaces] Pre-fetched ${igCacheMap.size} cached Instagram entries`);
+      }
+
+      const filtered = await Promise.all(unique.map((p) => transformPlaceToSuggestion(p, userAsCurrentUser, userAsOtherUser, apiKey, config, igCacheMap)));
       const suggestions = filtered.filter(Boolean);
       const blockedByFilter = filtered.length - suggestions.length;
       if (blockedByFilter > 0) {
