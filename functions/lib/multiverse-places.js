@@ -98,7 +98,13 @@ exports.getMultiUniversePlaces = onCall(
       const userAsCurrentUser = {lat: userLocation.latitude, lng: userLocation.longitude, id: request.auth.uid};
       const userAsOtherUser = {lat: userLocation.latitude, lng: userLocation.longitude, id: request.auth.uid};
 
-      const filtered = unique.map((p) => transformPlaceToSuggestion(p, userAsCurrentUser, userAsOtherUser, apiKey, config));
+      // Validate user coordinates are real (not 0,0 or null)
+      if (userAsCurrentUser.lat === 0 && userAsCurrentUser.lng === 0) {
+        logger.warn(`[getMultiUniversePlaces] User location is (0,0) — invalid coordinates`);
+        return {success: false, error: 'Invalid user location', suggestions: []};
+      }
+
+      const filtered = await Promise.all(unique.map((p) => transformPlaceToSuggestion(p, userAsCurrentUser, userAsOtherUser, apiKey, config)));
       const suggestions = filtered.filter(Boolean);
       const blockedByFilter = filtered.length - suggestions.length;
       if (blockedByFilter > 0) {

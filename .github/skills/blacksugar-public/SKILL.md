@@ -1,9 +1,28 @@
 ---
 name: blacksugar-public-repo
-description: Repositorio público de BlackSugar21 - landing pages, políticas legales, sitio web informativo con Angular 21, Firebase Hosting, documentación corporativa multi-idioma (es/en/pt), scripts de administración y testing unificado. Usar cuando se trabaje con el sitio público, páginas legales, deployment a Firebase Hosting, o gestión de documentación corporativa.
+description: "Expert guide for BlackSugar21 Public Repository (Angular 21 + Firebase Hosting). Use WHENEVER working with: public-facing website, legal pages (terms/privacy/data deletion), multi-language content (ES/EN/PT), Firebase Hosting deployment, admin scripts, unified testing system, or data management for development. Covers standalone components, i18n patterns, Firebase rules, deployment workflows, and test data population."
 ---
 
 # BlackSugar21 - Public Repository Skill
+
+## Table of Contents
+- [Información del Proyecto](#información-del-proyecto)
+- [Propósito y Alcance](#propósito-y-alcance)
+- [Arquitectura del Proyecto](#arquitectura-del-proyecto)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Configuración del Proyecto](#configuración-del-proyecto)
+- [Páginas Públicas](#páginas-públicas)
+- [Internacionalización](#internacionalización)
+- [Scripts de Administración](#scripts-de-administración)
+- [Deployment a Firebase Hosting](#deployment-a-firebase-hosting)
+- [Patrones de Desarrollo](#patrones-de-desarrollo-angular)
+- [Testing](#testing)
+- [Performance Optimization](#performance-optimization)
+- [Troubleshooting](#troubleshooting)
+- [CI/CD con GitHub Actions](#cicd-con-github-actions)
+- [Security Best Practices](#security-best-practices)
+
+---
 
 ## Información del Proyecto
 
@@ -16,6 +35,14 @@ description: Repositorio público de BlackSugar21 - landing pages, políticas le
 **Estado**: Production Ready ✅
 
 ## Propósito y Alcance
+
+### 📌 Distinción entre Skills
+- **blacksugar-public** ← **Este skill**: Contenido público, páginas legales, rutas/navegación, landing pages
+- **blacksugar-web-development**: Desarrollo Angular, patrones, testing scripts, deployment workflows
+
+**Este skill** cubre páginas públicas (términos, privacidad, datos, seguridad), configuración de rutas públicas, internacionalización, y contenido estático. Para desarrollo, testing, y deployment, ver **blacksugar-web-development**.
+
+---
 
 Este repositorio contiene el sitio web público de BlackSugar21, enfocado en:
 - **Páginas legales y corporativas**: Términos, Privacidad, Eliminación de datos, Seguridad infantil

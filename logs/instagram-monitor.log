@@ -1,0 +1,45 @@
+🔄 Starting monitoring daemon (checking every 60 minutes)...
+
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+📊 INSTAGRAM MONITORING REPORT
+════════════════════════════════════════════════════════════════════════════════════════════════════
+⏰ Timestamp: 2026-04-16T15:53:12.159Z
+
+📈 COLLECTION OVERVIEW
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  Total Documents:        132
+  With Metrics:           0 (0% success rate ✅)
+  With Followers Data:    0
+  With Posts Data:        0
+  Active Accounts:        0 (posted within 180 days)
+  Private Accounts:       0
+
+🔍 SOURCE BREAKDOWN (Scraping Effectiveness)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  Website Extraction:     97 (73.5%) 🌐
+  Google Search:          35 (26.5%) 🔎
+  Unknown Source:         0 (0.0%)
+
+⚡ RECENT ACTIVITY (Growth Tracking)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  Added in Last Hour:     0 documents
+  Added in Last 24h:      0 documents
+  Added in Last 7 days:   67 documents
+
+👥 INSTAGRAM METRICS (Aggregated)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  No metrics available yet
+
+⭐ TOP 10 VENUES BY FOLLOWERS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  No venues with follower data yet
+
+🏆 TOP 10 VENUES BY IG SCORE
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  No venues with IG scores yet
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+✅ Report generated at 11:53:12 AM
+════════════════════════════════════════════════════════════════════════════════════════════════════
+

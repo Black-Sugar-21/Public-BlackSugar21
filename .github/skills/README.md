@@ -1,195 +1,220 @@
-# 🤖 Agent Skills - BlackSugar21 Web
+# 🤖 BlackSugar21 Agent Skills — Central Hub
 
-## ¿Qué son los Agent Skills?
+Master guide for all development skills in BlackSugar21. These skills provide AI agents (Claude, Copilot) with specialized knowledge for each platform and subsystem.
 
-Los **Agent Skills** son un estándar abierto creado por Anthropic que permite a los agentes de IA (como GitHub Copilot) acceder a instrucciones, scripts y recursos especializados para realizar tareas específicas del proyecto.
+---
 
-## 🎯 Beneficios
+## 📚 Available Skills (5 Core + 3 Bundled Guides)
 
-- **Especialización**: Copilot conoce el contexto específico del proyecto Web/Angular
-- **Reducción de repetición**: No necesitas explicar la arquitectura Angular cada vez
-- **Carga eficiente**: Solo se carga el contenido relevante cuando es necesario
-- **Portabilidad**: Funciona en VS Code, GitHub Copilot CLI, y Copilot coding agent
+### Core Platform Skills
 
-## 📂 Estructura
+| Skill | Purpose | Use When |
+|-------|---------|----------|
+| **[blacksugar-public](blacksugar-public/SKILL.md)** | Public website, legal pages, landing pages | Working with public content, terms/privacy, Firebase Hosting |
+| **[blacksugar-web-development](blacksugar-web/SKILL.md)** | Angular 21 web development | Building features, testing, deployment workflows |
+| **[blacksugar-android](blacksugar-android/SKILL.md)** | Kotlin/Compose development | Android app, Firestore, Cloud Functions, AppCheck |
+| **[blacksugar-ios](blacksugar-ios/SKILL.md)** | Swift/SwiftUI development | iOS app, Firestore, Cloud Functions, AppCheck |
+| **[blacksugar-testing-system](blacksugar-testing/SKILL.md)** | Unified test data management | Creating test data, debugging, cleanup |
+
+### Bundled Guides (2026-04-16)
+
+| Guide | Purpose | Read When |
+|-------|---------|-----------|
+| **[QUICKSTART_BY_PLATFORM.md](QUICKSTART_BY_PLATFORM.md)** | 5-minute setup for each platform | First time setup or quick refresh |
+| **[MODERN_FEATURES_GUIDE.md](MODERN_FEATURES_GUIDE.md)** | V2 Discovery, Hang the DJ, Coach IA + RAG | Understanding latest architecture |
+| **[CROSS_PLATFORM_ALIGNMENT.md](CROSS_PLATFORM_ALIGNMENT.md)** | iOS ↔ Android parity checklist | Before release or verifying alignment |
+
+---
+
+## 🚀 Quick Start (5 Minutes)
+
+### 1️⃣ Choose Your Platform
+- **Android?** → [Android QUICKSTART](QUICKSTART_BY_PLATFORM.md#-android-quickstart)
+- **iOS?** → [iOS QUICKSTART](QUICKSTART_BY_PLATFORM.md#-ios-quickstart)
+- **Web?** → [Web QUICKSTART](QUICKSTART_BY_PLATFORM.md#--web-angular-quickstart)
+- **Testing?** → [Testing QUICKSTART](QUICKSTART_BY_PLATFORM.md#-testing-system-quickstart)
+
+### 2️⃣ Create Test Data
+```bash
+cd /Users/daniel/IdeaProjects/Public-BlackSugar21/scripts
+node test-system-unified.js
+# Option 2: Create 5-10 matches
+# Option 5: Create 20-30 discovery profiles
+```
+
+### 3️⃣ Understand Modern Features
+- 🎬 **Multi-Universe Simulator** → [See guide](MODERN_FEATURES_GUIDE.md#1-multi-universe-simulator-hang-the-dj)
+- 🔍 **Discovery V2** → [See guide](MODERN_FEATURES_GUIDE.md#2-discovery-v2-nuevas-queries)
+- 🧠 **Coach IA + RAG** → [See guide](MODERN_FEATURES_GUIDE.md#3-coach-ia--rag-knowledge-base)
+
+---
+
+## 🗂️ Skill Structure
 
 ```
 .github/skills/
+├── README.md                           # THIS FILE
+├── QUICKSTART_BY_PLATFORM.md           # Quick setup guides (NEW)
+├── MODERN_FEATURES_GUIDE.md            # Latest architecture (NEW)
+├── CROSS_PLATFORM_ALIGNMENT.md         # iOS ↔ Android checklist (NEW)
+│
 ├── blacksugar-public/
-│   └── SKILL.md                        # Repositorio público y sitio web
+│   └── SKILL.md                        # Public website + legal pages
 ├── blacksugar-web/
-│   ├── SKILL.md                        # Guía principal Angular/Web
-│   ├── incident-runbook.md             # Manual de respuesta a incidentes
-│   └── examples/
-│       └── firebase-service-example.ts # Patrones de Firebase en Angular
+│   └── SKILL.md                        # Angular 21 web development
 ├── blacksugar-testing/
-│   └── SKILL.md                        # Sistema unificado de testing
+│   └── SKILL.md                        # Unified test system
 ├── blacksugar-ios/
-│   └── SKILL.md                        # App iOS Swift/SwiftUI – Firebase, Analytics, CF
+│   └── SKILL.md                        # iOS Swift/SwiftUI
 └── blacksugar-android/
-    └── SKILL.md                        # App Android Kotlin/Compose – Firebase, Analytics, CF
+    └── SKILL.md                        # Android Kotlin/Compose
 ```
 
-## 🎯 Skills Disponibles
+---
 
-### blacksugar-public-repo
-**Descripción**: Repositorio público de BlackSugar21  
-**Usar cuando**: Sitio web público, páginas legales, deployment a Firebase Hosting, documentación corporativa  
-**Incluye**:
-- Landing pages y políticas legales (Términos, Privacidad, Data Deletion, Safety)
-- Configuración Angular 21 standalone components
-- Sistema de internacionalización (es/en/pt)
-- Deployment a Firebase Hosting
-- Scripts de administración y testing
-
-### blacksugar-web-development
-**Descripción**: Desarrollo de aplicación web Angular 21  
-**Usar cuando**: Trabajo con frontend, Firebase web, deployment, o debugging web  
-**Incluye**:
-- Arquitectura Angular standalone components
-- Patrones RxJS y Firebase
-- Configuración de deployment
-- Resolución de incidentes
-
-### blacksugar-testing-system
-**Descripción**: Sistema maestro consolidado de pruebas  
-**Usar cuando**: Testing, población de datos, limpieza, debugging de matches  
-**Incluye**:
-- Script unificado test-system-unified.js
-- Gestión de matches y discovery profiles
-- Verificación y diagnóstico
-- Limpieza selectiva y soporte multi-usuario
-
-### blacksugar-ios
-**Descripción**: App iOS de BlackSugar21 (Swift/SwiftUI)  
-**Usar cuando**: Código Swift, Firestore iOS, Analytics iOS, Cloud Functions desde iOS, SwipeView, PhoneAuth Swift, Remote Config iOS o auditoría iOS ↔ Android  
-**Incluye**:
-- Bundle ID `com.blacksugar21.app`, archivos clave Swift
-- Todos los campos escritos en `createUserProfile()` y `updateProfile()`
-- Estructura de mensajes text/place/ephemeral (FirestoreRemoteDataSource)
-- 23 eventos Analytics con código Swift
-- 10 claves Remote Config con defaults
-- 33 Cloud Functions con payloads
-- Reglas críticas de alineación iOS ↔ Android
-- Comandos de búsqueda rápida para Swift
+## 📖 Skill Descriptions (How Claude Recognizes Them)
 
 ### blacksugar-android
-**Descripción**: App Android de BlackSugar21 (Kotlin/Jetpack Compose)  
-**Usar cuando**: Código Kotlin, Firestore Android, Analytics Android, Cloud Functions desde Android, HomeViewModel, PhoneAuthViewModel, SwipeUploadWorker, ActiveChatManager o auditoría iOS ↔ Android  
-**Incluye**:
-- Package `com.black.sugar21`, archivos clave Kotlin
-- Todos los campos escritos en `createUser()` y `updateProfile()`
-- `toData()` y `toPlaceData()` de FirestoreMessage
-- `pendingNotifications` en PushNotificationService
-- `activeChat` via ActiveChatManager
-- WorkManager retry (SwipeUploadWorker)
-- 23 eventos Analytics con métodos AnalyticsService
-- 10 claves Remote Config con defaults
-- 33 Cloud Functions
-- Reglas críticas de alineación iOS ↔ Android
-- Comandos de búsqueda rápida para Kotlin
+> Expert Kotlin/Jetpack Compose development for BlackSugar21 Android app. Use WHENEVER working with: Android codebase, Firestore operations, Firebase Analytics/Remote Config, phone authentication, swipes/stories/matches, Cloud Functions integration, AppCheck PlayIntegrity, or Android↔iOS homologation.
 
-## 🔄 Cómo funciona
+### blacksugar-ios
+> Expert Swift/SwiftUI development for BlackSugar21 iOS app. Use WHENEVER working with: iOS codebase, Firestore operations, Firebase Analytics/Remote Config, phone authentication, swipes/stories/matches, Cloud Functions integration, AppCheck DeviceCheck/AppAttest, or iOS↔Android homologation.
 
-### Nivel 1: Descubrimiento
-Copilot siempre conoce qué skills están disponibles leyendo el `name` y `description` del frontmatter YAML.
+### blacksugar-web-development
+> Expert Angular 21 web development for BlackSugar21 public/admin application. Use WHENEVER working with: public website, Angular standalone components, TypeScript/RxJS patterns, Firebase Hosting/Firestore operations, admin scripts, data population, testing workflows, or deployment issues.
 
-### Nivel 2: Carga de instrucciones
-Cuando tu solicitud coincide con la descripción del skill, Copilot carga el contenido completo de `SKILL.md`.
+### blacksugar-public
+> Expert guide for BlackSugar21 Public Repository (Angular 21 + Firebase Hosting). Use WHENEVER working with: public-facing website, legal pages (terms/privacy/data deletion), multi-language content (ES/EN/PT), Firebase Hosting deployment, admin scripts, unified testing system, or data management for development.
 
-### Nivel 3: Acceso a recursos
-Copilot puede acceder a archivos adicionales (ejemplos, scripts) solo cuando los necesita.
-
-## 🚀 Cómo usar
-
-### Activación automática
-No necesitas hacer nada especial. Cuando trabajas en el proyecto web y haces preguntas a Copilot, automáticamente detectará y usará este skill cuando sea relevante.
-
-### Ejemplos de uso
-
-**Pregunta**: "¿Cómo creo un servicio de Firebase en Angular?"
-- Copilot detecta que es relevante para el proyecto web
-- Carga el skill de web
-- Usa el ejemplo `firebase-service-example.ts`
-- Proporciona código con RxJS y Firebase modular SDK
-
-**Pregunta**: "El deployment a Firebase falla, ¿qué reviso?"
-- Copilot carga el `incident-runbook.md`
-- Proporciona pasos de debugging específicos
-- Sugiere comandos de Firebase CLI
-
-**Pregunta**: "¿Cómo uso los scripts de admin?"
-- Copilot conoce los scripts en `/scripts`
-- Explica populate-test-matches.js, cleanup, etc.
-- Proporciona ejemplos de uso
-
-## 📝 SKILL.md - Formato
-
-Cada `SKILL.md` tiene esta estructura:
-
-```markdown
----
-name: skill-name               # Identificador único (kebab-case)
-description: Descripción...     # Cuándo usar este skill (max 1024 chars)
----
-
-# Título del Skill
-
-Contenido con instrucciones, ejemplos, y referencias...
-```
-
-## 🛠️ Personalización
-
-Puedes modificar los archivos para:
-- Agregar nuevos ejemplos de componentes Angular
-- Actualizar procedimientos de deployment
-- Añadir nuevos scripts de administración
-- Incluir patrones de RxJS específicos
-
-## 🔐 Configuración requerida
-
-Para habilitar Agent Skills en VS Code:
-1. Abre configuración (⌘+,)
-2. Busca: `chat.useAgentSkills`
-3. Activa la opción
-
-## 🌐 Características específicas de Web
-
-Este skill cubre:
-- **Angular 21**: Standalone components, signals, modern patterns
-- **RxJS**: Observables, operators, state management
-- **Firebase**: Firestore modular SDK, Hosting, Functions
-- **TypeScript**: Tipos avanzados, interfaces, generics
-- **Admin Scripts**: Node.js utilities para gestión de datos
-- **Deployment**: Firebase Hosting, build optimization
-
-## 📚 Scripts disponibles
-
-El skill documenta todos los scripts en `/scripts`:
-- `populate-test-matches.js` - Crear datos de prueba
-- `cleanup-test-matches.js` - Limpiar datos de prueba
-- `check-matches.js` - Verificar integridad de matches
-- `clean-orphan-matches.js` - Eliminar matches huérfanos
-- `debug-matches-users.js` - Debug de usuarios y matches
-- `get-user-email.js` - Obtener email por user ID
-
-## 📚 Recursos adicionales
-
-- [Documentación oficial de Agent Skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)
-- [Especificación del estándar](https://agentskills.io/)
-- [Repositorio de skills comunitarios](https://github.com/github/awesome-copilot)
-- [Skills de referencia](https://github.com/anthropics/skills)
-
-## 🤝 Contribuir
-
-Para mejorar estos skills:
-1. Edita los archivos relevantes
-2. Prueba con Copilot en código TypeScript/Angular
-3. Documenta los cambios
-4. Comparte mejoras con el equipo
+### blacksugar-testing-system
+> Unified test data management system for BlackSugar21 (replaces 19+ legacy scripts). Use WHENEVER: populating test data, creating matches/discovery profiles, verifying match ordering, selective cleanup, multi-user testing, or debugging match/discovery issues.
 
 ---
 
-**Proyecto**: BlackSugar21 Web  
-**Última actualización**: Enero 2026  
-**Versión**: 1.0
+## 🔑 Key Concepts
+
+### Data Models
+- **User**: `orientation` (men/women/both), `userType` (ELITE/ELITE/PRIME), `g` (geohash), `fcmToken`
+- **Message**: `type` (text/place/ephemeral), `isEphemeral` (always include)
+- **Match**: `lastMessageSeq`, `lastMessageTimestamp`, sorted by timestamp DESC then seq DESC
+
+### Cloud Functions (33+)
+- **Discovery V2**: `getDiscoveryFeed` (9 filters, improved performance)
+- **Coach**: `dateCoachChat` (RAG-powered), `generateIcebreakers`, `generateSmartReply`
+- **Multi-Universe**: `runMultiUniverseSimulation` (5-stage carousel)
+- **Photos**: `analyzePhotoBeforeUpload`, `moderateProfileImage`
+- **Stories**: `createStory`, `deleteStory`, `markStoryAsViewed`
+
+### Remote Config (12+ keys)
+- `coach_daily_credits` (3 — shared pool)
+- `enable_safety_checkin`, `enable_screen_protection`
+- `reviewer_uid` (test account with special permissions)
+
+### Languages (10)
+English, Spanish, Portuguese, French, German, Japanese, Chinese, Russian, Arabic, Indonesian
+
+---
+
+## ⚠️ Critical Rules (All Platforms)
+
+1. **`"g"` NOT `"geohash"`** — Geohash field is exactly `"g"`
+2. **Orientation lowercase** — `"men"` / `"women"` / `"both"`
+3. **UserType enum** — Firestore: ELITE/ELITE/PRIME (UI: 💎 Elite / 🌟 Prime)
+4. **`isEphemeral: false`** — Include in ALL message types
+5. **`fcmToken` camelCase** — Exact field name
+6. **Remote Config interval** — 3600 seconds (1 hour)
+7. **Reviewer bypass** — Skip location updates, see test profiles
+
+---
+
+## 🎯 Common Tasks
+
+### "I need to build a feature"
+1. Identify platform(s): Android / iOS / Web / All three?
+2. Read skill: [Android](blacksugar-android/SKILL.md) / [iOS](blacksugar-ios/SKILL.md) / [Web](blacksugar-web/SKILL.md)
+3. Find files: Use QUICK REFERENCE section
+4. Reference code: Study similar features
+5. Test: Create test data, verify on device
+
+### "I found a bug"
+1. Identify platform
+2. Read relevant skill
+3. Search key files using QUICK REFERENCE commands
+4. Fix & verify with test data
+5. Check [CROSS_PLATFORM_ALIGNMENT.md](CROSS_PLATFORM_ALIGNMENT.md) if multi-platform
+
+### "I need to deploy"
+1. Android → [Deploy to Play Store](QUICKSTART_BY_PLATFORM.md#android-to-play-store)
+2. iOS → [Deploy to TestFlight](QUICKSTART_BY_PLATFORM.md#ios-to-testflight)
+3. Web → [Deploy to Firebase](QUICKSTART_BY_PLATFORM.md#web-to-firebase-hosting)
+
+### "I need test data"
+1. Read [Testing QUICKSTART](QUICKSTART_BY_PLATFORM.md#-testing-system-quickstart)
+2. Run: `node test-system-unified.js`
+3. Use menu options 2, 4, 5, or 7
+
+---
+
+## 📋 Improvement Status (2026-04-16)
+
+✅ **Fase 1: COMPLETE**
+- Fixed syntax errors in 3 SKILL.md files
+- Improved descriptions with better triggering
+- Added Table of Contents to large documents
+
+✅ **Fase 2: COMPLETE**
+- Created QUICK REFERENCE cards (Android, iOS, Testing)
+- Clarified skill separation (public vs web-development)
+- Created bundled guides (MODERN_FEATURES_GUIDE, CROSS_PLATFORM_ALIGNMENT, QUICKSTART)
+
+🟡 **Fase 3: IN PROGRESS**
+- [x] Created QUICKSTART_BY_PLATFORM.md
+- [x] Created MODERN_FEATURES_GUIDE.md
+- [x] Created CROSS_PLATFORM_ALIGNMENT.md
+- [ ] Update individual skills with references to modern features
+
+---
+
+## 🔍 Navigation Guide
+
+### By Platform
+- **Android** → `blacksugar-android/SKILL.md` + [Android QUICKSTART](QUICKSTART_BY_PLATFORM.md#-android-quickstart)
+- **iOS** → `blacksugar-ios/SKILL.md` + [iOS QUICKSTART](QUICKSTART_BY_PLATFORM.md#-ios-quickstart)
+- **Web** → `blacksugar-web/SKILL.md` + [Web QUICKSTART](QUICKSTART_BY_PLATFORM.md#--web-angular-quickstart)
+- **Testing** → `blacksugar-testing/SKILL.md` + [Testing QUICKSTART](QUICKSTART_BY_PLATFORM.md#-testing-system-quickstart)
+
+### By Feature
+- **Discovery** → `getDiscoveryFeed` in platform skill + [V2 Guide](MODERN_FEATURES_GUIDE.md#2-discovery-v2-nuevas-queries)
+- **Match List** → See data models in [MODERN_FEATURES_GUIDE.md](MODERN_FEATURES_GUIDE.md)
+- **Coach IA** → See [Coach + RAG Guide](MODERN_FEATURES_GUIDE.md#3-coach-ia--rag-knowledge-base)
+- **Multi-Universe** → See [Hang the DJ Guide](MODERN_FEATURES_GUIDE.md#1-multi-universe-simulator-hang-the-dj)
+- **Photos** → See `moderateProfileImage` in platform skills
+- **Cross-platform issues** → [CROSS_PLATFORM_ALIGNMENT.md](CROSS_PLATFORM_ALIGNMENT.md)
+
+---
+
+## 📞 Support & Resources
+
+- **For structure questions** → Read the relevant SKILL.md
+- **For quick setup** → Check QUICKSTART_BY_PLATFORM.md
+- **For modern features** → See MODERN_FEATURES_GUIDE.md
+- **For cross-platform issues** → Use CROSS_PLATFORM_ALIGNMENT.md
+- **For code patterns** → Use command snippets in QUICK REFERENCE sections
+
+---
+
+## 🤝 Contributing to Skills
+
+To improve a skill:
+1. Edit the SKILL.md file in the relevant directory
+2. Update QUICK REFERENCE if needed
+3. Test documentation by following the guides
+4. Commit: `docs(skill): description of change`
+
+---
+
+**Status**: Production Ready ✅  
+**Last Updated**: 2026-04-16  
+**Coverage**: 5 core skills + 3 bundled guides  
+**Platforms**: Android, iOS, Web, Testing, Cross-platform  
+**Languages**: 10 (EN, ES, PT, FR, DE, JA, ZH, RU, AR, ID)

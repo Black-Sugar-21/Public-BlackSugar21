@@ -1,12 +1,39 @@
 ---
 name: blacksugar-web-development
-description: Comprehensive development guide for BlackSugar21 Web application. Covers Angular 21 standalone components, TypeScript, Firebase Hosting/Firestore, RxJS patterns, admin scripts for data management, and deployment workflows. Use when working with Angular web app, Firebase admin operations, or debugging deployment issues.
+description: "Expert Angular 21 web development for BlackSugar21 public/admin application. Use WHENEVER working with: public website, Angular standalone components, TypeScript/RxJS patterns, Firebase Hosting/Firestore operations, admin scripts, data population, testing workflows, or deployment issues. Covers Firebase Auth integration, Firestore security rules, component patterns, test data management scripts, and production deployment via GitHub Actions."
 ---
 
 # BlackSugar21 Web Application Development Skill
 
+## Table of Contents
+- [Overview](#overview)
+- [Project Context](#project-context)
+- [Project Structure](#project-structure)
+- [Important Configuration Files](#important-configuration-files)
+- [Test Data Management Scripts](#test-data-management-scripts)
+- [Common Development Commands](#common-development-commands)
+- [Build & Deployment](#build--deployment)
+- [Angular Best Practices](#angular-best-practices)
+- [Common Issues & Solutions](#common-issues--solutions)
+- [Testing](#testing)
+- [Scripts Documentation](#scripts-documentation)
+- [Environment Configuration](#environment-configuration)
+- [Performance Optimization](#performance-optimization)
+- [Git Workflow](#git-workflow)
+- [Monitoring & Analytics](#monitoring--analytics)
+- [Deployment Checklist](#deployment-checklist)
+- [Support & Resources](#support--resources)
+
+---
+
 ## Overview
 BlackSugar21 es la aplicación web pública/admin con Angular y Firebase. Esta skill proporciona guía completa para trabajar con el proyecto web.
+
+### 📌 Distinción entre Skills
+- **blacksugar-public**: Páginas públicas (términos, privacidad, eliminación), rutas públicas, contenido multi-idioma
+- **blacksugar-web-development**: Desarrollo Angular, patrones de componentes, Firebase operaciones, testing, deployment
+
+**Este skill** cubre desarrollo, workflows, testing scripts, y deployment. Para contenido de páginas públicas, ver **blacksugar-public**.
 
 ## Project Context
 

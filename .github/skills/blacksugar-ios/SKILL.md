@@ -1,10 +1,46 @@
-````skill
 ---
 name: blacksugar-ios
-description: App iOS de BlackSugar21 (Swift/SwiftUI). Usar cuando se trabaje con el código iOS, Firestore datasource, Firebase Analytics, Remote Config, autenticación por teléfono, mensajes efímeros, swipes, stories, Cloud Functions desde iOS, AppCheck, o auditoría iOS ↔ Android.
+description: "Expert Swift/SwiftUI development for BlackSugar21 iOS app. Use WHENEVER working with: iOS codebase, Firestore operations (FirestoreRemoteDataSource), Firebase Analytics/Remote Config, phone authentication, swipes/stories/matches, Cloud Functions integration, AppCheck DeviceCheck/AppAttest, ephemeral messages, or iOS↔Android homologation. Covers data persistence, SwiftUI patterns, test data management, performance optimization, and Combine reactive patterns for dating app use cases."
 ---
 
 # BlackSugar21 — iOS App Skill
+
+## ⚡ QUICK REFERENCE
+
+| Tarea | Archivo | Responsabilidad |
+|---|---|---|
+| **Operaciones Firestore** | `data/datasource/FirestoreRemoteDataSource.swift` | CRUD completo, auth, queries |
+| **Modelo Firestore** | `data/datasource/model/FirestoreUser.swift` | Codable + properties |
+| **Discovery** | `data/repository/ProfileCardRepository.swift` | Queries con geohash |
+| **Analytics** | `services/AnalyticsService.swift` | 23 eventos |
+| **Remote Config** | `services/RemoteConfigService.swift` | 10+ claves |
+| **Autenticación** | `ui/login/PhoneAuth/PhoneAuthViewModel.swift` | Phone auth + OTP |
+| **Chat activo** | `core/chat/ActiveChatManager.swift` | activeChat tracking |
+| **Cloud Functions** | Cualquier `httpsCallable()` | 33 CFs disponibles |
+
+### Comandos Rápidos
+```bash
+# Buscar campos Firestore
+grep -rn '"nombreCampo"' . --include="*.swift" | grep -v "//"
+
+# Listar CFs
+grep -rn 'httpsCallable' . --include="*.swift" | grep '"'
+
+# Ver eventos Analytics
+grep -rn 'logEvent' . --include="*.swift" | grep '"'
+
+# Compilar
+xcodebuild build -scheme black-sugar-21
+```
+
+### Valores Clave
+- **Orientation enum**: `"men"`, `"women"`, `"both"` (lowercase)
+- **Geohash field**: `"g"` (NO "geohash")
+- **Elite/Prime**: rawValue ELITE/ELITE/PRIME, UI: 💎 / 🌟
+- **Remote Config intervalo**: 3600 segundos
+- **Timestamps**: `.withFractionalSeconds` for ISO parsing
+
+---
 
 ## Información del Proyecto
 
@@ -312,4 +348,3 @@ grep -rn "httpsCallable" /Users/daniel/AndroidStudioProjects/iOS/black-sugar-21/
 # Ver eventos Analytics iOS
 grep -rn 'logEvent' /Users/daniel/AndroidStudioProjects/iOS/black-sugar-21/ --include="*.swift" | grep '"[a-z_]*"' | sed 's/.*"\([a-z_]*\)".*/\1/' | sort -u
 ```
-````

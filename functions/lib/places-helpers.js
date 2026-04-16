@@ -1509,7 +1509,7 @@ function isInappropriateVenue(place) {
   return false;
 }
 
-function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig) {
+async function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig) {
   // Filter out inappropriate venues before transforming
   if (isInappropriateVenue(place)) return null;
 
@@ -1533,6 +1533,18 @@ function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, place
     }));
   }
 
+  // Fetch cached Instagram data from Firestore
+  let instagramData = null;
+  try {
+    const db = admin.firestore();
+    const cachedInst = await db.collection('placeInstagram').doc(place.id).get();
+    if (cachedInst.exists) {
+      instagramData = cachedInst.data();
+    }
+  } catch (err) {
+    logger.warn(`[transformPlaceToSuggestion] Failed to fetch Instagram for ${place.id}: ${err.message}`);
+  }
+
   return {
     name: place.displayName?.text || '',
     address: place.formattedAddress || '',
@@ -1551,7 +1563,7 @@ function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, place
     isOpenNow: place.currentOpeningHours?.openNow ?? null,
     tiktok: null,
     instagram: null,
-    instagramHandle: null,
+    instagramHandle: instagramData?.instagram || null,
     category: place.primaryType || null,
     photos: photos,
     description: place.editorialSummary?.text || null,

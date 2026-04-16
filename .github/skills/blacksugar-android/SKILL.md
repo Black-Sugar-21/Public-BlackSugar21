@@ -1,10 +1,45 @@
-````skill
 ---
 name: blacksugar-android
-description: App Android de BlackSugar21 (Kotlin/Jetpack Compose). Usar cuando se trabaje con el código Android, Firestore UserServiceImpl/MessageServiceImpl, Firebase Analytics, Remote Config, autenticación por teléfono, SwipeUploadWorker, swipes, stories, Cloud Functions desde Android, AppCheck PlayIntegrity, o auditoría iOS ↔ Android.
+description: "Expert Kotlin/Jetpack Compose development for BlackSugar21 Android app. Use WHENEVER working with: Android codebase, Firestore operations (UserServiceImpl, MessageServiceImpl), Firebase Analytics/Remote Config, phone authentication, swipes/stories/matches, Cloud Functions integration, AppCheck PlayIntegrity, WorkManager/SwipeUploadWorker, or Android↔iOS homologation. Covers data persistence, UI patterns, test data management, and performance optimization for dating app use cases."
 ---
 
 # BlackSugar21 — Android App Skill
+
+## ⚡ QUICK REFERENCE
+
+| Tarea | Archivo | Líneas |
+|---|---|---|
+| **Operaciones Firestore** | `core/firebase/UserServiceImpl.kt` | CRUD, discovery, swipes |
+| **Mensajes** | `core/firebase/MessageServiceImpl.kt` | Chat, ephemeral, places |
+| **Analytics** | `core/analytics/AnalyticsService.kt` | 23 eventos |
+| **Remote Config** | `core/config/RemoteConfigManager.kt` | 10+ claves |
+| **Autenticación** | `auth/create/Phone/PhoneAuthViewModel.kt` | Phone auth + OTP |
+| **Swipes** | `core/worker/SwipeUploadWorker.kt` | Retry logic via WorkManager |
+| **Cloud Functions** | Cualquier `httpCallable()` | 33+ CFs disponibles |
+
+### Comandos Rápidos
+```bash
+# Buscar campos Firestore
+grep -rn '"nombreCampo"' app/src/main/java/ --include="*.kt"
+
+# Listar CFs
+grep -rn 'httpsCallable' app/src/main/java/ --include="*.kt" | grep '"'
+
+# Ver eventos Analytics
+grep -rn 'logEvent' app/src/main/java/ --include="*.kt" | grep '"'
+
+# Compilar
+./gradlew assembleDebug
+```
+
+### Valores Clave
+- **Orientation enum**: `men`, `women`, `both` (lowercase)
+- **Geohash field**: `"g"` (NO "geohash")
+- **Elite/Prime**: enum ELITE/ELITE/PRIME, UI: 💎 / 🌟
+- **Remote Config intervalo**: 3600 segundos
+- **Photo paths**: `users/{userId}/{filename}` (NO `profile_images/`)
+
+---
 
 ## Información del Proyecto
 
@@ -361,4 +396,3 @@ grep -rn 'logEvent' /Users/daniel/AndroidStudioProjects/BlackSugar212/ --include
 # Listar constantes FirestoreUserProperties
 grep -n "const val" /Users/daniel/AndroidStudioProjects/BlackSugar212/app/src/main/java/com/black/sugar21/core/firebase/model/FirestoreUser.kt
 ```
-````

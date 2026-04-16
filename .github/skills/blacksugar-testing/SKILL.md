@@ -1,12 +1,82 @@
 ---
 name: blacksugar-testing-system
-description: Sistema maestro consolidado de pruebas para BlackSugar21. Gestión completa de datos de prueba incluyendo matches, perfiles de discovery, verificación, limpieza selectiva, y soporte multi-usuario (Daniel/Rosita). Script unificado interactivo que reemplaza 19+ scripts legacy. Usar cuando se trabaje con testing, población de datos, limpieza, o debugging de matches.
+description: "Unified test data management system for BlackSugar21 (replaces 19+ legacy scripts). Use WHENEVER: populating test data, creating matches/discovery profiles, verifying match ordering, selective cleanup, multi-user testing (Daniel/Rosita), or debugging match/discovery issues. Single interactive Node.js CLI with match management, discovery profiles, verification, selective cleanup, and comprehensive troubleshooting. Essential for development, testing, and debugging all platforms."
 ---
 
 # BlackSugar21 Testing System - Comprehensive Skill
 
+## Table of Contents
+- [Overview](#overview)
+- [System Context](#system-context)
+- [Project Structure](#project-structure)
+- [Core System Architecture](#core-system-architecture)
+- [Data Types and Structures](#data-types-and-structures)
+- [Core Functions Reference](#core-functions-reference)
+- [Query Optimization Patterns](#query-optimization-patterns)
+- [Common Testing Workflows](#common-testing-workflows)
+- [Color Console System](#color-console-system)
+- [Test Data Naming Conventions](#test-data-naming-conventions)
+- [Error Handling Patterns](#error-handling-patterns)
+- [Performance Optimization Tips](#performance-optimization-tips)
+- [Troubleshooting Guide](#troubleshooting-guide)
+- [Testing Best Practices](#testing-best-practices)
+- [Integration with App Testing](#integration-with-app-testing)
+- [Firebase Admin SDK Best Practices](#firebase-admin-sdk-best-practices)
+- [Advanced Usage Patterns](#advanced-usage-patterns)
+- [Migration Notes](#migration-notes-legacy-scripts)
+- [Maintenance and Updates](#maintenance-and-updates)
+- [Quick Command Reference](#quick-command-reference)
+- [Support and Troubleshooting](#support-and-troubleshooting)
+
+---
+
 ## Overview
 Sistema unificado e interactivo de gestión de datos de prueba para BlackSugar21. Consolida todas las operaciones de testing en un único script maestro con menú categorizado, soporte multi-usuario, y limpieza granular.
+
+## ⚡ QUICK REFERENCE
+
+### Inicio Rápido
+```bash
+cd /Users/daniel/IdeaProjects/Public-BlackSugar21/scripts
+node test-system-unified.js
+```
+
+### Opciones del Menú
+| Opción | Acción | Usuarios |
+|--------|--------|----------|
+| **1** | Listar matches | Ambos |
+| **2** | Crear 1-10 matches | Ambos |
+| **3** | Enviar mensaje | Reordena matches |
+| **4** | Generar 3-10 escenario | Con conversaciones |
+| **5** | Crear 5-30 discovery | Para HomeView |
+| **6** | Verificar orden matches | Validar sequence |
+| **7** | Verificar sistema | Estadísticas |
+| **8** | Limpieza selectiva | Matches/Discovery |
+| **9** | Limpieza completa | TODO |
+| **10** | Cambiar usuario | Daniel/Rosita |
+
+### Test Users
+- **Daniel**: `sU8xLiwQWNXmbYdR63p1uO6TSm72` (hombre → ver mujeres)
+- **Rosita**: `DsDSK5xqEZZXAIKxtIKyBGntw8f2` (mujer → ver hombres)
+
+### Workflows Típicos
+```bash
+# Setup inicial
+node test-system-unified.js
+# Option 7 (verify) → Option 2 (create 5) → Option 5 (create 20)
+
+# Test reordering
+# Option 3 (send msg) → Watch in app → Option 6 (verify)
+
+# Multi-user testing
+# Option 10 (change user) → repeat setup
+```
+
+### Patrones Clave
+- **Email patterns**: `test_match_*@bstest.com`, `discovery_*@bstest-discovery.com`
+- **Firestore flags**: `isTest: true`, `isTestUser: true`, `isDiscoveryProfile: true`
+- **Timestamps**: Staggered automáticamente para orden natural
+- **Photos**: 5 photos per profile from randomuser.me
 
 ## System Context
 
