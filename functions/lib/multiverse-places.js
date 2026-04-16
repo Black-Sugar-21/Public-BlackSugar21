@@ -43,8 +43,8 @@ exports.getMultiUniversePlaces = onCall(
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       const lang = userLanguage || config.defaultLanguage || 'es';
 
-      // For multi-universe: use provided radius or default to 30km
-      const defaultRadius = 30000; // 30km for single-user exploration
+      // For multi-universe: use provided radius or default to 100km
+      const defaultRadius = 100000; // 100km for single-user exploration (larger radius to ensure results)
       const userRadius = radius || defaultRadius;
       const maxResults = config.perQueryResults;
       const maxPlaces = config.maxPlacesIntermediate;
