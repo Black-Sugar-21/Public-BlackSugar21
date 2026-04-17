@@ -130,11 +130,45 @@ exports.respondToDateCheckIn = onCall(
       // Also send a push notification to the user with emergency resources
       if (data.fcmToken) {
         try {
+          // Lookup user's language for localized safety message
+          let lang = 'en';
+          try {
+            const userDoc = await db.collection('users').doc(request.auth.uid).get();
+            if (userDoc.exists) {
+              lang = ((userDoc.data().deviceLanguage || 'en').split('-')[0].split('_')[0] || 'en').toLowerCase();
+            }
+          } catch (_) {}
+
+          const EMERGENCY_TITLE = {
+            en: 'Emergency resources',
+            es: 'Recursos de emergencia',
+            pt: 'Recursos de emergência',
+            fr: 'Ressources d\'urgence',
+            de: 'Notfall-Ressourcen',
+            ja: '緊急リソース',
+            zh: '紧急资源',
+            ru: 'Экстренные ресурсы',
+            ar: 'موارد الطوارئ',
+            id: 'Sumber daya darurat',
+          };
+          const EMERGENCY_BODY = {
+            en: 'Call your local emergency number if you need immediate help.',
+            es: 'Llama a tu número de emergencia local si necesitas ayuda inmediata.',
+            pt: 'Ligue para o seu número de emergência local se precisar de ajuda imediata.',
+            fr: 'Appelle ton numéro d\'urgence local si tu as besoin d\'aide immédiate.',
+            de: 'Ruf deine örtliche Notrufnummer an, wenn du sofort Hilfe brauchst.',
+            ja: '今すぐ助けが必要な場合は、地域の緊急番号に電話してください。',
+            zh: '如果你需要立即帮助，请拨打当地紧急电话。',
+            ru: 'Позвони по местному номеру экстренной помощи, если нужна срочная помощь.',
+            ar: 'اتصل برقم الطوارئ المحلي إذا كنت بحاجة إلى مساعدة فورية.',
+            id: 'Hubungi nomor darurat setempat jika kamu butuh bantuan segera.',
+          };
+
           await admin.messaging().send({
             token: data.fcmToken,
             notification: {
-              title: 'Emergency resources',
-              body: 'Call 911 or your local emergency number if you need immediate help.',
+              title: EMERGENCY_TITLE[lang] || EMERGENCY_TITLE.en,
+              body: EMERGENCY_BODY[lang] || EMERGENCY_BODY.en,
             },
             data: {type: 'safety_emergency', checkInId},
             android: {priority: 'high', notification: {channelId: 'safety_checkin_channel'}},

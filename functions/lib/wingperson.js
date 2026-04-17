@@ -380,17 +380,31 @@ exports.wingPersonAnalysis = onSchedule(
 
         if (!bestSignal) { noSignal++; continue; }
 
+        const userName = userData.name || 'User';
+        const lang = (userData.deviceLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+
+        // Localized default for match name (when name lookup fails)
+        const DEFAULT_MATCH_NAME = {
+          en: 'your match',
+          es: 'tu match',
+          pt: 'seu match',
+          fr: 'ton match',
+          de: 'dein Match',
+          ja: 'マッチ',
+          zh: '你的匹配',
+          ru: 'твой мэтч',
+          ar: 'تطابقك',
+          id: 'match-mu',
+        };
+
         // Get other user's name
-        let matchName = 'tu match';
+        let matchName = DEFAULT_MATCH_NAME[lang] || DEFAULT_MATCH_NAME.en;
         try {
           const otherDoc = await db.collection('users').doc(bestSignal.otherUserId).get();
           if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
         } catch (e) {
           logger.debug(`[Wingperson] otherUser fetch failed (using default name): ${e.message}`);
         }
-
-        const userName = userData.name || 'User';
-        const lang = (userData.deviceLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
 
         // Generate notification text
         const apiKey = process.env.GEMINI_API_KEY;

@@ -39,6 +39,19 @@ async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults
   if (!apiKey) return [];
 
   try {
+    // Ticketmaster locale map — 10 langs (silent fallback to en-us for unsupported)
+    const TM_LOCALE_MAP = {
+      en: 'en-us',
+      es: 'es',
+      pt: 'pt-br',
+      fr: 'fr-fr',
+      de: 'de-de',
+      ja: 'ja-jp',
+      zh: 'zh-cn',
+      ru: 'ru-ru',
+      ar: 'en-us', // Ticketmaster doesn't reliably support 'ar' — fallback
+      id: 'en-us', // Ticketmaster doesn't support 'id-id' — fallback
+    };
     const params = new URLSearchParams({
       apikey: apiKey,
       latlong: `${lat},${lng}`,
@@ -46,7 +59,7 @@ async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults
       unit: 'km',
       size: String(maxResults),
       sort: 'date,asc',
-      locale: lang === 'es' ? 'es' : lang === 'pt' ? 'pt-br' : lang === 'fr' ? 'fr-fr' : lang === 'de' ? 'de-de' : 'en-us',
+      locale: TM_LOCALE_MAP[lang] || 'en-us',
     });
 
     // Map internal categories to Ticketmaster classification

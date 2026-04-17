@@ -2100,10 +2100,22 @@ exports.generateDateBlueprint = onCall(
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
     const durationPreset = duration || 'standard'; // quick | standard | full
 
+    const SUGGESTED_DATE_PLAN_TITLE = {
+      en: 'Suggested date plan',
+      es: 'Plan de cita sugerido',
+      pt: 'Plano de encontro sugerido',
+      fr: 'Plan de rendez-vous suggéré',
+      de: 'Vorgeschlagener Date-Plan',
+      ja: 'おすすめデートプラン',
+      zh: '建议约会计划',
+      ru: 'Рекомендуемый план свидания',
+      ar: 'خطة موعد مقترحة',
+      id: 'Rencana kencan yang disarankan',
+    };
     const fallback = {
       success: true,
       blueprint: {
-        title: lang === 'es' ? 'Plan de cita sugerido' : 'Suggested date plan',
+        title: SUGGESTED_DATE_PLAN_TITLE[lang] || SUGGESTED_DATE_PLAN_TITLE.en,
         totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
         estimatedBudget: '$30-60',
         steps: [],
@@ -2229,7 +2241,22 @@ exports.generateDateBlueprint = onCall(
           const chunks = ragSnap.docs
             .map((d) => ({text: (d.data().text || '').substring(0, 500), similarity: 1 - (d.data()._distance ?? 1)}))
             .filter((d) => d.similarity >= 0.3);
-          if (chunks.length > 0) ragContext = '\n\nExpert dating advice (use this to structure the date):\n' + chunks.slice(0, 3).map((d) => `- [${d.category || 'general'}]: ${d.text}`).join('\n\n');
+          if (chunks.length > 0) {
+            const RAG_HEADER = {
+              en: 'Expert dating advice (use this to structure the date):',
+              es: 'Consejos expertos de citas (usa esto para estructurar la cita):',
+              pt: 'Conselhos de especialistas em encontros (use isto para estruturar o encontro):',
+              fr: 'Conseils d\'experts en rencontres (utilise ceci pour structurer le rendez-vous) :',
+              de: 'Experten-Dating-Tipps (nutze diese, um das Date zu strukturieren):',
+              ja: 'デートの専門家によるアドバイス（これを使ってデートを組み立ててください）：',
+              zh: '专家约会建议（用这些来安排约会）：',
+              ru: 'Экспертные советы по свиданиям (используй это, чтобы построить свидание):',
+              ar: 'نصائح من خبراء المواعدة (استخدم هذا لتنظيم الموعد):',
+              id: 'Saran kencan dari ahli (gunakan ini untuk menyusun kencan):',
+            };
+            const ragHeader = RAG_HEADER[lang] || RAG_HEADER.en;
+            ragContext = `\n\n${ragHeader}\n` + chunks.slice(0, 3).map((d) => `- [${d.category || 'general'}]: ${d.text}`).join('\n\n');
+          }
         }
       } catch (ragErr) {
         logger.info(`[DateBlueprint] RAG skipped: ${ragErr.message}`);
@@ -2331,8 +2358,20 @@ Return ONLY a JSON object:
         logger.info('[DateBlueprint] Building fallback plan from places data');
         const topPlaces = placeResults.slice(0, durationPreset === 'quick' ? 2 : 3);
         const baseHour = hour >= 18 ? 19 : hour >= 12 ? 14 : 10;
+        const FALLBACK_ICEBREAKER = {
+          en: 'What do you enjoy most on weekends?',
+          es: '¿Qué es lo que más te gusta hacer un fin de semana?',
+          pt: 'O que você mais gosta de fazer nos fins de semana?',
+          fr: 'Qu\'est-ce que tu aimes le plus faire le week-end ?',
+          de: 'Was machst du am liebsten am Wochenende?',
+          ja: '週末に一番好きなことは何ですか？',
+          zh: '你周末最喜欢做什么？',
+          ru: 'Что ты больше всего любишь делать по выходным?',
+          ar: 'ما أكثر ما تحب فعله في عطلة نهاية الأسبوع؟',
+          id: 'Apa yang paling kamu suka lakukan di akhir pekan?',
+        };
         parsed = {
-          title: lang === 'es' ? 'Plan de cita sugerido' : 'Suggested date plan',
+          title: SUGGESTED_DATE_PLAN_TITLE[lang] || SUGGESTED_DATE_PLAN_TITLE.en,
           totalDuration: durationPreset === 'quick' ? '1-2h' : durationPreset === 'full' ? '5h+' : '3-4h',
           estimatedBudget: '$25-50',
           steps: topPlaces.map((p, i) => ({
@@ -2346,7 +2385,7 @@ Return ONLY a JSON object:
             whyThisPlace: shared.length > 0 ? `Shared interest: ${shared[0]}` : '',
             travelTimeToNext: i < topPlaces.length - 1 ? '10 min' : '',
           })),
-          icebreaker: lang === 'es' ? '¿Qué es lo que más te gusta hacer un fin de semana?' : 'What do you enjoy most on weekends?',
+          icebreaker: FALLBACK_ICEBREAKER[lang] || FALLBACK_ICEBREAKER.en,
           dresscode: 'casual',
         };
       }
@@ -2556,8 +2595,80 @@ Rules:
 
           // Generate mini-blueprint: pre-event → event → post-event
           const hour = parseInt(topEvent.time) || 19;
+          const EVENT_NIGHT_TITLE = {
+            en: `${topEvent.category.charAt(0).toUpperCase() + topEvent.category.slice(1)} Night`,
+            es: `Noche de ${topEvent.category}`,
+            pt: `Noite de ${topEvent.category}`,
+            fr: `Soirée ${topEvent.category}`,
+            de: `${topEvent.category.charAt(0).toUpperCase() + topEvent.category.slice(1)}-Abend`,
+            ja: `${topEvent.category}の夜`,
+            zh: `${topEvent.category}之夜`,
+            ru: `Вечер ${topEvent.category}`,
+            ar: `ليلة ${topEvent.category}`,
+            id: `Malam ${topEvent.category}`,
+          };
+          const PRE_EVENT_ACTIVITY = {
+            en: 'Pre-event: coffee & chat',
+            es: 'Pre-evento: café y conversación',
+            pt: 'Pré-evento: café e conversa',
+            fr: 'Avant l\'événement : café et discussion',
+            de: 'Vor dem Event: Kaffee und Plaudern',
+            ja: 'イベント前：コーヒーとおしゃべり',
+            zh: '活动前：咖啡与聊天',
+            ru: 'Перед событием: кофе и беседа',
+            ar: 'قبل الحدث: قهوة ومحادثة',
+            id: 'Sebelum acara: kopi & mengobrol',
+          };
+          const PRE_EVENT_TIP = {
+            en: 'Arrive early to relax before the event',
+            es: 'Llega temprano para relajarse antes del evento',
+            pt: 'Chegue cedo para relaxar antes do evento',
+            fr: 'Arrive tôt pour te détendre avant l\'événement',
+            de: 'Früh ankommen, um vor dem Event zu entspannen',
+            ja: 'イベント前にリラックスできるよう早めに到着しよう',
+            zh: '早点到以便在活动前放松',
+            ru: 'Приходи пораньше, чтобы расслабиться перед событием',
+            ar: 'اصل مبكراً للاسترخاء قبل الحدث',
+            id: 'Datang lebih awal untuk bersantai sebelum acara',
+          };
+          const POST_EVENT_ACTIVITY = {
+            en: 'Post-event: dinner & debrief',
+            es: 'Post-evento: cena y reflexión',
+            pt: 'Pós-evento: jantar e reflexão',
+            fr: 'Après l\'événement : dîner et débrief',
+            de: 'Nach dem Event: Abendessen und Austausch',
+            ja: 'イベント後：ディナーと振り返り',
+            zh: '活动后：晚餐与回味',
+            ru: 'После события: ужин и обсуждение',
+            ar: 'بعد الحدث: عشاء ومناقشة',
+            id: 'Setelah acara: makan malam & berbincang',
+          };
+          const POST_EVENT_TIP = {
+            en: 'Discuss what you thought of the event',
+            es: 'Comenten qué les pareció el evento',
+            pt: 'Comentem o que acharam do evento',
+            fr: 'Partagez ce que vous avez pensé de l\'événement',
+            de: 'Besprecht, was euch am Event gefallen hat',
+            ja: 'イベントの感想を話し合おう',
+            zh: '讨论一下你们对活动的看法',
+            ru: 'Обсудите, что вам понравилось в событии',
+            ar: 'ناقشا ما أعجبكما في الحدث',
+            id: 'Diskusikan pendapat kalian tentang acara',
+          };
+          const EVENT_ICEBREAKER = {
+            en: `Have you been to a ${topEvent.category} event before?`,
+            es: `¿Habías ido a algo de ${topEvent.category} antes?`,
+            pt: `Você já tinha ido a um evento de ${topEvent.category} antes?`,
+            fr: `Tu étais déjà allé à un événement de ${topEvent.category} avant ?`,
+            de: `Warst du schon mal auf einem ${topEvent.category}-Event?`,
+            ja: `これまでに${topEvent.category}のイベントに行ったことはありますか？`,
+            zh: `你以前参加过${topEvent.category}类型的活动吗？`,
+            ru: `Ты раньше бывал на событиях ${topEvent.category}?`,
+            ar: `هل سبق لك حضور حدث ${topEvent.category} من قبل؟`,
+            id: `Pernah ke acara ${topEvent.category} sebelumnya?`,
+          };
           blueprint = {
-            title: lang === 'es' ? `Noche de ${topEvent.category}` : `${topEvent.category.charAt(0).toUpperCase() + topEvent.category.slice(1)} Night`,
+            title: EVENT_NIGHT_TITLE[lang] || EVENT_NIGHT_TITLE.en,
             totalDuration: '4-5h',
             estimatedBudget: topEvent.price !== 'TBA' && topEvent.price !== 'free' ? topEvent.price : '$30-60',
             featuredEvent: topEvent,
@@ -2566,10 +2677,10 @@ Rules:
                 order: 1,
                 time: `${Math.max(hour - 2, 12)}:00`,
                 duration: '1h',
-                activity: lang === 'es' ? 'Pre-evento: café y conversación' : 'Pre-event: coffee & chat',
+                activity: PRE_EVENT_ACTIVITY[lang] || PRE_EVENT_ACTIVITY.en,
                 placeName: nearbyPlaces[0].name || '',
                 place: nearbyPlaces[0] || null,
-                tip: lang === 'es' ? 'Llega temprano para relajarse antes del evento' : 'Arrive early to relax before the event',
+                tip: PRE_EVENT_TIP[lang] || PRE_EVENT_TIP.en,
                 isEvent: false,
               }] : []),
               {
@@ -2586,16 +2697,14 @@ Rules:
                 order: nearbyPlaces.length > 0 ? 3 : 2,
                 time: `${hour + 3}:00`,
                 duration: '1h',
-                activity: lang === 'es' ? 'Post-evento: cena y reflexión' : 'Post-event: dinner & debrief',
+                activity: POST_EVENT_ACTIVITY[lang] || POST_EVENT_ACTIVITY.en,
                 placeName: nearbyPlaces[1].name || '',
                 place: nearbyPlaces[1] || null,
-                tip: lang === 'es' ? 'Comenten qué les pareció el evento' : 'Discuss what you thought of the event',
+                tip: POST_EVENT_TIP[lang] || POST_EVENT_TIP.en,
                 isEvent: false,
               }] : []),
             ],
-            icebreaker: lang === 'es'
-              ? `¿Habías ido a algo de ${topEvent.category} antes?`
-              : `Have you been to a ${topEvent.category} event before?`,
+            icebreaker: EVENT_ICEBREAKER[lang] || EVENT_ICEBREAKER.en,
             dresscode: ['nightlife', 'theater', 'art'].includes(topEvent.category) ? 'smart casual' : 'casual',
           };
         } catch (bpErr) {

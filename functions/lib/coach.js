@@ -2753,7 +2753,20 @@ PLACE SEARCHES ARE NEVER OFF-TOPIC — any place/business/store query is dating-
 
 OFF-TOPIC HANDLING:
 Only classify as off-topic if ZERO connection to dating/relationships/places/self-improvement (e.g. "solve this equation", "write code", "who won the election").
-If off-topic: {"off_topic": true, "reply": "${offTopicMsg.replace(/"/g, '\\"')}", "suggestions": ["${lang === 'es' ? 'Mejora mi perfil' : 'Improve my profile'}", "${lang === 'es' ? 'Ideas para primera cita' : 'First date ideas'}", "${lang === 'es' ? 'Consejos de conversación' : 'Conversation tips'}"]}
+If off-topic: {"off_topic": true, "reply": "${offTopicMsg.replace(/"/g, '\\"')}", "suggestions": ${JSON.stringify((({
+  en: ['Improve my profile', 'First date ideas', 'Conversation tips'],
+  es: ['Mejora mi perfil', 'Ideas para primera cita', 'Consejos de conversación'],
+  pt: ['Melhorar meu perfil', 'Ideias para o primeiro encontro', 'Dicas de conversa'],
+  fr: ['Améliorer mon profil', 'Idées pour un premier rendez-vous', 'Conseils de conversation'],
+  de: ['Mein Profil verbessern', 'Ideen für das erste Date', 'Gesprächstipps'],
+  ja: ['プロフィールを改善する', '初デートのアイデア', '会話のコツ'],
+  zh: ['改进我的资料', '初次约会点子', '聊天技巧'],
+  ru: ['Улучшить профиль', 'Идеи для первого свидания', 'Советы по беседе'],
+  ar: ['تحسين ملفي الشخصي', 'أفكار للموعد الأول', 'نصائح المحادثة'],
+  id: ['Perbaiki profil saya', 'Ide kencan pertama', 'Tips obrolan'],
+})[lang] || ({
+  en: ['Improve my profile', 'First date ideas', 'Conversation tips'],
+}).en))}}
 
 EDGE CASES:
 
@@ -4518,27 +4531,47 @@ exports.triggerDateDebriefs = onSchedule(
         const usersMatched = data.usersMatched || [];
         const matchId = data.matchId;
 
+        // Localized default match name (used when other user name is unavailable)
+        const DEFAULT_MATCH_NAME = {
+          en: 'your match',
+          es: 'tu match',
+          pt: 'seu match',
+          fr: 'ton match',
+          de: 'dein Match',
+          ja: 'マッチ',
+          zh: '你的匹配',
+          ru: 'твой мэтч',
+          ar: 'تطابقك',
+          id: 'match-mu',
+        };
+
         // Get match name for each user
         for (const userId of usersMatched) {
           const otherUserId = usersMatched.find(u => u !== userId);
-          let matchName = 'tu match';
-          let lang = 'es';
+          let lang = 'en';
+          let otherName = null;
           try {
             const [userDoc, otherDoc] = await Promise.all([
               db.collection('users').doc(userId).get(),
               otherUserId ? db.collection('users').doc(otherUserId).get() : Promise.resolve({exists: false, data: () => ({})}),
             ]);
-            if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
-            if (userDoc.exists) lang = (userDoc.data().deviceLanguage || 'es').split('-')[0].split('_')[0].toLowerCase();
+            if (otherDoc.exists) otherName = otherDoc.data().name || null;
+            if (userDoc.exists) lang = (userDoc.data().deviceLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
           } catch (_) {}
+          const matchName = otherName || DEFAULT_MATCH_NAME[lang] || DEFAULT_MATCH_NAME.en;
 
           // Generate personalized debrief prompt
           const debriefMessages = {
-            es: `¡Hey! Ayer tenías un plan con ${matchName}. ¿Cómo te fue? Cuéntame todo 💫`,
             en: `Hey! You had a date plan with ${matchName} yesterday. How did it go? Tell me everything 💫`,
-            fr: `Hey ! Tu avais un plan avec ${matchName} hier. Comment ça s'est passé ? Raconte-moi 💫`,
+            es: `¡Hey! Ayer tenías un plan con ${matchName}. ¿Cómo te fue? Cuéntame todo 💫`,
+            pt: `Oi! Ontem você tinha um plano com ${matchName}. Como foi? Me conta tudo 💫`,
+            fr: `Hey ! Tu avais un plan avec ${matchName} hier. Comment ça s'est passé ? Raconte-moi tout 💫`,
             de: `Hey! Du hattest gestern ein Date mit ${matchName}. Wie war es? Erzähl mir alles 💫`,
-            pt: `Hey! Ontem você tinha um plano com ${matchName}. Como foi? Me conta tudo 💫`,
+            ja: `やあ！昨日${matchName}とのデートプランがあったね。どうだった？全部聞かせて 💫`,
+            zh: `嘿！你昨天和${matchName}有约会计划。怎么样？告诉我一切 💫`,
+            ru: `Привет! У тебя вчера был план со свиданием с ${matchName}. Как всё прошло? Расскажи всё 💫`,
+            ar: `مرحباً! كان لديك موعد مع ${matchName} أمس. كيف سار الأمر؟ أخبرني بكل شيء 💫`,
+            id: `Hei! Kemarin kamu ada rencana kencan dengan ${matchName}. Bagaimana? Ceritakan semuanya 💫`,
           };
           const debriefText = debriefMessages[lang] || debriefMessages.en;
 
@@ -4600,23 +4633,52 @@ exports.requestDateDebrief = onCall(
     const matchDoc = await db.collection('matches').doc(matchId).get();
     const usersMatched = matchDoc.data()?.usersMatched || [];
     const otherUserId = usersMatched.find(u => u !== userId);
-    let matchName = 'tu match';
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const lang = ((userDoc.data()?.deviceLanguage || 'en').split('-')[0]).toLowerCase();
+
+    // Localized default match name (used when other user name is unavailable)
+    const DEFAULT_MATCH_NAME = {
+      en: 'your match',
+      es: 'tu match',
+      pt: 'seu match',
+      fr: 'ton match',
+      de: 'dein Match',
+      ja: 'マッチ',
+      zh: '你的匹配',
+      ru: 'твой мэтч',
+      ar: 'تطابقك',
+      id: 'match-mu',
+    };
+    let matchName = DEFAULT_MATCH_NAME[lang] || DEFAULT_MATCH_NAME.en;
     if (otherUserId) {
       const otherDoc = await db.collection('users').doc(otherUserId).get();
       if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
     }
 
-    const userDoc = await db.collection('users').doc(userId).get();
-    const lang = ((userDoc.data()?.deviceLanguage || 'en').split('-')[0]).toLowerCase();
-
     const hasBp = !bpSnap.empty;
-    const messages = {
-      es: hasBp
-        ? `¿Cómo te fue en tu cita con ${matchName}? Cuéntame los detalles 💫`
-        : `¿Tuviste alguna cita con ${matchName} últimamente? Cuéntame cómo fue 💬`,
-      en: hasBp
-        ? `How did your date with ${matchName} go? Tell me the details 💫`
-        : `Did you go on a date with ${matchName} recently? Tell me how it went 💬`,
+    const messages = hasBp ? {
+      en: `How did your date with ${matchName} go? Tell me the details 💫`,
+      es: `¿Cómo te fue en tu cita con ${matchName}? Cuéntame los detalles 💫`,
+      pt: `Como foi seu encontro com ${matchName}? Me conta os detalhes 💫`,
+      fr: `Comment s'est passé ton rendez-vous avec ${matchName} ? Raconte-moi tout 💫`,
+      de: `Wie war dein Date mit ${matchName}? Erzähl mir die Details 💫`,
+      ja: `${matchName}とのデートはどうだった？詳しく教えて 💫`,
+      zh: `你和${matchName}的约会怎么样？告诉我细节吧 💫`,
+      ru: `Как прошло твоё свидание с ${matchName}? Расскажи подробности 💫`,
+      ar: `كيف كان موعدك مع ${matchName}؟ أخبرني بالتفاصيل 💫`,
+      id: `Bagaimana kencanmu dengan ${matchName}? Ceritakan detailnya 💫`,
+    } : {
+      en: `Did you go on a date with ${matchName} recently? Tell me how it went 💬`,
+      es: `¿Tuviste alguna cita con ${matchName} últimamente? Cuéntame cómo fue 💬`,
+      pt: `Você teve algum encontro com ${matchName} recentemente? Me conta como foi 💬`,
+      fr: `Tu as eu un rendez-vous avec ${matchName} récemment ? Raconte-moi 💬`,
+      de: `Hattest du kürzlich ein Date mit ${matchName}? Erzähl mir, wie es war 💬`,
+      ja: `最近${matchName}とデートした？どうだったか教えて 💬`,
+      zh: `你最近和${matchName}约过会吗？告诉我怎么样 💬`,
+      ru: `У тебя было свидание с ${matchName} недавно? Расскажи, как прошло 💬`,
+      ar: `هل خرجت في موعد مع ${matchName} مؤخراً؟ أخبرني كيف كان 💬`,
+      id: `Apakah kamu baru-baru ini kencan dengan ${matchName}? Ceritakan bagaimana 💬`,
     };
 
     const debriefText = messages[lang] || messages.en;
