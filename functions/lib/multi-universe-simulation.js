@@ -235,10 +235,14 @@ async function translatePhraseToLanguage(phrase, fromLang, toLang) {
     if (!phrase || phrase.length === 0) return phrase;
     if (fromLang === toLang) return phrase;
 
+    const cfg = (await getMultiUniverseConfig()).gemini;
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash-lite', // Use lite for fast translation
-      generationConfig: { maxOutputTokens: 150, temperature: 0.3 }
+      generationConfig: {
+        maxOutputTokens: cfg.translateMaxTokens,
+        temperature: cfg.translateTemperature,
+      },
     });
 
     const langNames = { en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French',
@@ -263,10 +267,21 @@ async function translatePhraseToLanguage(phrase, fromLang, toLang) {
 }
 
 // Remote Config defaults for multi-universe simulation
+// Structured so ops can override any value via `simulation_config` in Firebase RC
+// without redeploying the Cloud Function.
 const MULTIVERSE_CONFIG_DEFAULTS = {
   enabled: true,
+  // NOTE: maxPerDay is deprecated — unified rate limit uses `coachMessagesRemaining`.
+  // Kept for backward compatibility with older RC templates.
   maxPerDay: 3,
   cacheMinutes: 180 * 24 * 60, // 6 months in minutes
+  gemini: {
+    approachTemperature: 0.85,
+    approachMaxTokens: 800,
+    translateTemperature: 0.3,
+    translateMaxTokens: 150,
+    timeoutMs: 25000,
+  },
 };
 
 // Remote Config cache for simulation_config
@@ -286,7 +301,13 @@ async function getMultiUniverseConfig() {
     const param = template.parameters['simulation_config'];
     if (param?.defaultValue?.value) {
       const rcConfig = JSON.parse(param.defaultValue.value);
-      _multiverseConfigCache = { ...MULTIVERSE_CONFIG_DEFAULTS, ...rcConfig };
+      // Deep-merge the nested `gemini` block so ops can override one key without
+      // wiping the rest of the defaults.
+      _multiverseConfigCache = {
+        ...MULTIVERSE_CONFIG_DEFAULTS,
+        ...rcConfig,
+        gemini: { ...MULTIVERSE_CONFIG_DEFAULTS.gemini, ...(rcConfig.gemini || {}) },
+      };
       _multiverseConfigCacheTime = Date.now();
       return _multiverseConfigCache;
     }
@@ -792,9 +813,14 @@ async function generateApproachesForMultiverse(genAI, situation, userLang) {
   try {
     logger.info(`[Gemini] Initializing model: ${AI_MODEL_NAME}`);
     const langInstr = getLanguageInstruction(userLang);
+    const cfg = (await getMultiUniverseConfig()).gemini;
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_NAME,
-      generationConfig: { maxOutputTokens: 800, temperature: 0.85, responseMimeType: 'application/json' },
+      generationConfig: {
+        maxOutputTokens: cfg.approachMaxTokens,
+        temperature: cfg.approachTemperature,
+        responseMimeType: 'application/json',
+      },
     });
 
     const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
@@ -838,10 +864,11 @@ Respond ONLY with JSON (phrases in ${languageName}):
 
     logger.info(`[Gemini] Prompt size: ${prompt.length} chars, language: ${userLang}`);
 
-    // Timeout: if Gemini takes > 25 seconds, fail gracefully
+    // Timeout: fail gracefully if Gemini takes too long. Configurable via RC.
+    const timeoutMs = cfg.timeoutMs;
     const geminiPromise = model.generateContent(prompt);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini timeout: exceeded 25 seconds')), 25000)
+      setTimeout(() => reject(new Error(`Gemini timeout: exceeded ${timeoutMs}ms`)), timeoutMs)
     );
 
     let result;
@@ -849,7 +876,7 @@ Respond ONLY with JSON (phrases in ${languageName}):
       result = await Promise.race([geminiPromise, timeoutPromise]);
       logger.info(`[Gemini] Content generation succeeded`);
     } catch (timeoutErr) {
-      logger.error('[Gemini] TIMEOUT after 25s:', timeoutErr.message);
+      logger.error(`[Gemini] TIMEOUT after ${timeoutMs}ms:`, timeoutErr.message);
       return generateApproachesFallback(userLang);
     }
 
