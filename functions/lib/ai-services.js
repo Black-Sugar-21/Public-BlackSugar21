@@ -571,7 +571,7 @@ exports.generateSmartReply = onCall(
     try {
       if (!apiKey || !matchId || !userId) {
         logger.info(`[generateSmartReply] Missing required param (apiKey=${!!apiKey}, matchId=${!!matchId}, userId=${!!userId}), using fallback`);
-        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime, degraded: true};
       }
 
       // 1. Read last 8 text messages from the match conversation (skip place/ephemeral)
@@ -598,13 +598,13 @@ exports.generateSmartReply = onCall(
       const matchDoc = await db.collection('matches').doc(matchId).get();
       if (!matchDoc.exists) {
         logger.info(`[generateSmartReply] Match ${matchId} not found, using fallback`);
-        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime, degraded: true};
       }
       const matchData = matchDoc.data() || {};
       const usersMatched = matchData.usersMatched || [];
       if (!usersMatched.includes(userId)) {
         logger.warn(`[generateSmartReply] User ${userId} not in match ${matchId}`);
-        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+        return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime, degraded: true};
       }
       const otherUserId = usersMatched.find((uid) => uid !== userId) || '';
 
@@ -714,65 +714,84 @@ Return ONLY a JSON object:
   "engagementTip": "..."
 }`;
 
-      const _srStart = Date.now();
-      const result = await model.generateContent({
-        contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: await (async () => { const c = await getAiConfig(); return {maxOutputTokens: getTokens(c, 'smartReply', 512), temperature: getTemp(c, 'smartReply', 0.85)}; })(),
-      });
-      trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart});
+      const _srCfg = await getAiConfig();
+      const _srGenCfg = {maxOutputTokens: getTokens(_srCfg, 'smartReply', 512), temperature: getTemp(_srCfg, 'smartReply', 0.85)};
 
-      const text = safeResponseText(result);
-      let parsed = null;
-      try {
-        parsed = parseGeminiJsonResponse(text);
-      } catch (_parseErr) {
-        logger.warn(`[generateSmartReply] JSON parse failed: ${_parseErr.message}`);
+      // Retry x2 before surrendering to fallback — a single Gemini glitch shouldn't silently ship canned phrases.
+      let lastErr = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const _srStart = Date.now();
+          const result = await model.generateContent({
+            contents: [{role: 'user', parts: [{text: prompt}]}],
+            generationConfig: _srGenCfg,
+          });
+          trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart, attempt});
+
+          const text = safeResponseText(result);
+          let parsed = null;
+          try {
+            parsed = parseGeminiJsonResponse(text);
+          } catch (_parseErr) {
+            logger.warn(`[generateSmartReply] attempt ${attempt}: JSON parse failed: ${_parseErr.message}`);
+          }
+
+          // New format: replies array with tone + explanation
+          if (parsed && Array.isArray(parsed.replies) && parsed.replies.length >= 3) {
+            const replies = parsed.replies.slice(0, 3).map((r) => ({
+              text: String(r.text || '').substring(0, 150),
+              tone: ['casual', 'flirty', 'deep'].includes(r.tone) ? r.tone : 'casual',
+              explanation: String(r.explanation || '').substring(0, 100),
+            }));
+            // Reject attempt if any reply text is empty — try again rather than ship blanks
+            if (replies.some((r) => !r.text)) {
+              logger.warn(`[generateSmartReply] attempt ${attempt}: one or more empty reply texts`);
+              lastErr = new Error('empty_reply_text');
+              continue;
+            }
+            const findByTone = (t) => replies.find((r) => r.tone === t)?.text || replies[0]?.text || '';
+            const suggestions = {
+              playful: findByTone('flirty'),
+              thoughtful: findByTone('deep'),
+              casual: findByTone('casual'),
+              tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
+              engagementTip: String(parsed.engagementTip || '').substring(0, 200),
+            };
+            logger.info(`[generateSmartReply] Generated 3-tone replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs, attempt ${attempt}]`);
+            return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
+          }
+
+          // Legacy format fallback (old prompt format)
+          if (parsed && parsed.playful && parsed.thoughtful && parsed.casual) {
+            const suggestions = {
+              playful: String(parsed.playful).substring(0, 150),
+              thoughtful: String(parsed.thoughtful).substring(0, 150),
+              casual: String(parsed.casual).substring(0, 150),
+              tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
+              engagementTip: String(parsed.engagementTip || '').substring(0, 200),
+            };
+            const replies = [
+              {text: suggestions.casual, tone: 'casual', explanation: ''},
+              {text: suggestions.playful, tone: 'flirty', explanation: ''},
+              {text: suggestions.thoughtful, tone: 'deep', explanation: ''},
+            ];
+            logger.info(`[generateSmartReply] Generated legacy replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs, attempt ${attempt}]`);
+            return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
+          }
+
+          logger.warn(`[generateSmartReply] attempt ${attempt}: AI returned invalid format`);
+          lastErr = new Error('invalid_format');
+        } catch (innerErr) {
+          logger.warn(`[generateSmartReply] attempt ${attempt} threw: ${innerErr.message}`);
+          lastErr = innerErr;
+        }
       }
 
-      // New format: replies array with tone + explanation
-      if (parsed && Array.isArray(parsed.replies) && parsed.replies.length >= 3) {
-        const replies = parsed.replies.slice(0, 3).map((r) => ({
-          text: String(r.text || '').substring(0, 150),
-          tone: ['casual', 'flirty', 'deep'].includes(r.tone) ? r.tone : 'casual',
-          explanation: String(r.explanation || '').substring(0, 100),
-        }));
-        // Legacy backward compat: map flirty→playful, deep→thoughtful
-        const findByTone = (t) => replies.find((r) => r.tone === t)?.text || replies[0]?.text || '';
-        const suggestions = {
-          playful: findByTone('flirty'),
-          thoughtful: findByTone('deep'),
-          casual: findByTone('casual'),
-          tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
-          engagementTip: String(parsed.engagementTip || '').substring(0, 200),
-        };
-        logger.info(`[generateSmartReply] Generated 3-tone replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs]`);
-        return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
-      }
-
-      // Legacy format fallback (old prompt format)
-      if (parsed && parsed.playful && parsed.thoughtful && parsed.casual) {
-        const suggestions = {
-          playful: String(parsed.playful).substring(0, 150),
-          thoughtful: String(parsed.thoughtful).substring(0, 150),
-          casual: String(parsed.casual).substring(0, 150),
-          tone: ['neutral', 'flirty', 'serious'].includes(parsed.tone) ? parsed.tone : 'neutral',
-          engagementTip: String(parsed.engagementTip || '').substring(0, 200),
-        };
-        // Build replies from legacy format
-        const replies = [
-          {text: suggestions.casual, tone: 'casual', explanation: ''},
-          {text: suggestions.playful, tone: 'flirty', explanation: ''},
-          {text: suggestions.thoughtful, tone: 'deep', explanation: ''},
-        ];
-        logger.info(`[generateSmartReply] Generated legacy replies (${lang}) for ${myName}→${theirName} [${chatHistory.length} msgs]`);
-        return {success: true, replies, suggestions, executionTime: Date.now() - startTime};
-      }
-
-      logger.warn('[generateSmartReply] AI returned invalid format, using fallback');
-      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+      logger.error(`[generateSmartReply] All attempts failed (${lastErr?.message}), returning degraded fallback`);
+      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime, degraded: true};
     } catch (err) {
-      logger.warn(`[generateSmartReply] AI failed (${err.message}), using fallback`);
-      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime};
+      logger.error(`[generateSmartReply] Outer failure (${err.message}), returning degraded fallback`);
+      return {success: true, suggestions: fallback, replies: fallbackReplies, executionTime: Date.now() - startTime, degraded: true};
     }
   },
 );
@@ -1435,40 +1454,54 @@ Rules:
 
 Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning": "why this works", "emoji": "🎯"}]`;
 
-      const result = await model.generateContent({
-        contents: [{role: 'user', parts: [{text: prompt}]}],
-        generationConfig: {maxOutputTokens: getTokens(aiConfig, 'icebreakers', 512), temperature: getTemp(aiConfig, 'icebreakers', 0.9)},
-      });
+      const _ibGenCfg = {maxOutputTokens: getTokens(aiConfig, 'icebreakers', 512), temperature: getTemp(aiConfig, 'icebreakers', 0.9)};
 
-      const text = safeResponseText(result);
-      let parsed = null;
-      try {
-        parsed = parseGeminiJsonResponse(text);
-      } catch (_parseErr) {
-        logger.warn(`[generateIcebreakers] JSON parse failed: ${_parseErr.message}`);
-      }
+      // Retry x2 — a single Gemini hiccup shouldn't silently ship generic icebreakers.
+      let lastErr = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const result = await model.generateContent({
+            contents: [{role: 'user', parts: [{text: prompt}]}],
+            generationConfig: _ibGenCfg,
+          });
 
-      if (Array.isArray(parsed) && parsed.length >= 3) {
-        const icebreakers = parsed.slice(0, 3).map((item) => ({
-          message: String(item.message || item.text || '').substring(0, 100),
-          reasoning: String(item.reasoning || '').substring(0, 100),
-          emoji: String(item.emoji || '💬').substring(0, 4),
-        })).filter((i) => i.message.length > 0);
+          const text = safeResponseText(result);
+          let parsed = null;
+          try {
+            parsed = parseGeminiJsonResponse(text);
+          } catch (_parseErr) {
+            logger.warn(`[generateIcebreakers] attempt ${attempt}: JSON parse failed: ${_parseErr.message}`);
+          }
 
-        if (icebreakers.length >= 2) {
-          logger.info(`[generateIcebreakers] Generated ${icebreakers.length} personalized icebreakers (${lang}) for ${user1Name}→${user2Name}`);
-          return {success: true, icebreakers, starters: icebreakers.map((i) => i.message)};
+          if (Array.isArray(parsed) && parsed.length >= 3) {
+            const icebreakers = parsed.slice(0, 3).map((item) => ({
+              message: String(item.message || item.text || '').substring(0, 100),
+              reasoning: String(item.reasoning || '').substring(0, 100),
+              emoji: String(item.emoji || '💬').substring(0, 4),
+            })).filter((i) => i.message.length > 0);
+
+            if (icebreakers.length >= 2) {
+              logger.info(`[generateIcebreakers] Generated ${icebreakers.length} personalized icebreakers (${lang}) for ${user1Name}→${user2Name} [attempt ${attempt}]`);
+              return {success: true, icebreakers, starters: icebreakers.map((i) => i.message)};
+            }
+          }
+
+          logger.warn(`[generateIcebreakers] attempt ${attempt}: AI returned invalid format`);
+          lastErr = new Error('invalid_format');
+        } catch (innerErr) {
+          logger.warn(`[generateIcebreakers] attempt ${attempt} threw: ${innerErr.message}`);
+          lastErr = innerErr;
         }
       }
 
-      logger.warn('[generateIcebreakers] AI returned invalid format, using fallback');
-      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+      logger.error(`[generateIcebreakers] All attempts failed (${lastErr?.message}), returning degraded fallback`);
+      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message), degraded: true};
     } catch (err) {
       const rawLang = (request.data || {}).lang || 'en';
       const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
       const fallbackStarters = FALLBACK_BY_LANG[lang] || FALLBACK_BY_LANG.en;
-      logger.warn(`[generateIcebreakers] AI failed (${err.message}), using ${lang} fallback`);
-      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message)};
+      logger.error(`[generateIcebreakers] Outer failure (${err.message}), returning degraded fallback (${lang})`);
+      return {success: true, icebreakers: fallbackStarters, starters: fallbackStarters.map((i) => i.message), degraded: true};
     }
   },
 );
@@ -2422,11 +2455,11 @@ Return ONLY a JSON object:
         return {success: true, blueprint};
       }
 
-      logger.warn('[DateBlueprint] AI returned invalid format');
-      return fallback;
+      logger.error('[DateBlueprint] AI returned invalid format after retry chain — returning degraded fallback');
+      return {...fallback, degraded: true};
     } catch (err) {
-      logger.warn(`[DateBlueprint] Error: ${err.message}`);
-      return fallback;
+      logger.error(`[DateBlueprint] Outer failure (${err.message}) — returning degraded fallback`);
+      return {...fallback, degraded: true};
     }
   },
 );

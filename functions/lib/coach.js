@@ -4439,8 +4439,8 @@ Rules:
       logger.info(`[getRealtimeCoachTips] GEMINI: matchId=${matchId}, algo=${algoResult.score}, gemini=${geminiScore}, blended=${blendedScore}, tips=${tips.length}`);
       return coachResult;
     } catch (error) {
-      // On Gemini failure, fallback to algorithmic score
-      logger.warn(`[getRealtimeCoachTips] Gemini failed (${error.message}), using algorithmic fallback`);
+      // On Gemini failure, fall back to algorithmic score and flag degraded so clients can show a subtle hint.
+      logger.error(`[getRealtimeCoachTips] Gemini failed (${error.message}), returning algorithmic fallback flagged as degraded`);
       const fallbackMessages = [];
       try {
         const snap = await db.collection('matches').doc(matchId).collection('messages')
@@ -4449,7 +4449,9 @@ Rules:
           const m = d.data();
           fallbackMessages.push({sender: m.senderId === userId ? 'user' : 'match', text: m.message || '', type: m.type || 'text'});
         });
-      } catch (_) { /* ignore */ }
+      } catch (msgReadErr) {
+        logger.warn(`[getRealtimeCoachTips] Fallback message read failed: ${msgReadErr.message}`);
+      }
       const algoFallback = calculateAlgorithmicChemistry(fallbackMessages.reverse(), userId);
       return {
         success: true,
@@ -4459,6 +4461,7 @@ Rules:
         tips: [],
         preDateDetected: false,
         suggestedAction: null,
+        degraded: true,
       };
     }
   },
