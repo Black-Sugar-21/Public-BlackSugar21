@@ -3873,17 +3873,23 @@ exports.deleteCoachMessage = onCall(
     const db = admin.firestore();
 
     try {
-      const msgRef = db.collection('coachChats').doc(userId)
+      // Delete from BOTH paths — client writes to users/{uid}/coachChat/ while
+      // some legacy CF paths use coachChats/{uid}/messages/. Clean both for
+      // full cleanup on simulation removal. Idempotent: missing doc is OK.
+      const clientRef = db.collection('users').doc(userId)
+        .collection('coachChat').doc(messageId);
+      const legacyRef = db.collection('coachChats').doc(userId)
         .collection('messages').doc(messageId);
 
-      const msgDoc = await msgRef.get();
-      if (!msgDoc.exists) {
-        return {success: true}; // Idempotent
-      }
+      const results = await Promise.allSettled([
+        clientRef.delete(),
+        legacyRef.delete(),
+      ]);
 
-      await msgRef.delete();
+      const deletedClient = results[0].status === 'fulfilled';
+      const deletedLegacy = results[1].status === 'fulfilled';
+      logger.info(`[deleteCoachMessage] User ${userId} msg ${messageId}: client=${deletedClient} legacy=${deletedLegacy}`);
 
-      logger.info(`[deleteCoachMessage] Deleted message ${messageId} for user ${userId}`);
       return {success: true};
     } catch (error) {
       logger.error(`[deleteCoachMessage] Error: ${error.message}`);
