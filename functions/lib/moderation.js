@@ -656,9 +656,18 @@ exports.moderateMessage = onCall(
  */
 
 // --- Auto-moderation helpers ---
-function getMessageHash(message) {
+/**
+ * Hash message for cache lookup. Includes sender language because Gemini
+ * generates the `reason` field in that language — without lang in the key,
+ * a Spanish-first user's cached reason would be shown to an English user.
+ * Category/severity are language-agnostic enums, but `reason` (shown in
+ * moderatedMessages reports + possible user UI) is not.
+ */
+function getMessageHash(message, senderLang = 'en') {
+  const normalizedLang = (typeof senderLang === 'string' && senderLang
+    ? senderLang : 'en').split('-')[0].toLowerCase();
   return crypto.createHash('sha256')
-    .update(message.toLowerCase().trim())
+    .update(`${normalizedLang}:${message.toLowerCase().trim()}`)
     .digest('hex');
 }
 
@@ -802,8 +811,17 @@ exports.autoModerateMessage = onDocumentCreated(
     const senderId = data.senderId;
 
     try {
-      // ── 1. Cache check ──
-      const messageHash = getMessageHash(message);
+      // ── 1. Load sender language UP-FRONT (needed for lang-scoped cache key
+      //       since Gemini-generated `reason` is in sender's language) ──
+      let senderLang = 'en';
+      try {
+        const senderDocEarly = await db.collection('users').doc(senderId).get();
+        senderLang = senderDocEarly.exists ? (senderDocEarly.data().deviceLanguage || 'en') : 'en';
+        senderLang = senderLang.split('-')[0].split('_')[0].toLowerCase();
+      } catch (_e) { /* non-critical, fall back to 'en' */ }
+
+      // ── 2. Cache check (lang-scoped) ──
+      const messageHash = getMessageHash(message, senderLang);
       const cachedResult = await getCachedModerationResult(messageHash, db);
       if (cachedResult) {
         if (!cachedResult.allowed && cachedResult.severity === 'HIGH') {
@@ -816,7 +834,7 @@ exports.autoModerateMessage = onDocumentCreated(
         return;
       }
 
-      // ── 2. Quick filters (sin IA) — with RC-configurable blacklist additions ──
+      // ── 3. Quick filters (sin IA) — with RC-configurable blacklist additions ──
       const modConfig = await getModerationConfig();
       const quickCheck = applyQuickFilters(message, modConfig);
 
@@ -862,14 +880,9 @@ exports.autoModerateMessage = onDocumentCreated(
         return;
       }
 
-      // RAG: obtener contexto de moderación + idioma del sender + config en paralelo
+      // RAG: obtener contexto de moderación (senderLang ya se cargó en step 1)
       let ragContext = '';
-      let senderLang = 'en';
       try {
-        const senderDoc = await db.collection('users').doc(senderId).get();
-        // modConfig already loaded before quick filters (reuse cached instance)
-        senderLang = senderDoc.exists ? (senderDoc.data().deviceLanguage || 'en') : 'en';
-        senderLang = senderLang.split('-')[0].split('_')[0].toLowerCase();
         ragContext = await retrieveModerationKnowledge(message, apiKey, senderLang, 'message', modConfig.rag || {});
       } catch (ragErr) {
         logger.warn('[autoModerate] RAG fallback:', ragErr.message);

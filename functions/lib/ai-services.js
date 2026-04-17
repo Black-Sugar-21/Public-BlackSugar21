@@ -1712,9 +1712,12 @@ exports.calculateAIChemistry = onCall(
       // Rate limit check failed — continue anyway (non-critical)
     }
 
-    // ── Cache check (TTL dinámico) ──
+    // ── Cache check (TTL dinámico, language-scoped) ──
+    // Gemini-generated `reasons` and `tip` fields are in user's language at
+    // generation time — scope cache by lang to prevent cross-language leaks.
     const pairId = [currentUserId, targetUserId].sort().join('_');
-    const cacheRef = db.collection('chemistryCache').doc(pairId);
+    const cacheDocId = `${pairId}_${lang}`;
+    const cacheRef = db.collection('chemistryCache').doc(cacheDocId);
     try {
       const cacheDoc = await cacheRef.get();
       if (cacheDoc.exists) {

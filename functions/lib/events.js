@@ -319,8 +319,11 @@ async function fetchLocalEvents(lat, lng, radiusKm, lang, category, userPrefs) {
   const maxResults = config.maxEventsPerQuery || 10;
   const searchDaysMs = (config.searchDaysAhead || 14) * 86400000;
 
-  // Check cache
-  const regionHash = `${Math.round(lat * 10)}_${Math.round(lng * 10)}_${category || 'all'}`;
+  // Check cache — scoped by language because external APIs return event names/
+  // descriptions in the request language, so different users with different langs
+  // would see the wrong language if we share cache cross-lang.
+  const langKey = (typeof lang === 'string' && lang ? lang : 'en').split('-')[0].toLowerCase();
+  const regionHash = `${Math.round(lat * 10)}_${Math.round(lng * 10)}_${category || 'all'}_${langKey}`;
   const db = admin.firestore();
   try {
     const cacheDoc = await db.collection('eventCache').doc(regionHash).get();
