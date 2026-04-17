@@ -1,8 +1,7 @@
 /**
- * Hang the DJ Multi-Universe Simulator
+ * Multi-Universe Simulator
  *
  * Tests compatibility across 5 relationship stages + scenarios
- * Inspired by Black Mirror episode "Hang the DJ"
  *
  * Features:
  * - Run 5 independent situation simulations across relationship progression

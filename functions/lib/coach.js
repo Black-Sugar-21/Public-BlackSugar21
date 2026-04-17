@@ -1095,20 +1095,20 @@ exports.dateCoachChat = onCall(
       // ── End situation rehearsal intent detection ──────────────────────
 
       // ── Simulation intent detection (no credits deducted, no save) ──────
-      // Inspired by Black Mirror "Hang the DJ" — runs 10 simulations of the match
-      // and counts how many show genuine connection (rebellion signal).
+      // Runs 10 simulations of the match and counts how many show genuine
+      // connection (independent-choice signal).
       const SIMULATION_TRIGGERS = [
         /simul[ae]/i, /predic/i, /how.*would.*go/i, /what.*happen/i,
         /cómo.*iría/i, /qué.*pasaría/i, /qué.*ocurrir/i, /cómo.*evolucion/i,
         /compatib/i, /quimica/i, /chemistry/i, /analiz/i,
         /what.*future/i, /cuál.*futuro/i, /future.*us/i,
-        /hang the dj/i, /parallel/i, /simulation/i,
+        /parallel/i, /simulation/i, /multiverse/i, /universos/i,
       ];
       if (matchId && !loadMoreActivities && !loadMoreSuggestions &&
           SIMULATION_TRIGGERS.some(r => r.test(message))) {
         const simMsg = {
-          es: '🔮 Puedo correr 10 simulaciones de tu conexión con este match — como en "Hang the DJ". Analizo cómo reaccionarían en distintos escenarios y te digo cuántas terminaron eligiéndose mutuamente.\n\n¿Quieres que lo haga?',
-          en: '🔮 I can run 10 simulations of your connection with this match — like a "Hang the DJ" experiment. I\'ll analyze how you\'d react across different scenarios and tell you how many times you chose each other.\n\nWant me to run it?',
+          es: '🔮 Puedo correr 10 simulaciones de tu conexión con este match. Analizo cómo reaccionarían en distintos escenarios y te digo cuántas terminaron eligiéndose mutuamente.\n\n¿Quieres que lo haga?',
+          en: '🔮 I can run 10 simulations of your connection with this match. I\'ll analyze how you\'d react across different scenarios and tell you how many times you chose each other.\n\nWant me to run it?',
           pt: '🔮 Posso rodar 10 simulações da sua conexão com esse match. Vou analisar como vocês reagiriam em diferentes cenários e dizer quantas vezes se escolheram mutuamente.\n\nQuer que eu faça?',
           fr: '🔮 Je peux lancer 10 simulations de votre connexion avec ce match. J\'analyse comment vous réagiriez dans différents scénarios et combien de fois vous vous êtes choisis mutuellement.\n\nVous voulez que je le fasse?',
         };

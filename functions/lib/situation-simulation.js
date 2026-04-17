@@ -688,6 +688,15 @@ exports.simulateSituation = onCall(
       recommendedFor: typeof a.recommendedFor === 'string' ? a.recommendedFor : null,
     }));
 
+    // ── Decrement unified coach credits (shared with multi-universe) ──
+    try {
+      await db.collection('users').doc(userId).update({
+        coachMessagesRemaining: admin.firestore.FieldValue.increment(-1),
+      });
+    } catch (e) {
+      logger.warn(`[simulateSituation] Failed to decrement coachMessagesRemaining: ${e.message}`);
+    }
+
     const finalReport = {
       success: true,
       situation: trimmed,

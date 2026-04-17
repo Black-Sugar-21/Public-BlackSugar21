@@ -1,15 +1,14 @@
 'use strict';
 
 /**
- * Relationship Simulation Engine — "Hang the DJ" pattern
+ * Relationship Simulation Engine — multi-universe pattern
  *
  * Runs 10 simulations of two users across 4 relationship scenarios.
- * Counts how many simulations show genuine connection ("rebellion signal").
+ * Counts how many simulations show genuine connection (mutual-choice signal).
  * Final score = positive_simulations / total × 100
  *
- * Inspired by Black Mirror S4E4 "Hang the DJ":
- * - 1000 simulations → we run 10 (cost-controlled)
- * - "Rebellion" = both agents choose each other despite scenario friction
+ * - 1000 theoretical simulations → we run 10 (cost-controlled)
+ * - "Mutual choice" = both agents choose each other despite scenario friction
  * - Score is honest: 8/10 = 80% compatibility
  */
 
@@ -319,10 +318,10 @@ const BEHAVIOR_ARCHETYPES = {
 };
 
 // ---------------------------------------------------------------------------
-// Hang the DJ — Duration-based relationship simulation system
-// Inspired by Black Mirror S4E4 and MirrorFish multi-scenario compatibility engine
-// Each simulation draws a random relationship duration (weighted toward realistic distribution)
-// and runs the full arc of that relationship, ending with the "Rebellion Moment"
+// Duration-based relationship simulation system
+// Multi-scenario compatibility engine. Each simulation draws a random
+// relationship duration (weighted toward a realistic distribution) and runs
+// the full arc of that relationship, ending with the "Independent Choice Moment"
 // ---------------------------------------------------------------------------
 
 const RELATIONSHIP_DURATIONS = [
@@ -342,7 +341,7 @@ const RELATIONSHIP_DURATIONS = [
   { id: 'three_years',    label: '3 years together',  weight: 5,  rounds: 8, phase: 'long_term' },
 ];
 
-/** Weighted random duration selection — mimics the system assigning relationship lengths in Hang the DJ */
+/** Weighted random duration selection — assigns relationship length per simulation */
 function pickRandomDuration() {
   const total = RELATIONSHIP_DURATIONS.reduce((s, d) => s + d.weight, 0);
   let r = Math.random() * total;
@@ -451,10 +450,10 @@ START: ${nameA} opens the conversation, gently but honestly.`;
 }
 
 // ---------------------------------------------------------------------------
-// The Rebellion Moment — "Hang the DJ" climax
-// Inspired by Black Mirror S4E4: when the system announces the relationship is over,
-// do both agents independently choose to rebel and stay?
-// This tests whether the attachment bond is strong enough to resist external separation.
+// The Independent Choice Moment — simulation climax
+// When the system announces the relationship is over, do both agents
+// independently choose to stay together? This tests whether the attachment
+// bond is strong enough to resist external separation.
 // ---------------------------------------------------------------------------
 
 const REBELLION_NOTIFICATIONS = {
@@ -827,10 +826,10 @@ STRICT RULES:
  * Supports 10 languages: EN, ES, PT, FR, DE, JA, ZH, RU, AR, ID.
  */
 /**
- * Hang the DJ — Rebellion detection
+ * Independent choice detection
  *
- * Primary: Did BOTH agents independently choose to rebel (resist separation) in the Rebellion Moment?
- * Fallback: If rebellion moment missing, analyze dialogue sentiment mutually.
+ * Primary: Did BOTH agents independently choose to resist separation in the climax moment?
+ * Fallback: If climax moment missing, analyze dialogue sentiment mutually.
  *
  * Theory basis:
  * - Bowlby (1969): Under threat of separation, strong attachment activates proximity-seeking behavior.
@@ -910,7 +909,7 @@ function detectRebellion(transcript, personaA, personaB) {
         return REBEL_SIGNALS.some(s => txt.includes(s)) &&
                !COMPLY_SIGNALS.some(s => txt.includes(s));
       });
-    // Both rebels = confirmed connection (Hang the DJ: 998/1000 = both chose each other)
+    // Both resist = confirmed connection (both independently chose each other)
     if (aRebel && bRebel) return true;
     // Neither rebels = clear disconnect
     if (!aRebel && !bRebel) return false;
@@ -990,7 +989,7 @@ async function generateAgentTurn(model, prompt, timeoutMs = 12000) {
 /**
  * Run a single simulation between two agents across the given relationship duration.
  * Dialogue rounds are based on duration.rounds.
- * Ends with the Rebellion Moment — the Hang the DJ climax.
+ * Ends with the Independent Choice Moment — the simulation climax.
  *
  * @param {object} duration  - entry from RELATIONSHIP_DURATIONS (id, label, rounds, phases)
  * @returns {Array}          - transcript including rebellion moment turns
@@ -1040,7 +1039,7 @@ async function runSingleSimulation(genAI, personaA, personaB, duration, config =
     transcript.push({speaker: 'B', name: personaB.name, text: textB, round, durationId: duration.id});
   }
 
-  // ── The Rebellion Moment — Hang the DJ climax ────────────────────────────
+  // ── The Independent Choice Moment — simulation climax ────────────────────
   // Only if we have a meaningful dialogue (at least 4 turns)
   if (transcript.length >= 4) {
     try {
@@ -1058,7 +1057,7 @@ async function runSingleSimulation(genAI, personaA, personaB, duration, config =
 
 /**
  * Build the final analysis report using all simulation results.
- * Integrates psychology RAG insights and uses Hang the DJ rebellion framing.
+ * Integrates psychology RAG insights and uses independent-choice framing.
  */
 async function buildFinalReport(genAI, personaA, personaB, simulationResults, lang, apiKey) {
   const db = admin.firestore();
@@ -1111,7 +1110,7 @@ async function buildFinalReport(genAI, personaA, personaB, simulationResults, la
       psychInsights.map((t, i) => `[${i + 1}] ${t.substring(0, 300)}`).join('\n')
     : '';
 
-  // Rebellion moment transcript summary (Hang the DJ climax turns only)
+  // Independent-choice moment transcript summary (climax turns only)
   const rebellionSummary = simulationResults.map((r, i) => {
     const rebTurns = (r.transcript || []).filter(t => t.isRebellionMoment);
     if (rebTurns.length === 0) return null;
@@ -1125,13 +1124,13 @@ async function buildFinalReport(genAI, personaA, personaB, simulationResults, la
       .map(t => `  ${t.name}: ${t.text?.substring(0, 120)}`).join('\n')
   ).join('\n\n');
 
-  const prompt = `You are an expert relationship psychologist analyzing Hang the DJ-style multi-duration simulations.
+  const prompt = `You are an expert relationship psychologist analyzing multi-duration relationship simulations.
 
-SIMULATION CONCEPT (Black Mirror S4E4):
+SIMULATION CONCEPT:
 We ran ${simulationResults.length} simulations of ${personaA.name} and ${personaB.name} across different relationship durations.
-At the END of each simulation, both agents independently faced a "separation notice" — the Rebellion Moment.
-${positiveCount} out of ${simulationResults.length} simulations: BOTH agents chose to rebel (${rebellionRate}% rebellion rate).
-This mirrors the show's logic: 998/1000 → 99.8% compatibility. Higher rebellion rate = stronger genuine bond.
+At the END of each simulation, both agents independently faced a "separation notice" — the Independent Choice Moment.
+${positiveCount} out of ${simulationResults.length} simulations: BOTH agents independently chose each other (${rebellionRate}% mutual-choice rate).
+Higher mutual-choice rate = stronger genuine bond.
 
 RELATIONSHIP DURATIONS SIMULATED:
 ${JSON.stringify(durationBreakdown, null, 2)}
@@ -1149,14 +1148,14 @@ PERSONA B — ${personaB.name}:
 
 SHARED INTERESTS: ${sharedInterests.join(', ') || 'none identified'}
 
-REBELLION MOMENT OUTCOMES (Hang the DJ climax):
+INDEPENDENT CHOICE MOMENT OUTCOMES (simulation climax):
 ${rebellionSummary || 'No rebellion moments captured in this run.'}
 
 SIMULATION DIALOGUE EXCERPTS:
 ${transcriptSummary}
 ${psychSection}
 
-Return a JSON report using the Hang the DJ framing — reference the rebellion rate, not just a generic score:
+Return a JSON report referencing the mutual-choice rate, not just a generic score:
 {
   "compatibilityScore": ${compatibilityScore},
   "positiveSimulations": ${positiveCount},
@@ -1164,7 +1163,7 @@ Return a JSON report using the Hang the DJ framing — reference the rebellion r
   "rebellionRate": ${rebellionRate},
   "dominantPhase": "${dominantPhase}",
   "trajectoryPrediction": "<'strong connection'|'moderate potential'|'needs work'|'incompatible'>",
-  "trajectoryExplanation": "<2-3 sentences using Hang the DJ framing: 'In X of ${simulationResults.length} universes, both chose each other' — relate to the rebellion rate and dominant phase>",
+  "trajectoryExplanation": "<2-3 sentences using the framing: 'In X of ${simulationResults.length} universes, both chose each other' — relate to the mutual-choice rate and dominant phase>",
   "keyInsights": [
     "<insight from rebellion moment patterns — when did they rebel vs comply?>",
     "<attachment dynamic insight (${personaA.attachmentStyle} + ${personaB.attachmentStyle}) based on psychology research>",
@@ -1416,7 +1415,7 @@ exports.simulateRelationship = onCall(
 
     logger.info(`[simulateRelationship] Agents built: A=${personaA.name}(${personaA.attachmentStyle}/${personaA.commStyle}) B=${personaB.name}(${personaB.attachmentStyle}/${personaB.commStyle})`);
 
-    // ── Run simulations (Hang the DJ pattern) ────────────────────────────
+    // ── Run simulations (multi-universe pattern) ─────────────────────────
     const genAI = new GoogleGenerativeAI(apiKey);
     const simulationResults = [];
     let totalTurnTokens = 0;
@@ -1449,7 +1448,7 @@ exports.simulateRelationship = onCall(
         turnTemperature: simConfig.turnTemperature,
       }, lang);
 
-      // Hang the DJ: rebellion detection — did both agents independently choose each other?
+      // Independent-choice detection — did both agents independently choose each other?
       const isPositive = detectRebellion(transcript, personaA, personaB);
       const validTurns = transcript.length;
 
