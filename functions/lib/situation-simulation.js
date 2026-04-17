@@ -53,77 +53,96 @@ const SITUATION_TYPES = [
 
 const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 
-// Fallback approaches when Gemini API fails or returns invalid JSON — 10 languages supported
-function generateApproachesFallback(userLang = 'en') {
-  const FALLBACKS = {
+// Extracts a short, clean snippet of the user's situation to echo back in fallbacks.
+// Keeps the first ~90 chars of meaningful content — enough to anchor the phrase to the user's topic.
+function extractSituationSnippet(situation) {
+  if (!situation || typeof situation !== 'string') return '';
+  const cleaned = situation
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?;]+$/g, '')
+    .trim();
+  if (cleaned.length <= 90) return cleaned;
+  // Try to cut at a word boundary
+  const cut = cleaned.slice(0, 90);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut) + '…';
+}
+
+// Fallback approaches when Gemini API fails or returns invalid JSON — 10 languages supported.
+// When `situation` is provided, the fallbacks embed a snippet so they don't feel generic.
+function generateApproachesFallback(userLang = 'en', situation = '') {
+  const snippet = extractSituationSnippet(situation);
+  const hasSnippet = snippet.length > 0;
+  // Template per language with {s} = user situation snippet
+  const TEMPLATES = {
     en: [
-      'I wanted to talk with you about this. Can we chat?',
-      'Hey, got a few minutes? There\'s something on my mind.',
-      'I\'ve been thinking about you, and I want to be honest about how I feel.',
-      'I think we should talk about this. I care about us and want to understand each other better.',
+      hasSnippet ? `Hey — about what I mentioned (${snippet}), I'd love to talk it through with you. What do you think?` : 'I wanted to talk with you about this. Can we chat?',
+      hasSnippet ? `So… ${snippet} 😅 Didn't want to leave you in the dark. Got a sec?` : 'Hey, got a few minutes? There\'s something on my mind.',
+      hasSnippet ? `I've been thinking about you, and I want to be open about this: ${snippet}. I hope that's okay to share.` : 'I\'ve been thinking about you, and I want to be honest about how I feel.',
+      hasSnippet ? `Just being real with you: ${snippet}. No pressure — I just wanted you to know where I'm at.` : 'I think we should talk about this. I care about us and want to understand each other better.',
     ],
     es: [
-      'Quería hablar contigo sobre esto. ¿Podemos conversar?',
-      'Oye, ¿tienes un momento? Hay algo que me ronda la cabeza.',
-      'He estado pensando en ti y quiero ser honesto/a sobre cómo me siento.',
-      'Creo que deberíamos hablar de esto. Me importa lo nuestro y quiero entendernos mejor.',
+      hasSnippet ? `Oye, sobre lo que te comentaba (${snippet}), me gustaría conversarlo contigo. ¿Qué opinas?` : 'Quería hablar contigo sobre esto. ¿Podemos conversar?',
+      hasSnippet ? `Te cuento: ${snippet} 😅 No quería dejarte sin saber. ¿Un momento?` : 'Oye, ¿tienes un momento? Hay algo que me ronda la cabeza.',
+      hasSnippet ? `He estado pensando en ti y quiero ser sincero/a contigo sobre esto: ${snippet}. Espero esté bien compartirlo.` : 'He estado pensando en ti y quiero ser honesto/a sobre cómo me siento.',
+      hasSnippet ? `Siendo honesto/a contigo: ${snippet}. Sin presión — solo quería que lo supieras.` : 'Creo que deberíamos hablar de esto. Me importa lo nuestro y quiero entendernos mejor.',
     ],
     pt: [
-      'Queria falar contigo sobre isso. Podemos conversar?',
-      'Ei, tens um minuto? Há algo que quero dizer.',
-      'Tenho pensado em ti e quero ser honesto/a sobre o que sinto.',
-      'Acho que deveríamos falar sobre isso. Importo-me connosco e quero compreender-nos melhor.',
+      hasSnippet ? `Oi, sobre o que te contei (${snippet}), queria conversar contigo. O que achas?` : 'Queria falar contigo sobre isso. Podemos conversar?',
+      hasSnippet ? `Te conto: ${snippet} 😅 Não queria te deixar sem saber. Tens um minuto?` : 'Ei, tens um minuto? Há algo que quero dizer.',
+      hasSnippet ? `Tenho pensado em ti e quero ser sincero/a sobre isto: ${snippet}. Espero que esteja tudo bem partilhar.` : 'Tenho pensado em ti e quero ser honesto/a sobre o que sinto.',
+      hasSnippet ? `Sendo honesto/a contigo: ${snippet}. Sem pressão — só queria que soubesses.` : 'Acho que deveríamos falar sobre isso. Importo-me connosco e quero compreender-nos melhor.',
     ],
     fr: [
-      'Je voulais te parler de quelque chose. On peut discuter ?',
-      'Hé, tu as un moment ? Il y a quelque chose qui me préoccupe.',
-      'Je pense à toi et je veux être honnête sur ce que je ressens.',
-      'Je pense qu\'on devrait parler de ça. Je tiens à nous et je veux qu\'on se comprenne mieux.',
+      hasSnippet ? `Salut, à propos de ce que je te disais (${snippet}), j'aimerais qu'on en parle. Qu'en penses-tu ?` : 'Je voulais te parler de quelque chose. On peut discuter ?',
+      hasSnippet ? `Je t'explique : ${snippet} 😅 Je ne voulais pas te laisser dans le flou. Tu as un moment ?` : 'Hé, tu as un moment ? Il y a quelque chose qui me préoccupe.',
+      hasSnippet ? `Je pense à toi et je veux être sincère avec toi sur ceci : ${snippet}. J'espère que ça va de partager.` : 'Je pense à toi et je veux être honnête sur ce que je ressens.',
+      hasSnippet ? `Pour être honnête avec toi : ${snippet}. Pas de pression — je voulais juste que tu saches.` : 'Je pense qu\'on devrait parler de ça. Je tiens à nous et je veux qu\'on se comprenne mieux.',
     ],
     de: [
-      'Ich wollte mit dir darüber reden. Können wir kurz reden?',
-      'Hey, hast du kurz Zeit? Da ist etwas, was mir durch den Kopf geht.',
-      'Ich habe an dich gedacht, und ich möchte ehrlich sagen, wie ich fühle.',
-      'Ich denke, wir sollten darüber reden. Mir liegt an uns, und ich möchte uns besser verstehen.',
+      hasSnippet ? `Hey, wegen dem, was ich erwähnt habe (${snippet}) — ich würde gern mit dir darüber reden. Was meinst du?` : 'Ich wollte mit dir darüber reden. Können wir kurz reden?',
+      hasSnippet ? `Also… ${snippet} 😅 Wollte dich nicht im Dunkeln lassen. Hast du kurz Zeit?` : 'Hey, hast du kurz Zeit? Da ist etwas, was mir durch den Kopf geht.',
+      hasSnippet ? `Ich habe an dich gedacht und möchte dir gegenüber ehrlich sein: ${snippet}. Ich hoffe, das ist okay.` : 'Ich habe an dich gedacht, und ich möchte ehrlich sagen, wie ich fühle.',
+      hasSnippet ? `Ganz ehrlich: ${snippet}. Kein Druck — ich wollte nur, dass du Bescheid weißt.` : 'Ich denke, wir sollten darüber reden. Mir liegt an uns, und ich möchte uns besser verstehen.',
     ],
     it: [
-      'Volevo parlarti di una cosa. Possiamo chiacchierare?',
-      'Ehi, hai un minuto? C\'è qualcosa che ho in mente.',
-      'Ho pensato a te e voglio essere onesto/a su ciò che provo.',
-      'Penso che dovremmo parlarne. Tengo a noi e voglio capirci meglio.',
+      hasSnippet ? `Ehi, riguardo a ciò che ti dicevo (${snippet}), mi piacerebbe parlarne con te. Che ne pensi?` : 'Volevo parlarti di una cosa. Possiamo chiacchierare?',
+      hasSnippet ? `Ti dico: ${snippet} 😅 Non volevo lasciarti nel buio. Hai un minuto?` : 'Ehi, hai un minuto? C\'è qualcosa che ho in mente.',
+      hasSnippet ? `Ho pensato a te e voglio essere sincero/a con te su questo: ${snippet}. Spero vada bene condividerlo.` : 'Ho pensato a te e voglio essere onesto/a su ciò che provo.',
+      hasSnippet ? `Per essere onesto/a con te: ${snippet}. Nessuna pressione — volevo solo che lo sapessi.` : 'Penso che dovremmo parlarne. Tengo a noi e voglio capirci meglio.',
     ],
     ja: [
-      '少し話したいことがあるんだ。時間ある？',
-      'ねえ、ちょっといい？話したいことがあって。',
-      '君のことを考えていて、自分の気持ちを正直に伝えたいんだ。',
-      'これについて話すべきだと思う。私たちのことが大切で、もっと分かり合いたいから。',
+      hasSnippet ? `ねえ、さっき話したこと（${snippet}）について、君と話したいな。どう思う？` : '少し話したいことがあるんだ。時間ある？',
+      hasSnippet ? `実はね… ${snippet} 😅 伝えておきたくて。少しいい？` : 'ねえ、ちょっといい？話したいことがあって。',
+      hasSnippet ? `君のことを考えていて、正直に伝えたいんだ：${snippet}。話してもいいかな？` : '君のことを考えていて、自分の気持ちを正直に伝えたいんだ。',
+      hasSnippet ? `正直に言うと：${snippet}。プレッシャーはかけたくないけど、知っておいてほしくて。` : 'これについて話すべきだと思う。私たちのことが大切で、もっと分かり合いたいから。',
     ],
     zh: [
-      '我想和你聊聊这件事，可以吗？',
-      '嘿，有空吗？我有话想说。',
-      '我一直在想你，我想诚实地表达我的感受。',
-      '我觉得我们应该谈谈这件事。我在乎我们，想更好地理解彼此。',
+      hasSnippet ? `嘿，关于我之前说的（${snippet}），想跟你好好聊聊，你觉得呢？` : '我想和你聊聊这件事，可以吗？',
+      hasSnippet ? `跟你说：${snippet} 😅 不想让你不知道。有空吗？` : '嘿，有空吗？我有话想说。',
+      hasSnippet ? `我一直在想你，想坦诚地告诉你：${snippet}。希望我可以跟你分享。` : '我一直在想你，我想诚实地表达我的感受。',
+      hasSnippet ? `跟你说实话：${snippet}。没有压力——只是想让你知道。` : '我觉得我们应该谈谈这件事。我在乎我们，想更好地理解彼此。',
     ],
     ru: [
-      'Я хотел/а поговорить с тобой об этом. Можем пообщаться?',
-      'Эй, есть минутка? У меня кое-что на уме.',
-      'Я думал/а о тебе и хочу честно сказать, что я чувствую.',
-      'Думаю, нам стоит об этом поговорить. Мне важны наши отношения, хочу лучше понимать друг друга.',
+      hasSnippet ? `Привет, по поводу того, что я говорил/а (${snippet}), хотел/а бы обсудить с тобой. Что думаешь?` : 'Я хотел/а поговорить с тобой об этом. Можем пообщаться?',
+      hasSnippet ? `Расскажу: ${snippet} 😅 Не хотел/а оставлять тебя в неведении. Есть минутка?` : 'Эй, есть минутка? У меня кое-что на уме.',
+      hasSnippet ? `Я думал/а о тебе и хочу быть откровенным/ой: ${snippet}. Надеюсь, это нормально поделиться.` : 'Я думал/а о тебе и хочу честно сказать, что я чувствую.',
+      hasSnippet ? `Если честно: ${snippet}. Без давления — просто хотел/а, чтобы ты знал/а.` : 'Думаю, нам стоит об этом поговорить. Мне важны наши отношения, хочу лучше понимать друг друга.',
     ],
     ar: [
-      'أردت أن أتحدث معك عن هذا. هل يمكننا التحدث؟',
-      'مرحباً، هل لديك لحظة؟ هناك شيء يشغل بالي.',
-      'كنت أفكر فيك، وأريد أن أكون صريحاً بشأن مشاعري.',
-      'أعتقد أنه يجب أن نتحدث عن هذا. أنا أهتم بنا وأريد أن نفهم بعضنا أفضل.',
+      hasSnippet ? `مرحباً، بخصوص ما ذكرته (${snippet})، أود أن نتحدث عن ذلك. ما رأيك؟` : 'أردت أن أتحدث معك عن هذا. هل يمكننا التحدث؟',
+      hasSnippet ? `لأقول لك: ${snippet} 😅 لم أرد أن أتركك دون علم. هل لديك لحظة؟` : 'مرحباً، هل لديك لحظة؟ هناك شيء يشغل بالي.',
+      hasSnippet ? `كنت أفكر فيك وأريد أن أكون صريحاً/صريحة معك بشأن هذا: ${snippet}. آمل أن يكون من المقبول مشاركته.` : 'كنت أفكر فيك، وأريد أن أكون صريحاً بشأن مشاعري.',
+      hasSnippet ? `بصراحة معك: ${snippet}. بدون ضغط — فقط أردتك أن تعرف.` : 'أعتقد أنه يجب أن نتحدث عن هذا. أنا أهتم بنا وأريد أن نفهم بعضنا أفضل.',
     ],
     id: [
-      'Aku ingin bicara denganmu tentang ini. Bisa kita ngobrol?',
-      'Hei, ada waktu sebentar? Ada yang mau aku sampaikan.',
-      'Aku memikirkanmu, dan aku ingin jujur tentang perasaanku.',
-      'Menurutku kita harus bicara soal ini. Aku peduli pada kita dan ingin saling memahami lebih baik.',
+      hasSnippet ? `Hei, soal yang tadi kubilang (${snippet}), aku ingin mengobrolkannya denganmu. Bagaimana menurutmu?` : 'Aku ingin bicara denganmu tentang ini. Bisa kita ngobrol?',
+      hasSnippet ? `Aku cerita ya: ${snippet} 😅 Tidak mau meninggalkanmu tanpa tahu. Ada waktu sebentar?` : 'Hei, ada waktu sebentar? Ada yang mau aku sampaikan.',
+      hasSnippet ? `Aku memikirkanmu dan ingin jujur padamu soal ini: ${snippet}. Semoga tidak masalah membaginya.` : 'Aku memikirkanmu, dan aku ingin jujur tentang perasaanku.',
+      hasSnippet ? `Jujur denganmu: ${snippet}. Tanpa tekanan — hanya ingin kamu tahu.` : 'Menurutku kita harus bicara soal ini. Aku peduli pada kita dan ingin saling memahami lebih baik.',
     ],
   };
-  const phrases = FALLBACKS[userLang] || FALLBACKS.en;
+  const phrases = TEMPLATES[userLang] || TEMPLATES.en;
   const tones = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
   return phrases.map((phrase, i) => ({
     id: String(i + 1),
@@ -338,9 +357,12 @@ async function generateApproaches(genAI, situation, matchPersona, userLang) {
 🌍 OUTPUT LANGUAGE: ${languageName} — code "${userLang}".
 EVERY "phrase" value in the JSON MUST be written in ${languageName}. Do NOT output English phrases when the user's language is not English.
 
-You are a dating coach helping a user rehearse how to say something to their match.
+You are a dating coach helping a user rehearse how to say something SPECIFIC to their match.
 
-User wants to express (original language preserved): "${situation}"
+The user's situation (verbatim — treat every noun, verb and detail as load-bearing):
+"""
+${situation}
+"""
 
 Match profile (so you tailor tone hints):
 - Name: ${matchPersona.name}
@@ -349,48 +371,84 @@ Match profile (so you tailor tone hints):
 - Attachment style: ${matchPersona.attachmentStyle}
 - Communication style: ${matchPersona.commStyle}
 
-Generate EXACTLY 4 distinct approaches — each a short phrase the user could actually send.
-Each approach uses one of these FIXED tones, in this exact order:
-  1. direct — clear, confident, unambiguous
-  2. playful — warm, light, a little humor
-  3. romantic_vulnerable — soft, honest about feelings
-  4. grounded_honest — calm, real, low-pressure
+🎯 CORE RULE — each approach MUST directly address the concrete content of the situation above.
+If the user talks about going out with a friend, mention the friend and the plan.
+If the user wants to confess feelings, state the feeling.
+If the user wants to apologize for cancelling a date, name the cancellation.
+Generic openers like "quería hablar contigo", "tenemos que hablar", "hay algo que quiero decirte", "we need to talk",
+"I've been thinking", "hay algo que me ronda la cabeza" — on their own — are FORBIDDEN. A message that could be
+sent for literally any situation has failed. Read the user's situation again and make each phrase unmistakably
+about THAT topic.
 
-Each phrase must be 1-2 sentences, natural, first-person, as if the user typed it themselves IN ${languageName}.
+Generate EXACTLY 4 distinct approaches — each a complete message the user could copy-paste and send right now.
+Each approach uses one of these FIXED tones, in this exact order:
+  1. direct — clear, confident, unambiguous; names the situation in the first sentence
+  2. playful — warm, light, a little humor; still references the specific topic (e.g. the friend, the plan, the feeling)
+  3. romantic_vulnerable — soft, honest about feelings tied to THIS situation
+  4. grounded_honest — calm, real, low-pressure; states what's happening and what they want
+
+Each phrase must be 2-3 sentences, natural, first-person, as if the user typed it themselves IN ${languageName}.
+Reference at least one concrete detail from the user's situation in every phrase (a name, place, plan, feeling, or event they mentioned).
+
+Quick self-check before returning each phrase: "Could this message have been written by someone with a totally
+different problem?" If yes, rewrite it until the answer is no.
 
 ${langInstr}
 
-⚠️ FINAL CHECK: Before returning, verify every "phrase" field is in ${languageName}, not English. If any phrase is in English but the target language is not English, REWRITE it in ${languageName}.
+⚠️ FINAL CHECKS:
+1. Every "phrase" is in ${languageName}, not English (unless target is English).
+2. Every "phrase" references specific content from the user's situation.
+3. No two phrases sound interchangeable.
 
 Respond ONLY with JSON in this shape (phrases in ${languageName}):
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
-    const result = await model.generateContent(prompt);
-    const text = result?.response?.text();
+    // Try up to 2 times — a single Gemini hiccup shouldn't collapse to generic fallbacks
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const result = await model.generateContent(prompt);
+        const text = result?.response?.text();
 
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      logger.warn('[generateApproaches] Gemini returned empty response, using fallback');
-      return generateApproachesFallback(userLang);
+        if (!text || typeof text !== 'string' || text.trim().length === 0) {
+          logger.warn(`[generateApproaches] attempt ${attempt}: Gemini returned empty response`);
+          lastError = new Error('empty_response');
+          continue;
+        }
+
+        const parsed = parseGeminiJsonResponse(text);
+        if (!parsed || !Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
+          logger.warn(`[generateApproaches] attempt ${attempt}: failed to parse valid approaches`);
+          lastError = new Error('parse_failed');
+          continue;
+        }
+
+        const approaches = parsed.approaches;
+        // Normalize — guarantee 4 approaches in fixed order
+        const byTone = new Map();
+        for (const a of approaches) {
+          if (a && typeof a.phrase === 'string' && a.tone) byTone.set(a.tone, a.phrase.trim());
+        }
+        const normalized = FIXED_TONES.map((tone, i) => ({
+          id: String(i + 1),
+          tone,
+          phrase: byTone.get(tone) || approaches[i]?.phrase || '',
+        }));
+        // Reject this attempt if any phrase is empty — try again rather than ship blanks
+        if (normalized.some(a => !a.phrase)) {
+          logger.warn(`[generateApproaches] attempt ${attempt}: one or more phrases empty after normalize`);
+          lastError = new Error('empty_phrase');
+          continue;
+        }
+        return normalized;
+      } catch (innerErr) {
+        logger.warn(`[generateApproaches] attempt ${attempt} threw: ${innerErr.message}`);
+        lastError = innerErr;
+      }
     }
 
-    const parsed = parseGeminiJsonResponse(text);
-    if (!parsed || !Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
-      logger.warn('[generateApproaches] Failed to parse valid approaches, using fallback');
-      return generateApproachesFallback(userLang);
-    }
-
-    const approaches = parsed.approaches;
-
-    // Normalize — guarantee 4 approaches in fixed order
-    const byTone = new Map();
-    for (const a of approaches) {
-      if (a && typeof a.phrase === 'string' && a.tone) byTone.set(a.tone, a.phrase.trim());
-    }
-    return FIXED_TONES.map((tone, i) => ({
-      id: String(i + 1),
-      tone,
-      phrase: byTone.get(tone) || approaches[i]?.phrase || '',
-    }));
+    logger.error(`[generateApproaches] all attempts failed (${lastError?.message}), using situation-aware fallback`);
+    return generateApproachesFallback(userLang, situation);
   } catch (e) {
     logger.error('[situationSim] generateApproaches failed:', e.message);
     throw e; // Re-throw so parent catches and returns proper error message
