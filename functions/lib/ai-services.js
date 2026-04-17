@@ -383,20 +383,76 @@ exports.analyzeConversationChemistry = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {messages} = request.data || {};
+    const {messages, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+
+    const INSIGHTS_I18N = {
+      en: {
+        high_volume: 'Lots of messages — a strong sign of mutual interest',
+        flowing: 'The conversation is flowing nicely',
+        start: 'Start the conversation to unlock chemistry analysis',
+      },
+      es: {
+        high_volume: 'Gran cantidad de mensajes — buena señal de interés mutuo',
+        flowing: 'La conversación está fluyendo bien',
+        start: 'Inicia la conversación para desbloquear el análisis de química',
+      },
+      pt: {
+        high_volume: 'Muitas mensagens — um forte sinal de interesse mútuo',
+        flowing: 'A conversa está fluindo bem',
+        start: 'Inicie a conversa para desbloquear a análise de química',
+      },
+      fr: {
+        high_volume: 'Beaucoup de messages — un signe fort d\'intérêt mutuel',
+        flowing: 'La conversation se passe bien',
+        start: 'Commence la conversation pour débloquer l\'analyse de l\'alchimie',
+      },
+      de: {
+        high_volume: 'Viele Nachrichten — ein starkes Zeichen gegenseitigen Interesses',
+        flowing: 'Das Gespräch läuft gut',
+        start: 'Starte das Gespräch, um die Chemie-Analyse freizuschalten',
+      },
+      ja: {
+        high_volume: 'メッセージが多い — 相互の関心が高いサイン',
+        flowing: '会話が順調に進んでいます',
+        start: '会話を始めて、相性分析を解除しましょう',
+      },
+      zh: {
+        high_volume: '消息量很大 — 相互感兴趣的强烈信号',
+        flowing: '对话进行得很顺利',
+        start: '开始对话以解锁默契分析',
+      },
+      ru: {
+        high_volume: 'Много сообщений — сильный признак взаимного интереса',
+        flowing: 'Разговор хорошо развивается',
+        start: 'Начните разговор, чтобы открыть анализ химии',
+      },
+      ar: {
+        high_volume: 'الكثير من الرسائل — علامة قوية على الاهتمام المتبادل',
+        flowing: 'المحادثة تسير بسلاسة',
+        start: 'ابدأ المحادثة لفتح تحليل الكيمياء',
+      },
+      id: {
+        high_volume: 'Banyak pesan — tanda kuat ketertarikan timbal balik',
+        flowing: 'Percakapan berjalan dengan baik',
+        start: 'Mulai percakapan untuk membuka analisis chemistry',
+      },
+    };
+    const t = INSIGHTS_I18N[lang] || INSIGHTS_I18N.en;
+
     let score = 50;
     const insights = [];
 
     if (Array.isArray(messages) && messages.length > 0) {
       score = Math.min(50 + messages.length * 2, 100);
-      if (messages.length > 20) insights.push('Gran cantidad de mensajes — buena señal de interés mutuo');
-      if (messages.length > 5) insights.push('La conversación está fluyendo bien');
+      if (messages.length > 20) insights.push(t.high_volume);
+      if (messages.length > 5) insights.push(t.flowing);
     } else {
-      insights.push('Inicia la conversación para desbloquear el análisis de química');
+      insights.push(t.start);
     }
 
     const level = score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
-    logger.info(`[analyzeConversationChemistry] score=${score}, level=${level}`);
+    logger.info(`[analyzeConversationChemistry] score=${score}, level=${level}, lang=${lang}`);
     return {success: true, score, level, insights};
   },
 );
@@ -806,13 +862,83 @@ exports.generateConversationStarter = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const starterTexts = [
-      {message: '¿Cuál es el lugar más increíble que has visitado? 🌍', reasoning: 'Travel shared experience', expectedResponse: 'A destination or travel story'},
-      {message: 'Si pudieras hacer cualquier cosa este fin de semana, ¿qué sería? ☀️', reasoning: 'Reveals lifestyle', expectedResponse: 'Weekend plans or wishes'},
-      {message: '¿Cuál es tu película favorita de todos los tiempos? 🎬', reasoning: 'Cultural common ground', expectedResponse: 'A movie title or genre'},
-      {message: '¿Qué es lo que más te apasiona en la vida? ✨', reasoning: 'Shows depth of character', expectedResponse: 'A passion or goal'},
-      {message: '¿Si pudieras viajar a cualquier lugar ahora mismo, adónde irías? ✈️', reasoning: 'Dream exploration', expectedResponse: 'A place or reason'},
-    ];
+    const {userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+
+    const STARTERS_I18N = {
+      en: [
+        {message: 'What\'s the most incredible place you\'ve visited? 🌍', reasoning: 'Travel shared experience', expectedResponse: 'A destination or travel story'},
+        {message: 'If you could do anything this weekend, what would it be? ☀️', reasoning: 'Reveals lifestyle', expectedResponse: 'Weekend plans or wishes'},
+        {message: 'What\'s your all-time favorite movie? 🎬', reasoning: 'Cultural common ground', expectedResponse: 'A movie title or genre'},
+        {message: 'What are you most passionate about in life? ✨', reasoning: 'Shows depth of character', expectedResponse: 'A passion or goal'},
+        {message: 'If you could travel anywhere right now, where would you go? ✈️', reasoning: 'Dream exploration', expectedResponse: 'A place or reason'},
+      ],
+      es: [
+        {message: '¿Cuál es el lugar más increíble que has visitado? 🌍', reasoning: 'Experiencia de viaje compartida', expectedResponse: 'Un destino o historia de viaje'},
+        {message: 'Si pudieras hacer cualquier cosa este fin de semana, ¿qué sería? ☀️', reasoning: 'Revela estilo de vida', expectedResponse: 'Planes o deseos de fin de semana'},
+        {message: '¿Cuál es tu película favorita de todos los tiempos? 🎬', reasoning: 'Punto en común cultural', expectedResponse: 'Un título o género de película'},
+        {message: '¿Qué es lo que más te apasiona en la vida? ✨', reasoning: 'Muestra profundidad de carácter', expectedResponse: 'Una pasión o meta'},
+        {message: 'Si pudieras viajar a cualquier lugar ahora mismo, ¿adónde irías? ✈️', reasoning: 'Exploración de sueños', expectedResponse: 'Un lugar o razón'},
+      ],
+      pt: [
+        {message: 'Qual é o lugar mais incrível que você já visitou? 🌍', reasoning: 'Experiência de viagem compartilhada', expectedResponse: 'Um destino ou história de viagem'},
+        {message: 'Se pudesse fazer qualquer coisa neste fim de semana, o que seria? ☀️', reasoning: 'Revela estilo de vida', expectedResponse: 'Planos ou desejos de fim de semana'},
+        {message: 'Qual é o seu filme favorito de todos os tempos? 🎬', reasoning: 'Ponto em comum cultural', expectedResponse: 'Um título ou gênero de filme'},
+        {message: 'O que te apaixona mais na vida? ✨', reasoning: 'Mostra profundidade de caráter', expectedResponse: 'Uma paixão ou meta'},
+        {message: 'Se pudesse viajar para qualquer lugar agora, para onde iria? ✈️', reasoning: 'Exploração de sonhos', expectedResponse: 'Um lugar ou razão'},
+      ],
+      fr: [
+        {message: 'Quel est l\'endroit le plus incroyable que tu aies visité ? 🌍', reasoning: 'Expérience de voyage partagée', expectedResponse: 'Une destination ou histoire de voyage'},
+        {message: 'Si tu pouvais faire n\'importe quoi ce week-end, que ferais-tu ? ☀️', reasoning: 'Révèle le style de vie', expectedResponse: 'Plans ou souhaits du week-end'},
+        {message: 'Quel est ton film préféré de tous les temps ? 🎬', reasoning: 'Point commun culturel', expectedResponse: 'Un titre ou genre de film'},
+        {message: 'Qu\'est-ce qui te passionne le plus dans la vie ? ✨', reasoning: 'Montre la profondeur de caractère', expectedResponse: 'Une passion ou un but'},
+        {message: 'Si tu pouvais voyager n\'importe où maintenant, où irais-tu ? ✈️', reasoning: 'Exploration de rêves', expectedResponse: 'Un lieu ou une raison'},
+      ],
+      de: [
+        {message: 'Was ist der unglaublichste Ort, den du je besucht hast? 🌍', reasoning: 'Geteilte Reiseerfahrung', expectedResponse: 'Ein Ziel oder eine Reisegeschichte'},
+        {message: 'Wenn du dieses Wochenende alles tun könntest, was wäre es? ☀️', reasoning: 'Zeigt den Lebensstil', expectedResponse: 'Wochenendpläne oder Wünsche'},
+        {message: 'Was ist dein Lieblingsfilm aller Zeiten? 🎬', reasoning: 'Kulturelle Gemeinsamkeiten', expectedResponse: 'Ein Filmtitel oder Genre'},
+        {message: 'Wofür brennst du am meisten im Leben? ✨', reasoning: 'Zeigt Charaktertiefe', expectedResponse: 'Eine Leidenschaft oder ein Ziel'},
+        {message: 'Wenn du jetzt überall hinreisen könntest, wohin würdest du gehen? ✈️', reasoning: 'Traumerkundung', expectedResponse: 'Ein Ort oder Grund'},
+      ],
+      ja: [
+        {message: 'これまで訪れた中で、一番素晴らしい場所はどこ？ 🌍', reasoning: '共有する旅の体験', expectedResponse: '目的地や旅のストーリー'},
+        {message: 'この週末、なんでもできるとしたら何をする？ ☀️', reasoning: 'ライフスタイルが分かる', expectedResponse: '週末の予定や願望'},
+        {message: '今までで一番好きな映画は？ 🎬', reasoning: '文化的な共通点', expectedResponse: '映画のタイトルやジャンル'},
+        {message: '人生で一番情熱を注いでいることは？ ✨', reasoning: '人柄の深みを見せる', expectedResponse: '情熱や目標'},
+        {message: '今すぐどこへでも行けるとしたら、どこに行く？ ✈️', reasoning: '夢の探求', expectedResponse: '場所や理由'},
+      ],
+      zh: [
+        {message: '你去过的最不可思议的地方是哪里？ 🌍', reasoning: '共同的旅行经历', expectedResponse: '目的地或旅行故事'},
+        {message: '如果这个周末可以做任何事，你想做什么？ ☀️', reasoning: '展现生活方式', expectedResponse: '周末计划或愿望'},
+        {message: '你一直以来最喜欢的电影是什么？ 🎬', reasoning: '文化共鸣点', expectedResponse: '电影名或类型'},
+        {message: '你生活中最有激情的事是什么？ ✨', reasoning: '展现个性深度', expectedResponse: '激情或目标'},
+        {message: '如果现在能去任何地方，你会去哪里？ ✈️', reasoning: '梦想探索', expectedResponse: '地点或原因'},
+      ],
+      ru: [
+        {message: 'Какое самое невероятное место ты посетил/а? 🌍', reasoning: 'Общий опыт путешествий', expectedResponse: 'Место или история путешествия'},
+        {message: 'Если бы ты мог/ла делать что угодно в эти выходные, что бы это было? ☀️', reasoning: 'Раскрывает стиль жизни', expectedResponse: 'Планы или желания на выходные'},
+        {message: 'Какой твой любимый фильм всех времен? 🎬', reasoning: 'Культурные общности', expectedResponse: 'Название фильма или жанр'},
+        {message: 'Что больше всего увлекает тебя в жизни? ✨', reasoning: 'Показывает глубину характера', expectedResponse: 'Увлечение или цель'},
+        {message: 'Если бы мог/ла отправиться куда угодно прямо сейчас, куда бы поехал/а? ✈️', reasoning: 'Исследование мечты', expectedResponse: 'Место или причина'},
+      ],
+      ar: [
+        {message: 'ما هو أروع مكان زرته؟ 🌍', reasoning: 'تجربة سفر مشتركة', expectedResponse: 'وجهة أو قصة سفر'},
+        {message: 'إذا كان بإمكانك فعل أي شيء في نهاية الأسبوع، ماذا ستفعل؟ ☀️', reasoning: 'يكشف نمط الحياة', expectedResponse: 'خطط أو أمنيات نهاية الأسبوع'},
+        {message: 'ما هو فيلمك المفضل على الإطلاق؟ 🎬', reasoning: 'نقطة مشتركة ثقافية', expectedResponse: 'عنوان فيلم أو نوع'},
+        {message: 'ما الذي يشغفك أكثر في الحياة؟ ✨', reasoning: 'يُظهر عمق الشخصية', expectedResponse: 'شغف أو هدف'},
+        {message: 'إذا أمكنك السفر إلى أي مكان الآن، أين ستذهب؟ ✈️', reasoning: 'استكشاف الأحلام', expectedResponse: 'مكان أو سبب'},
+      ],
+      id: [
+        {message: 'Tempat paling luar biasa yang pernah kamu kunjungi apa? 🌍', reasoning: 'Pengalaman perjalanan bersama', expectedResponse: 'Tujuan atau cerita perjalanan'},
+        {message: 'Kalau bisa melakukan apa saja akhir pekan ini, apa itu? ☀️', reasoning: 'Mengungkapkan gaya hidup', expectedResponse: 'Rencana atau keinginan akhir pekan'},
+        {message: 'Film favoritmu sepanjang masa apa? 🎬', reasoning: 'Kesamaan budaya', expectedResponse: 'Judul atau genre film'},
+        {message: 'Apa yang paling kamu sukai dalam hidup? ✨', reasoning: 'Menunjukkan kedalaman karakter', expectedResponse: 'Passion atau tujuan'},
+        {message: 'Kalau bisa traveling ke mana saja sekarang, mau ke mana? ✈️', reasoning: 'Eksplorasi impian', expectedResponse: 'Tempat atau alasan'},
+      ],
+    };
+
+    const starterTexts = STARTERS_I18N[lang] || STARTERS_I18N.en;
     const idx = Math.floor(Math.random() * starterTexts.length);
     const chosen = starterTexts[idx];
     const rest = starterTexts.filter((_, i) => i !== idx);
@@ -982,8 +1108,9 @@ exports.detectProfileRedFlags = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userId} = request.data || {};
+    const {userId, userLanguage} = request.data || {};
     const targetId = userId || request.auth.uid;
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const db = admin.firestore();
     const userDoc = await db.collection('users').doc(targetId).get();
@@ -1007,13 +1134,29 @@ exports.detectProfileRedFlags = onCall(
     }
 
     riskScore = Math.min(riskScore, 100);
+
+    // Localized details — 10 languages
+    const DETAILS_I18N = {
+      en: {detected: (n) => `Detected ${n} warning signal${n === 1 ? '' : 's'}`, clean: 'Profile with no warning signals'},
+      es: {detected: (n) => `Se detectaron ${n} señal(es) de alerta`, clean: 'Perfil sin señales de alerta'},
+      pt: {detected: (n) => `Foram detectados ${n} sinal(is) de alerta`, clean: 'Perfil sem sinais de alerta'},
+      fr: {detected: (n) => `${n} signal(aux) d\'alerte détecté(s)`, clean: 'Profil sans signaux d\'alerte'},
+      de: {detected: (n) => `${n} Warnsignal(e) erkannt`, clean: 'Profil ohne Warnsignale'},
+      ja: {detected: (n) => `${n}件の警告サインを検出しました`, clean: '警告サインのないプロフィール'},
+      zh: {detected: (n) => `检测到 ${n} 个警告信号`, clean: '没有警告信号的资料'},
+      ru: {detected: (n) => `Обнаружено ${n} тревожных сигнал(ов)`, clean: 'Профиль без тревожных сигналов'},
+      ar: {detected: (n) => `تم اكتشاف ${n} علامة تحذير`, clean: 'ملف شخصي بدون علامات تحذير'},
+      id: {detected: (n) => `Terdeteksi ${n} sinyal peringatan`, clean: 'Profil tanpa sinyal peringatan'},
+    };
+    const d = DETAILS_I18N[lang] || DETAILS_I18N.en;
+
     // ✅ Respuesta homologada: iOS/Android leen hasRedFlags, flags, confidence, details
     return {
       success: true,
       hasRedFlags: flags.length > 0,
       flags,
       confidence: flags.length > 0 ? Math.min(flags.length * 30, 90) : 0,
-      details: flags.length > 0 ? `Se detectaron ${flags.length} señal(es) de alerta` : 'Perfil sin señales de alerta',
+      details: flags.length > 0 ? d.detected(flags.length) : d.clean,
       riskScore,
     };
   },
@@ -1218,17 +1361,34 @@ exports.predictOptimalMessageTime = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
+    const {userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+
     // En producción analizar patrones de actividad del usuario
     const optimalHours = [19, 20, 21]; // 7pm-9pm son las horas pico habituales
     const optimalTime = optimalHours[Math.floor(Math.random() * optimalHours.length)];
-    logger.info(`[predictOptimalMessageTime] Optimal hour: ${optimalTime}:00`);
+
+    const REASONING_I18N = {
+      en: 'Users are most active between 7 PM and 9 PM',
+      es: 'Los usuarios son más activos entre 7pm y 9pm',
+      pt: 'Os usuários são mais ativos entre 19h e 21h',
+      fr: 'Les utilisateurs sont les plus actifs entre 19h et 21h',
+      de: 'Nutzer sind zwischen 19 und 21 Uhr am aktivsten',
+      ja: 'ユーザーは午後7時から9時の間に最もアクティブです',
+      zh: '用户在晚上7点到9点最活跃',
+      ru: 'Пользователи наиболее активны между 19:00 и 21:00',
+      ar: 'المستخدمون أكثر نشاطاً بين الساعة 7 و 9 مساءً',
+      id: 'Pengguna paling aktif antara pukul 19:00 dan 21:00',
+    };
+
+    logger.info(`[predictOptimalMessageTime] Optimal hour: ${optimalTime}:00, lang=${lang}`);
     return {
       success: true,
       optimalTime: `${optimalTime}:00`,
       optimalHour: optimalTime,
       timezone: 'UTC-6',
       confidence: 0.75,
-      reasoning: 'Los usuarios son más activos entre 7pm y 9pm',
+      reasoning: REASONING_I18N[lang] || REASONING_I18N.en,
     };
   },
 );
@@ -1243,25 +1403,155 @@ exports.getDatingAdvice = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {topic} = request.data || {};
+    const {topic, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
 
-    const adviceMap = {
-      'first_message': {
-        advice: 'Haz una pregunta específica sobre algo de su perfil para mostrar que te interesan genuinamente',
-        tips: ['Menciona un interés en común', 'Sé específico, no genérico', 'Termina con una pregunta abierta'],
+    const ADVICE_MAP_I18N = {
+      en: {
+        first_message: {
+          advice: 'Ask a specific question about something in their profile to show genuine interest',
+          tips: ['Mention a common interest', 'Be specific, not generic', 'End with an open-ended question'],
+        },
+        first_date: {
+          advice: 'Pick a comfortable place with good conversation — avoid the movies on a first date',
+          tips: ['Grab a coffee or take a walk', 'Listen actively', 'Just be yourself'],
+        },
+        default: {
+          advice: 'Authenticity is the key to success in modern dating',
+          tips: ['Be authentic', 'Show genuine interest', 'Don\'t pressure yourself'],
+        },
       },
-      'first_date': {
-        advice: 'Elige un lugar cómodo y con buena conversación, evita el cine en la primera cita',
-        tips: ['Toma café o un paseo', 'Escucha activamente', 'Sé tú mismo/a'],
+      es: {
+        first_message: {
+          advice: 'Haz una pregunta específica sobre algo de su perfil para mostrar que te interesan genuinamente',
+          tips: ['Menciona un interés en común', 'Sé específico, no genérico', 'Termina con una pregunta abierta'],
+        },
+        first_date: {
+          advice: 'Elige un lugar cómodo y con buena conversación, evita el cine en la primera cita',
+          tips: ['Toma café o un paseo', 'Escucha activamente', 'Sé tú mismo/a'],
+        },
+        default: {
+          advice: 'La autenticidad es la clave del éxito en las citas modernas',
+          tips: ['Sé auténtico/a', 'Muestra interés genuino', 'No te presiones'],
+        },
       },
-      'default': {
-        advice: 'La autenticidad es la clave del éxito en las citas modernas',
-        tips: ['Sé auténtico/a', 'Muestra interés genuino', 'No te presiones'],
+      pt: {
+        first_message: {
+          advice: 'Faça uma pergunta específica sobre algo no perfil para mostrar interesse genuíno',
+          tips: ['Mencione um interesse em comum', 'Seja específico, não genérico', 'Termine com uma pergunta aberta'],
+        },
+        first_date: {
+          advice: 'Escolha um lugar confortável com boa conversa — evite cinema no primeiro encontro',
+          tips: ['Tome um café ou dê um passeio', 'Escute ativamente', 'Seja você mesmo/a'],
+        },
+        default: {
+          advice: 'A autenticidade é a chave do sucesso nos encontros modernos',
+          tips: ['Seja autêntico/a', 'Demonstre interesse genuíno', 'Não se pressione'],
+        },
+      },
+      fr: {
+        first_message: {
+          advice: 'Pose une question spécifique sur quelque chose de son profil pour montrer un intérêt sincère',
+          tips: ['Mentionne un intérêt commun', 'Sois spécifique, pas générique', 'Termine par une question ouverte'],
+        },
+        first_date: {
+          advice: 'Choisis un endroit confortable avec de bonnes conversations — évite le cinéma au premier rendez-vous',
+          tips: ['Prenez un café ou marchez', 'Écoute activement', 'Sois toi-même'],
+        },
+        default: {
+          advice: 'L\'authenticité est la clé du succès dans les rencontres modernes',
+          tips: ['Sois authentique', 'Montre un intérêt sincère', 'Ne te mets pas la pression'],
+        },
+      },
+      de: {
+        first_message: {
+          advice: 'Stelle eine konkrete Frage zu etwas im Profil, um echtes Interesse zu zeigen',
+          tips: ['Erwähne ein gemeinsames Interesse', 'Sei konkret, nicht generisch', 'Ende mit einer offenen Frage'],
+        },
+        first_date: {
+          advice: 'Wähle einen bequemen Ort mit guten Gesprächen — vermeide das Kino beim ersten Date',
+          tips: ['Auf einen Kaffee gehen oder einen Spaziergang machen', 'Aktiv zuhören', 'Sei einfach du selbst'],
+        },
+        default: {
+          advice: 'Authentizität ist der Schlüssel zum Erfolg beim modernen Dating',
+          tips: ['Sei authentisch', 'Zeige echtes Interesse', 'Setze dich nicht unter Druck'],
+        },
+      },
+      ja: {
+        first_message: {
+          advice: '相手のプロフィールにある具体的な点について質問し、本当に興味があることを示しましょう',
+          tips: ['共通の興味を挙げる', '汎用的でなく具体的に', 'オープンな質問で締めくくる'],
+        },
+        first_date: {
+          advice: '会話がしやすい居心地の良い場所を選びましょう。初デートで映画は避けましょう',
+          tips: ['カフェや散歩がおすすめ', '相手の話に耳を傾ける', '自分らしくいる'],
+        },
+        default: {
+          advice: '現代のデートで成功する鍵は、ありのままの自分でいることです',
+          tips: ['本物の自分でいる', '誠実な関心を示す', '自分を追い込まない'],
+        },
+      },
+      zh: {
+        first_message: {
+          advice: '就对方资料中的具体内容提问，展现你真诚的兴趣',
+          tips: ['提及共同兴趣', '具体而非泛泛而谈', '以开放式问题结尾'],
+        },
+        first_date: {
+          advice: '选择一个舒适、便于交流的地点——第一次约会避免电影院',
+          tips: ['喝咖啡或散步', '认真倾听', '做自己'],
+        },
+        default: {
+          advice: '真实是现代约会成功的关键',
+          tips: ['保持真实', '表达真诚的兴趣', '不要给自己压力'],
+        },
+      },
+      ru: {
+        first_message: {
+          advice: 'Задайте конкретный вопрос о чём-то в профиле, чтобы показать искренний интерес',
+          tips: ['Упомяните общий интерес', 'Будьте конкретны, не шаблонны', 'Закончите открытым вопросом'],
+        },
+        first_date: {
+          advice: 'Выберите комфортное место для хорошей беседы — избегайте кино на первом свидании',
+          tips: ['Выпейте кофе или прогуляйтесь', 'Слушайте внимательно', 'Будьте собой'],
+        },
+        default: {
+          advice: 'Искренность — ключ к успеху в современных отношениях',
+          tips: ['Будьте искренни', 'Проявляйте искренний интерес', 'Не давите на себя'],
+        },
+      },
+      ar: {
+        first_message: {
+          advice: 'اطرح سؤالاً محدداً عن شيء في ملفهم الشخصي لتُظهر اهتماماً حقيقياً',
+          tips: ['اذكر اهتماماً مشتركاً', 'كن محدداً، لا عاماً', 'اختم بسؤال مفتوح'],
+        },
+        first_date: {
+          advice: 'اختر مكاناً مريحاً يسمح بالحوار الجيد — تجنّب السينما في الموعد الأول',
+          tips: ['اشربا قهوة أو تمشّيا', 'استمع باهتمام', 'كن على طبيعتك'],
+        },
+        default: {
+          advice: 'الأصالة هي مفتاح النجاح في العلاقات الحديثة',
+          tips: ['كن أصيلاً', 'أظهر اهتماماً حقيقياً', 'لا تضغط على نفسك'],
+        },
+      },
+      id: {
+        first_message: {
+          advice: 'Ajukan pertanyaan spesifik tentang sesuatu di profilnya untuk menunjukkan minat yang tulus',
+          tips: ['Sebutkan minat yang sama', 'Spesifik, jangan umum', 'Akhiri dengan pertanyaan terbuka'],
+        },
+        first_date: {
+          advice: 'Pilih tempat nyaman untuk percakapan yang baik — hindari bioskop di kencan pertama',
+          tips: ['Ngopi atau jalan-jalan', 'Dengarkan dengan aktif', 'Jadi diri sendiri'],
+        },
+        default: {
+          advice: 'Keaslian adalah kunci sukses dalam dating modern',
+          tips: ['Jadilah autentik', 'Tunjukkan minat yang tulus', 'Jangan memaksakan diri'],
+        },
       },
     };
 
-    const selected = adviceMap[topic] || adviceMap['default'];
-    logger.info(`[getDatingAdvice] Advice for topic=${topic || 'default'}`);
+    const adviceMap = ADVICE_MAP_I18N[lang] || ADVICE_MAP_I18N.en;
+    const selected = adviceMap[topic] || adviceMap.default;
+    logger.info(`[getDatingAdvice] Advice for topic=${topic || 'default'}, lang=${lang}`);
     return {success: true, ...selected};
   },
 );

@@ -52,30 +52,83 @@ const SITUATION_TYPES = [
 
 const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 
-// Fallback approaches when Gemini API fails or returns invalid JSON
-function generateApproachesFallback() {
-  return [
-    {
-      id: '1',
-      tone: 'direct',
-      phrase: 'I wanted to talk with you about this. Can we chat?',
-    },
-    {
-      id: '2',
-      tone: 'playful',
-      phrase: 'Hey, got a few minutes? There\'s something on my mind.',
-    },
-    {
-      id: '3',
-      tone: 'romantic_vulnerable',
-      phrase: 'I\'ve been thinking about you, and I want to be honest about how I feel.',
-    },
-    {
-      id: '4',
-      tone: 'grounded_honest',
-      phrase: 'I think we should talk about this. I care about us and want to understand each other better.',
-    },
-  ];
+// Fallback approaches when Gemini API fails or returns invalid JSON — 10 languages supported
+function generateApproachesFallback(userLang = 'en') {
+  const FALLBACKS = {
+    en: [
+      'I wanted to talk with you about this. Can we chat?',
+      'Hey, got a few minutes? There\'s something on my mind.',
+      'I\'ve been thinking about you, and I want to be honest about how I feel.',
+      'I think we should talk about this. I care about us and want to understand each other better.',
+    ],
+    es: [
+      'Quería hablar contigo sobre esto. ¿Podemos conversar?',
+      'Oye, ¿tienes un momento? Hay algo que me ronda la cabeza.',
+      'He estado pensando en ti y quiero ser honesto/a sobre cómo me siento.',
+      'Creo que deberíamos hablar de esto. Me importa lo nuestro y quiero entendernos mejor.',
+    ],
+    pt: [
+      'Queria falar contigo sobre isso. Podemos conversar?',
+      'Ei, tens um minuto? Há algo que quero dizer.',
+      'Tenho pensado em ti e quero ser honesto/a sobre o que sinto.',
+      'Acho que deveríamos falar sobre isso. Importo-me connosco e quero compreender-nos melhor.',
+    ],
+    fr: [
+      'Je voulais te parler de quelque chose. On peut discuter ?',
+      'Hé, tu as un moment ? Il y a quelque chose qui me préoccupe.',
+      'Je pense à toi et je veux être honnête sur ce que je ressens.',
+      'Je pense qu\'on devrait parler de ça. Je tiens à nous et je veux qu\'on se comprenne mieux.',
+    ],
+    de: [
+      'Ich wollte mit dir darüber reden. Können wir kurz reden?',
+      'Hey, hast du kurz Zeit? Da ist etwas, was mir durch den Kopf geht.',
+      'Ich habe an dich gedacht, und ich möchte ehrlich sagen, wie ich fühle.',
+      'Ich denke, wir sollten darüber reden. Mir liegt an uns, und ich möchte uns besser verstehen.',
+    ],
+    it: [
+      'Volevo parlarti di una cosa. Possiamo chiacchierare?',
+      'Ehi, hai un minuto? C\'è qualcosa che ho in mente.',
+      'Ho pensato a te e voglio essere onesto/a su ciò che provo.',
+      'Penso che dovremmo parlarne. Tengo a noi e voglio capirci meglio.',
+    ],
+    ja: [
+      '少し話したいことがあるんだ。時間ある？',
+      'ねえ、ちょっといい？話したいことがあって。',
+      '君のことを考えていて、自分の気持ちを正直に伝えたいんだ。',
+      'これについて話すべきだと思う。私たちのことが大切で、もっと分かり合いたいから。',
+    ],
+    zh: [
+      '我想和你聊聊这件事，可以吗？',
+      '嘿，有空吗？我有话想说。',
+      '我一直在想你，我想诚实地表达我的感受。',
+      '我觉得我们应该谈谈这件事。我在乎我们，想更好地理解彼此。',
+    ],
+    ru: [
+      'Я хотел/а поговорить с тобой об этом. Можем пообщаться?',
+      'Эй, есть минутка? У меня кое-что на уме.',
+      'Я думал/а о тебе и хочу честно сказать, что я чувствую.',
+      'Думаю, нам стоит об этом поговорить. Мне важны наши отношения, хочу лучше понимать друг друга.',
+    ],
+    ar: [
+      'أردت أن أتحدث معك عن هذا. هل يمكننا التحدث؟',
+      'مرحباً، هل لديك لحظة؟ هناك شيء يشغل بالي.',
+      'كنت أفكر فيك، وأريد أن أكون صريحاً بشأن مشاعري.',
+      'أعتقد أنه يجب أن نتحدث عن هذا. أنا أهتم بنا وأريد أن نفهم بعضنا أفضل.',
+    ],
+    id: [
+      'Aku ingin bicara denganmu tentang ini. Bisa kita ngobrol?',
+      'Hei, ada waktu sebentar? Ada yang mau aku sampaikan.',
+      'Aku memikirkanmu, dan aku ingin jujur tentang perasaanku.',
+      'Menurutku kita harus bicara soal ini. Aku peduli pada kita dan ingin saling memahami lebih baik.',
+    ],
+  };
+  const phrases = FALLBACKS[userLang] || FALLBACKS.en;
+  const tones = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
+  return phrases.map((phrase, i) => ({
+    id: String(i + 1),
+    tone: tones[i],
+    phrase,
+  }));
 }
 
 // Safety guardrail patterns — when any of these match the user's situation,
@@ -268,14 +321,25 @@ Respond with JSON: {"type": "<category>"}`;
 async function generateApproaches(genAI, situation, matchPersona, userLang) {
   try {
     const langInstr = getLanguageInstruction(userLang);
+    const languageName = {
+      'es': 'Spanish (español)', 'pt': 'Portuguese (português)', 'fr': 'French (français)',
+      'de': 'German (Deutsch)', 'it': 'Italian (italiano)', 'ja': 'Japanese (日本語)',
+      'zh': 'Chinese (中文)', 'ru': 'Russian (Русский)', 'ar': 'Arabic (العربية)',
+      'id': 'Indonesian (Bahasa Indonesia)', 'en': 'English',
+    }[userLang] || 'English';
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_NAME,
       generationConfig: {maxOutputTokens: 1200, temperature: 0.85, responseMimeType: 'application/json'},
     });
 
-    const prompt = `You are a dating coach helping a user rehearse how to say something to their match.
+    const prompt = `${langInstr}
 
-User wants to express: "${situation}"
+🌍 OUTPUT LANGUAGE: ${languageName} — code "${userLang}".
+EVERY "phrase" value in the JSON MUST be written in ${languageName}. Do NOT output English phrases when the user's language is not English.
+
+You are a dating coach helping a user rehearse how to say something to their match.
+
+User wants to express (original language preserved): "${situation}"
 
 Match profile (so you tailor tone hints):
 - Name: ${matchPersona.name}
@@ -291,13 +355,13 @@ Each approach uses one of these FIXED tones, in this exact order:
   3. romantic_vulnerable — soft, honest about feelings
   4. grounded_honest — calm, real, low-pressure
 
-Each phrase must be 1-2 sentences, natural, first-person, as if the user typed it themselves.
+Each phrase must be 1-2 sentences, natural, first-person, as if the user typed it themselves IN ${languageName}.
 
 ${langInstr}
 
-⚠️ ALL phrases MUST be in the user's language, NOT English. Every phrase must feel native to that language.
+⚠️ FINAL CHECK: Before returning, verify every "phrase" field is in ${languageName}, not English. If any phrase is in English but the target language is not English, REWRITE it in ${languageName}.
 
-Respond ONLY with JSON in this shape:
+Respond ONLY with JSON in this shape (phrases in ${languageName}):
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
     const result = await model.generateContent(prompt);
@@ -305,13 +369,13 @@ Respond ONLY with JSON in this shape:
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       logger.warn('[generateApproaches] Gemini returned empty response, using fallback');
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     const parsed = parseGeminiJsonResponse(text);
     if (!parsed || !Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
       logger.warn('[generateApproaches] Failed to parse valid approaches, using fallback');
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     const approaches = parsed.approaches;

@@ -516,8 +516,8 @@ exports.simulateMultiUniverse = onCall(
             avgReactionScore: parseFloat(avgReactionScore.toFixed(2)),
             bestApproachId: bestApproach?.id || null,
             bestApproachPhrase: bestApproach?.phrase || '',
-            coachTip: situationResponse.coachTip || `Strong potential at ${localizedStageLabel}`,
-            psyInsights: situationResponse.psychInsights || 'Compatible communication patterns emerging',
+            coachTip: situationResponse.coachTip || getLocalizedStrongPotential(localizedStageLabel, userLanguage),
+            psyInsights: situationResponse.psychInsights || getLocalizedPsychInsight('compatible_patterns', userLanguage),
           };
           stages.push(stageResult);
           analyticsData.successfulStages++;
@@ -703,7 +703,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         approaches: generateApproachesFallback(userLanguage),
         bestApproachId: '1',
         coachTip: getLocalizedCoachTip('communication_foundation', userLanguage),
-        psychInsights: 'Focus on authenticity and openness.',
+        psychInsights: getLocalizedPsychInsight('authenticity', userLanguage),
         tokens: 0,
       };
     }
@@ -733,7 +733,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       approaches: approachesWithScores,
       bestApproachId: approachesWithScores[0]?.id || '1',
       coachTip: getLocalizedCoachTip('approach_variety', userLanguage),
-      psychInsights: 'The variety tests compatibility across communication styles.',
+      psychInsights: getLocalizedPsychInsight('variety_communication', userLanguage),
       tokens: approaches.length * 150, // rough estimate
     };
   } catch (e) {
@@ -749,7 +749,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       approaches: generateApproachesFallback(userLanguage),
       bestApproachId: '1',
       coachTip: getLocalizedCoachTip('communication_importance', userLanguage),
-      psychInsights: 'Genuine connection develops through authentic dialogue.',
+      psychInsights: getLocalizedPsychInsight('authentic_dialogue', userLanguage),
       tokens: 0,
     };
   }
@@ -769,8 +769,19 @@ async function generateApproachesForMultiverse(genAI, situation, userLang) {
     });
 
     const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
+    const languageName = {
+      'es': 'Spanish (español)', 'pt': 'Portuguese (português)', 'fr': 'French (français)',
+      'de': 'German (Deutsch)', 'it': 'Italian (italiano)', 'ja': 'Japanese (日本語)',
+      'zh': 'Chinese (中文)', 'ru': 'Russian (Русский)', 'ar': 'Arabic (العربية)',
+      'id': 'Indonesian (Bahasa Indonesia)', 'en': 'English',
+    }[userLang] || 'English';
 
-    const prompt = `You are an inclusive dating coach. Generate EXACTLY 4 distinct communication approaches for a multi-universe relationship stage test.
+    const prompt = `${langInstr}
+
+🌍 OUTPUT LANGUAGE: ${languageName} — code "${userLang}".
+EVERY "phrase" value in the JSON MUST be written in ${languageName}. Do NOT output English phrases when the user's language is not English.
+
+You are an inclusive dating coach. Generate EXACTLY 4 distinct communication approaches for a multi-universe relationship stage test.
 
 CRITICAL GUIDELINES:
 - Use completely gender-neutral language. NEVER assume the gender of either person.
@@ -779,7 +790,7 @@ CRITICAL GUIDELINES:
 - Phrases must work for ANY relationship type (heterosexual, same-sex, non-binary, polyamorous).
 - Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.
 
-User wants to express: "${situation}"
+User wants to express (original language preserved): "${situation}"
 
 Generate 4 approaches with FIXED tones in this exact order:
   1. direct — clear, confident, unambiguous
@@ -787,11 +798,13 @@ Generate 4 approaches with FIXED tones in this exact order:
   3. romantic_vulnerable — soft, honest about feelings (adjust intensity for cultural context)
   4. grounded_honest — calm, real, low-pressure (respectful and genuine)
 
-Each phrase must be 1-2 sentences, natural, first-person. ${langInstr}
+Each phrase must be 1-2 sentences, natural, first-person IN ${languageName}.
 
-⚠️ ALL phrases MUST be in the user's language (${userLang}), NOT English.
+${langInstr}
 
-Respond ONLY with JSON:
+⚠️ FINAL CHECK: Before returning, verify every "phrase" field is in ${languageName}, not English. If any phrase is in English but the target language is not English, REWRITE it in ${languageName}.
+
+Respond ONLY with JSON (phrases in ${languageName}):
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
     logger.info(`[Gemini] Prompt size: ${prompt.length} chars, language: ${userLang}`);
@@ -826,13 +839,13 @@ Respond ONLY with JSON:
     if (!parsed) {
       logger.error(`[Gemini] Failed to parse JSON from response`);
       logger.debug(`[Gemini] Raw response was: ${text}`);
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     if (!Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
       logger.error(`[Gemini] Parsed JSON but no approaches array found`);
       logger.debug(`[Gemini] Parsed object: ${JSON.stringify(parsed)}`);
-      return generateApproachesFallback();
+      return generateApproachesFallback(userLang);
     }
 
     logger.info(`[Gemini] Parsed ${parsed.approaches.length} approaches`);
@@ -859,7 +872,7 @@ Respond ONLY with JSON:
   } catch (e) {
     logger.error(`[Gemini] Error after ${Date.now() - callStart}ms:`, e.message);
     if (e.stack) logger.error(`[Gemini] Stack:`, e.stack);
-    return generateApproachesFallback();
+    return generateApproachesFallback(userLang);
   }
 }
 
@@ -979,6 +992,83 @@ function getLocalizedCoachTip(tipKey, userLang = 'en') {
 
   const tipTexts = tips[tipKey] || tips.communication_foundation;
   return tipTexts[userLang] || tipTexts.en;
+}
+
+/**
+ * Get localized psychology insights for fallback scenarios (10 languages)
+ */
+function getLocalizedPsychInsight(insightKey, userLang = 'en') {
+  const insights = {
+    authenticity: {
+      en: 'Focus on authenticity and openness.',
+      es: 'Concéntrate en la autenticidad y la apertura.',
+      pt: 'Concentre-se na autenticidade e abertura.',
+      fr: 'Misez sur l\'authenticité et l\'ouverture.',
+      de: 'Konzentriere dich auf Authentizität und Offenheit.',
+      ja: '誠実さとオープンさに焦点を当てましょう。',
+      zh: '专注于真实和开放。',
+      ru: 'Сосредоточьтесь на искренности и открытости.',
+      ar: 'ركّز على الصدق والانفتاح.',
+      id: 'Fokus pada keaslian dan keterbukaan.',
+    },
+    variety_communication: {
+      en: 'The variety tests compatibility across communication styles.',
+      es: 'La variedad pone a prueba la compatibilidad entre estilos de comunicación.',
+      pt: 'A variedade testa a compatibilidade entre estilos de comunicação.',
+      fr: 'La variété teste la compatibilité des styles de communication.',
+      de: 'Die Vielfalt prüft die Kompatibilität verschiedener Kommunikationsstile.',
+      ja: 'バリエーションはコミュニケーションスタイルの相性を試します。',
+      zh: '多样性测试不同沟通方式之间的兼容性。',
+      ru: 'Разнообразие проверяет совместимость стилей общения.',
+      ar: 'التنوع يختبر التوافق بين أساليب التواصل.',
+      id: 'Ragam ini menguji kecocokan di berbagai gaya komunikasi.',
+    },
+    authentic_dialogue: {
+      en: 'Genuine connection develops through authentic dialogue.',
+      es: 'La conexión genuina se desarrolla a través del diálogo auténtico.',
+      pt: 'A conexão genuína se desenvolve através do diálogo autêntico.',
+      fr: 'Un lien véritable se développe grâce à un dialogue authentique.',
+      de: 'Echte Verbindung entsteht durch authentischen Dialog.',
+      ja: '本物のつながりは、誠実な対話から生まれます。',
+      zh: '真正的连接通过真诚的对话形成。',
+      ru: 'Настоящая связь развивается через искренний диалог.',
+      ar: 'يتطور الاتصال الحقيقي من خلال الحوار الصادق.',
+      id: 'Koneksi sejati tumbuh melalui dialog yang autentik.',
+    },
+    compatible_patterns: {
+      en: 'Compatible communication patterns emerging.',
+      es: 'Surgen patrones de comunicación compatibles.',
+      pt: 'Padrões de comunicação compatíveis estão surgindo.',
+      fr: 'Des schémas de communication compatibles émergent.',
+      de: 'Kompatible Kommunikationsmuster zeichnen sich ab.',
+      ja: '相性の良いコミュニケーションパターンが見えてきています。',
+      zh: '兼容的沟通模式正在形成。',
+      ru: 'Проявляются совместимые модели общения.',
+      ar: 'تظهر أنماط تواصل متوافقة.',
+      id: 'Muncul pola komunikasi yang cocok.',
+    },
+  };
+  const texts = insights[insightKey] || insights.authenticity;
+  return texts[userLang] || texts.en;
+}
+
+/**
+ * Get localized strong potential coach tip with stage name (10 languages)
+ */
+function getLocalizedStrongPotential(stageLabel, userLang = 'en') {
+  const templates = {
+    en: `Strong potential at ${stageLabel}`,
+    es: `Gran potencial en ${stageLabel}`,
+    pt: `Grande potencial em ${stageLabel}`,
+    fr: `Fort potentiel à ${stageLabel}`,
+    de: `Starkes Potenzial bei ${stageLabel}`,
+    ja: `${stageLabel}で大きな可能性があります`,
+    zh: `${stageLabel}潜力巨大`,
+    ru: `Большой потенциал на этапе ${stageLabel}`,
+    ar: `إمكانات قوية في ${stageLabel}`,
+    id: `Potensi besar di ${stageLabel}`,
+  };
+  return templates[userLang] || templates.en;
 }
 
 /**

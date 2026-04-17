@@ -864,10 +864,12 @@ exports.autoModerateMessage = onDocumentCreated(
 
       // RAG: obtener contexto de moderación + idioma del sender + config en paralelo
       let ragContext = '';
+      let senderLang = 'en';
       try {
         const senderDoc = await db.collection('users').doc(senderId).get();
         // modConfig already loaded before quick filters (reuse cached instance)
-        const senderLang = senderDoc.exists ? (senderDoc.data().deviceLanguage || 'en') : 'en';
+        senderLang = senderDoc.exists ? (senderDoc.data().deviceLanguage || 'en') : 'en';
+        senderLang = senderLang.split('-')[0].split('_')[0].toLowerCase();
         ragContext = await retrieveModerationKnowledge(message, apiKey, senderLang, 'message', modConfig.rag || {});
       } catch (ragErr) {
         logger.warn('[autoModerate] RAG fallback:', ragErr.message);
@@ -877,7 +879,19 @@ exports.autoModerateMessage = onDocumentCreated(
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
 
       const ragSection = ragContext ? `\n\nMODERATION KNOWLEDGE BASE:\n${ragContext}\n` : '';
-      const prompt = `You are a content moderation system for Black Sugar 21, a dating app. Analyze the following chat message and classify it.
+      const langInstr = getLanguageInstruction(senderLang);
+      const languageName = {
+        'es': 'Spanish (español)', 'pt': 'Portuguese (português)', 'fr': 'French (français)',
+        'de': 'German (Deutsch)', 'it': 'Italian (italiano)', 'ja': 'Japanese (日本語)',
+        'zh': 'Chinese (中文)', 'ru': 'Russian (Русский)', 'ar': 'Arabic (العربية)',
+        'id': 'Indonesian (Bahasa Indonesia)', 'en': 'English',
+      }[senderLang] || 'English';
+      const prompt = `${langInstr}
+
+🌍 OUTPUT LANGUAGE FOR "reason" FIELD: ${languageName} — code "${senderLang}".
+The "reason" field in the JSON MUST be written in ${languageName}. Categories and severity stay in English (they're enum values).
+
+You are a content moderation system for Black Sugar 21, a dating app. Analyze the following chat message and classify it.
 ${ragSection}
 Message: "${message.substring(0, 1000)}"
 
@@ -895,8 +909,8 @@ Severity (only if NOT SAFE):
 - MEDIUM: Moderate, needs review
 - HIGH: Severe, immediate block and report
 
-Respond ONLY with valid JSON (no markdown):
-{"category":"SAFE|SPAM|SCAM|INAPPROPRIATE|PERSONAL_INFO","severity":"NONE|LOW|MEDIUM|HIGH","confidence":0-100,"reason":"brief explanation"}`;
+Respond ONLY with valid JSON (no markdown). The "reason" must be written in ${languageName}:
+{"category":"SAFE|SPAM|SCAM|INAPPROPRIATE|PERSONAL_INFO","severity":"NONE|LOW|MEDIUM|HIGH","confidence":0-100,"reason":"brief explanation in ${languageName}"}`;
 
       const modStart = Date.now();
       const result = await model.generateContent(prompt);
