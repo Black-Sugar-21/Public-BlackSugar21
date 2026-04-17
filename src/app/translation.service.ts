@@ -157,6 +157,162 @@ export class TranslationService {
       en: 'Download the app and meet your coach'
     },
 
+    // What's New Section (2026-04-17)
+    'whatsnew.badge': {
+      es: 'NOVEDADES', en: 'WHAT\'S NEW', pt: 'NOVIDADES',
+      fr: 'NOUVEAUTÉS', de: 'NEU', ja: '新機能',
+      zh: '新功能', ru: 'НОВОЕ', ar: 'الجديد', id: 'BARU'
+    },
+    'whatsnew.title': {
+      es: 'Lo más reciente de Black Sugar 21',
+      en: 'The latest from Black Sugar 21',
+      pt: 'As novidades mais recentes do Black Sugar 21',
+      fr: 'Les dernières nouveautés de Black Sugar 21',
+      de: 'Die neuesten Updates von Black Sugar 21',
+      ja: 'Black Sugar 21の最新情報',
+      zh: 'Black Sugar 21 最新动态',
+      ru: 'Последние обновления Black Sugar 21',
+      ar: 'أحدث ميزات Black Sugar 21',
+      id: 'Pembaruan terbaru dari Black Sugar 21'
+    },
+    'whatsnew.subtitle': {
+      es: 'Mejoras pensadas para que cada conversación cuente.',
+      en: 'Upgrades designed to make every conversation count.',
+      pt: 'Melhorias pensadas para fazer cada conversa valer a pena.',
+      fr: 'Des améliorations pensées pour que chaque conversation compte.',
+      de: 'Verbesserungen, damit jedes Gespräch zählt.',
+      ja: 'すべての会話が大切になるようデザインされたアップデート。',
+      zh: '每一次对话都变得更有意义的升级。',
+      ru: 'Улучшения, благодаря которым каждый разговор становится важным.',
+      ar: 'تحسينات مصممة لتجعل كل محادثة مهمة.',
+      id: 'Peningkatan yang membuat setiap percakapan lebih berarti.'
+    },
+
+    'whatsnew.multiverse.title': {
+      es: 'Universos Posibles',
+      en: 'Possible Universes',
+      pt: 'Universos Possíveis',
+      fr: 'Univers Possibles',
+      de: 'Mögliche Universen',
+      ja: '可能性の宇宙',
+      zh: '可能的宇宙',
+      ru: 'Возможные Вселенные',
+      ar: 'أكوان محتملة',
+      id: 'Alam Semesta yang Mungkin'
+    },
+    'whatsnew.multiverse.desc': {
+      es: 'Simula cómo podría evolucionar una relación en cinco etapas, con consejos prácticos en tu idioma. Tus simulaciones ahora se guardan entre sesiones, así nunca pierdes el hilo.',
+      en: 'Simulate how a relationship could unfold across five stages, with practical advice in your language. Your simulations now persist between sessions, so you never lose the thread.',
+      pt: 'Simule como um relacionamento pode evoluir em cinco etapas, com conselhos práticos no seu idioma. Suas simulações agora persistem entre sessões — você nunca perde o fio.',
+      fr: 'Simulez comment une relation pourrait évoluer en cinq étapes, avec des conseils pratiques dans votre langue. Vos simulations sont maintenant sauvegardées entre les sessions.',
+      de: 'Simuliere, wie sich eine Beziehung in fünf Phasen entwickeln könnte — mit praktischen Tipps in deiner Sprache. Deine Simulationen bleiben jetzt zwischen Sitzungen erhalten.',
+      ja: '5つの段階で関係がどう進展するかをシミュレート。あなたの言語で実用的なアドバイスが得られ、シミュレーションはセッションをまたいで保存されます。',
+      zh: '在五个阶段中模拟一段关系的可能走向，提供母语化的实用建议。你的模拟会在会话间自动保存。',
+      ru: 'Смоделируйте, как могут развиваться отношения на пяти этапах, с практическими советами на вашем языке. Ваши симуляции теперь сохраняются между сессиями.',
+      ar: 'حاكِ كيف يمكن أن تتطور العلاقة عبر خمس مراحل مع نصائح عملية بلغتك. الآن تُحفظ محاكاتك بين الجلسات.',
+      id: 'Simulasikan bagaimana sebuah hubungan berkembang melalui lima tahap, dengan saran praktis dalam bahasamu. Simulasimu kini tersimpan antar sesi.'
+    },
+
+    'whatsnew.coach.title': {
+      es: 'Coach IA más potente',
+      en: 'A more powerful AI Coach',
+      pt: 'Coach IA mais poderoso',
+      fr: 'Un AI Coach plus puissant',
+      de: 'Ein stärkerer KI-Coach',
+      ja: 'より強力なAIコーチ',
+      zh: '更强大的 AI 教练',
+      ru: 'Более мощный ИИ-коуч',
+      ar: 'مدرّب ذكاء اصطناعي أقوى',
+      id: 'AI Coach yang lebih hebat'
+    },
+    'whatsnew.coach.desc': {
+      es: '5 créditos diarios para simular citas, historial completo al volver a la app y mensajes siempre en tu idioma. Con protección adicional contra abuso.',
+      en: '5 daily credits to simulate dates, full history when you return, and messages always in your language — plus added abuse protection.',
+      pt: '5 créditos diários para simular encontros, histórico completo ao voltar ao app e mensagens sempre no seu idioma — com proteção extra contra abusos.',
+      fr: '5 crédits quotidiens pour simuler des rendez-vous, un historique complet à votre retour et des messages toujours dans votre langue — avec une protection anti-abus renforcée.',
+      de: '5 tägliche Credits für Date-Simulationen, vollständige Chronik bei deiner Rückkehr und Nachrichten stets in deiner Sprache — mit zusätzlichem Missbrauchsschutz.',
+      ja: 'デートをシミュレーションする5つのデイリークレジット、再訪時の完全な履歴、常にあなたの言語で届くメッセージ。不正利用への保護も強化。',
+      zh: '每日 5 个模拟约会积分，重新打开应用即可看到完整历史，所有消息始终以你的母语呈现，并加强了防滥用保护。',
+      ru: '5 ежедневных кредитов на симуляцию свиданий, полная история при возвращении и сообщения всегда на вашем языке — с усиленной защитой от злоупотреблений.',
+      ar: '5 أرصدة يومية لمحاكاة المواعيد، وسجل كامل عند عودتك، ورسائل دائمًا بلغتك — مع حماية إضافية من الإساءة.',
+      id: '5 kredit harian untuk simulasi kencan, riwayat lengkap saat kamu kembali, dan pesan selalu dalam bahasamu — plus perlindungan tambahan dari penyalahgunaan.'
+    },
+
+    'whatsnew.rehearse.title': {
+      es: 'Ensaya cualquier situación',
+      en: 'Rehearse any situation',
+      pt: 'Ensaie qualquer situação',
+      fr: 'Répétez n\'importe quelle situation',
+      de: 'Probe jede Situation',
+      ja: 'どんな状況もリハーサル',
+      zh: '任何情境，先演练一遍',
+      ru: 'Отрепетируйте любую ситуацию',
+      ar: 'تمرّن على أي موقف',
+      id: 'Latih situasi apapun'
+    },
+    'whatsnew.rehearse.desc': {
+      es: 'Prueba cuatro enfoques distintos antes de enviar un mensaje — cada uno con su propio puntaje y explicación. Todo integrado con tus créditos del Coach.',
+      en: 'Try four different approaches before you send a message — each with its own score and explanation. Fully integrated with your Coach credits.',
+      pt: 'Teste quatro abordagens diferentes antes de enviar uma mensagem — cada uma com sua pontuação e explicação. Tudo integrado aos créditos do Coach.',
+      fr: 'Testez quatre approches différentes avant d\'envoyer un message — chacune avec son score et son explication. Entièrement intégré aux crédits du Coach.',
+      de: 'Probiere vier verschiedene Ansätze, bevor du eine Nachricht sendest — jeder mit eigener Bewertung und Erklärung. Vollständig mit deinen Coach-Credits integriert.',
+      ja: 'メッセージを送る前に4つの異なるアプローチを試せます。それぞれにスコアと説明付き。Coachのクレジットと完全に連動。',
+      zh: '发送消息前，先尝试四种不同的方式——每一种都有自己的评分与解释，并与 Coach 积分完全打通。',
+      ru: 'Протестируйте четыре разных подхода перед отправкой сообщения — у каждого свой балл и объяснение. Полностью интегрировано с кредитами Coach.',
+      ar: 'جرّب أربع مقاربات مختلفة قبل إرسال الرسالة — لكل منها نقاطها وشرحها. ومتكامل بالكامل مع أرصدة Coach.',
+      id: 'Coba empat pendekatan berbeda sebelum kirim pesan — masing-masing dengan skor dan penjelasannya. Terintegrasi penuh dengan kredit Coach.'
+    },
+
+    'whatsnew.security.title': {
+      es: 'Seguridad reforzada',
+      en: 'Stronger security',
+      pt: 'Segurança reforçada',
+      fr: 'Sécurité renforcée',
+      de: 'Stärkere Sicherheit',
+      ja: '強化されたセキュリティ',
+      zh: '更强的安全保障',
+      ru: 'Усиленная безопасность',
+      ar: 'أمان أقوى',
+      id: 'Keamanan yang lebih kuat'
+    },
+    'whatsnew.security.desc': {
+      es: 'Solo los miembros de un match pueden subir fotos a ese chat. Los datos sensibles ya no aparecen en logs. Tu privacidad, elevada a otro nivel.',
+      en: 'Only match members can upload photos in that chat. Sensitive data no longer appears in logs. Your privacy, taken to the next level.',
+      pt: 'Somente os membros de um match podem enviar fotos naquele chat. Dados sensíveis não aparecem mais nos logs. Sua privacidade em outro nível.',
+      fr: 'Seuls les membres d\'un match peuvent envoyer des photos dans ce chat. Les données sensibles n\'apparaissent plus dans les logs. Votre vie privée passe au niveau supérieur.',
+      de: 'Nur Match-Mitglieder können in diesem Chat Fotos hochladen. Sensible Daten erscheinen nicht mehr in Protokollen. Deine Privatsphäre, eine Stufe höher.',
+      ja: 'マッチのメンバーだけがそのチャットに写真をアップロードできます。センシティブなデータはログに残りません。プライバシーを次のレベルへ。',
+      zh: '只有配对双方才能在各自的聊天中上传照片；敏感数据不再出现在日志里。你的隐私被提升到新高度。',
+      ru: 'Загружать фото в чат могут только участники матча. Чувствительные данные больше не попадают в логи. Ваша приватность — на новом уровне.',
+      ar: 'يستطيع أعضاء المطابقة فقط رفع الصور في تلك المحادثة. البيانات الحساسة لم تعد تظهر في السجلات. خصوصيتك مرفوعة إلى مستوى جديد.',
+      id: 'Hanya anggota match yang dapat mengunggah foto di chat tersebut. Data sensitif tidak lagi muncul di log. Privasimu naik ke level berikutnya.'
+    },
+
+    'whatsnew.polish.title': {
+      es: 'Una experiencia más pulida',
+      en: 'A more polished experience',
+      pt: 'Uma experiência mais refinada',
+      fr: 'Une expérience plus soignée',
+      de: 'Ein feineres Erlebnis',
+      ja: 'より洗練された体験',
+      zh: '更精致的体验',
+      ru: 'Более отточенный опыт',
+      ar: 'تجربة أكثر تلميعًا',
+      id: 'Pengalaman yang lebih halus'
+    },
+    'whatsnew.polish.desc': {
+      es: 'Cargas más limpias sin capas que se acumulan, consejos del coach con mejor legibilidad y cards del multiverso alineadas con el resto de la app.',
+      en: 'Cleaner loading without stacked layers, coach advice with better readability, and multiverse cards aligned with the rest of the app.',
+      pt: 'Carregamentos mais limpos sem camadas sobrepostas, conselhos do coach com melhor legibilidade e cards do multiverso alinhados com o resto do app.',
+      fr: 'Des chargements plus nets sans couches superposées, des conseils de coach plus lisibles et des cartes du multivers alignées avec le reste de l\'app.',
+      de: 'Sauberere Ladezustände ohne gestapelte Schichten, Coach-Tipps mit besserer Lesbarkeit und Multiversum-Karten, die zum Rest der App passen.',
+      ja: '重なり合わないクリーンなロード、読みやすくなったコーチのアドバイス、そしてアプリ全体と揃った多元宇宙カード。',
+      zh: '加载界面更干净，不再叠层；教练建议更易读；多元宇宙卡片与整体 UI 对齐。',
+      ru: 'Более чистая загрузка без наложенных слоёв, советы коуча с улучшенной читаемостью и карточки мультивселенной в едином стиле приложения.',
+      ar: 'تحميلات أنظف دون طبقات متراكمة، ونصائح مدرب أكثر وضوحًا، وبطاقات متعددة الأكوان متناسقة مع بقية التطبيق.',
+      id: 'Loading lebih bersih tanpa lapisan bertumpuk, saran coach yang lebih mudah dibaca, dan kartu multiverse yang selaras dengan seluruh aplikasi.'
+    },
+
     // Terms Section
     'terms.title': {
       es: 'Términos de Uso',

@@ -124,6 +124,30 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         ease: 'power2.out',
       });
 
+      // 3b. ScrollTrigger — What's New section reveal
+      gsap.from('.whatsnew-header', {
+        scrollTrigger: {
+          trigger: '.whatsnew-section',
+          start: 'top 85%',
+        },
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power2.out',
+      });
+      gsap.from('.whatsnew-card', {
+        scrollTrigger: {
+          trigger: '.whatsnew-grid',
+          start: 'top 85%',
+        },
+        y: 40,
+        opacity: 0,
+        scale: 0.96,
+        duration: 0.6,
+        stagger: 0.12,
+        ease: 'power2.out',
+      });
+
       // 4. Parallax — Hero section subtle
       gsap.to('.hero-section', {
         scrollTrigger: {
