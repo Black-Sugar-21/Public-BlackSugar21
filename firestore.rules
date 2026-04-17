@@ -133,6 +133,15 @@ service cloud.firestore {
         // Solo Cloud Functions (admin SDK) pueden escribir — bypass automático de reglas.
         allow write: if false;
       }
+
+      // Subcolección COACH CHAT: historial de simulaciones + mensajes coach.
+      // Tanto cliente (iOS/Android) como CF (admin SDK) pueden escribir aquí.
+      // Cliente guarda: situation_result + multi_universe_result + user messages.
+      // CF escribe: coach responses via admin SDK (bypass automático de rules).
+      // Solo el propietario puede leer/escribir su propio historial.
+      match /coachChat/{messageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // --- MESSAGES ---
