@@ -22,6 +22,7 @@ const {
   getLanguageInstruction,
   parseGeminiJsonResponse,
   trackAICall,
+  getLocalizedError: getLocalizedErrorShared,
 } = require('./shared');
 
 const db = admin.firestore();
@@ -1351,84 +1352,11 @@ function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
  * Localized HttpsError user-facing messages (10 languages).
  * Auth errors are kept in English (occur before lang is parsed).
  */
+// Delegates to the shared helper. All 6 keys previously defined locally
+// (rate_limit, match_not_found, profile_not_found, all_stages_failed,
+// invalid_result, simulation_failed) are now in shared.js ERROR_MESSAGES.
 function getLocalizedError(key, userLang = 'en') {
-  const normalizedLang = normalizeLanguageCode(userLang);
-  const messages = {
-    rate_limit: {
-      en: 'Daily limit reached. You have used all your Coach AI credits for today. Come back tomorrow for 3 fresh credits.',
-      es: 'Límite diario alcanzado. Has usado todos tus créditos del Coach IA de hoy. Vuelve mañana para 3 créditos nuevos.',
-      pt: 'Limite diário atingido. Você usou todos os seus créditos do Coach IA de hoje. Volte amanhã para 3 créditos novos.',
-      fr: 'Limite quotidienne atteinte. Tu as utilisé tous tes crédits du Coach IA aujourd\'hui. Reviens demain pour 3 crédits frais.',
-      de: 'Tageslimit erreicht. Du hast alle deine Coach-KI-Credits für heute aufgebraucht. Komm morgen für 3 neue Credits wieder.',
-      ja: '1日の上限に達しました。今日のコーチAIクレジットをすべて使いました。明日3つの新しいクレジットで戻ってきてください。',
-      zh: '已达每日上限。您今天的教练AI额度已用完。明天回来获取3个新额度。',
-      ru: 'Достигнут дневной лимит. Вы использовали все свои кредиты Коуча ИИ на сегодня. Возвращайтесь завтра за 3 новыми кредитами.',
-      ar: 'تم الوصول إلى الحد اليومي. لقد استخدمت كل أرصدة كوتش الذكاء الاصطناعي لهذا اليوم. عُد غداً للحصول على 3 أرصدة جديدة.',
-      id: 'Batas harian tercapai. Kamu telah menggunakan semua kredit Coach AI hari ini. Kembali besok untuk 3 kredit baru.',
-    },
-    match_not_found: {
-      en: 'Match not found. Please refresh and try again.',
-      es: 'Match no encontrado. Actualiza e inténtalo de nuevo.',
-      pt: 'Match não encontrado. Atualize e tente novamente.',
-      fr: 'Match introuvable. Actualise et réessaie.',
-      de: 'Match nicht gefunden. Bitte aktualisiere und versuche es erneut.',
-      ja: 'マッチが見つかりません。更新してもう一度お試しください。',
-      zh: '未找到匹配。请刷新后重试。',
-      ru: 'Мэтч не найден. Обновите и попробуйте снова.',
-      ar: 'لم يتم العثور على التطابق. يرجى التحديث والمحاولة مرة أخرى.',
-      id: 'Match tidak ditemukan. Silakan segarkan dan coba lagi.',
-    },
-    profile_not_found: {
-      en: 'User profile not found.',
-      es: 'Perfil de usuario no encontrado.',
-      pt: 'Perfil de usuário não encontrado.',
-      fr: 'Profil utilisateur introuvable.',
-      de: 'Benutzerprofil nicht gefunden.',
-      ja: 'ユーザープロフィールが見つかりません。',
-      zh: '未找到用户资料。',
-      ru: 'Профиль пользователя не найден.',
-      ar: 'لم يتم العثور على الملف الشخصي.',
-      id: 'Profil pengguna tidak ditemukan.',
-    },
-    all_stages_failed: {
-      en: 'Unable to test all relationship stages. Please try again in a moment.',
-      es: 'No pudimos probar todas las etapas de la relación. Inténtalo de nuevo en un momento.',
-      pt: 'Não foi possível testar todas as etapas da relação. Tente novamente em um momento.',
-      fr: 'Impossible de tester toutes les étapes de la relation. Réessaie dans un instant.',
-      de: 'Es war nicht möglich, alle Beziehungsphasen zu testen. Bitte versuche es gleich erneut.',
-      ja: '関係のすべての段階をテストできませんでした。しばらくしてからもう一度お試しください。',
-      zh: '无法测试所有关系阶段。请稍后再试。',
-      ru: 'Не удалось протестировать все стадии отношений. Пожалуйста, повторите попытку через некоторое время.',
-      ar: 'لم نتمكن من اختبار جميع مراحل العلاقة. يرجى المحاولة مرة أخرى بعد قليل.',
-      id: 'Tidak bisa menguji semua tahap hubungan. Silakan coba lagi sebentar.',
-    },
-    invalid_result: {
-      en: 'Generated result is incomplete. Please try again.',
-      es: 'El resultado generado está incompleto. Inténtalo de nuevo.',
-      pt: 'O resultado gerado está incompleto. Tente novamente.',
-      fr: 'Le résultat généré est incomplet. Réessaie.',
-      de: 'Das generierte Ergebnis ist unvollständig. Bitte versuche es erneut.',
-      ja: '生成された結果が不完全です。もう一度お試しください。',
-      zh: '生成的结果不完整。请再试一次。',
-      ru: 'Сгенерированный результат неполный. Пожалуйста, попробуйте снова.',
-      ar: 'النتيجة المُولَّدة غير مكتملة. يرجى المحاولة مرة أخرى.',
-      id: 'Hasil yang dihasilkan tidak lengkap. Silakan coba lagi.',
-    },
-    simulation_failed: {
-      en: 'Simulation failed. Please try again.',
-      es: 'La simulación falló. Inténtalo de nuevo.',
-      pt: 'A simulação falhou. Tente novamente.',
-      fr: 'La simulation a échoué. Réessaie.',
-      de: 'Die Simulation ist fehlgeschlagen. Bitte versuche es erneut.',
-      ja: 'シミュレーションに失敗しました。もう一度お試しください。',
-      zh: '模拟失败。请重试。',
-      ru: 'Симуляция не удалась. Пожалуйста, попробуйте снова.',
-      ar: 'فشلت المحاكاة. يرجى المحاولة مرة أخرى.',
-      id: 'Simulasi gagal. Silakan coba lagi.',
-    },
-  };
-  const byKey = messages[key] || messages.simulation_failed;
-  return byKey[normalizedLang] || byKey.en;
+  return getLocalizedErrorShared(key, normalizeLanguageCode(userLang));
 }
 
 /**

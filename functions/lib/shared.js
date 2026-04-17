@@ -522,6 +522,43 @@ const ERROR_MESSAGES = {
     zh: '内容被安全过滤器拦截。', ru: 'Контент заблокирован фильтрами безопасности.',
     ar: 'تم حظر المحتوى بواسطة فلاتر الأمان.', id: 'Konten diblokir oleh filter keamanan.',
   },
+  // Multi-universe specific keys (previously duplicated in multi-universe-simulation.js)
+  all_stages_failed: {
+    en: 'Unable to test all relationship stages. Please try again in a moment.',
+    es: 'No pudimos probar todas las etapas de la relación. Inténtalo de nuevo en un momento.',
+    pt: 'Não foi possível testar todas as etapas da relação. Tente novamente em um momento.',
+    fr: 'Impossible de tester toutes les étapes de la relation. Réessaie dans un instant.',
+    de: 'Es war nicht möglich, alle Beziehungsphasen zu testen. Bitte versuche es gleich erneut.',
+    ja: '関係のすべての段階をテストできませんでした。しばらくしてからもう一度お試しください。',
+    zh: '无法测试所有关系阶段。请稍后再试。',
+    ru: 'Не удалось протестировать все стадии отношений. Пожалуйста, повторите попытку через некоторое время.',
+    ar: 'لم نتمكن من اختبار جميع مراحل العلاقة. يرجى المحاولة مرة أخرى بعد قليل.',
+    id: 'Tidak bisa menguji semua tahap hubungan. Silakan coba lagi sebentar.',
+  },
+  invalid_result: {
+    en: 'Generated result is incomplete. Please try again.',
+    es: 'El resultado generado está incompleto. Inténtalo de nuevo.',
+    pt: 'O resultado gerado está incompleto. Tente novamente.',
+    fr: 'Le résultat généré est incomplet. Réessaie.',
+    de: 'Das generierte Ergebnis ist unvollständig. Bitte versuche es erneut.',
+    ja: '生成された結果が不完全です。もう一度お試しください。',
+    zh: '生成的结果不完整。请再试一次。',
+    ru: 'Сгенерированный результат неполный. Пожалуйста, попробуйте снова.',
+    ar: 'النتيجة المُولَّدة غير مكتملة. يرجى المحاولة مرة أخرى.',
+    id: 'Hasil yang dihasilkan tidak lengkap. Silakan coba lagi.',
+  },
+  simulation_failed: {
+    en: 'Simulation failed. Please try again.',
+    es: 'La simulación falló. Inténtalo de nuevo.',
+    pt: 'A simulação falhou. Tente novamente.',
+    fr: 'La simulation a échoué. Réessaie.',
+    de: 'Die Simulation ist fehlgeschlagen. Bitte versuche es erneut.',
+    ja: 'シミュレーションに失敗しました。もう一度お試しください。',
+    zh: '模拟失败。请重试。',
+    ru: 'Симуляция не удалась. Пожалуйста, попробуйте снова.',
+    ar: 'فشلت المحاكاة. يرجى المحاولة مرة أخرى.',
+    id: 'Simulasi gagal. Silakan coba lagi.',
+  },
 };
 
 /**

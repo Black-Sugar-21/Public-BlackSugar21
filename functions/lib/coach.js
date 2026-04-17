@@ -3871,10 +3871,12 @@ exports.getCoachHistory = onCall(
         };
       });
 
-      // Keep snap.docs.length semantics for "hasMore" — use max of both sources
-      const hadMoreLegacy = legacySnap.docs.length === fetchLimit;
-      const hadMoreNew = newSnap.docs.length === fetchLimit;
-      const snap = { docs: merged, hasMore: hadMoreLegacy || hadMoreNew };
+      // hasMore is true ONLY if we had to slice merged (i.e. the union is larger
+      // than `limit`). If both sources returned < fetchLimit AND merged fits in
+      // limit, there are no more pages. This avoids the over-report case where
+      // legacy has 60 docs but dedup collapses them into merged≤limit.
+      const combinedCount = legacySnap.docs.length + newSnap.docs.length;
+      const snap = { docs: merged, hasMore: combinedCount > limit };
 
       // Reverse to return in ascending order (oldest first)
       messages.reverse();

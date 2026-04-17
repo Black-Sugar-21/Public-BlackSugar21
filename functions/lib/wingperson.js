@@ -364,7 +364,9 @@ exports.wingPersonAnalysis = onSchedule(
             .where('sentAt', '>', admin.firestore.Timestamp.fromMillis(now - dedupWindowMs))
             .get();
           recentSnap.docs.forEach(d => recentNotifs.add(d.data().matchId));
-        } catch (e) { /* collection may not exist yet */ }
+        } catch (e) {
+          logger.debug(`[Wingperson] recent notifs query failed (collection may not exist yet): ${e.message}`);
+        }
 
         // Analyze matches — find best signal
         let bestSignal = null;
@@ -383,7 +385,9 @@ exports.wingPersonAnalysis = onSchedule(
         try {
           const otherDoc = await db.collection('users').doc(bestSignal.otherUserId).get();
           if (otherDoc.exists) matchName = otherDoc.data().name || matchName;
-        } catch (e) { /* use default */ }
+        } catch (e) {
+          logger.debug(`[Wingperson] otherUser fetch failed (using default name): ${e.message}`);
+        }
 
         const userName = userData.name || 'User';
         const lang = (userData.deviceLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
