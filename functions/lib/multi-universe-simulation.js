@@ -839,10 +839,19 @@ async function generateApproachesForMultiverse(genAI, situation, userLang) {
 
     const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
     const languageName = {
-      'es': 'Spanish (español)', 'pt': 'Portuguese (português)', 'fr': 'French (français)',
-      'de': 'German (Deutsch)', 'it': 'Italian (italiano)', 'ja': 'Japanese (日本語)',
-      'zh': 'Chinese (中文)', 'ru': 'Russian (Русский)', 'ar': 'Arabic (العربية)',
-      'id': 'Indonesian (Bahasa Indonesia)', 'en': 'English',
+      'es': 'Spanish (español)',
+      'pt': 'Brazilian Portuguese (português do Brasil)',
+      'pt-PT': 'European Portuguese (português de Portugal)',
+      'fr': 'French (français)',
+      'de': 'German (Deutsch)',
+      'ja': 'Japanese (日本語)',
+      'zh': 'Simplified Chinese (简体中文)',
+      'zh-TW': 'Traditional Chinese — Taiwan (繁體中文台灣)',
+      'zh-HK': 'Traditional Chinese — Hong Kong (繁體中文香港)',
+      'ru': 'Russian (Русский)',
+      'ar': 'Arabic (العربية)',
+      'id': 'Indonesian (Bahasa Indonesia)',
+      'en': 'English',
     }[userLang] || 'English';
 
     const prompt = `${langInstr}

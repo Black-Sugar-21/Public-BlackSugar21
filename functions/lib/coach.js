@@ -390,18 +390,23 @@ function detectCommunicationStyle(userMessages) {
 function getCulturalContext(lang) {
   const cultures = {
     ja: 'Indirect, respectful. Use polite suggestions, not direct commands. Avoid overly casual language.',
-    ko: 'Respectful hierarchy-aware. Use polite forms. Be encouraging but not pushy.',
-    zh: 'Practical, relationship-focused. Give concrete advice. Respect face/dignity.',
+    zh: 'Practical, relationship-focused. Give concrete advice. Respect face/dignity. Default is mainland Simplified Chinese.',
+    'zh-TW': 'Traditional Chinese cultural register — use Taiwanese vocabulary (軟體, 網路). Slightly more indirect than mainland; preserve politeness markers.',
+    'zh-HK': 'Hong Kong cultural register — accept Cantonese idioms and mixed English borrowings common in HK professional dating.',
     ar: 'Formal initially, warm once comfortable. Respect cultural boundaries around dating.',
     de: 'Direct, factual, efficient. Skip small talk, get to actionable advice.',
     fr: 'Elegant, witty. Appreciate nuance and charm in dating advice.',
-    pt: 'Warm, emotional, expressive. Emphasize connection and feelings.',
+    pt: 'Warm, emotional, expressive. Brazilian Portuguese — use "você" + Brazilian idioms.',
+    'pt-PT': 'European Portuguese — use "tu" for informal register, Portugal-specific vocabulary (telemóvel, pequeno-almoço). More reserved tone than Brazilian.',
     es: 'Warm, enthusiastic, emotionally supportive. Use humor freely.',
     ru: 'Direct but thoughtful. Practical advice with emotional depth.',
     id: 'Polite, community-oriented. Consider family/social context in dating advice.',
     en: 'Balanced — adapt to user\'s detected style.',
   };
-  return cultures[lang] || cultures['en'];
+  // Exact regional match first, then base fallback, then en.
+  if (cultures[lang]) return cultures[lang];
+  const base = typeof lang === 'string' ? lang.split('-')[0] : 'en';
+  return cultures[base] || cultures.en;
 }
 
 /**

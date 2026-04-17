@@ -13,6 +13,67 @@ const AI_MODEL_LITE = 'gemini-2.5-flash-lite';
 
 // ─── Shared Helper Functions ─────────────────────────────────────────────────
 
+// Supported base languages and regional variants. Variants are returned as-is
+// by normalizeLanguageCode when recognized; callers use getRegionalString() to
+// look up translations with fallback chain: exact → base → en.
+const SUPPORTED_LANGUAGES = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
+const SUPPORTED_REGIONAL = ['pt-BR', 'pt-PT', 'zh-CN', 'zh-TW', 'zh-HK'];
+
+/**
+ * Normalize a BCP-47 language tag to our supported set.
+ *
+ * Preserves meaningful regional variants (pt-PT, zh-TW, zh-HK) because their
+ * vocabulary and writing system diverge enough from the base that users in
+ * those locales notice. Other regional tags (es-MX, es-AR, en-US, pt-BR,
+ * zh-CN) collapse to the base language since the differences are minor
+ * enough for our use-case.
+ *
+ * @param {*} lang — BCP-47 tag or anything else (defensive).
+ * @returns {string} One of SUPPORTED_LANGUAGES or SUPPORTED_REGIONAL, or 'en'.
+ */
+function normalizeLanguageCode(lang) {
+  if (typeof lang !== 'string' || !lang) return 'en';
+  const trimmed = lang.trim().toLowerCase();
+
+  // Try exact regional-variant match first (e.g. "pt-pt" → "pt-PT").
+  // Normalize region to uppercase per BCP-47 convention.
+  const regionalNormalized = trimmed.replace(/^([a-z]{2})-([a-z]{2,4})$/, (_, base, region) =>
+    `${base}-${region.toUpperCase()}`);
+  if (SUPPORTED_REGIONAL.includes(regionalNormalized)) {
+    // pt-BR collapses to pt because it's our default pt variant (most BR users).
+    if (regionalNormalized === 'pt-BR') return 'pt';
+    // zh-CN collapses to zh (simplified is our default zh).
+    if (regionalNormalized === 'zh-CN') return 'zh';
+    return regionalNormalized;  // pt-PT, zh-TW, zh-HK preserved
+  }
+
+  // Fall back to 2-letter base code.
+  const base = trimmed.substring(0, 2);
+  return SUPPORTED_LANGUAGES.includes(base) ? base : 'en';
+}
+
+/**
+ * Look up a value from a localized table with a fallback chain.
+ * Example:
+ *   getRegionalString({ en:'A', pt:'B', 'pt-PT':'C' }, 'pt-PT') → 'C'
+ *   getRegionalString({ en:'A', pt:'B' },               'pt-PT') → 'B'  (fallback to pt)
+ *   getRegionalString({ en:'A' },                       'pt-PT') → 'A'  (fallback to en)
+ *
+ * @param {Object} table — keys are language codes, values are strings.
+ * @param {string} lang — normalized lang code.
+ * @returns {string}
+ */
+function getRegionalString(table, lang) {
+  if (!table || typeof table !== 'object') return '';
+  if (table[lang]) return table[lang];
+  // Strip region suffix and retry (pt-PT → pt).
+  if (typeof lang === 'string' && lang.includes('-')) {
+    const base = lang.split('-')[0];
+    if (table[base]) return table[base];
+  }
+  return table.en || '';
+}
+
 function getLanguageInstruction(lang) {
   // NOTE: These instructions are critical — they must be at the END of the prompt
   // to override any other language directives. Gemini must generate ALL content
@@ -21,10 +82,15 @@ function getLanguageInstruction(lang) {
   if (typeof lang !== 'string' || !lang) {
     return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';
   }
-  if (lang.startsWith('zh')) return '⚠️ CRITICAL: 必须用中文生成所有内容，包括短语、反应、教练建议。绝不能用英文。';
-  if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية فقط. لا تستخدم الإنجليزية أبداً.';
+  // Regional variants — more specific instructions BEFORE base startsWith checks.
+  if (lang === 'zh-TW') return '⚠️ CRITICAL: 必須用「繁體中文（台灣）」生成所有內容，使用台灣用語（例：軟體而非软件，網路而非网络）。絕對不能使用簡體字或英文。';
+  if (lang === 'zh-HK') return '⚠️ CRITICAL: 必須用「繁體中文（香港）」生成所有內容，使用香港粵語用詞。絕對不能使用簡體字或英文。';
+  if (lang === 'pt-PT') return '⚠️ CRÍTICO: TODO o conteúdo DEVE estar em português europeu (Portugal). Usa "tu" e vocabulário de Portugal (ex: "telemóvel" não "celular"; "pequeno-almoço" não "café da manhã"). Nunca em inglês nem em português brasileiro.';
+  // Base languages
+  if (lang.startsWith('zh')) return '⚠️ CRITICAL: 必须用简体中文（中国大陆）生成所有内容，包括短语、反应、教练建议。绝不能用英文或繁体字。';
+  if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية الفصحى فقط. لا تستخدم الإنجليزية أبداً.';
   if (lang.startsWith('id') || lang.startsWith('ms')) return '⚠️ KRITIS: SEMUA konten harus dalam Bahasa Indonesia. Jangan gunakan Bahasa Inggris.';
-  if (lang.startsWith('pt')) return '⚠️ CRÍTICO: TODO conteúdo DEVE estar em português. Nunca em inglês.';
+  if (lang.startsWith('pt')) return '⚠️ CRÍTICO: TODO conteúdo DEVE estar em português brasileiro. Use vocabulário do Brasil (ex: "celular" não "telemóvel"; "ônibus" não "autocarro"). Nunca em inglês nem em português europeu.';
   if (lang.startsWith('fr')) return '⚠️ CRITIQUE: TOUT le contenu DOIT être en français. Jamais en anglais.';
   if (lang.startsWith('ja')) return '⚠️ 重要：すべてのコンテンツは日本語ONLY。英語は絶対に使わないでください。';
   if (lang.startsWith('ru')) return '⚠️ КРИТИЧНО: Все содержимое ТОЛЬКО на русском. Никогда не используйте английский.';
@@ -456,10 +522,13 @@ const ERROR_MESSAGES = {
     en: 'Daily limit reached. Come back tomorrow for fresh credits.',
     es: 'Límite diario alcanzado. Vuelve mañana para créditos nuevos.',
     pt: 'Limite diário atingido. Volte amanhã para créditos novos.',
+    'pt-PT': 'Limite diário atingido. Volta amanhã para obteres créditos novos.',
     fr: 'Limite quotidienne atteinte. Reviens demain pour de nouveaux crédits.',
     de: 'Tageslimit erreicht. Komm morgen für neue Credits wieder.',
     ja: '1日の上限に達しました。明日新しいクレジットで戻ってきてください。',
     zh: '已达每日上限。明天回来获取新额度。',
+    'zh-TW': '已達每日上限。明天回來取得新的額度。',
+    'zh-HK': '已達每日上限。聽日再嚟拎新嘅額度。',
     ru: 'Достигнут дневной лимит. Возвращайтесь завтра за новыми кредитами.',
     ar: 'تم الوصول إلى الحد اليومي. عُد غداً للحصول على أرصدة جديدة.',
     id: 'Batas harian tercapai. Kembali besok untuk kredit baru.',
@@ -468,10 +537,13 @@ const ERROR_MESSAGES = {
     en: 'Match not found. Please refresh and try again.',
     es: 'Match no encontrado. Actualiza e inténtalo de nuevo.',
     pt: 'Match não encontrado. Atualize e tente novamente.',
+    'pt-PT': 'Match não encontrado. Atualiza e tenta novamente.',
     fr: 'Match introuvable. Actualise et réessaie.',
     de: 'Match nicht gefunden. Bitte aktualisiere und versuche es erneut.',
     ja: 'マッチが見つかりません。更新してもう一度お試しください。',
     zh: '未找到匹配。请刷新后重试。',
+    'zh-TW': '找不到配對。請重新整理後再試。',
+    'zh-HK': '搵唔到配對。請重新載入再試。',
     ru: 'Мэтч не найден. Обновите и попробуйте снова.',
     ar: 'لم يتم العثور على التطابق. يرجى التحديث والمحاولة مرة أخرى.',
     id: 'Match tidak ditemukan. Silakan segarkan dan coba lagi.',
@@ -567,11 +639,10 @@ const ERROR_MESSAGES = {
  * @param {string} [userLang='en'] — 2-letter ISO code (defensive: accepts region codes)
  */
 function getLocalizedError(key, userLang = 'en') {
-  const lang = (typeof userLang === 'string' && userLang.length >= 2)
-    ? userLang.toLowerCase().substring(0, 2)
-    : 'en';
+  const lang = normalizeLanguageCode(userLang);
   const byKey = ERROR_MESSAGES[key] || ERROR_MESSAGES.internal;
-  return byKey[lang] || byKey.en;
+  // Use regional fallback chain: exact (pt-PT) → base (pt) → en
+  return getRegionalString(byKey, lang);
 }
 
 // ─── PII Redaction ──────────────────────────────────────────────────────────
@@ -705,4 +776,8 @@ module.exports = {
   redactToken,
   ERROR_MESSAGES,
   getLocalizedError,
+  normalizeLanguageCode,
+  getRegionalString,
+  SUPPORTED_LANGUAGES,
+  SUPPORTED_REGIONAL,
 };
