@@ -186,7 +186,7 @@ const STAGE_LABELS_BY_LANGUAGE = {
  * Handles cases like "es-MX" → "es", "en-US" → "en", etc.
  */
 function normalizeLanguageCode(lang) {
-  if (!lang) return 'en';
+  if (typeof lang !== 'string' || !lang) return 'en';
   const normalized = lang.toLowerCase().substring(0, 2);
   const validLanguages = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
   return validLanguages.includes(normalized) ? normalized : 'en';
@@ -358,7 +358,7 @@ exports.simulateMultiUniverse = onCall(
         logger.error(`[MultiUniverse] User document not found: ${userId}`);
         analyticsData.errorReason = 'user_not_found';
         await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
-        throw new HttpsError('not-found', 'User profile not found');
+        throw new HttpsError('not-found', getLocalizedError('profile_not_found', userLanguage));
       }
 
       const userData = userDoc.data();
@@ -371,7 +371,7 @@ exports.simulateMultiUniverse = onCall(
         await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw new HttpsError(
           'resource-exhausted',
-          `Daily limit reached. You have used all your Coach IA credits for today. Come back tomorrow for 3 fresh credits.`
+          getLocalizedError('rate_limit', userLanguage)
         );
       }
 
@@ -470,7 +470,7 @@ exports.simulateMultiUniverse = onCall(
           analyticsData.errorReason = 'match_not_found';
           analyticsData.failedStage = 'load_match';
           await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
-          throw new HttpsError('not-found', `Match not found (ID: ${matchId.substring(0, 8)}...)`);
+          throw new HttpsError('not-found', getLocalizedError('match_not_found', userLanguage));
         }
         const matchData = matchDoc.data();
         const otherUserId = matchData?.usersMatched?.find((uid) => uid !== userId);
@@ -585,7 +585,7 @@ exports.simulateMultiUniverse = onCall(
         await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
         throw new HttpsError(
           'internal',
-          'Unable to test all relationship stages. Please try again in a moment.'
+          getLocalizedError('all_stages_failed', userLanguage)
         );
       }
 
@@ -614,7 +614,7 @@ exports.simulateMultiUniverse = onCall(
         logger.error(`[MultiUniverse] Validation failed: no stages in result`);
         analyticsData.errorReason = 'invalid_result';
         await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
-        throw new HttpsError('internal', 'Generated result is incomplete. Please try again.');
+        throw new HttpsError('internal', getLocalizedError('invalid_result', userLanguage));
       }
       logger.info(`[MultiUniverse] Result validated: ${result.stages.length} stages, score=${score}`);
 
@@ -663,7 +663,7 @@ exports.simulateMultiUniverse = onCall(
       // Fail-open: log ERROR with context (we don't throw — tokens already spent)
       try {
         await db.collection('users').doc(userId).update({
-          coachMessagesRemaining: db.FieldValue.increment(-1)
+          coachMessagesRemaining: admin.firestore.FieldValue.increment(-1)
         });
         logger.info(`[MultiUniverse] Coach credits decremented (unified counter)`);
       } catch (e) {
@@ -700,7 +700,7 @@ exports.simulateMultiUniverse = onCall(
       analyticsData.errorMessage = e.message;
       await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
 
-      throw new HttpsError('internal', 'Simulation failed. Please try again.');
+      throw new HttpsError('internal', getLocalizedError('simulation_failed', userLanguage));
     }
   }
 );
@@ -750,7 +750,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         matchReaction: generateMatchReaction(app.tone, situation, userLanguage),
         successScore: score,
         signals: ['warmth', 'reciprocation', 'openness'],
-        recommendedFor: idx === 0 ? 'Direct opener' : null,
+        recommendedFor: idx === 0 ? getLocalizedRecommendedFor(userLanguage) : null,
       };
     });
 
@@ -1031,7 +1031,11 @@ function getLocalizedCoachTip(tipKey, userLang = 'en') {
  */
 function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
   const normalizedLang = normalizeLanguageCode(userLang);
-  const name = (matchName && matchName !== 'Your Match') ? matchName : null;
+  // Solo mode: matchName is a localized placeholder (e.g. "Pareja ideal") — should not be
+  // substituted as if it were a real name. Treat all known solo names + 'Your Match' as null.
+  const soloNamesSet = new Set(Object.values(SOLO_MODE_NAMES));
+  const isSoloPlaceholder = matchName && (matchName === 'Your Match' || soloNamesSet.has(matchName));
+  const name = (matchName && !isSoloPlaceholder) ? matchName : null;
   const who = (withName, fallback) => name ? withName.replace('{name}', name) : fallback;
 
   const tipLists = {
@@ -1301,6 +1305,110 @@ function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
   if (!stageLangTips) return getLocalizedCoachTip('communication_foundation', normalizedLang);
   const tips = stageLangTips[normalizedLang] || stageLangTips.en;
   return tips.map(t => `• ${t}`).join('\n');
+}
+
+/**
+ * Localized HttpsError user-facing messages (10 languages).
+ * Auth errors are kept in English (occur before lang is parsed).
+ */
+function getLocalizedError(key, userLang = 'en') {
+  const normalizedLang = normalizeLanguageCode(userLang);
+  const messages = {
+    rate_limit: {
+      en: 'Daily limit reached. You have used all your Coach AI credits for today. Come back tomorrow for 3 fresh credits.',
+      es: 'Límite diario alcanzado. Has usado todos tus créditos del Coach IA de hoy. Vuelve mañana para 3 créditos nuevos.',
+      pt: 'Limite diário atingido. Você usou todos os seus créditos do Coach IA de hoje. Volte amanhã para 3 créditos novos.',
+      fr: 'Limite quotidienne atteinte. Tu as utilisé tous tes crédits du Coach IA aujourd\'hui. Reviens demain pour 3 crédits frais.',
+      de: 'Tageslimit erreicht. Du hast alle deine Coach-KI-Credits für heute aufgebraucht. Komm morgen für 3 neue Credits wieder.',
+      ja: '1日の上限に達しました。今日のコーチAIクレジットをすべて使いました。明日3つの新しいクレジットで戻ってきてください。',
+      zh: '已达每日上限。您今天的教练AI额度已用完。明天回来获取3个新额度。',
+      ru: 'Достигнут дневной лимит. Вы использовали все свои кредиты Коуча ИИ на сегодня. Возвращайтесь завтра за 3 новыми кредитами.',
+      ar: 'تم الوصول إلى الحد اليومي. لقد استخدمت كل أرصدة كوتش الذكاء الاصطناعي لهذا اليوم. عُد غداً للحصول على 3 أرصدة جديدة.',
+      id: 'Batas harian tercapai. Kamu telah menggunakan semua kredit Coach AI hari ini. Kembali besok untuk 3 kredit baru.',
+    },
+    match_not_found: {
+      en: 'Match not found. Please refresh and try again.',
+      es: 'Match no encontrado. Actualiza e inténtalo de nuevo.',
+      pt: 'Match não encontrado. Atualize e tente novamente.',
+      fr: 'Match introuvable. Actualise et réessaie.',
+      de: 'Match nicht gefunden. Bitte aktualisiere und versuche es erneut.',
+      ja: 'マッチが見つかりません。更新してもう一度お試しください。',
+      zh: '未找到匹配。请刷新后重试。',
+      ru: 'Мэтч не найден. Обновите и попробуйте снова.',
+      ar: 'لم يتم العثور على التطابق. يرجى التحديث والمحاولة مرة أخرى.',
+      id: 'Match tidak ditemukan. Silakan segarkan dan coba lagi.',
+    },
+    profile_not_found: {
+      en: 'User profile not found.',
+      es: 'Perfil de usuario no encontrado.',
+      pt: 'Perfil de usuário não encontrado.',
+      fr: 'Profil utilisateur introuvable.',
+      de: 'Benutzerprofil nicht gefunden.',
+      ja: 'ユーザープロフィールが見つかりません。',
+      zh: '未找到用户资料。',
+      ru: 'Профиль пользователя не найден.',
+      ar: 'لم يتم العثور على الملف الشخصي.',
+      id: 'Profil pengguna tidak ditemukan.',
+    },
+    all_stages_failed: {
+      en: 'Unable to test all relationship stages. Please try again in a moment.',
+      es: 'No pudimos probar todas las etapas de la relación. Inténtalo de nuevo en un momento.',
+      pt: 'Não foi possível testar todas as etapas da relação. Tente novamente em um momento.',
+      fr: 'Impossible de tester toutes les étapes de la relation. Réessaie dans un instant.',
+      de: 'Es war nicht möglich, alle Beziehungsphasen zu testen. Bitte versuche es gleich erneut.',
+      ja: '関係のすべての段階をテストできませんでした。しばらくしてからもう一度お試しください。',
+      zh: '无法测试所有关系阶段。请稍后再试。',
+      ru: 'Не удалось протестировать все стадии отношений. Пожалуйста, повторите попытку через некоторое время.',
+      ar: 'لم نتمكن من اختبار جميع مراحل العلاقة. يرجى المحاولة مرة أخرى بعد قليل.',
+      id: 'Tidak bisa menguji semua tahap hubungan. Silakan coba lagi sebentar.',
+    },
+    invalid_result: {
+      en: 'Generated result is incomplete. Please try again.',
+      es: 'El resultado generado está incompleto. Inténtalo de nuevo.',
+      pt: 'O resultado gerado está incompleto. Tente novamente.',
+      fr: 'Le résultat généré est incomplet. Réessaie.',
+      de: 'Das generierte Ergebnis ist unvollständig. Bitte versuche es erneut.',
+      ja: '生成された結果が不完全です。もう一度お試しください。',
+      zh: '生成的结果不完整。请再试一次。',
+      ru: 'Сгенерированный результат неполный. Пожалуйста, попробуйте снова.',
+      ar: 'النتيجة المُولَّدة غير مكتملة. يرجى المحاولة مرة أخرى.',
+      id: 'Hasil yang dihasilkan tidak lengkap. Silakan coba lagi.',
+    },
+    simulation_failed: {
+      en: 'Simulation failed. Please try again.',
+      es: 'La simulación falló. Inténtalo de nuevo.',
+      pt: 'A simulação falhou. Tente novamente.',
+      fr: 'La simulation a échoué. Réessaie.',
+      de: 'Die Simulation ist fehlgeschlagen. Bitte versuche es erneut.',
+      ja: 'シミュレーションに失敗しました。もう一度お試しください。',
+      zh: '模拟失败。请重试。',
+      ru: 'Симуляция не удалась. Пожалуйста, попробуйте снова.',
+      ar: 'فشلت المحاكاة. يرجى المحاولة مرة أخرى.',
+      id: 'Simulasi gagal. Silakan coba lagi.',
+    },
+  };
+  const byKey = messages[key] || messages.simulation_failed;
+  return byKey[normalizedLang] || byKey.en;
+}
+
+/**
+ * Localized "Direct opener" label shown on the recommended approach card (10 languages)
+ */
+function getLocalizedRecommendedFor(userLang = 'en') {
+  const normalizedLang = normalizeLanguageCode(userLang);
+  const labels = {
+    en: 'Direct opener',
+    es: 'Apertura directa',
+    pt: 'Abertura direta',
+    fr: 'Ouverture directe',
+    de: 'Direkter Einstieg',
+    ja: '直接的な書き出し',
+    zh: '直接开场',
+    ru: 'Прямое начало',
+    ar: 'بداية مباشرة',
+    id: 'Pembuka langsung',
+  };
+  return labels[normalizedLang] || labels.en;
 }
 
 /**
