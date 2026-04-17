@@ -148,36 +148,101 @@ exports.analyzeProfileWithAI = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userId} = request.data || {};
+    const {userId, userLanguage} = request.data || {};
     const targetId = userId || request.auth.uid;
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const db = admin.firestore();
 
     const userDoc = await db.collection('users').doc(targetId).get();
     if (!userDoc.exists) throw new Error('User not found');
+
+    const TEXTS = {
+      en: {
+        bio: 'Add a more detailed bio to improve your matches',
+        photos: (n) => `Add more photos (you have ${n}, at least 3 recommended)`,
+        interests: 'Add more interests to improve compatibility',
+        analysis: 'Profile successfully analyzed',
+      },
+      es: {
+        bio: 'Añade una bio más detallada para mejorar tus matches',
+        photos: (n) => `Añade más fotos (tienes ${n}, se recomiendan al menos 3)`,
+        interests: 'Añade más intereses para mejorar la compatibilidad',
+        analysis: 'Perfil analizado con éxito',
+      },
+      pt: {
+        bio: 'Adicione uma bio mais detalhada para melhorar seus matches',
+        photos: (n) => `Adicione mais fotos (você tem ${n}, pelo menos 3 recomendadas)`,
+        interests: 'Adicione mais interesses para melhorar a compatibilidade',
+        analysis: 'Perfil analisado com sucesso',
+      },
+      fr: {
+        bio: 'Ajoute une bio plus détaillée pour améliorer tes matches',
+        photos: (n) => `Ajoute plus de photos (tu en as ${n}, au moins 3 recommandées)`,
+        interests: 'Ajoute plus d\'intérêts pour améliorer la compatibilité',
+        analysis: 'Profil analysé avec succès',
+      },
+      de: {
+        bio: 'Füge eine detailliertere Bio hinzu, um deine Matches zu verbessern',
+        photos: (n) => `Füge mehr Fotos hinzu (du hast ${n}, mindestens 3 empfohlen)`,
+        interests: 'Füge mehr Interessen hinzu, um die Kompatibilität zu verbessern',
+        analysis: 'Profil erfolgreich analysiert',
+      },
+      ja: {
+        bio: 'マッチを改善するために、より詳しいバイオを追加しましょう',
+        photos: (n) => `写真をもっと追加しましょう（現在${n}枚、3枚以上推奨）`,
+        interests: '相性を改善するために、興味をもっと追加しましょう',
+        analysis: 'プロフィールの分析が完了しました',
+      },
+      zh: {
+        bio: '添加更详细的个人简介来改善你的匹配',
+        photos: (n) => `添加更多照片（你有${n}张，建议至少3张）`,
+        interests: '添加更多兴趣来提高兼容性',
+        analysis: '资料分析成功',
+      },
+      ru: {
+        bio: 'Добавьте более подробное био, чтобы улучшить мэтчи',
+        photos: (n) => `Добавьте больше фото (у вас ${n}, рекомендуется минимум 3)`,
+        interests: 'Добавьте больше интересов, чтобы улучшить совместимость',
+        analysis: 'Профиль успешно проанализирован',
+      },
+      ar: {
+        bio: 'أضف سيرة ذاتية أكثر تفصيلاً لتحسين توافقاتك',
+        photos: (n) => `أضف المزيد من الصور (لديك ${n}، يُوصى بـ 3 على الأقل)`,
+        interests: 'أضف المزيد من الاهتمامات لتحسين التوافق',
+        analysis: 'تم تحليل الملف الشخصي بنجاح',
+      },
+      id: {
+        bio: 'Tambahkan bio yang lebih detail untuk meningkatkan match-mu',
+        photos: (n) => `Tambahkan lebih banyak foto (kamu punya ${n}, minimal 3 direkomendasikan)`,
+        interests: 'Tambahkan lebih banyak minat untuk meningkatkan kecocokan',
+        analysis: 'Profil berhasil dianalisis',
+      },
+    };
+    const t = TEXTS[lang] || TEXTS.en;
 
     const user = userDoc.data();
     const recommendations = [];
     let score = 70;
 
     if (!user.bio || user.bio.length < 20) {
-      recommendations.push('Añade una bio más detallada para mejorar tus matches');
+      recommendations.push(t.bio);
       score -= 10;
     }
     const photoCount = Array.isArray(user.pictures) ? user.pictures.length : 1;
     if (photoCount < 3) {
-      recommendations.push(`Añade más fotos (tienes ${photoCount}, se recomiendan al menos 3)`);
+      recommendations.push(t.photos(photoCount));
       score -= 10;
     }
     if (!user.interests || (Array.isArray(user.interests) && user.interests.length < 3)) {
-      recommendations.push('Añade más intereses para mejorar la compatibilidad');
+      recommendations.push(t.interests);
       score -= 5;
     }
 
-    logger.info(`[analyzeProfileWithAI] Profile score=${score} for ${targetId}`);
+    logger.info(`[analyzeProfileWithAI] Profile score=${score}, lang=${lang} for ${targetId}`);
     return {
       success: true,
       score: Math.max(score, 30),
-      analysis: 'Perfil analizado con éxito',
+      analysis: t.analysis,
       recommendations,
       photoCount,
     };
@@ -762,12 +827,27 @@ exports.analyzePersonalityCompatibility = onCall(
     const uid1 = d.userId || d.userId1;
     const uid2 = d.targetUserId || d.userId2;
     if (!uid1 || !uid2) throw new Error('userId and targetUserId required');
+    const lang = (typeof d.userLanguage === 'string' && d.userLanguage ? d.userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const db = admin.firestore();
     const [u1Doc, u2Doc] = await Promise.all([
       db.collection('users').doc(uid1).get(),
       db.collection('users').doc(uid2).get(),
     ]);
+
+    const COMMON_INTERESTS_TEXT = {
+      en: (n) => `${n} interests in common`,
+      es: (n) => `${n} intereses en común`,
+      pt: (n) => `${n} interesses em comum`,
+      fr: (n) => `${n} centres d'intérêt en commun`,
+      de: (n) => `${n} gemeinsame Interessen`,
+      ja: (n) => `${n}個の共通の興味`,
+      zh: (n) => `${n} 个共同兴趣`,
+      ru: (n) => `${n} общих интересов`,
+      ar: (n) => `${n} اهتمامات مشتركة`,
+      id: (n) => `${n} minat yang sama`,
+    };
+    const getCommonText = COMMON_INTERESTS_TEXT[lang] || COMMON_INTERESTS_TEXT.en;
 
     let overallScore = 60;
     const strengths = [];
@@ -778,7 +858,7 @@ exports.analyzePersonalityCompatibility = onCall(
       const i2 = (u2.interests || []).map(String);
       const common = i2.filter((i) => i1.has(i));
       overallScore = Math.min(60 + common.length * 5, 100);
-      if (common.length > 0) strengths.push(`${common.length} intereses en común`);
+      if (common.length > 0) strengths.push(getCommonText(common.length));
     }
 
     // ✅ Respuesta homologada: iOS/Android leen resultData["analysis"] como dict
@@ -812,12 +892,26 @@ exports.predictMatchSuccess = onCall(
     const uid1 = d.userId || d.userId1;
     const uid2 = d.targetUserId || d.userId2;
     if (!uid1 || !uid2) throw new Error('userId and targetUserId required');
+    const lang = (typeof d.userLanguage === 'string' && d.userLanguage ? d.userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const db = admin.firestore();
     const [u1Doc, u2Doc] = await Promise.all([
       db.collection('users').doc(uid1).get(),
       db.collection('users').doc(uid2).get(),
     ]);
+
+    const RISK_AGE_TEXT = {
+      en: 'Large age difference',
+      es: 'Gran diferencia de edad',
+      pt: 'Grande diferença de idade',
+      fr: 'Grande différence d\'âge',
+      de: 'Großer Altersunterschied',
+      ja: '年齢差が大きい',
+      zh: '年龄差距较大',
+      ru: 'Большая разница в возрасте',
+      ar: 'فارق عمري كبير',
+      id: 'Perbedaan usia besar',
+    };
 
     let matchProbability = 50;
     const riskFactors = [];
@@ -831,7 +925,7 @@ exports.predictMatchSuccess = onCall(
       matchProbability = Math.min(50 + common.length * 5, 95);
 
       const ageDiff = Math.abs(calcAge(u1.birthDate) - calcAge(u2.birthDate));
-      if (ageDiff > 10) riskFactors.push('Large age difference');
+      if (ageDiff > 10) riskFactors.push(RISK_AGE_TEXT[lang] || RISK_AGE_TEXT.en);
     }
 
     const recommendation = matchProbability >= 80 ? 'highly_recommended'
@@ -1062,6 +1156,7 @@ exports.getEnhancedCompatibilityScore = onCall(
     const uid1 = d.currentUserId || d.userId1;
     const uid2 = d.candidateId || d.userId2;
     if (!uid1 || !uid2) throw new Error('currentUserId and candidateId required');
+    const lang = (typeof d.userLanguage === 'string' && d.userLanguage ? d.userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const db = admin.firestore();
     const [u1Doc, u2Doc] = await Promise.all([
@@ -1087,13 +1182,27 @@ exports.getEnhancedCompatibilityScore = onCall(
     const aiScore = Math.round(baseScore * 0.3);
     const totalScore = Math.min(baseScore * 0.7 + aiScore, 100);
 
+    const hasCommon = interestsScore > 0;
+    const EXPLANATION = {
+      en: hasCommon ? 'Compatibility based on common interests and profile factors' : 'Compatibility based on profile factors',
+      es: hasCommon ? 'Compatibilidad basada en intereses comunes y factores de perfil' : 'Compatibilidad basada en factores de perfil',
+      pt: hasCommon ? 'Compatibilidade baseada em interesses comuns e fatores do perfil' : 'Compatibilidade baseada em fatores do perfil',
+      fr: hasCommon ? 'Compatibilité basée sur les intérêts communs et les facteurs du profil' : 'Compatibilité basée sur les facteurs du profil',
+      de: hasCommon ? 'Kompatibilität basierend auf gemeinsamen Interessen und Profilfaktoren' : 'Kompatibilität basierend auf Profilfaktoren',
+      ja: hasCommon ? '共通の興味とプロフィール要素に基づく相性' : 'プロフィール要素に基づく相性',
+      zh: hasCommon ? '基于共同兴趣和资料因素的兼容性' : '基于资料因素的兼容性',
+      ru: hasCommon ? 'Совместимость на основе общих интересов и факторов профиля' : 'Совместимость на основе факторов профиля',
+      ar: hasCommon ? 'التوافق على أساس الاهتمامات المشتركة وعوامل الملف الشخصي' : 'التوافق على أساس عوامل الملف الشخصي',
+      id: hasCommon ? 'Kecocokan berdasarkan minat bersama dan faktor profil' : 'Kecocokan berdasarkan faktor profil',
+    };
+
     // ✅ Respuesta homologada: iOS/Android leen totalScore, baseScore, aiScore, explanation
     return {
       success: true,
       totalScore,
       baseScore,
       aiScore,
-      explanation: `Compatibilidad basada en ${interestsScore > 0 ? 'intereses comunes y' : ''} factores de perfil`,
+      explanation: EXPLANATION[lang] || EXPLANATION.en,
     };
   },
 );
