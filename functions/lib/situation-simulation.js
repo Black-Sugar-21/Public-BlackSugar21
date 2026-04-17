@@ -144,10 +144,76 @@ function generateApproachesFallback(userLang = 'en', situation = '') {
   };
   const phrases = TEMPLATES[userLang] || TEMPLATES.en;
   const tones = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
+  // Per-tone follow-up tip, localized — last-resort guidance so detail sheet isn't empty
+  const FOLLOWUP_TIPS = {
+    en: {
+      direct: 'If they answer yes, get to the point. If they seem hesitant, give them space and ask what feels right for them.',
+      playful: 'Match their energy — if they tease back, keep it light; if they get serious, switch gears and be sincere.',
+      romantic_vulnerable: 'If they respond warmly, stay present and let them share too. If they deflect, respect it and don\'t push.',
+      grounded_honest: 'Let them process. A short silence is okay. Ask what they think — then actually listen.',
+    },
+    es: {
+      direct: 'Si responden que sí, ve al grano. Si dudan, dales espacio y pregúntales qué les haría sentirse cómodos.',
+      playful: 'Sigue su energía — si bromean, mantenlo liviano; si se ponen serios, cambia el tono y sé sincero/a.',
+      romantic_vulnerable: 'Si responden con calidez, quédate presente y deja que ellos también compartan. Si evaden, respétalo y no presiones.',
+      grounded_honest: 'Deja que lo procesen. Un silencio corto está bien. Pregunta qué piensan — y escucha de verdad.',
+    },
+    pt: {
+      direct: 'Se responderem que sim, vai direto ao ponto. Se hesitarem, dê espaço e pergunte o que os deixaria confortáveis.',
+      playful: 'Siga a energia — se brincarem, mantenha leve; se ficarem sérios, mude o tom e seja sincero/a.',
+      romantic_vulnerable: 'Se responderem com carinho, esteja presente e deixe-os partilhar também. Se evitarem, respeite e não pressione.',
+      grounded_honest: 'Deixe-os processar. Um silêncio curto está bem. Pergunte o que pensam — e escute de verdade.',
+    },
+    fr: {
+      direct: 'S\'ils disent oui, va droit au but. S\'ils hésitent, laisse-leur de l\'espace et demande ce qui leur semble juste.',
+      playful: 'Suis leur énergie — s\'ils te taquinent, reste léger ; s\'ils deviennent sérieux, change de ton et sois sincère.',
+      romantic_vulnerable: 'S\'ils répondent chaleureusement, reste présent et laisse-les partager. S\'ils esquivent, respecte-le sans insister.',
+      grounded_honest: 'Laisse-les prendre leur temps. Un court silence est normal. Demande ce qu\'ils en pensent — et écoute vraiment.',
+    },
+    de: {
+      direct: 'Wenn sie zustimmen, komm zur Sache. Wenn sie zögern, gib ihnen Raum und frag, was sich für sie richtig anfühlt.',
+      playful: 'Nimm ihre Energie auf — wenn sie zurückfrotzeln, bleib locker; werden sie ernst, wechsle den Ton und sei aufrichtig.',
+      romantic_vulnerable: 'Wenn sie herzlich reagieren, bleib präsent und lass sie auch teilen. Weichen sie aus, respektiere das und dräng nicht.',
+      grounded_honest: 'Lass ihnen Zeit. Eine kurze Stille ist okay. Frag, was sie denken — und höre wirklich zu.',
+    },
+    ja: {
+      direct: '相手がイエスなら要点を伝えて。ためらっているなら余白を残して、何が心地よいか聞いてあげて。',
+      playful: '相手のノリに合わせて。冗談で返ってきたら軽く、真剣になったらこちらも真剣に。',
+      romantic_vulnerable: '温かく返ってきたら、ちゃんと向き合ってあげて。かわされたら、押さずに尊重しよう。',
+      grounded_honest: '少し考える時間を与えよう。短い沈黙は大丈夫。相手の考えを聞いて、ちゃんと聴こう。',
+    },
+    zh: {
+      direct: '如果对方同意，直接进入正题。如果对方犹豫，给他们空间，问他们怎样会觉得舒服。',
+      playful: '跟上对方的节奏——如果对方开玩笑，保持轻松；如果变严肃，就换个语气认真回应。',
+      romantic_vulnerable: '如果对方热情回应，保持在场，让他们也分享。如果对方回避，尊重他们，不要推进。',
+      grounded_honest: '让他们消化一下。短暂的沉默没关系。问问他们怎么想——然后真正去听。',
+    },
+    ru: {
+      direct: 'Если они согласны — переходи к делу. Если колеблются — дай пространство и спроси, что им удобно.',
+      playful: 'Подстройся под их энергию — если шутят в ответ, держи легкий тон; если серьёзно — отвечай искренне.',
+      romantic_vulnerable: 'Если откликаются тепло — будь рядом и дай им поделиться. Если уходят в сторону — уважай это, не дави.',
+      grounded_honest: 'Дай им осмыслить. Короткое молчание — это нормально. Спроси, что они думают — и действительно слушай.',
+    },
+    ar: {
+      direct: 'إذا وافقوا، ادخل في صلب الموضوع. إذا ترددوا، امنحهم مساحة واسألهم عمّا يشعرهم بالراحة.',
+      playful: 'سايِر طاقتهم — إن ردّوا بمزاح، ابقَ خفيفاً؛ وإن جدّوا، غيّر نبرتك وكن صادقاً.',
+      romantic_vulnerable: 'إذا ردّوا بدفء، ابقَ حاضراً ودعهم يشاركوا أيضاً. إذا تهرّبوا، احترم ذلك ولا تضغط.',
+      grounded_honest: 'دعهم يستوعبون. الصمت القصير لا بأس به. اسألهم عن رأيهم — ثم استمع حقاً.',
+    },
+    id: {
+      direct: 'Jika mereka setuju, langsung ke intinya. Jika ragu, beri ruang dan tanya apa yang membuat mereka nyaman.',
+      playful: 'Ikuti energi mereka — kalau mereka bercanda, tetap ringan; kalau mereka serius, ubah nada dan tulus.',
+      romantic_vulnerable: 'Jika mereka merespons hangat, tetap hadir dan biarkan mereka juga berbagi. Jika menghindar, hormati dan jangan mendesak.',
+      grounded_honest: 'Biarkan mereka memproses. Diam sejenak tidak apa-apa. Tanya pendapat mereka — dan benar-benar dengarkan.',
+    },
+  };
+  const tips = FOLLOWUP_TIPS[userLang] || FOLLOWUP_TIPS.en;
   return phrases.map((phrase, i) => ({
     id: String(i + 1),
     tone: tones[i],
     phrase,
+    alternativePhrases: [],
+    followUpTips: tips[tones[i]] || '',
   }));
 }
 
@@ -349,7 +415,7 @@ async function generateApproaches(genAI, situation, matchPersona, userLang) {
     }[userLang] || 'English';
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_NAME,
-      generationConfig: {maxOutputTokens: 1200, temperature: 0.85, responseMimeType: 'application/json'},
+      generationConfig: {maxOutputTokens: 2800, temperature: 0.85, responseMimeType: 'application/json'},
     });
 
     const prompt = `${langInstr}
@@ -380,28 +446,37 @@ Generic openers like "quería hablar contigo", "tenemos que hablar", "hay algo q
 sent for literally any situation has failed. Read the user's situation again and make each phrase unmistakably
 about THAT topic.
 
-Generate EXACTLY 4 distinct approaches — each a complete message the user could copy-paste and send right now.
-Each approach uses one of these FIXED tones, in this exact order:
+Generate EXACTLY 4 distinct approaches. Each approach uses one of these FIXED tones, in this exact order:
   1. direct — clear, confident, unambiguous; names the situation in the first sentence
   2. playful — warm, light, a little humor; still references the specific topic (e.g. the friend, the plan, the feeling)
   3. romantic_vulnerable — soft, honest about feelings tied to THIS situation
   4. grounded_honest — calm, real, low-pressure; states what's happening and what they want
 
-Each phrase must be 2-3 sentences, natural, first-person, as if the user typed it themselves IN ${languageName}.
-Reference at least one concrete detail from the user's situation in every phrase (a name, place, plan, feeling, or event they mentioned).
+For EACH approach produce this richer structure (not just one phrase):
+- "phrase": the main message (2-3 sentences, first-person, IN ${languageName}) — this is the copy-paste-and-send version
+- "alternativePhrases": an array of exactly 3 more variations in the SAME tone, same situation, different wording. Each 1-3 sentences. They should be genuinely different (different hook, different framing) — not paraphrases of each other. The user will pick the one that feels most natural.
+- "followUpTips": 1-2 sentences telling the user what to do AFTER the match replies. Should help them handle both positive and hesitant reactions. Actionable, specific to the tone (e.g. for "playful" suggest keeping it light; for "direct" suggest pausing before pressing).
 
-Quick self-check before returning each phrase: "Could this message have been written by someone with a totally
-different problem?" If yes, rewrite it until the answer is no.
+Every "phrase" and every entry in "alternativePhrases" MUST reference at least one concrete detail from the user's situation (a name, place, plan, feeling, or event they mentioned). No generic openers.
+
+Quick self-check before returning: "Could any of these messages have been written by someone with a totally
+different problem?" If yes, rewrite until the answer is no.
 
 ${langInstr}
 
 ⚠️ FINAL CHECKS:
-1. Every "phrase" is in ${languageName}, not English (unless target is English).
-2. Every "phrase" references specific content from the user's situation.
-3. No two phrases sound interchangeable.
+1. Every "phrase" / "alternativePhrases[i]" / "followUpTips" is in ${languageName}, not English (unless target is English).
+2. "alternativePhrases" has EXACTLY 3 entries.
+3. Every phrase references specific content from the user's situation.
+4. No two phrases (main or alternative, within an approach or across approaches) sound interchangeable.
 
-Respond ONLY with JSON in this shape (phrases in ${languageName}):
-{"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
+Respond ONLY with JSON in this shape (all text in ${languageName}):
+{"approaches":[
+  {"id":"1","tone":"direct","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
+  {"id":"2","tone":"playful","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
+  {"id":"3","tone":"romantic_vulnerable","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
+  {"id":"4","tone":"grounded_honest","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."}
+]}`;
 
     // Try up to 2 times — a single Gemini hiccup shouldn't collapse to generic fallbacks
     let lastError = null;
@@ -424,16 +499,37 @@ Respond ONLY with JSON in this shape (phrases in ${languageName}):
         }
 
         const approaches = parsed.approaches;
-        // Normalize — guarantee 4 approaches in fixed order
+        // Normalize — guarantee 4 approaches in fixed order, preserve rich fields
         const byTone = new Map();
         for (const a of approaches) {
-          if (a && typeof a.phrase === 'string' && a.tone) byTone.set(a.tone, a.phrase.trim());
+          if (a && typeof a.phrase === 'string' && a.tone) {
+            byTone.set(a.tone, {
+              phrase: (a.phrase || '').trim(),
+              alternativePhrases: Array.isArray(a.alternativePhrases)
+                ? a.alternativePhrases
+                    .filter(p => typeof p === 'string' && p.trim().length > 0)
+                    .map(p => p.trim())
+                    .slice(0, 3)
+                : [],
+              followUpTips: typeof a.followUpTips === 'string' ? a.followUpTips.trim() : '',
+            });
+          }
         }
-        const normalized = FIXED_TONES.map((tone, i) => ({
-          id: String(i + 1),
-          tone,
-          phrase: byTone.get(tone) || approaches[i]?.phrase || '',
-        }));
+        const normalized = FIXED_TONES.map((tone, i) => {
+          const entry = byTone.get(tone) || {};
+          const rawApproach = approaches[i] || {};
+          return {
+            id: String(i + 1),
+            tone,
+            phrase: entry.phrase || (rawApproach.phrase || '').trim() || '',
+            alternativePhrases: entry.alternativePhrases && entry.alternativePhrases.length
+              ? entry.alternativePhrases
+              : (Array.isArray(rawApproach.alternativePhrases)
+                  ? rawApproach.alternativePhrases.filter(p => typeof p === 'string').slice(0, 3)
+                  : []),
+            followUpTips: entry.followUpTips || (typeof rawApproach.followUpTips === 'string' ? rawApproach.followUpTips.trim() : ''),
+          };
+        });
         // Reject this attempt if any phrase is empty — try again rather than ship blanks
         if (normalized.some(a => !a.phrase)) {
           logger.warn(`[generateApproaches] attempt ${attempt}: one or more phrases empty after normalize`);
@@ -769,6 +865,10 @@ exports.simulateSituation = onCall(
         id: String(approach.id || ''),
         tone: String(approach.tone || ''),
         phrase: String(approach.phrase || ''),
+        alternativePhrases: Array.isArray(approach.alternativePhrases)
+          ? approach.alternativePhrases.filter(p => typeof p === 'string' && p.length > 0)
+          : [],
+        followUpTips: typeof approach.followUpTips === 'string' ? approach.followUpTips : '',
         matchReaction: reactionText || '',
         successScore: Number.isFinite(score) ? score : 5,
         signals: Array.isArray(signals) ? signals.filter(s => typeof s === 'string') : [],
@@ -803,6 +903,10 @@ exports.simulateSituation = onCall(
       id: a.id || '',
       tone: a.tone || '',
       phrase: a.phrase || '',
+      alternativePhrases: Array.isArray(a.alternativePhrases)
+        ? a.alternativePhrases.filter(p => typeof p === 'string' && p.length > 0).slice(0, 3)
+        : [],
+      followUpTips: typeof a.followUpTips === 'string' ? a.followUpTips : '',
       matchReaction: a.matchReaction || '',
       successScore: Number.isFinite(a.successScore) ? a.successScore : 5,
       signals: Array.isArray(a.signals)
