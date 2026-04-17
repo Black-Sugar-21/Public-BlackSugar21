@@ -917,7 +917,21 @@ Respond ONLY with valid JSON (no markdown). The "reason" must be written in ${la
       trackAICall({functionName: 'autoModerateMessage', model: AI_MODEL_LITE, operation: 'classify', usage: result.response.usageMetadata, latencyMs: Date.now() - modStart});
       const responseText = safeResponseText(result).trim();
       const cleanText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const rawAnalysis = JSON.parse(cleanText);
+
+      // Defensive parse: Gemini may return malformed JSON on rare hallucinations.
+      // Fail-safe to SAFE to avoid blocking legitimate messages on parser crash.
+      let rawAnalysis;
+      try {
+        rawAnalysis = JSON.parse(cleanText);
+      } catch (parseErr) {
+        logger.error('[autoModerate] JSON.parse failed — Gemini returned invalid JSON', {
+          messageId,
+          matchId,
+          responsePreview: cleanText.substring(0, 120),
+          error: parseErr.message,
+        });
+        rawAnalysis = {category: 'SAFE', severity: 'NONE', confidence: 0, reason: 'parse_error'};
+      }
 
       // ── Anti-Hallucination Validation Layer ──────────────────────────
       // Gemini can return invalid categories, out-of-range confidence, or missing fields.

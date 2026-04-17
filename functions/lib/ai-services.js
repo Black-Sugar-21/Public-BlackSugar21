@@ -384,7 +384,7 @@ exports.analyzeConversationChemistry = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {messages, userLanguage} = request.data || {};
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const INSIGHTS_I18N = {
       en: {
@@ -863,7 +863,7 @@ exports.generateConversationStarter = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {userLanguage} = request.data || {};
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const STARTERS_I18N = {
       en: [
@@ -1110,7 +1110,7 @@ exports.detectProfileRedFlags = onCall(
     if (!request.auth) throw new Error('Authentication required');
     const {userId, userLanguage} = request.data || {};
     const targetId = userId || request.auth.uid;
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const db = admin.firestore();
     const userDoc = await db.collection('users').doc(targetId).get();
@@ -1362,7 +1362,7 @@ exports.predictOptimalMessageTime = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {userLanguage} = request.data || {};
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     // En producción analizar patrones de actividad del usuario
     const optimalHours = [19, 20, 21]; // 7pm-9pm son las horas pico habituales
@@ -1404,7 +1404,7 @@ exports.getDatingAdvice = onCall(
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
     const {topic, userLanguage} = request.data || {};
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
     const ADVICE_MAP_I18N = {
       en: {
@@ -2677,7 +2677,7 @@ exports.analyzeOutfit = onCall(
       // Allow request if rate limit check fails — don't block users due to infra issue
     }
 
-    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const venue = venueType || 'restaurant';
     const occ = occasion || 'date';
 

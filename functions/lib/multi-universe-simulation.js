@@ -641,10 +641,20 @@ exports.simulateMultiUniverse = onCall(
       // Step 8: DECREMENT UNIFIED coachMessagesRemaining (only after successful generation)
       // This ensures users only lose their daily credit if simulation actually completes
       // Simulations and regular Coach IA messages share the same credit pool
-      await db.collection('users').doc(userId).update({
-        coachMessagesRemaining: db.FieldValue.increment(-1)
-      }).catch(e => logger.warn('[MultiUniverse] Failed to decrement coach credits:', e.message));
-      logger.info(`[MultiUniverse] Coach credits decremented (unified counter)`);
+      // Fail-open: log ERROR with context (we don't throw — tokens already spent)
+      try {
+        await db.collection('users').doc(userId).update({
+          coachMessagesRemaining: db.FieldValue.increment(-1)
+        });
+        logger.info(`[MultiUniverse] Coach credits decremented (unified counter)`);
+      } catch (e) {
+        logger.error('[MultiUniverse] CRITICAL: credit decrement failed — user may bypass limit', {
+          userId: userId.substring(0, 8),
+          matchId: matchId ? matchId.substring(0, 8) : 'solo',
+          error: e.message,
+          errorCode: e.code || 'unknown',
+        });
+      }
 
       // Estimate cost: ~0.000075 per input token, ~0.0003 per output token (Gemini 2.5 Flash pricing)
       const estimatedCost = (totalTokens * 0.000075) + (successfulStages.length * 100 * 0.0003);

@@ -753,12 +753,19 @@ exports.simulateSituation = onCall(
     }));
 
     // ── Decrement unified coach credits (shared with multi-universe) ──
+    // Fail-open: log ERROR (not warn) with full context so ops can monitor.
+    // We don't throw because: result already generated + Gemini tokens already spent.
     try {
       await db.collection('users').doc(userId).update({
         coachMessagesRemaining: admin.firestore.FieldValue.increment(-1),
       });
     } catch (e) {
-      logger.warn(`[simulateSituation] Failed to decrement coachMessagesRemaining: ${e.message}`);
+      logger.error('[simulateSituation] CRITICAL: credit decrement failed — user may bypass limit', {
+        userId: userId.substring(0, 8),
+        matchId: matchId ? matchId.substring(0, 8) : 'solo',
+        error: e.message,
+        errorCode: e.code || 'unknown',
+      });
     }
 
     const finalReport = {
