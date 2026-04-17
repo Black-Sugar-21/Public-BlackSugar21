@@ -402,6 +402,9 @@ exports.simulateMultiUniverse = onCall(
 
           // Re-localize stage labels + re-generate approaches if language differs
           // (cache might have different language than current user)
+          // coachTip: ALWAYS regenerate from current stage-specific function
+          // (old caches may have generic pre-stage-specific tips that we want to overwrite)
+          const cachedMatchName = cachedResult.matchName || 'Your Match';
           const localizedStages = await Promise.all(
             cachedResult.stages.map(async stage => {
               const shouldTranslate = cachedResult.userLanguage !== userLanguage;
@@ -413,10 +416,8 @@ exports.simulateMultiUniverse = onCall(
                 bestApproachPhrase: (shouldTranslate && stage.bestApproachPhrase)
                   ? await translatePhraseToLanguage(stage.bestApproachPhrase, cachedResult.userLanguage || 'en', userLanguage)
                   : stage.bestApproachPhrase,
-                // Similarly for coach tips
-                coachTip: (shouldTranslate && stage.coachTip)
-                  ? await translatePhraseToLanguage(stage.coachTip, cachedResult.userLanguage || 'en', userLanguage)
-                  : stage.coachTip
+                // Always regenerate coachTip with current stage-specific bullet format
+                coachTip: getStageSpecificCoachTip(stage.stageId || stage.id, cachedMatchName, userLanguage),
               };
             })
           );
@@ -1024,81 +1025,282 @@ function getLocalizedCoachTip(tipKey, userLang = 'en') {
 
 /**
  * Stage-specific actionable coach tips for multi-universe simulation.
- * Each stage has distinct emotional dynamics; generic "approach variety" tip
- * was unhelpful. These tips give the user a CONCRETE next action based on
- * the stage context.
+ * Returns a formatted bullet list (3 concrete tips per stage) — more practical
+ * than a single paragraph. Client renders newlines naturally. Backward compatible:
+ * still a `string`, clients don't need schema changes.
  */
 function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
   const normalizedLang = normalizeLanguageCode(userLang);
   const name = (matchName && matchName !== 'Your Match') ? matchName : null;
-  const withName = (template, fallback) => name ? template.replace('{name}', name) : fallback;
+  const who = (withName, fallback) => name ? withName.replace('{name}', name) : fallback;
 
-  const tips = {
+  const tipLists = {
     initial_contact: {
-      en: name ? `First contact with ${name}: start with curiosity, not questions about yourself. Reference something specific from their profile — it shows you paid attention.` : 'First contact: start with curiosity. Reference something specific from their profile to show you paid attention, not just swiped.',
-      es: withName(`Primer contacto con {name}: empieza con curiosidad, no hablando de ti. Menciona algo específico de su perfil — demuestra que prestaste atención.`, 'Primer contacto: empieza con curiosidad. Menciona algo específico de su perfil para mostrar que prestaste atención, no solo le diste like.'),
-      pt: withName(`Primeiro contato com {name}: comece com curiosidade, não falando de você. Mencione algo específico do perfil dela — mostra que você prestou atenção.`, 'Primeiro contato: comece com curiosidade. Mencione algo específico do perfil para mostrar atenção, não só o swipe.'),
-      fr: withName(`Premier contact avec {name} : commence par la curiosité, pas en parlant de toi. Mentionne quelque chose de précis de son profil — ça montre que tu as regardé.`, 'Premier contact : commence par la curiosité. Mentionne quelque chose de précis de son profil pour montrer que tu as vraiment regardé.'),
-      de: withName(`Erstkontakt mit {name}: fang mit Neugier an, nicht mit dir selbst. Erwähne etwas Konkretes aus dem Profil — zeigt, dass du aufmerksam warst.`, 'Erstkontakt: Starte mit Neugier. Erwähne etwas Konkretes aus dem Profil, nicht einfach geswiped.'),
-      ja: withName(`{name}さんとの最初の接触: 自分の話より、興味を示すことから。プロフィールの具体的な点に触れると、ちゃんと見たのが伝わります。`, '最初の接触: 自分の話ではなく、興味を示すことから始めましょう。プロフィールの具体的な点に触れると、ちゃんと見たことが伝わります。'),
-      zh: withName(`与{name}的初次接触：从好奇心开始，不要谈自己。提到她资料里的具体内容——说明你真的看过。`, '初次接触：从好奇心开始。提到对方资料里的具体内容，说明你真的看过，不只是划卡。'),
-      ru: withName(`Первый контакт с {name}: начни с любопытства, а не с рассказа о себе. Упомяни что-то конкретное из профиля — покажет, что ты обратил/а внимание.`, 'Первый контакт: начни с любопытства. Упомяни что-то конкретное из профиля — покажет, что ты правда смотрел/а.'),
-      ar: withName(`التواصل الأول مع {name}: ابدأ بالفضول، ليس بالحديث عن نفسك. اذكر شيئاً محدداً من ملفها — يُظهر أنك انتبهت.`, 'التواصل الأول: ابدأ بالفضول. اذكر شيئاً محدداً من الملف الشخصي لتُظهر أنك انتبهت فعلاً.'),
-      id: withName(`Kontak pertama dengan {name}: mulai dengan rasa ingin tahu, bukan cerita tentang dirimu. Sebut sesuatu spesifik dari profilnya — menunjukkan kamu benar-benar memperhatikan.`, 'Kontak pertama: mulai dengan rasa ingin tahu. Sebut sesuatu spesifik dari profil untuk menunjukkan kamu benar-benar memperhatikan.'),
+      en: [
+        who(`Reference something specific from ${name}'s profile — a hobby, a photo, a phrase`, 'Reference something specific from their profile — a hobby, a photo, a phrase'),
+        'Avoid generic openers like "hey" or "how are you?" — they kill curiosity',
+        'End with an open-ended question to make replying easy and natural',
+      ],
+      es: [
+        who('Menciona algo específico del perfil de {name} — un hobby, una foto, una frase', 'Menciona algo específico de su perfil — un hobby, una foto, una frase'),
+        'Evita aperturas genéricas como "hola" o "¿qué tal?" — matan la curiosidad',
+        'Termina con una pregunta abierta para que responder sea fácil y natural',
+      ],
+      pt: [
+        who('Mencione algo específico do perfil de {name} — um hobby, uma foto, uma frase', 'Mencione algo específico do perfil — um hobby, uma foto, uma frase'),
+        'Evite aberturas genéricas como "oi" ou "tudo bem?" — matam a curiosidade',
+        'Termine com uma pergunta aberta para facilitar a resposta natural',
+      ],
+      fr: [
+        who('Mentionne quelque chose de précis du profil de {name} — un hobby, une photo, une phrase', 'Mentionne quelque chose de précis de son profil — un hobby, une photo, une phrase'),
+        `Évite les ouvertures génériques comme "salut" ou "ça va ?" — elles tuent la curiosité`,
+        'Termine par une question ouverte pour faciliter une réponse naturelle',
+      ],
+      de: [
+        who('Beziehe dich auf etwas Konkretes aus {name}s Profil — ein Hobby, ein Foto, einen Satz', 'Beziehe dich auf etwas Konkretes aus dem Profil — ein Hobby, ein Foto, einen Satz'),
+        'Vermeide generische Einstiege wie "hey" oder "wie gehts?" — sie töten Neugier',
+        'Schließe mit einer offenen Frage ab, damit die Antwort leicht fällt',
+      ],
+      ja: [
+        who('{name}さんのプロフィールの具体的な部分に触れる — 趣味、写真、一言', 'プロフィールの具体的な部分に触れる — 趣味、写真、一言'),
+        '「こんにちは」「元気？」など一般的な書き出しは避ける — 好奇心を殺します',
+        '返事しやすいように、オープンな質問で締めくくる',
+      ],
+      zh: [
+        who('提到{name}资料里具体的东西——一个爱好、一张照片、一句话', '提到对方资料里具体的东西——一个爱好、一张照片、一句话'),
+        '避免"嗨"或"你好吗？"这类通用开场——它们扼杀好奇心',
+        '用一个开放式问题结尾，让对方容易自然回复',
+      ],
+      ru: [
+        who('Упомяни что-то конкретное из профиля {name} — хобби, фото, фразу', 'Упомяни что-то конкретное из профиля — хобби, фото, фразу'),
+        'Избегай общих вступлений как "привет" или "как дела?" — они убивают любопытство',
+        'Закончи открытым вопросом — так легко и естественно ответить',
+      ],
+      ar: [
+        who('اذكر شيئاً محدداً من ملف {name} — هواية، صورة، عبارة', 'اذكر شيئاً محدداً من الملف الشخصي — هواية، صورة، عبارة'),
+        'تجنّب البدايات العامة مثل "مرحباً" أو "كيف حالك؟" — تقتل الفضول',
+        'اختم بسؤال مفتوح ليسهل الرد بشكل طبيعي',
+      ],
+      id: [
+        who('Sebut sesuatu spesifik dari profil {name} — hobi, foto, kutipan', 'Sebut sesuatu spesifik dari profil — hobi, foto, kutipan'),
+        'Hindari pembuka generik seperti "hai" atau "apa kabar?" — membunuh rasa ingin tahu',
+        'Akhiri dengan pertanyaan terbuka agar balas mudah dan alami',
+      ],
     },
     getting_to_know: {
-      en: name ? `Going deeper with ${name}: ask open questions about values and dreams, not just facts. "What excites you about your work?" > "What do you do?"` : 'Going deeper: shift from factual questions ("what do you do?") to value-based ones ("what excites you about it?"). Real connection comes from meaning, not data.',
-      es: withName(`Profundizando con {name}: haz preguntas abiertas sobre valores y sueños, no solo datos. "¿Qué te emociona de tu trabajo?" > "¿En qué trabajas?"`, 'Para profundizar: pasa de preguntas factuales ("¿en qué trabajas?") a preguntas de valor ("¿qué te emociona de eso?"). La conexión real nace del significado, no de los datos.'),
-      pt: withName(`Aprofundando com {name}: faça perguntas abertas sobre valores e sonhos, não apenas fatos. "O que te empolga no seu trabalho?" > "No que você trabalha?"`, 'Para aprofundar: troque perguntas factuais ("no que você trabalha?") por perguntas de valor ("o que te empolga nisso?"). Conexão real nasce do significado.'),
-      fr: withName(`Aller plus loin avec {name} : pose des questions ouvertes sur les valeurs et les rêves, pas juste des faits. "Qu'est-ce qui t'anime dans ton travail ?" > "Tu fais quoi ?"`, `Pour approfondir : passe des questions factuelles à celles sur les valeurs. "Qu'est-ce qui t'anime là-dedans ?" crée plus de connexion que "Tu fais quoi ?".`),
-      de: withName(`Tiefer gehen mit {name}: Stelle offene Fragen zu Werten und Träumen, nicht nur Fakten. "Was begeistert dich an deinem Job?" > "Was arbeitest du?"`, 'Tiefer gehen: wechsle von Faktenfragen zu Werte-Fragen. "Was begeistert dich daran?" schafft mehr Nähe als "Was machst du?".'),
-      ja: withName(`{name}さんとの深まり: 事実ではなく、価値観や夢について開かれた質問を。「仕事の何にワクワクする？」>「何の仕事？」`, '深める時: 事実を聞く質問から、価値観を聞く質問へ。「何にワクワクする？」の方が「何の仕事？」より深いつながりを生みます。'),
-      zh: withName(`与{name}深入了解：问关于价值观和梦想的开放式问题，而不只是事实。"你的工作里什么让你兴奋？" > "你做什么工作？"`, '深入了解：从问事实（"你做什么？"）转向问价值（"什么让你兴奋？"）。真正的连接来自意义，不是数据。'),
-      ru: withName(`Углубление с {name}: задавай открытые вопросы о ценностях и мечтах, не только факты. "Что тебя вдохновляет в работе?" > "Кем работаешь?"`, 'Чтобы углубиться: перейди от фактов к ценностям. "Что тебя в этом вдохновляет?" даёт больше связи, чем "Кем работаешь?".'),
-      ar: withName(`التعمق مع {name}: اطرح أسئلة مفتوحة عن القيم والأحلام، لا مجرد حقائق. "ما الذي يحمّسك في عملك؟" أفضل من "ماذا تعملين؟"`, 'للتعمق: انتقل من أسئلة الحقائق إلى أسئلة القيم. "ما الذي يحمّسك في ذلك؟" يخلق اتصالاً أعمق من "ماذا تعملين؟".'),
-      id: withName(`Lebih dalam dengan {name}: tanya pertanyaan terbuka tentang nilai dan mimpi, bukan cuma fakta. "Apa yang bikin kamu excited soal kerjamu?" > "Kamu kerja apa?"`, 'Untuk lebih dalam: beralih dari pertanyaan fakta ke pertanyaan nilai. "Apa yang bikin kamu excited?" lebih dalam dari "kerja apa?".'),
+      en: [
+        who(`Ask ${name} open questions about values and dreams, not just facts ("what excites you about your work?" > "what do you do?")`, 'Ask open questions about values and dreams, not just facts ("what excites you about your work?" > "what do you do?")'),
+        'Share something about yourself in return — reciprocity builds trust',
+        'Look for common ground beyond surface level (not just favorite foods)',
+      ],
+      es: [
+        who('Hazle a {name} preguntas abiertas sobre valores y sueños, no solo datos ("¿qué te emociona de tu trabajo?" > "¿en qué trabajas?")', 'Haz preguntas abiertas sobre valores y sueños, no solo datos ("¿qué te emociona de tu trabajo?" > "¿en qué trabajas?")'),
+        'Comparte algo tuyo a cambio — la reciprocidad construye confianza',
+        'Busca puntos en común más profundos (no solo comida favorita)',
+      ],
+      pt: [
+        who('Faça perguntas abertas a {name} sobre valores e sonhos, não só fatos ("o que te empolga no seu trabalho?" > "no que trabalha?")', 'Faça perguntas abertas sobre valores e sonhos, não só fatos ("o que te empolga no seu trabalho?" > "no que trabalha?")'),
+        'Compartilhe algo seu em troca — reciprocidade constrói confiança',
+        'Busque pontos em comum mais profundos (não só comida favorita)',
+      ],
+      fr: [
+        who(`Pose à {name} des questions ouvertes sur les valeurs et les rêves, pas juste des faits ("qu'est-ce qui t'anime dans ton travail ?" > "tu fais quoi ?")`, `Pose des questions ouvertes sur les valeurs et les rêves, pas juste des faits ("qu'est-ce qui t'anime dans ton travail ?" > "tu fais quoi ?")`),
+        'Partage quelque chose de toi en retour — la réciprocité crée la confiance',
+        'Cherche des points communs profonds, pas juste la nourriture préférée',
+      ],
+      de: [
+        who('Stelle {name} offene Fragen zu Werten und Träumen, nicht nur Fakten ("was begeistert dich an deinem Job?" > "was machst du?")', 'Stelle offene Fragen zu Werten und Träumen, nicht nur Fakten ("was begeistert dich an deinem Job?" > "was machst du?")'),
+        'Teile im Gegenzug etwas von dir — Gegenseitigkeit schafft Vertrauen',
+        'Suche nach tieferen Gemeinsamkeiten, nicht nur Lieblingsessen',
+      ],
+      ja: [
+        who('{name}さんに価値観や夢について開かれた質問を。事実だけでなく（「仕事の何にワクワクする？」>「何の仕事？」）', '価値観や夢について開かれた質問を。事実だけでなく（「仕事の何にワクワクする？」>「何の仕事？」）'),
+        '自分のことも返しで共有する — 相互性が信頼を築きます',
+        '好きな食べ物より深い共通点を探す',
+      ],
+      zh: [
+        who('问{name}关于价值观和梦想的开放式问题，而不只是事实（"你工作里什么让你兴奋？" > "你做什么工作？"）', '问关于价值观和梦想的开放式问题，而不只是事实（"你工作里什么让你兴奋？" > "你做什么工作？"）'),
+        '也分享一些你自己的事——互惠建立信任',
+        '寻找更深层的共同点，不只是最爱吃什么',
+      ],
+      ru: [
+        who('Задавай {name} открытые вопросы о ценностях и мечтах, не только факты ("что тебя вдохновляет в работе?" > "кем работаешь?")', 'Задавай открытые вопросы о ценностях и мечтах, не только факты ("что тебя вдохновляет в работе?" > "кем работаешь?")'),
+        'Поделись чем-то о себе в ответ — взаимность строит доверие',
+        'Ищи глубокие точки пересечения, не только любимую еду',
+      ],
+      ar: [
+        who('اطرح على {name} أسئلة مفتوحة عن القيم والأحلام، لا مجرد حقائق ("ما الذي يحمّسك في عملك؟" > "ماذا تعملين؟")', 'اطرح أسئلة مفتوحة عن القيم والأحلام، لا مجرد حقائق ("ما الذي يحمّسك في عملك؟" > "ماذا تعملين؟")'),
+        'شارك شيئاً عن نفسك بالمقابل — التبادل يبني الثقة',
+        'ابحث عن قواسم مشتركة أعمق، ليس فقط الطعام المفضل',
+      ],
+      id: [
+        who('Tanya {name} pertanyaan terbuka tentang nilai dan mimpi, bukan cuma fakta ("apa yang bikin kamu excited soal kerjamu?" > "kerja apa?")', 'Tanya pertanyaan terbuka tentang nilai dan mimpi, bukan cuma fakta ("apa yang bikin kamu excited soal kerjamu?" > "kerja apa?")'),
+        'Bagikan sesuatu tentang dirimu sebagai balasan — timbal balik membangun kepercayaan',
+        'Cari kesamaan yang lebih dalam, bukan cuma makanan favorit',
+      ],
     },
     building_connection: {
-      en: name ? `Deep connection with ${name}: now is the time to share something vulnerable — a fear, a hope, a past struggle. Vulnerability invites vulnerability.` : 'Deep connection: share something slightly vulnerable — a fear, hope, or past struggle. People open up when they feel safe, and sharing first creates that safety.',
-      es: withName(`Conexión profunda con {name}: es el momento de compartir algo vulnerable — un miedo, una esperanza, un desafío pasado. La vulnerabilidad invita a la vulnerabilidad.`, 'Conexión profunda: comparte algo ligeramente vulnerable — un miedo, una esperanza, un desafío. La gente se abre cuando se siente segura, y compartir primero crea esa seguridad.'),
-      pt: withName(`Conexão profunda com {name}: é hora de compartilhar algo vulnerável — um medo, uma esperança, um desafio passado. Vulnerabilidade convida vulnerabilidade.`, 'Conexão profunda: compartilhe algo levemente vulnerável — um medo, uma esperança, uma luta passada. Pessoas se abrem quando se sentem seguras.'),
-      fr: withName(`Connexion profonde avec {name} : c'est le moment de partager quelque chose de vulnérable — une peur, un espoir, un combat passé. La vulnérabilité invite la vulnérabilité.`, `Connexion profonde : partage quelque chose de légèrement vulnérable — une peur, un espoir, un combat. Les gens s'ouvrent quand ils se sentent en sécurité.`),
-      de: withName(`Tiefe Verbindung mit {name}: Jetzt ist der Moment, etwas Verletzliches zu teilen — eine Angst, eine Hoffnung, eine vergangene Herausforderung. Verletzlichkeit lädt zu Verletzlichkeit ein.`, 'Tiefe Verbindung: Teile etwas leicht Verletzliches — eine Angst, Hoffnung, vergangene Herausforderung. Menschen öffnen sich, wenn sie sich sicher fühlen.'),
-      ja: withName(`{name}さんとの深いつながり: 今こそ少し弱い部分を共有する時。恐れ、希望、過去の苦労など。弱さは弱さを引き出します。`, '深いつながり: 少し弱い部分を共有してみましょう。恐れ、希望、過去の苦労など。人は安心すると心を開きます。まず自分から。'),
-      zh: withName(`与{name}的深度连接：现在是分享脆弱的时刻——一个恐惧、希望或过往挣扎。脆弱邀请脆弱。`, '深度连接：分享一点脆弱的东西——一个恐惧、希望或过往挣扎。人在感到安全时会打开心，而先分享能创造这份安全感。'),
-      ru: withName(`Глубокая связь с {name}: пора поделиться чем-то уязвимым — страхом, надеждой, прошлой трудностью. Уязвимость приглашает уязвимость.`, 'Глубокая связь: поделись чем-то слегка уязвимым — страхом, надеждой, прошлой трудностью. Люди открываются, когда чувствуют безопасность.'),
-      ar: withName(`اتصال عميق مع {name}: حان وقت مشاركة شيء حساس — خوف، أمل، أو صراع ماضٍ. الانكشاف يدعو إلى الانكشاف.`, 'اتصال عميق: شارك شيئاً حساساً قليلاً — خوف، أمل، أو صراع ماضٍ. الناس ينفتحون حين يشعرون بالأمان.'),
-      id: withName(`Koneksi mendalam dengan {name}: saatnya berbagi sesuatu yang rentan — ketakutan, harapan, atau perjuangan masa lalu. Kerentanan mengundang kerentanan.`, 'Koneksi mendalam: bagikan sesuatu yang sedikit rentan — ketakutan, harapan, atau perjuangan. Orang terbuka saat merasa aman.'),
+      en: [
+        who(`Share something slightly vulnerable with ${name} — a fear, a hope, a past struggle. Vulnerability invites vulnerability`, 'Share something slightly vulnerable — a fear, a hope, a past struggle. Vulnerability invites vulnerability'),
+        who(`Use ${name}'s name naturally in conversation — it creates intimacy and signals attention`, 'Use their name naturally in conversation — it creates intimacy and signals attention'),
+        'Suggest meeting in person soon — texting forever kills momentum',
+      ],
+      es: [
+        who('Comparte algo ligeramente vulnerable con {name} — un miedo, una esperanza, un desafío pasado. La vulnerabilidad invita a la vulnerabilidad', 'Comparte algo ligeramente vulnerable — un miedo, una esperanza, un desafío pasado. La vulnerabilidad invita a la vulnerabilidad'),
+        who('Usa el nombre de {name} naturalmente en la conversación — crea intimidad y señala atención', 'Usa su nombre naturalmente en la conversación — crea intimidad y señala atención'),
+        'Propón verse en persona pronto — chatear eternamente mata el momentum',
+      ],
+      pt: [
+        who('Compartilhe algo levemente vulnerável com {name} — um medo, uma esperança, uma luta passada. Vulnerabilidade convida vulnerabilidade', 'Compartilhe algo levemente vulnerável — um medo, uma esperança, uma luta passada. Vulnerabilidade convida vulnerabilidade'),
+        who('Use o nome de {name} naturalmente na conversa — cria intimidade e sinaliza atenção', 'Use o nome dela naturalmente na conversa — cria intimidade e sinaliza atenção'),
+        'Sugira se encontrar pessoalmente logo — conversar por texto eternamente mata o momento',
+      ],
+      fr: [
+        who(`Partage quelque chose de légèrement vulnérable avec {name} — une peur, un espoir, un combat passé. La vulnérabilité invite la vulnérabilité`, 'Partage quelque chose de légèrement vulnérable — une peur, un espoir, un combat passé. La vulnérabilité invite la vulnérabilité'),
+        who(`Utilise le prénom de {name} naturellement dans la conversation — ça crée de l'intimité et montre ton attention`, `Utilise son prénom naturellement dans la conversation — ça crée de l'intimité et montre ton attention`),
+        'Propose de vous voir en personne rapidement — rester sur le chat tue la dynamique',
+      ],
+      de: [
+        who('Teile etwas leicht Verletzliches mit {name} — eine Angst, Hoffnung, vergangene Herausforderung. Verletzlichkeit lädt zu Verletzlichkeit ein', 'Teile etwas leicht Verletzliches — eine Angst, Hoffnung, vergangene Herausforderung. Verletzlichkeit lädt zu Verletzlichkeit ein'),
+        who('Verwende {name}s Vornamen natürlich im Gespräch — schafft Nähe und zeigt Aufmerksamkeit', 'Verwende ihren Vornamen natürlich im Gespräch — schafft Nähe und zeigt Aufmerksamkeit'),
+        'Schlage bald ein persönliches Treffen vor — ewiges Chatten tötet die Dynamik',
+      ],
+      ja: [
+        who('{name}さんに少し弱い部分を共有する — 恐れ、希望、過去の苦労。弱さは弱さを引き出します', '少し弱い部分を共有する — 恐れ、希望、過去の苦労。弱さは弱さを引き出します'),
+        who('会話の中で自然に{name}さんの名前を使う — 親密さを生み、注意を示します', '会話の中で自然に相手の名前を使う — 親密さを生み、注意を示します'),
+        '早めに対面で会うことを提案する — ずっとチャットのままだと勢いが失われます',
+      ],
+      zh: [
+        who('与{name}分享一点脆弱——一个恐惧、希望或过往挣扎。脆弱邀请脆弱', '分享一点脆弱——一个恐惧、希望或过往挣扎。脆弱邀请脆弱'),
+        who('在对话中自然地叫{name}的名字——能创造亲密感，表明你在关注', '在对话中自然地叫对方的名字——能创造亲密感，表明你在关注'),
+        '尽快提出见面——一直聊天会扼杀势头',
+      ],
+      ru: [
+        who('Поделись с {name} чем-то слегка уязвимым — страхом, надеждой, прошлой трудностью. Уязвимость приглашает уязвимость', 'Поделись чем-то слегка уязвимым — страхом, надеждой, прошлой трудностью. Уязвимость приглашает уязвимость'),
+        who('Естественно используй имя {name} в разговоре — создаёт близость и показывает внимание', 'Естественно используй её имя в разговоре — создаёт близость и показывает внимание'),
+        'Предложи встретиться лично скоро — вечная переписка убивает импульс',
+      ],
+      ar: [
+        who('شارك مع {name} شيئاً حساساً قليلاً — خوف، أمل، أو صراع ماضٍ. الانكشاف يدعو إلى الانكشاف', 'شارك شيئاً حساساً قليلاً — خوف، أمل، أو صراع ماضٍ. الانكشاف يدعو إلى الانكشاف'),
+        who('استخدم اسم {name} بشكل طبيعي في المحادثة — يخلق ألفة ويُظهر الانتباه', 'استخدم اسمها بشكل طبيعي في المحادثة — يخلق ألفة ويُظهر الانتباه'),
+        'اقترح اللقاء شخصياً قريباً — المحادثة إلى ما لا نهاية تقتل الزخم',
+      ],
+      id: [
+        who('Bagikan sesuatu yang sedikit rentan ke {name} — ketakutan, harapan, perjuangan masa lalu. Kerentanan mengundang kerentanan', 'Bagikan sesuatu yang sedikit rentan — ketakutan, harapan, perjuangan masa lalu. Kerentanan mengundang kerentanan'),
+        who('Gunakan nama {name} secara natural dalam percakapan — menciptakan keintiman dan menunjukkan perhatian', 'Gunakan namanya secara natural dalam percakapan — menciptakan keintiman dan menunjukkan perhatian'),
+        'Ajak bertemu langsung segera — chat terus-menerus membunuh momentum',
+      ],
     },
     conflict_challenge: {
-      en: name ? `Navigating disagreement with ${name}: acknowledge their perspective FIRST ("I see why you feel that way") before sharing yours. Validation ≠ agreement, but defuses tension.` : 'Navigating conflict: acknowledge their perspective first ("I see why you feel that way") before sharing yours. Validation isn\'t agreement, but it defuses tension instantly.',
-      es: withName(`Navegando desacuerdo con {name}: reconoce SU perspectiva primero ("entiendo por qué lo sientes así") antes de compartir la tuya. Validar ≠ estar de acuerdo, pero baja la tensión al instante.`, 'Navegando conflicto: reconoce su perspectiva primero ("entiendo por qué lo sientes así") antes de compartir la tuya. Validar no es estar de acuerdo, pero desactiva la tensión al instante.'),
-      pt: withName(`Lidando com desacordo com {name}: reconheça a perspectiva DELA primeiro ("entendo por que você se sente assim") antes de compartilhar a sua. Validar ≠ concordar, mas alivia a tensão.`, 'Lidando com conflito: reconheça a perspectiva dela primeiro antes da sua. Validar não é concordar, mas desarma a tensão instantaneamente.'),
-      fr: withName(`Gérer un désaccord avec {name} : reconnais SA perspective D'ABORD ("je comprends pourquoi tu le ressens ainsi") avant de donner la tienne. Valider ≠ être d'accord, mais désamorce.`, `Gérer un conflit : reconnais sa perspective d'abord. "Je comprends pourquoi tu le ressens ainsi" désamorce instantanément, même si tu n'es pas d'accord.`),
-      de: withName(`Meinungsverschiedenheit mit {name} lösen: erkenne IHRE Perspektive ZUERST an ("ich verstehe, warum du das so fühlst"), bevor du deine teilst. Validieren ≠ zustimmen, aber baut Spannung ab.`, 'Konflikte lösen: erkenne zuerst ihre Perspektive an. "Ich verstehe, warum du das so fühlst" baut sofort Spannung ab, auch ohne zuzustimmen.'),
-      ja: withName(`{name}さんとの意見の対立: 自分の意見を言う前に、まず相手の視点を認めましょう(「そう感じるのは分かる」)。認める≠賛成だが、緊張を一瞬で解きます。`, '意見の対立を乗り越える: まず相手の視点を認めましょう。「そう感じるのは分かる」は賛成でなくても、緊張を一瞬で和らげます。'),
-      zh: withName(`与{name}处理分歧：先认可她的视角（"我明白你为什么那样感觉"）再表达你的。认可≠同意，但能瞬间化解紧张。`, '处理冲突：先认可对方的视角，再表达你的。"我明白你为什么那样感觉"并不代表同意，但能瞬间化解紧张。'),
-      ru: withName(`Разрешение разногласия с {name}: признай ЕЁ точку зрения ПЕРВЫМ ("понимаю, почему ты так чувствуешь"), прежде чем выражать свою. Признание ≠ согласие, но снимает напряжение.`, 'Разрешение конфликта: сначала признай точку зрения другого. "Понимаю, почему ты так чувствуешь" мгновенно снимает напряжение, даже без согласия.'),
-      ar: withName(`التعامل مع الخلاف مع {name}: اعترف بوجهة نظرها أولاً ("أفهم لماذا تشعرين هكذا") قبل مشاركة وجهة نظرك. الاعتراف ≠ الموافقة، لكنه يُهدّئ التوتر فوراً.`, 'التعامل مع الخلاف: اعترف بوجهة نظر الآخر أولاً. "أفهم لماذا تشعر هكذا" تُهدّئ التوتر فوراً حتى دون موافقة.'),
-      id: withName(`Mengatasi perbedaan dengan {name}: akui perspektifnya DULU ("aku paham kenapa kamu merasa begitu") sebelum membagikan punyamu. Validasi ≠ setuju, tapi langsung meredakan tegang.`, 'Mengatasi konflik: akui perspektif lawan dulu. "Aku paham kenapa kamu merasa begitu" langsung meredakan tegang, meski bukan persetujuan.'),
+      en: [
+        who(`Acknowledge ${name}'s perspective FIRST ("I see why you feel that way") before sharing yours — validation ≠ agreement but defuses tension`, 'Acknowledge their perspective FIRST ("I see why you feel that way") before sharing yours — validation ≠ agreement but defuses tension'),
+        'Use "I feel" statements, not "you always" — blame escalates, vulnerability de-escalates',
+        'If emotions run too high, pause and return in 24 hours — texting while hot destroys relationships',
+      ],
+      es: [
+        who('Reconoce la perspectiva de {name} PRIMERO ("entiendo por qué lo sientes así") antes de dar la tuya — validar ≠ estar de acuerdo, pero baja la tensión', 'Reconoce su perspectiva PRIMERO ("entiendo por qué lo sientes así") antes de dar la tuya — validar ≠ estar de acuerdo, pero baja la tensión'),
+        'Usa frases con "yo siento", no "tú siempre" — culpar escala, la vulnerabilidad desescala',
+        'Si las emociones están muy altas, pausa y vuelve en 24 horas — chatear en caliente destruye relaciones',
+      ],
+      pt: [
+        who('Reconheça a perspectiva de {name} PRIMEIRO ("entendo por que você se sente assim") antes de dar a sua — validar ≠ concordar, mas alivia a tensão', 'Reconheça a perspectiva dela PRIMEIRO ("entendo por que você se sente assim") antes de dar a sua — validar ≠ concordar, mas alivia a tensão'),
+        'Use frases com "eu sinto", não "você sempre" — culpar escala, vulnerabilidade desescala',
+        'Se as emoções estão muito altas, faça uma pausa e volte em 24h — conversar quente destrói relações',
+      ],
+      fr: [
+        who(`Reconnais la perspective de {name} D'ABORD ("je comprends pourquoi tu le ressens ainsi") avant de donner la tienne — valider ≠ être d'accord, mais désamorce`, `Reconnais sa perspective D'ABORD ("je comprends pourquoi tu le ressens ainsi") avant de donner la tienne — valider ≠ être d'accord, mais désamorce`),
+        `Utilise "je ressens", pas "tu fais toujours" — le blâme escalade, la vulnérabilité désescalade`,
+        'Si les émotions sont trop hautes, fais une pause et reviens dans 24h — écrire à chaud détruit les relations',
+      ],
+      de: [
+        who('Erkenne {name}s Perspektive ZUERST an ("ich verstehe, warum du das so fühlst"), bevor du deine teilst — validieren ≠ zustimmen, aber baut Spannung ab', 'Erkenne ihre Perspektive ZUERST an ("ich verstehe, warum du das so fühlst"), bevor du deine teilst — validieren ≠ zustimmen, aber baut Spannung ab'),
+        'Verwende "ich fühle", nicht "du immer" — Vorwürfe eskalieren, Verletzlichkeit deeskaliert',
+        'Bei hohen Emotionen: Pause machen, in 24h zurückkommen — Streiten im Affekt zerstört Beziehungen',
+      ],
+      ja: [
+        who('自分の意見を言う前に、まず{name}さんの視点を認める（「そう感じるのは分かる」）— 認める≠賛成だが、緊張を和らげます', '自分の意見を言う前に、まず相手の視点を認める（「そう感じるのは分かる」）— 認める≠賛成だが、緊張を和らげます'),
+        '「私は〜と感じる」と言い、「あなたはいつも」と言わない — 責めは悪化させ、弱さは和らげます',
+        '感情が高ぶりすぎたら、一時停止して24時間後に戻る — 熱いままのチャットは関係を壊します',
+      ],
+      zh: [
+        who('先认可{name}的视角（"我明白你为什么那样感觉"）再表达你的——认可≠同意，但能化解紧张', '先认可对方的视角（"我明白你为什么那样感觉"）再表达你的——认可≠同意，但能化解紧张'),
+        '用"我感觉"，不用"你总是"——指责升级，脆弱缓解',
+        '如果情绪太激烈，暂停24小时再回来——热头上聊天会毁掉关系',
+      ],
+      ru: [
+        who('Признай точку зрения {name} ПЕРВЫМ ("понимаю, почему ты так чувствуешь"), прежде чем выразить свою — признание ≠ согласие, но снимает напряжение', 'Признай её точку зрения ПЕРВЫМ ("понимаю, почему ты так чувствуешь"), прежде чем выразить свою — признание ≠ согласие, но снимает напряжение'),
+        'Говори "я чувствую", а не "ты всегда" — обвинения усиливают, уязвимость успокаивает',
+        'Если эмоции слишком сильные, сделай паузу и вернись через 24 часа — писать на горячую голову разрушает отношения',
+      ],
+      ar: [
+        who('اعترف بوجهة نظر {name} أولاً ("أفهم لماذا تشعرين هكذا") قبل مشاركة وجهة نظرك — الاعتراف ≠ الموافقة، لكنه يُهدّئ التوتر', 'اعترف بوجهة نظرها أولاً ("أفهم لماذا تشعرين هكذا") قبل مشاركة وجهة نظرك — الاعتراف ≠ الموافقة، لكنه يُهدّئ التوتر'),
+        'استخدم "أنا أشعر" لا "أنتِ دائماً" — اللوم يُصعّد، الانكشاف يُهدّئ',
+        'إذا ارتفعت المشاعر، توقف وعُد بعد 24 ساعة — الرد في لحظة الغضب يُدمّر العلاقات',
+      ],
+      id: [
+        who('Akui perspektif {name} DULU ("aku paham kenapa kamu merasa begitu") sebelum membagikan punyamu — validasi ≠ setuju, tapi meredakan tegang', 'Akui perspektifnya DULU ("aku paham kenapa kamu merasa begitu") sebelum membagikan punyamu — validasi ≠ setuju, tapi meredakan tegang'),
+        'Gunakan "aku merasa", bukan "kamu selalu" — menyalahkan menaikkan, kerentanan meredakan',
+        'Jika emosi terlalu tinggi, jeda dan kembali dalam 24 jam — chat saat panas menghancurkan hubungan',
+      ],
     },
     commitment: {
-      en: name ? `Taking the next step with ${name}: propose something specific (place + day + short time). "Coffee Saturday at 4pm?" converts 3x better than "want to meet sometime?"` : 'Moving forward: propose something specific — place + day + short duration. "Coffee Saturday at 4?" converts 3x better than "want to meet sometime?" because it\'s low-commitment and easy to say yes to.',
-      es: withName(`Siguiente paso con {name}: propón algo específico (lugar + día + poco tiempo). "¿Un café el sábado a las 4?" convierte 3x mejor que "¿quieres vernos algún día?"`, 'Avanzar: propón algo específico — lugar + día + poco tiempo. "¿Un café el sábado a las 4?" convierte 3x mejor que "¿quieres vernos algún día?" porque es bajo compromiso y fácil de aceptar.'),
-      pt: withName(`Próximo passo com {name}: proponha algo específico (lugar + dia + pouco tempo). "Um café sábado às 16h?" converte 3x melhor que "quer se encontrar?"`, 'Avançando: proponha algo específico — lugar + dia + pouco tempo. "Café sábado às 16h?" converte 3x mais que "quer sair?" porque é baixo compromisso.'),
-      fr: withName(`Passer à l'étape suivante avec {name} : propose quelque chose de précis (lieu + jour + courte durée). "Un café samedi à 16h ?" convertit 3x mieux que "on se voit quand ?"`, `Avancer : propose quelque chose de précis — lieu + jour + courte durée. "Un café samedi à 16h ?" convertit 3x mieux que "on se voit un jour ?" car c'est peu engageant.`),
-      de: withName(`Nächster Schritt mit {name}: schlage etwas Konkretes vor (Ort + Tag + kurze Zeit). "Kaffee Samstag um 16 Uhr?" konvertiert 3x besser als "mal treffen?"`, 'Weiterkommen: schlage etwas Konkretes vor — Ort + Tag + kurze Dauer. "Kaffee Samstag um 16 Uhr?" konvertiert 3x besser als "mal treffen?" weil es unverbindlich ist.'),
-      ja: withName(`{name}さんとの次のステップ: 具体的に提案を(場所＋曜日＋短時間)。「土曜4時にカフェ？」は「いつか会いたい」より3倍成功率が高いです。`, '次のステップ: 具体的に提案しましょう ― 場所＋曜日＋短時間。「土曜4時にカフェ？」は「いつか会いたい」より3倍成功率が高い。ハードルが低いから。'),
-      zh: withName(`与{name}的下一步：提具体建议（地点+时间+短时长）。"周六下午4点喝咖啡？"比"什么时候见面？"的成功率高3倍。`, '往前走：提具体建议——地点+时间+短时长。"周六4点喝咖啡？"比"什么时候见？"成功率高3倍，因为门槛低、容易答应。'),
-      ru: withName(`Следующий шаг с {name}: предложи что-то конкретное (место + день + короткое время). "Кофе в субботу в 16?" работает в 3x лучше, чем "встретимся как-нибудь?"`, 'Двигаться дальше: предложи что-то конкретное — место + день + короткое время. "Кофе в субботу в 16?" работает в 3x лучше, чем "встретимся когда-нибудь?".'),
-      ar: withName(`الخطوة التالية مع {name}: اقترح شيئاً محدداً (مكان + يوم + وقت قصير). "قهوة السبت الساعة 4؟" يحوّل بنسبة 3 أضعاف أفضل من "نلتقي يوماً ما؟"`, 'التقدّم: اقترح شيئاً محدداً — مكان + يوم + وقت قصير. "قهوة السبت 4؟" ينجح بنسبة 3× أكثر من "نلتقي يوماً؟" لأن الالتزام منخفض.'),
-      id: withName(`Langkah berikutnya dengan {name}: ajukan sesuatu spesifik (tempat + hari + durasi singkat). "Ngopi Sabtu jam 4?" 3x lebih sukses dari "mau ketemu kapan?"`, 'Maju: ajukan sesuatu spesifik — tempat + hari + durasi singkat. "Ngopi Sabtu jam 4?" 3x lebih sukses dari "mau ketemu kapan?" karena komitmen rendah.'),
+      en: [
+        who(`Propose to ${name} something specific — place + day + short duration ("coffee Saturday at 4?" converts 3x better than "want to meet sometime?")`, 'Propose something specific — place + day + short duration ("coffee Saturday at 4?" converts 3x better than "want to meet sometime?")'),
+        who(`Express what you appreciate about ${name} specifically — not generic compliments`, 'Express what you appreciate about them specifically — not generic compliments'),
+        'Discuss expectations openly — casual vs serious, exclusive vs open. Ambiguity kills momentum',
+      ],
+      es: [
+        who('Propón a {name} algo específico — lugar + día + poco tiempo ("¿un café el sábado a las 4?" convierte 3x mejor que "¿vernos algún día?")', 'Propón algo específico — lugar + día + poco tiempo ("¿un café el sábado a las 4?" convierte 3x mejor que "¿vernos algún día?")'),
+        who('Expresa qué valoras específicamente de {name} — no cumplidos genéricos', 'Expresa qué valoras específicamente de la otra persona — no cumplidos genéricos'),
+        'Habla expectativas abiertamente — casual vs serio, exclusivo vs abierto. La ambigüedad mata el momentum',
+      ],
+      pt: [
+        who('Proponha a {name} algo específico — lugar + dia + pouco tempo ("um café sábado às 16h?" converte 3x mais que "quer se encontrar?")', 'Proponha algo específico — lugar + dia + pouco tempo ("um café sábado às 16h?" converte 3x mais que "quer se encontrar?")'),
+        who('Expresse o que você aprecia especificamente em {name} — não elogios genéricos', 'Expresse o que você aprecia especificamente — não elogios genéricos'),
+        'Converse expectativas abertamente — casual vs sério, exclusivo vs aberto. Ambiguidade mata o momento',
+      ],
+      fr: [
+        who(`Propose à {name} quelque chose de précis — lieu + jour + courte durée ("un café samedi à 16h ?" convertit 3x mieux que "on se voit quand ?")`, `Propose quelque chose de précis — lieu + jour + courte durée ("un café samedi à 16h ?" convertit 3x mieux que "on se voit quand ?")`),
+        who(`Exprime ce que tu apprécies spécifiquement chez {name} — pas des compliments génériques`, 'Exprime ce que tu apprécies spécifiquement chez la personne — pas des compliments génériques'),
+        'Discute ouvertement des attentes — casual vs sérieux, exclusif vs ouvert. L\'ambiguïté tue la dynamique',
+      ],
+      de: [
+        who('Schlage {name} etwas Konkretes vor — Ort + Tag + kurze Dauer ("Kaffee Samstag um 16?" konvertiert 3x besser als "mal treffen?")', 'Schlage etwas Konkretes vor — Ort + Tag + kurze Dauer ("Kaffee Samstag um 16?" konvertiert 3x besser als "mal treffen?")'),
+        who('Drücke aus, was du konkret an {name} schätzt — keine generischen Komplimente', 'Drücke aus, was du konkret schätzt — keine generischen Komplimente'),
+        'Besprecht Erwartungen offen — locker vs ernst, exklusiv vs offen. Mehrdeutigkeit tötet die Dynamik',
+      ],
+      ja: [
+        who('{name}さんに具体的な提案を — 場所＋曜日＋短時間（「土曜4時にカフェ？」は「いつか会いたい」より3倍成功）', '具体的な提案を — 場所＋曜日＋短時間（「土曜4時にカフェ？」は「いつか会いたい」より3倍成功）'),
+        who('{name}さんの具体的にどこが好きかを伝える — ありがちな褒め言葉ではなく', '相手の具体的にどこが好きかを伝える — ありがちな褒め言葉ではなく'),
+        '期待をオープンに話し合う — カジュアルか本気か、排他的かオープンか。曖昧さは勢いを殺します',
+      ],
+      zh: [
+        who('向{name}提具体建议——地点+时间+短时长（"周六4点喝咖啡？"比"什么时候见？"成功率高3倍）', '提具体建议——地点+时间+短时长（"周六4点喝咖啡？"比"什么时候见？"成功率高3倍）'),
+        who('具体表达你欣赏{name}的哪里——不要笼统的赞美', '具体表达你欣赏对方的哪里——不要笼统的赞美'),
+        '坦率地讨论期望——休闲还是认真，专一还是开放。模糊会扼杀势头',
+      ],
+      ru: [
+        who('Предложи {name} что-то конкретное — место + день + короткое время ("кофе в субботу в 16?" работает в 3x лучше, чем "встретимся как-нибудь?")', 'Предложи что-то конкретное — место + день + короткое время ("кофе в субботу в 16?" работает в 3x лучше, чем "встретимся как-нибудь?")'),
+        who('Выражай, что ты конкретно ценишь в {name} — не общие комплименты', 'Выражай, что ты конкретно ценишь в человеке — не общие комплименты'),
+        'Обсуждайте ожидания открыто — лёгкое vs серьёзное, эксклюзивное vs открытое. Неопределённость убивает импульс',
+      ],
+      ar: [
+        who('اقترح على {name} شيئاً محدداً — مكان + يوم + وقت قصير ("قهوة السبت 4؟" ينجح 3× أكثر من "نلتقي يوماً ما؟")', 'اقترح شيئاً محدداً — مكان + يوم + وقت قصير ("قهوة السبت 4؟" ينجح 3× أكثر من "نلتقي يوماً ما؟")'),
+        who('عبّر عمّا تقدّره تحديداً في {name} — ليس إطراءات عامة', 'عبّر عمّا تقدّره تحديداً في الشخص — ليس إطراءات عامة'),
+        'ناقشا التوقعات بصراحة — عابر أم جدّي، حصري أم مفتوح. الغموض يقتل الزخم',
+      ],
+      id: [
+        who('Ajukan ke {name} sesuatu yang spesifik — tempat + hari + durasi singkat ("ngopi Sabtu jam 4?" 3x lebih sukses dari "mau ketemu kapan?")', 'Ajukan sesuatu yang spesifik — tempat + hari + durasi singkat ("ngopi Sabtu jam 4?" 3x lebih sukses dari "mau ketemu kapan?")'),
+        who('Ungkapkan apa yang kamu hargai secara spesifik dari {name} — bukan pujian generik', 'Ungkapkan apa yang kamu hargai secara spesifik — bukan pujian generik'),
+        'Bahas ekspektasi secara terbuka — santai vs serius, eksklusif vs terbuka. Ambiguitas membunuh momentum',
+      ],
     },
   };
 
-  const stageTips = tips[stageId];
-  if (!stageTips) return getLocalizedCoachTip('communication_foundation', normalizedLang);
-  return stageTips[normalizedLang] || stageTips.en;
+  const stageLangTips = tipLists[stageId];
+  if (!stageLangTips) return getLocalizedCoachTip('communication_foundation', normalizedLang);
+  const tips = stageLangTips[normalizedLang] || stageLangTips.en;
+  return tips.map(t => `• ${t}`).join('\n');
 }
 
 /**
