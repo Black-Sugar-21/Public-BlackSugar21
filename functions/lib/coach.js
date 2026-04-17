@@ -1572,7 +1572,9 @@ Example: ["phrase 1", "phrase 2", ...]`;
                 if (resolved && resolved.handle) {
                   return {...activity, instagram: resolved.handle, _igMetrics: resolved.metrics || null};
                 }
-              } catch (igErr) { /* continue without Instagram */ }
+              } catch (igErr) {
+                logger.debug(`[dateCoachChat] Instagram resolve skipped: ${igErr.message}`);
+              }
               return activity;
             }));
           }
@@ -3478,7 +3480,9 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
                 if (resolved && resolved.handle) {
                   return {...activity, instagram: resolved.handle, _igMetrics: resolved.metrics || null};
                 }
-              } catch (igErr) { /* continue without Instagram */ }
+              } catch (igErr) {
+                logger.debug(`[dateCoachChat] Instagram resolve skipped: ${igErr.message}`);
+              }
               return activity;
             }));
           }
