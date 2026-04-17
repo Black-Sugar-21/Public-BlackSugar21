@@ -341,7 +341,15 @@ async function getMultiUniverseConfig() {
  * }
  */
 exports.simulateMultiUniverse = onCall(
-  { region: 'us-central1', memory: '1GiB', timeoutSeconds: 300 },
+  {
+    region: 'us-central1',
+    memory: '1GiB',
+    timeoutSeconds: 300,
+    // geminiApiKey.value() is used inside translatePhraseToLanguage and
+    // generateApproachesForMultiverse; v2 requires declaring the secret here
+    // so Firebase binds it at runtime.
+    secrets: [geminiApiKey],
+  },
   async (request) => {
     const startTime = Date.now();
     const userId = request.auth?.uid;
@@ -350,6 +358,11 @@ exports.simulateMultiUniverse = onCall(
     let { matchId = "", userLanguage = 'en' } = request.data;
     // Normalize language code to 2-letter ISO 639-1 format (handles "es-MX" → "es")
     userLanguage = normalizeLanguageCode(userLanguage);
+    // Validate matchId: must be a short alphanumeric Firestore doc id.
+    // Protects against path-injection and oversized payloads.
+    if (typeof matchId !== 'string' || matchId.length > 200 || matchId.includes('/')) {
+      throw new HttpsError('invalid-argument', getLocalizedError('match_not_found', userLanguage));
+    }
     const isSoloMode = !matchId;  // Empty matchId = solo practice mode
 
     let analyticsData = {
