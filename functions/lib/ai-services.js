@@ -2069,10 +2069,32 @@ function sanitizePlaceForJson(place) {
 }
 
 /**
- * Sanitize blueprint title: remove names, forbidden patterns, ensure elegance.
+ * Localized elegant fallback titles used when sanitization empties the raw title.
+ * Picked at random per call so the blueprint still feels fresh.
  */
-function sanitizeBlueprintTitle(rawTitle, myName, theirName) {
-  if (!rawTitle) return 'Plan de Salida';
+const BLUEPRINT_FALLBACK_TITLES = {
+  en: ['Coffee & Conversation', 'Sunset Vibes', 'Afternoon Flavors', 'Golden Hour', 'Art & Laughter'],
+  es: ['Café y Buena Charla', 'Atardecer a Dos', 'Tarde de Sabores', 'Hora Dorada', 'Arte y Risas'],
+  pt: ['Café e Boa Prosa', 'Fim de Tarde', 'Tarde de Sabores', 'Hora Dourada', 'Arte e Risos'],
+  fr: ['Café et Conversation', 'Vibes du Coucher', 'Après-midi Gourmand', 'Heure Dorée', 'Art et Rires'],
+  de: ['Kaffee & Gespräch', 'Sonnenuntergang-Vibes', 'Nachmittag der Aromen', 'Goldene Stunde', 'Kunst & Lachen'],
+  ja: ['コーヒーと会話', '夕暮れの雰囲気', '午後の味わい', 'ゴールデンアワー', 'アートと笑顔'],
+  zh: ['咖啡与畅聊', '日落时光', '午后风味', '黄金时刻', '艺术与欢笑'],
+  ru: ['Кофе и разговор', 'Закатное настроение', 'Вечер вкусов', 'Золотой час', 'Искусство и смех'],
+  ar: ['قهوة وحديث', 'أجواء الغروب', 'مساء النكهات', 'الساعة الذهبية', 'فن وضحكات'],
+  id: ['Kopi & Obrolan', 'Suasana Senja', 'Sore Rasa-rasa', 'Jam Emas', 'Seni & Tawa'],
+};
+
+/**
+ * Sanitize blueprint title: remove names, forbidden patterns, ensure elegance.
+ * `lang` (optional) localizes the fallback pool when the sanitized title is empty.
+ */
+function sanitizeBlueprintTitle(rawTitle, myName, theirName, lang) {
+  const normalizedLang = (lang || 'en').split('-')[0].split('_')[0].toLowerCase();
+  const fallbackPool = BLUEPRINT_FALLBACK_TITLES[normalizedLang] || BLUEPRINT_FALLBACK_TITLES.en;
+  const pickFallback = () => fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+
+  if (!rawTitle) return pickFallback();
   let title = rawTitle.substring(0, 100).trim();
 
   // Remove names from title (case-insensitive)
@@ -2103,10 +2125,9 @@ function sanitizeBlueprintTitle(rawTitle, myName, theirName) {
   // Remove leading/trailing punctuation and extra spaces
   title = title.replace(/^[\s,\-—–:]+|[\s,\-—–:]+$/g, '').replace(/\s+/g, ' ').trim();
 
-  // If title is now empty or too short, generate a generic elegant one
+  // If title is now empty or too short, generate a generic elegant one in the user's language
   if (!title || title.length < 3) {
-    const fallbacks = ['Café y Buena Charla', 'Sunset Vibes', 'Tarde de Sabores', 'Golden Hour', 'Arte y Risas'];
-    title = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    title = pickFallback();
   }
 
   return title;
@@ -2443,7 +2464,7 @@ Return ONLY a JSON object:
         });
 
         const blueprint = {
-          title: sanitizeBlueprintTitle(String(parsed.title || ''), myName, theirName),
+          title: sanitizeBlueprintTitle(String(parsed.title || ''), myName, theirName, lang),
           totalDuration: String(parsed.totalDuration || durationText).substring(0, 20),
           estimatedBudget: String(parsed.estimatedBudget || '$30-60').substring(0, 20),
           steps: enrichedSteps,

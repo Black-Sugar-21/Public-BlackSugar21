@@ -228,14 +228,24 @@ Rules:
 - Max 100 characters
 - Return ONLY the notification text, nothing else`;
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 48, temperature: 0.95 },
-    });
-    const text = result.response.text().trim().replace(/^["']|["']$/g, '');
-    if (text.length > 0 && text.length <= 150) return text;
+    // Retry x2 before falling through to the generic name-only template.
+    // Push notifications MUST fire, so we still fall back — but we try twice first.
+    const genCfg = { maxOutputTokens: 48, temperature: 0.95 };
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: genCfg,
+        });
+        const text = result.response.text().trim().replace(/^["']|["']$/g, '');
+        if (text.length > 0 && text.length <= 150) return text;
+        logger.warn(`[WingPerson] attempt ${attempt}: empty or oversized output (len=${text.length})`);
+      } catch (attemptErr) {
+        logger.warn(`[WingPerson] attempt ${attempt} failed: ${attemptErr.message}`);
+      }
+    }
   } catch (e) {
-    logger.info(`[WingPerson] Gemini fallback: ${e.message}`);
+    logger.warn(`[WingPerson] Gemini setup failed: ${e.message}`);
   }
 
   // Fallback messages (no Gemini) — all 10 supported languages
