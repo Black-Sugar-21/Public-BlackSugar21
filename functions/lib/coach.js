@@ -1,5 +1,5 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
@@ -4636,15 +4636,24 @@ exports.requestDateDebrief = onCall(
 
     const db = admin.firestore();
 
-    // Find most recent blueprint in this match
+    // ── SECURITY: validate caller is a member of this match BEFORE reading messages/profiles ──
+    // Prevents any authenticated user from scraping blueprint messages + other user's name
+    // by passing someone else's matchId.
+    const matchDoc = await db.collection('matches').doc(matchId).get();
+    if (!matchDoc.exists) {
+      throw new HttpsError('not-found', 'Match not found');
+    }
+    const usersMatched = matchDoc.data()?.usersMatched || [];
+    if (!Array.isArray(usersMatched) || !usersMatched.includes(userId)) {
+      logger.warn(`[requestDateDebrief] Permission denied: ${userId.substring(0, 8)} not in match ${matchId.substring(0, 8)}`);
+      throw new HttpsError('permission-denied', 'Not a member of this match');
+    }
+    const otherUserId = usersMatched.find(u => u !== userId);
+
+    // Find most recent blueprint in this match (now safe — caller is a member)
     const bpSnap = await db.collection('matches').doc(matchId).collection('messages')
       .where('type', '==', 'date_blueprint')
       .orderBy('timestamp', 'desc').limit(1).get();
-
-    // Get match name
-    const matchDoc = await db.collection('matches').doc(matchId).get();
-    const usersMatched = matchDoc.data()?.usersMatched || [];
-    const otherUserId = usersMatched.find(u => u !== userId);
 
     const userDoc = await db.collection('users').doc(userId).get();
     const lang = ((userDoc.data()?.deviceLanguage || 'en').split('-')[0]).toLowerCase();

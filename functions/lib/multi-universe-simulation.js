@@ -23,6 +23,7 @@ const {
   parseGeminiJsonResponse,
   trackAICall,
   getLocalizedError: getLocalizedErrorShared,
+  checkGeminiSafety,
 } = require('./shared');
 
 const db = admin.firestore();
@@ -932,6 +933,13 @@ Respond ONLY with JSON (phrases in ${languageName}):
         logger.info(`[Gemini] attempt ${attempt}: content generation succeeded`);
       } catch (attemptErr) {
         logger.warn(`[Gemini] attempt ${attempt} failed: ${attemptErr.message}`);
+        continue;
+      }
+
+      // Guard: safety block or MAX_TOKENS truncation — don't parse partial output
+      const safety = checkGeminiSafety(result, 'generateApproachesForMultiverse');
+      if (!safety.ok) {
+        logger.warn(`[Gemini] attempt ${attempt}: safety/finish check failed — ${safety.reason}: ${safety.detail}`);
         continue;
       }
 

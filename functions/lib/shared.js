@@ -749,6 +749,44 @@ async function decrementCoachCredit(db, userId, admin = null) {
   }
 }
 
+/**
+ * Inspect a Gemini `generateContent` result for safety blocks / truncation.
+ * Returns `{ok: true}` when the response finished cleanly; `{ok: false, reason, detail}` otherwise.
+ *
+ * Without this check, callers that just do `result.response.text()` will:
+ *   - Receive '' when `promptFeedback.blockReason` is set (safety) and silently fall back.
+ *   - Parse truncated JSON when `finishReason === 'MAX_TOKENS'` / 'RECITATION'.
+ *   - Never distinguish a real AI answer from an empty/degraded one in monitoring.
+ *
+ * Usage:
+ *   const safety = checkGeminiSafety(result, 'dateCoachChat');
+ *   if (!safety.ok) { logger.warn(...); return fallback(); }
+ */
+function checkGeminiSafety(result, fnName = 'unknown') {
+  const response = result?.response;
+  if (!response) {
+    return {ok: false, reason: 'no_response', detail: 'result.response missing'};
+  }
+  const blockReason = response.promptFeedback?.blockReason;
+  if (blockReason) {
+    return {ok: false, reason: 'blocked', detail: `blockReason=${blockReason}`};
+  }
+  const candidate = response.candidates?.[0];
+  if (!candidate) {
+    return {ok: false, reason: 'no_candidate', detail: 'no candidates array'};
+  }
+  const finishReason = candidate.finishReason;
+  // 'STOP' = clean finish. 'MAX_TOKENS' = truncation. 'SAFETY'/'RECITATION'/'OTHER' = blocked.
+  if (finishReason && finishReason !== 'STOP' && finishReason !== 'FINISH_REASON_UNSPECIFIED') {
+    return {
+      ok: false,
+      reason: finishReason === 'MAX_TOKENS' ? 'truncated' : 'blocked',
+      detail: `finishReason=${finishReason}`,
+    };
+  }
+  return {ok: true};
+}
+
 module.exports = {
   geminiApiKey,
   placesApiKey,
@@ -780,4 +818,5 @@ module.exports = {
   getRegionalString,
   SUPPORTED_LANGUAGES,
   SUPPORTED_REGIONAL,
+  checkGeminiSafety,
 };

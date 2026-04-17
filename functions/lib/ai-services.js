@@ -292,6 +292,26 @@ exports.calculateSafetyScore = onCall(
     try {
       // Mode 1: Analyze match conversation (when matchId provided)
       if (matchId && apiKey) {
+        // ── SECURITY: validate caller is a member of this match ──
+        // Prevents any authenticated user from passing someone else's matchId
+        // and scraping private conversations via the safety-score IA lens.
+        const callerId = request.auth.uid;
+        try {
+          const matchDoc = await db.collection('matches').doc(matchId).get();
+          if (!matchDoc.exists) {
+            logger.info(`[calculateSafetyScore] Match ${matchId.substring(0, 8)} not found`);
+            return safeFallback;
+          }
+          const matchData = matchDoc.data() || {};
+          if (!Array.isArray(matchData.usersMatched) || !matchData.usersMatched.includes(callerId)) {
+            logger.warn(`[calculateSafetyScore] Permission denied: ${callerId.substring(0, 8)} not in match ${matchId.substring(0, 8)}`);
+            return safeFallback;
+          }
+        } catch (e) {
+          logger.warn(`[calculateSafetyScore] Match membership check failed: ${e.message}`);
+          return safeFallback;
+        }
+
         // Read last 15 messages
         let messages = [];
         try {
@@ -855,6 +875,16 @@ exports.analyzePersonalityCompatibility = onCall(
     if (!uid1 || !uid2) throw new Error('userId and targetUserId required');
     const lang = (typeof d.userLanguage === 'string' && d.userLanguage ? d.userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
+    // ── SECURITY: caller must be one of the two users being compared ──
+    // Without this, any authenticated user could enumerate profiles by passing
+    // arbitrary (uid1, uid2) pairs and reading the compatibility score/strengths
+    // which leak whether the other user has interests and how many overlap.
+    const callerId = request.auth.uid;
+    if (callerId !== uid1 && callerId !== uid2) {
+      logger.warn(`[analyzePersonalityCompatibility] Permission denied: caller ${callerId.substring(0, 8)} not in {${uid1.substring(0, 8)}, ${uid2.substring(0, 8)}}`);
+      throw new Error('Not authorized to analyze this pair');
+    }
+
     const db = admin.firestore();
     const [u1Doc, u2Doc] = await Promise.all([
       db.collection('users').doc(uid1).get(),
@@ -919,6 +949,15 @@ exports.predictMatchSuccess = onCall(
     const uid2 = d.targetUserId || d.userId2;
     if (!uid1 || !uid2) throw new Error('userId and targetUserId required');
     const lang = (typeof d.userLanguage === 'string' && d.userLanguage ? d.userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
+
+    // ── SECURITY: caller must be one of the two users being predicted ──
+    // Same leak surface as analyzePersonalityCompatibility — arbitrary UIDs would
+    // expose age/interest overlap between strangers.
+    const callerId = request.auth.uid;
+    if (callerId !== uid1 && callerId !== uid2) {
+      logger.warn(`[predictMatchSuccess] Permission denied: caller ${callerId.substring(0, 8)} not in {${uid1.substring(0, 8)}, ${uid2.substring(0, 8)}}`);
+      throw new Error('Not authorized to predict this pair');
+    }
 
     const db = admin.firestore();
     const [u1Doc, u2Doc] = await Promise.all([

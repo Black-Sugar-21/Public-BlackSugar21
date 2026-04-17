@@ -32,6 +32,7 @@ const {
   parseGeminiJsonResponse,
   trackAICall,
   getLocalizedError,
+  checkGeminiSafety,
 } = require('./shared');
 
 const {
@@ -483,6 +484,15 @@ Respond ONLY with JSON in this shape (all text in ${languageName}):
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const result = await model.generateContent(prompt);
+
+        // Guard: if Gemini blocked for safety or truncated, don't parse garbage.
+        const safety = checkGeminiSafety(result, 'generateApproaches');
+        if (!safety.ok) {
+          logger.warn(`[generateApproaches] attempt ${attempt}: Gemini safety/finish check failed — ${safety.reason}: ${safety.detail}`);
+          lastError = new Error(`gemini_${safety.reason}`);
+          continue;
+        }
+
         const text = result?.response?.text();
 
         if (!text || typeof text !== 'string' || text.trim().length === 0) {
