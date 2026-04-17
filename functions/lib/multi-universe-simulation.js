@@ -376,7 +376,11 @@ exports.simulateMultiUniverse = onCall(
       }
 
       // Step 2: Check cache (valid for 6 months)
-      const cacheKey = isSoloMode ? 'multiverse_solo' : `multiverse_${matchId}`;
+      // Language-scoped cache key — prevents cross-language leaks where a user who
+      // generated a simulation in English later sees English strings despite device lang change.
+      const normalizedUserLang = normalizeLanguageCode(userLanguage || 'en');
+      const baseCacheKey = isSoloMode ? 'multiverse_solo' : `multiverse_${matchId}`;
+      const cacheKey = `${baseCacheKey}_${normalizedUserLang}`;
       const cacheDoc = await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).get();
 
@@ -417,10 +421,21 @@ exports.simulateMultiUniverse = onCall(
             })
           );
 
+          // Regenerate keyInsights using re-localized stages + current language.
+          // Cache stored insights in whatever lang it was created in — stale on lang change.
+          const freshLabel = getCompatibilityLabel(cachedResult.compatibilityScore || 0, userLanguage);
+          const freshInsights = generateInsights(localizedStages, freshLabel, userLanguage);
+
           analyticsData.success = true;
           analyticsData.duration = Date.now() - startTime;
           await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
-          return { ...cachedResult, stages: localizedStages, fromCache: true };
+          return {
+            ...cachedResult,
+            stages: localizedStages,
+            compatibilityLabel: freshLabel,
+            keyInsights: freshInsights,
+            fromCache: true,
+          };
         } else {
           logger.info(`[MultiUniverse] Cache expired at ${new Date(cacheExpireTime).toISOString()}`);
         }
