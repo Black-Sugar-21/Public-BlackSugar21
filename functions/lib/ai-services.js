@@ -2275,6 +2275,13 @@ exports.generateDateBlueprint = onCall(
       const prefsText = preferences ? `Budget: ${preferences.budget || 'flexible'}, Dietary: ${preferences.dietary || 'none'}, Mood: ${preferences.mood || 'romantic'}` : 'No specific preferences';
       const durationText = durationPreset === 'quick' ? '1-2 hours (coffee + walk)' : durationPreset === 'full' ? '5+ hours (full day date)' : '3-4 hours (activity + dinner)';
 
+      // Initialize time context early so it's available to RAG query + prompt builder below.
+      // Previously `hour` was declared on L2324 after the RAG block that referenced it on L2283,
+      // causing a latent ReferenceError that sent every execution to the silent fallback.
+      const now = new Date();
+      const hour = now.getHours();
+      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+
       // 7. RAG: retrieve date planning advice
       let ragContext = '';
       try {
@@ -2316,13 +2323,9 @@ exports.generateDateBlueprint = onCall(
         logger.info(`[DateBlueprint] RAG skipped: ${ragErr.message}`);
       }
 
-      // 8. Generate itinerary with Gemini
+      // 8. Generate itinerary with Gemini (now/hour/dayOfWeek were initialized before the RAG block above)
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_NAME});
-
-      const now = new Date();
-      const hour = now.getHours();
-      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
 
       const prompt = `You are an expert date planner. Create a personalized first date itinerary for ${myName} and ${theirName}.
 

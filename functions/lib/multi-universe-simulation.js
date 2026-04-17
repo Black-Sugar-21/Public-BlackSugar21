@@ -508,7 +508,21 @@ exports.simulateMultiUniverse = onCall(
           throw new HttpsError('not-found', getLocalizedError('match_not_found', userLanguage));
         }
         const matchData = matchDoc.data();
-        const otherUserId = matchData?.usersMatched?.find((uid) => uid !== userId);
+
+        // ── SECURITY: validate caller is a member of the match ──────────────
+        // Without this, any authenticated user could pass someone else's matchId
+        // and simulate with the other user's profile. The `find((uid) => uid !== userId)`
+        // below would still return the "other" userId even when the caller is not in
+        // usersMatched, leaking the match's content and wasting Gemini tokens.
+        if (!Array.isArray(matchData?.usersMatched) || !matchData.usersMatched.includes(userId)) {
+          logger.warn(`[MultiUniverse] Permission denied: ${userId.substring(0, 8)} not in match ${matchId.substring(0, 8)}`);
+          analyticsData.errorReason = 'permission_denied';
+          analyticsData.failedStage = 'load_match';
+          await trackMultiUniverseAnalytics(userId, matchId || "solo", analyticsData);
+          throw new HttpsError('permission-denied', getLocalizedError('match_not_found', userLanguage));
+        }
+
+        const otherUserId = matchData.usersMatched.find((uid) => uid !== userId);
 
         // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
         if (otherUserId) {

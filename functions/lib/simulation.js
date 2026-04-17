@@ -1233,6 +1233,8 @@ ${getLanguageInstruction(lang)}`;
     const trajectory = compatibilityScore >= 70 ? 'strong connection'
       : compatibilityScore >= 50 ? 'moderate potential'
       : compatibilityScore >= 30 ? 'needs work' : 'incompatible';
+    const t = getFallbackReportStrings(lang || 'en');
+    const aligned = trajectory === 'strong connection';
     return {
       compatibilityScore,
       positiveSimulations: positiveCount,
@@ -1240,32 +1242,39 @@ ${getLanguageInstruction(lang)}`;
       rebellionRate: compatibilityScore,
       dominantPhase: dominantPhase,
       trajectoryPrediction: trajectory,
-      trajectoryExplanation: `En ${positiveCount} de ${simulationResults.length} universos simulados, ${personaA.name} y ${personaB.name} se eligieron mutuamente — tasa de rebelión del ${compatibilityScore}%. Su dinámica ${personaA.attachmentStyle} × ${personaB.attachmentStyle} muestra ${trajectory === 'strong connection' ? 'una alineación mutua genuina' : 'diferencias importantes que vale la pena explorar'}.`,
+      trajectoryExplanation: t.trajectoryExplanation({
+        positiveCount,
+        total: simulationResults.length,
+        a: personaA.name,
+        b: personaB.name,
+        score: compatibilityScore,
+        styleA: personaA.attachmentStyle,
+        styleB: personaB.attachmentStyle,
+        aligned,
+      }),
       keyInsights: [
-        sharedInterestsArr.length > 0 ? `Intereses en común: ${sharedInterestsArr.slice(0, 3).join(', ')}` : 'Exploren los mundos del otro para encontrar puntos en común',
-        `${personaA.name} se comunica con estilo ${personaA.commStyle}`,
-        `${positiveCount} de ${simulationResults.length} simulaciones mostraron conexión genuina en el Momento de Rebelión`,
+        sharedInterestsArr.length > 0
+          ? t.sharedInterestsLabel(sharedInterestsArr.slice(0, 3).join(', '))
+          : t.noSharedInterests,
+        t.commStyleLine(personaA.name, personaA.commStyle),
+        t.rebellionMomentLine(positiveCount, simulationResults.length),
       ],
       potentialFrictionPoints: [
         personaA.attachmentStyle !== personaB.attachmentStyle
-          ? `Los estilos de apego ${personaA.attachmentStyle} + ${personaB.attachmentStyle} requieren comunicación activa (Bowlby, 1969)`
-          : 'Estilos de apego similares — cuidado con la dinámica de cámara de eco',
-        'Alineen expectativas temprano para evitar fricciones en la etapa de construcción',
+          ? t.attachmentFriction(personaA.attachmentStyle, personaB.attachmentStyle)
+          : t.similarStylesEcho,
+        t.alignExpectations,
       ],
       recommendedTopics: sharedInterestsArr.length > 0
-        ? [`Hablen de ${sharedInterestsArr[0]}`, 'Compartan su mejor recuerdo del último año', '¿Qué les apasiona fuera del trabajo?']
-        : ['Compartan lo que les apasiona', 'Pregunten por su mejor recuerdo del último año', 'Exploren qué buscan los dos'],
+        ? [t.talkAbout(sharedInterestsArr[0]), t.shareBestMemory, t.whatsYourPassion]
+        : [t.shareYourPassions, t.askBestMemory, t.exploreBothWant],
       attachmentDynamics: `${personaA.attachmentStyle} + ${personaB.attachmentStyle}`,
       communicationMatch: Math.min(100, Math.max(0, compatibilityScore + Math.floor(Math.random() * 10) - 5)),
       ghostingRisk: compatibilityScore >= 70 ? 0.15 : compatibilityScore >= 50 ? 0.30 : 0.50,
       firstDateSuccessProbability: compatibilityScore / 100,
       longTermPotential: Math.max(0, (compatibilityScore - 10)) / 100,
-      coachTip: compatibilityScore >= 60
-        ? `Pregúntale a ${personaB.name} por sus pasiones — las simulaciones muestran que la curiosidad genuina funciona muy bien aquí.`
-        : 'Quita la presión — enfócate en disfrutar la conversación, no en el resultado.',
-      nextBestMove: compatibilityScore >= 60
-        ? 'Envía un mensaje cálido y específico mencionando algo real de su perfil.'
-        : 'Mantén la ligereza — una observación divertida o pregunta sobre algo que los dos disfruten.',
+      coachTip: compatibilityScore >= 60 ? t.coachTipHigh(personaB.name) : t.coachTipLow,
+      nextBestMove: compatibilityScore >= 60 ? t.nextMoveHigh : t.nextMoveLow,
       simulationResults: simulationResults.map((r, i) => ({
         simulation: i + 1,
         scenario: r.durationId || r.scenario,
@@ -1277,6 +1286,226 @@ ${getLanguageInstruction(lang)}`;
       })),
     };
   }
+}
+
+// Localized strings for the structured simulation fallback report — all 10 supported languages.
+// Previously this block was hardcoded in Spanish, so EN/FR/DE/... users received Spanish text
+// on any Gemini parse/validation failure. Keeping templates as functions to interpolate safely.
+function getFallbackReportStrings(rawLang) {
+  const lang = (rawLang || 'en').split('-')[0].split('_')[0].toLowerCase();
+  const TABLES = {
+    en: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `In ${positiveCount} out of ${total} simulated universes, ${a} and ${b} chose each other — a ${score}% rebellion rate. Your ${styleA} × ${styleB} dynamic shows ${aligned ? 'genuine mutual alignment' : 'meaningful differences worth exploring'}.`,
+      sharedInterestsLabel: (list) => `Shared interests: ${list}`,
+      noSharedInterests: 'Explore each other\'s worlds to find common ground',
+      commStyleLine: (name, style) => `${name} communicates in a ${style} style`,
+      rebellionMomentLine: (pos, total) => `${pos} of ${total} simulations showed a genuine connection at the Rebellion Moment`,
+      attachmentFriction: (a, b) => `The ${a} + ${b} attachment styles need active communication (Bowlby, 1969)`,
+      similarStylesEcho: 'Similar attachment styles — watch out for echo-chamber dynamics',
+      alignExpectations: 'Align expectations early to avoid friction during the building stage',
+      talkAbout: (t) => `Talk about ${t}`,
+      shareBestMemory: 'Share your best memory from the last year',
+      whatsYourPassion: 'What are you passionate about outside of work?',
+      shareYourPassions: 'Share what you\'re passionate about',
+      askBestMemory: 'Ask about their best memory from the last year',
+      exploreBothWant: 'Explore what you both are looking for',
+      coachTipHigh: (b) => `Ask ${b} about their passions — simulations show genuine curiosity works really well here.`,
+      coachTipLow: 'Take the pressure off — focus on enjoying the conversation, not the outcome.',
+      nextMoveHigh: 'Send a warm, specific message referencing something real from their profile.',
+      nextMoveLow: 'Keep it light — a playful observation or a question about something you both enjoy.',
+    },
+    es: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `En ${positiveCount} de ${total} universos simulados, ${a} y ${b} se eligieron mutuamente — tasa de rebelión del ${score}%. Su dinámica ${styleA} × ${styleB} muestra ${aligned ? 'una alineación mutua genuina' : 'diferencias importantes que vale la pena explorar'}.`,
+      sharedInterestsLabel: (list) => `Intereses en común: ${list}`,
+      noSharedInterests: 'Exploren los mundos del otro para encontrar puntos en común',
+      commStyleLine: (name, style) => `${name} se comunica con estilo ${style}`,
+      rebellionMomentLine: (pos, total) => `${pos} de ${total} simulaciones mostraron conexión genuina en el Momento de Rebelión`,
+      attachmentFriction: (a, b) => `Los estilos de apego ${a} + ${b} requieren comunicación activa (Bowlby, 1969)`,
+      similarStylesEcho: 'Estilos de apego similares — cuidado con la dinámica de cámara de eco',
+      alignExpectations: 'Alineen expectativas temprano para evitar fricciones en la etapa de construcción',
+      talkAbout: (t) => `Hablen de ${t}`,
+      shareBestMemory: 'Compartan su mejor recuerdo del último año',
+      whatsYourPassion: '¿Qué les apasiona fuera del trabajo?',
+      shareYourPassions: 'Compartan lo que les apasiona',
+      askBestMemory: 'Pregunten por su mejor recuerdo del último año',
+      exploreBothWant: 'Exploren qué buscan los dos',
+      coachTipHigh: (b) => `Pregúntale a ${b} por sus pasiones — las simulaciones muestran que la curiosidad genuina funciona muy bien aquí.`,
+      coachTipLow: 'Quita la presión — enfócate en disfrutar la conversación, no en el resultado.',
+      nextMoveHigh: 'Envía un mensaje cálido y específico mencionando algo real de su perfil.',
+      nextMoveLow: 'Mantén la ligereza — una observación divertida o pregunta sobre algo que los dos disfruten.',
+    },
+    pt: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `Em ${positiveCount} de ${total} universos simulados, ${a} e ${b} escolheram-se mutuamente — taxa de rebelião de ${score}%. A dinâmica ${styleA} × ${styleB} mostra ${aligned ? 'um alinhamento mútuo genuíno' : 'diferenças importantes que vale a pena explorar'}.`,
+      sharedInterestsLabel: (list) => `Interesses em comum: ${list}`,
+      noSharedInterests: 'Explorem os mundos um do outro para encontrar pontos em comum',
+      commStyleLine: (name, style) => `${name} comunica com estilo ${style}`,
+      rebellionMomentLine: (pos, total) => `${pos} de ${total} simulações mostraram conexão genuína no Momento da Rebelião`,
+      attachmentFriction: (a, b) => `Os estilos de apego ${a} + ${b} requerem comunicação ativa (Bowlby, 1969)`,
+      similarStylesEcho: 'Estilos de apego similares — atenção à dinâmica de câmara de eco',
+      alignExpectations: 'Alinhem expectativas cedo para evitar atritos na fase de construção',
+      talkAbout: (t) => `Falem sobre ${t}`,
+      shareBestMemory: 'Partilhem a melhor memória do último ano',
+      whatsYourPassion: 'O que vos apaixona fora do trabalho?',
+      shareYourPassions: 'Partilhem o que vos apaixona',
+      askBestMemory: 'Perguntem sobre a melhor memória do último ano',
+      exploreBothWant: 'Explorem o que ambos procuram',
+      coachTipHigh: (b) => `Pergunta a ${b} sobre as paixões — as simulações mostram que a curiosidade genuína funciona muito bem aqui.`,
+      coachTipLow: 'Tira a pressão — foca-te em aproveitar a conversa, não no resultado.',
+      nextMoveHigh: 'Envia uma mensagem calorosa e específica mencionando algo real do perfil.',
+      nextMoveLow: 'Mantém leve — uma observação divertida ou pergunta sobre algo que ambos gostem.',
+    },
+    fr: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `Dans ${positiveCount} des ${total} univers simulés, ${a} et ${b} se sont choisis mutuellement — taux de rébellion de ${score}%. Votre dynamique ${styleA} × ${styleB} montre ${aligned ? 'un alignement mutuel authentique' : 'des différences importantes à explorer'}.`,
+      sharedInterestsLabel: (list) => `Intérêts communs : ${list}`,
+      noSharedInterests: 'Explorez les univers l\'un de l\'autre pour trouver un terrain d\'entente',
+      commStyleLine: (name, style) => `${name} communique avec un style ${style}`,
+      rebellionMomentLine: (pos, total) => `${pos} sur ${total} simulations ont montré une connexion authentique au Moment de la Rébellion`,
+      attachmentFriction: (a, b) => `Les styles d\'attachement ${a} + ${b} nécessitent une communication active (Bowlby, 1969)`,
+      similarStylesEcho: 'Styles d\'attachement similaires — attention à la dynamique de chambre d\'écho',
+      alignExpectations: 'Alignez les attentes tôt pour éviter les frictions pendant la phase de construction',
+      talkAbout: (t) => `Parlez de ${t}`,
+      shareBestMemory: 'Partagez votre meilleur souvenir de l\'année dernière',
+      whatsYourPassion: 'Qu\'est-ce qui vous passionne en dehors du travail ?',
+      shareYourPassions: 'Partagez ce qui vous passionne',
+      askBestMemory: 'Demandez-leur leur meilleur souvenir de l\'année dernière',
+      exploreBothWant: 'Explorez ce que vous recherchez tous les deux',
+      coachTipHigh: (b) => `Demande à ${b} quelles sont ses passions — les simulations montrent que la curiosité authentique fonctionne très bien ici.`,
+      coachTipLow: 'Enlève la pression — concentre-toi sur le plaisir de la conversation, pas sur le résultat.',
+      nextMoveHigh: 'Envoie un message chaleureux et spécifique mentionnant quelque chose de concret dans son profil.',
+      nextMoveLow: 'Reste léger — une observation amusante ou une question sur quelque chose que vous aimez tous les deux.',
+    },
+    de: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `In ${positiveCount} von ${total} simulierten Universen haben ${a} und ${b} einander gewählt — Rebellionsrate von ${score}%. Eure ${styleA} × ${styleB} Dynamik zeigt ${aligned ? 'eine echte gegenseitige Abstimmung' : 'bedeutsame Unterschiede, die es wert sind, erkundet zu werden'}.`,
+      sharedInterestsLabel: (list) => `Gemeinsame Interessen: ${list}`,
+      noSharedInterests: 'Erkundet einander, um Gemeinsamkeiten zu finden',
+      commStyleLine: (name, style) => `${name} kommuniziert in einem ${style} Stil`,
+      rebellionMomentLine: (pos, total) => `${pos} von ${total} Simulationen zeigten eine echte Verbindung im Rebellionsmoment`,
+      attachmentFriction: (a, b) => `Die Bindungsstile ${a} + ${b} erfordern aktive Kommunikation (Bowlby, 1969)`,
+      similarStylesEcho: 'Ähnliche Bindungsstile — achtet auf Echo-Chamber-Dynamiken',
+      alignExpectations: 'Gleicht Erwartungen früh ab, um Reibung in der Aufbauphase zu vermeiden',
+      talkAbout: (t) => `Sprecht über ${t}`,
+      shareBestMemory: 'Teilt eure schönste Erinnerung des letzten Jahres',
+      whatsYourPassion: 'Was begeistert euch außerhalb der Arbeit?',
+      shareYourPassions: 'Teilt, wofür ihr brennt',
+      askBestMemory: 'Fragt nach ihrer schönsten Erinnerung des letzten Jahres',
+      exploreBothWant: 'Erkundet, was ihr beide sucht',
+      coachTipHigh: (b) => `Frag ${b} nach ihren Leidenschaften — Simulationen zeigen, dass echte Neugier hier sehr gut funktioniert.`,
+      coachTipLow: 'Nimm den Druck raus — genieße das Gespräch, nicht das Ergebnis.',
+      nextMoveHigh: 'Schick eine warme, spezifische Nachricht, die etwas Echtes aus dem Profil erwähnt.',
+      nextMoveLow: 'Bleib locker — eine verspielte Beobachtung oder eine Frage zu etwas, das ihr beide mögt.',
+    },
+    ja: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `${total}のシミュレーション宇宙のうち${positiveCount}で、${a}と${b}はお互いを選びました — 反乱率${score}%。あなたたちの${styleA}×${styleB}のダイナミクスは${aligned ? '本物の相互調和' : '探る価値のある重要な違い'}を示しています。`,
+      sharedInterestsLabel: (list) => `共通の関心事: ${list}`,
+      noSharedInterests: 'お互いの世界を探って共通点を見つけましょう',
+      commStyleLine: (name, style) => `${name}は${style}スタイルでコミュニケーションをとります`,
+      rebellionMomentLine: (pos, total) => `${total}回のシミュレーションのうち${pos}回で反乱の瞬間に本物のつながりが見られました`,
+      attachmentFriction: (a, b) => `${a}と${b}の愛着スタイルは積極的なコミュニケーションが必要です（Bowlby, 1969）`,
+      similarStylesEcho: '似た愛着スタイル — エコーチェンバーのダイナミクスに注意',
+      alignExpectations: '期待を早めに擦り合わせて、構築段階での摩擦を避けましょう',
+      talkAbout: (t) => `${t}について話しましょう`,
+      shareBestMemory: '昨年の最高の思い出を共有しましょう',
+      whatsYourPassion: '仕事以外で情熱を注いでいることは何ですか？',
+      shareYourPassions: '情熱を注いでいることを共有しましょう',
+      askBestMemory: '相手の昨年の最高の思い出について聞きましょう',
+      exploreBothWant: 'お互いが何を求めているか探りましょう',
+      coachTipHigh: (b) => `${b}の情熱について聞いてみて — シミュレーションでは、本物の好奇心がここでとても効果的であることが示されています。`,
+      coachTipLow: 'プレッシャーを取り除いて — 結果ではなく、会話を楽しむことに集中しましょう。',
+      nextMoveHigh: 'プロフィールの具体的な何かに触れた、温かく具体的なメッセージを送りましょう。',
+      nextMoveLow: '軽やかに — 遊び心のある観察や、お互いが楽しめる何かについての質問を。',
+    },
+    zh: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `在${total}个模拟的宇宙中，${a}和${b}在${positiveCount}个中选择了彼此——叛逆率${score}%。你们的${styleA}×${styleB}动态展示了${aligned ? '真正的相互契合' : '值得探索的重要差异'}。`,
+      sharedInterestsLabel: (list) => `共同兴趣：${list}`,
+      noSharedInterests: '探索彼此的世界以找到共同点',
+      commStyleLine: (name, style) => `${name}以${style}风格沟通`,
+      rebellionMomentLine: (pos, total) => `${total}次模拟中有${pos}次在叛逆时刻展现了真正的连接`,
+      attachmentFriction: (a, b) => `${a} + ${b}的依附风格需要积极沟通（Bowlby, 1969）`,
+      similarStylesEcho: '相似的依附风格——当心回音室效应',
+      alignExpectations: '早期调整期望以避免建立阶段的摩擦',
+      talkAbout: (t) => `聊聊${t}`,
+      shareBestMemory: '分享去年最美好的回忆',
+      whatsYourPassion: '工作以外你最热爱什么？',
+      shareYourPassions: '分享你热爱的事物',
+      askBestMemory: '询问对方去年最美好的回忆',
+      exploreBothWant: '探索你们俩都在寻找什么',
+      coachTipHigh: (b) => `问问${b}的热情所在——模拟显示真诚的好奇心在这里非常管用。`,
+      coachTipLow: '放下压力——专注于享受对话，而不是结果。',
+      nextMoveHigh: '发一条温暖具体的消息，提到他们资料中真实的东西。',
+      nextMoveLow: '保持轻松——一个俏皮的观察或关于你们都喜欢的事的问题。',
+    },
+    ru: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `В ${positiveCount} из ${total} смоделированных вселенных ${a} и ${b} выбрали друг друга — коэффициент восстания ${score}%. Ваша динамика ${styleA} × ${styleB} показывает ${aligned ? 'подлинное взаимное совпадение' : 'значимые различия, которые стоит исследовать'}.`,
+      sharedInterestsLabel: (list) => `Общие интересы: ${list}`,
+      noSharedInterests: 'Исследуйте миры друг друга, чтобы найти точки соприкосновения',
+      commStyleLine: (name, style) => `${name} общается в стиле ${style}`,
+      rebellionMomentLine: (pos, total) => `В ${pos} из ${total} симуляций была подлинная связь в Момент Восстания`,
+      attachmentFriction: (a, b) => `Стили привязанности ${a} + ${b} требуют активного общения (Bowlby, 1969)`,
+      similarStylesEcho: 'Похожие стили привязанности — остерегайтесь эффекта эхо-камеры',
+      alignExpectations: 'Согласуйте ожидания рано, чтобы избежать трений на этапе построения',
+      talkAbout: (t) => `Поговорите о ${t}`,
+      shareBestMemory: 'Поделитесь лучшим воспоминанием прошлого года',
+      whatsYourPassion: 'Чем вы увлечены помимо работы?',
+      shareYourPassions: 'Поделитесь тем, чем вы увлечены',
+      askBestMemory: 'Спросите о лучшем воспоминании прошлого года',
+      exploreBothWant: 'Исследуйте, что ищете вы оба',
+      coachTipHigh: (b) => `Спроси ${b} об их страстях — симуляции показывают, что искреннее любопытство здесь работает очень хорошо.`,
+      coachTipLow: 'Сними давление — сосредоточься на удовольствии от разговора, а не на результате.',
+      nextMoveHigh: 'Отправь тёплое конкретное сообщение, упомянув что-то реальное из профиля.',
+      nextMoveLow: 'Держи легко — шутливое наблюдение или вопрос о том, что вы оба любите.',
+    },
+    ar: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `في ${positiveCount} من ${total} أكوان محاكاة، اختار ${a} و${b} بعضهما البعض — معدل تمرد ${score}%. ديناميكية ${styleA} × ${styleB} الخاصة بكما تُظهر ${aligned ? 'توافقاً متبادلاً حقيقياً' : 'اختلافات مهمة تستحق الاستكشاف'}.`,
+      sharedInterestsLabel: (list) => `اهتمامات مشتركة: ${list}`,
+      noSharedInterests: 'استكشفا عالم بعضكما لإيجاد أرضية مشتركة',
+      commStyleLine: (name, style) => `${name} يتواصل بأسلوب ${style}`,
+      rebellionMomentLine: (pos, total) => `${pos} من ${total} محاكاة أظهرت اتصالاً حقيقياً في لحظة التمرد`,
+      attachmentFriction: (a, b) => `أساليب التعلق ${a} + ${b} تتطلب تواصلاً نشطاً (Bowlby, 1969)`,
+      similarStylesEcho: 'أساليب تعلق متشابهة — احذرا من ديناميكية غرفة الصدى',
+      alignExpectations: 'وفّقا التوقعات مبكراً لتجنب الاحتكاك في مرحلة البناء',
+      talkAbout: (t) => `تحدثا عن ${t}`,
+      shareBestMemory: 'شاركا أجمل ذكرى من العام الماضي',
+      whatsYourPassion: 'ما الذي يشعلك خارج العمل؟',
+      shareYourPassions: 'شاركا ما تشعر به من شغف',
+      askBestMemory: 'اسألا عن أجمل ذكرى من العام الماضي',
+      exploreBothWant: 'استكشفا ما يبحث عنه كل منكما',
+      coachTipHigh: (b) => `اسأل ${b} عن شغفهم — تُظهر المحاكاة أن الفضول الحقيقي يعمل جيداً هنا.`,
+      coachTipLow: 'ارفع الضغط — ركز على الاستمتاع بالمحادثة، لا بالنتيجة.',
+      nextMoveHigh: 'أرسل رسالة دافئة ومحددة تذكر شيئاً حقيقياً من ملفهم الشخصي.',
+      nextMoveLow: 'احتفظ بالخفة — ملاحظة ممتعة أو سؤال حول شيء يستمتع به كلاكما.',
+    },
+    id: {
+      trajectoryExplanation: ({positiveCount, total, a, b, score, styleA, styleB, aligned}) =>
+        `Di ${positiveCount} dari ${total} alam semesta simulasi, ${a} dan ${b} saling memilih — tingkat pemberontakan ${score}%. Dinamika ${styleA} × ${styleB} kalian menunjukkan ${aligned ? 'keselarasan timbal balik yang tulus' : 'perbedaan penting yang layak dijelajahi'}.`,
+      sharedInterestsLabel: (list) => `Minat bersama: ${list}`,
+      noSharedInterests: 'Jelajahi dunia satu sama lain untuk menemukan kesamaan',
+      commStyleLine: (name, style) => `${name} berkomunikasi dengan gaya ${style}`,
+      rebellionMomentLine: (pos, total) => `${pos} dari ${total} simulasi menunjukkan koneksi tulus di Momen Pemberontakan`,
+      attachmentFriction: (a, b) => `Gaya kelekatan ${a} + ${b} membutuhkan komunikasi aktif (Bowlby, 1969)`,
+      similarStylesEcho: 'Gaya kelekatan serupa — hati-hati dengan dinamika ruang gema',
+      alignExpectations: 'Sejajarkan ekspektasi sejak awal untuk menghindari gesekan di tahap membangun',
+      talkAbout: (t) => `Bicarakan ${t}`,
+      shareBestMemory: 'Bagikan kenangan terbaik dari tahun lalu',
+      whatsYourPassion: 'Apa yang membuatmu bersemangat di luar pekerjaan?',
+      shareYourPassions: 'Bagikan apa yang membuatmu bersemangat',
+      askBestMemory: 'Tanyakan kenangan terbaik mereka dari tahun lalu',
+      exploreBothWant: 'Jelajahi apa yang kalian berdua cari',
+      coachTipHigh: (b) => `Tanya ${b} tentang passion mereka — simulasi menunjukkan rasa ingin tahu tulus sangat ampuh di sini.`,
+      coachTipLow: 'Hilangkan tekanan — fokus pada menikmati percakapan, bukan hasilnya.',
+      nextMoveHigh: 'Kirim pesan hangat dan spesifik yang menyebutkan sesuatu yang nyata dari profil mereka.',
+      nextMoveLow: 'Santai saja — observasi playful atau pertanyaan tentang hal yang kalian berdua sukai.',
+    },
+  };
+  return TABLES[lang] || TABLES.en;
 }
 
 // ---------------------------------------------------------------------------

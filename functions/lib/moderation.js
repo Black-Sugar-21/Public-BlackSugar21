@@ -175,58 +175,23 @@ async function retrieveModerationKnowledge(textToModerate, apiKey, lang = 'en', 
  */
 
 // --- Prompt builders ---
-function buildProfileImagePrompt(lang, isSpanish, expectedGender) {
+function buildProfileImagePrompt(lang, _isSpanishUnused, expectedGender) {
+  // Unified prompt for all 10 supported languages. Prompt body stays in English (model's
+  // operational language) and `languageInstruction` forces the `reason` output field into
+  // the user's language. Previously a binary ES/EN branch shipped English rejection reasons
+  // to 80% of users (pt/fr/de/ja/zh/ru/ar/id).
   const languageInstruction = getLanguageInstruction(lang);
 
   let genderInstruction = '';
   if (expectedGender !== null && expectedGender !== undefined) {
-    if (isSpanish) {
-      genderInstruction = expectedGender
-        ? '\n- OBLIGATORIO: Si la persona principal en la foto es MUJER, RECHAZAR con category "gender_mismatch" (se esperaba MASCULINO). Verificar rasgos faciales.'
-        : '\n- OBLIGATORIO: Si la persona principal en la foto es HOMBRE, RECHAZAR con category "gender_mismatch" (se esperaba FEMENINO). Verificar rasgos faciales.';
-    } else {
-      genderInstruction = expectedGender
-        ? '\n- MANDATORY: If the main person in the photo is FEMALE, REJECT with category "gender_mismatch" (expected MALE). Check facial features.'
-        : '\n- MANDATORY: If the main person in the photo is MALE, REJECT with category "gender_mismatch" (expected FEMALE). Check facial features.';
-    }
+    genderInstruction = expectedGender
+      ? '\n- MANDATORY: If the main person in the photo is FEMALE, REJECT with category "gender_mismatch" (expected MALE). Check facial features.'
+      : '\n- MANDATORY: If the main person in the photo is MALE, REJECT with category "gender_mismatch" (expected FEMALE). Check facial features.';
   }
 
   let genderApproval = '';
   if (expectedGender !== null && expectedGender !== undefined) {
-    genderApproval = isSpanish
-      ? '\n- El género de la persona corresponde al esperado'
-      : '\n- The person\'s gender matches the expected one';
-  }
-
-  if (isSpanish) {
-    return `Analiza esta imagen para una app de citas (estilo Tinder) y determina si es apropiada.
-
-RECHAZAR si contiene:
-- Desnudez o contenido sexual explícito
-- Violencia o contenido gráfico
-- Símbolos de odio o discriminación
-- Menores de edad
-- Rostros poco claros (la persona principal debe ser claramente visible)
-- Contenido ofensivo o inapropiado${genderInstruction}
-
-APROBAR si:
-- Muestra claramente el rostro de una persona adulta
-- Es una foto apropiada para perfil de citas
-- Los LENTES/GAFAS están permitidos
-- Accesorios (sombreros, gorras, bufandas ligeras) están permitidos siempre que el rostro sea visible
-- MÚLTIPLES PERSONAS están permitidas (fotos con amigos, familia, etc. son aceptables)
-- No contiene contenido inapropiado${genderApproval}
-
-${languageInstruction}
-
-Responde SOLO en formato JSON:
-{
-    "approved": true/false,
-    "reason": "explicación breve en español si se rechaza",
-    "confidence": 0.0-1.0,
-    "categories": ["lista", "de", "problemas", "en", "español"],
-    "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|gender_mismatch|approved"
-}`;
+    genderApproval = '\n- The person\'s gender matches the expected one';
   }
 
   return `Analyze this image for a dating app (Tinder style) and determine if it's appropriate.
@@ -249,10 +214,10 @@ APPROVE if:
 
 ${languageInstruction}
 
-Respond ONLY in JSON format:
+Respond ONLY in JSON format. The "reason" field MUST be written in the user's language (per the instruction above), NOT in English:
 {
     "approved": true/false,
-    "reason": "brief explanation if rejected",
+    "reason": "brief explanation in the user's language if rejected",
     "confidence": 0.0-1.0,
     "categories": ["list", "of", "issues"],
     "category": "nudity|violence|underage|unclear_face|screenshot|low_quality|offensive|celebrity|gender_mismatch|approved"
@@ -263,51 +228,9 @@ Respond ONLY in JSON format:
  * Construye prompt permisivo para stories/historias.
  * Homologado con ContentModerationService.kt moderateStoryImage()
  */
-function buildStoryImagePrompt(lang, isSpanish) {
+function buildStoryImagePrompt(lang, _isSpanishUnused) {
+  // Unified prompt — model operates in English, `reason` output follows languageInstruction.
   const languageInstruction = getLanguageInstruction(lang);
-
-  if (isSpanish) {
-    return `Analiza esta imagen para una HISTORIA/STORY de app de citas y determina si es apropiada.
-
-RECHAZAR SOLO si contiene:
-- Desnudez o contenido sexual explícito
-- Violencia gráfica o contenido perturbador
-- Símbolos de odio, racismo o discriminación
-- Propaganda política o contenido divisivo
-- Spam o publicidad comercial excesiva
-- Drogas ilegales o consumo de sustancias
-- Armas de fuego (armas blancas decorativas están permitidas)
-- Contenido ofensivo o lenguaje de odio visible
-
-APROBAR TODO lo demás, incluyendo:
-- Paisajes, naturaleza, lugares
-- Comida, bebidas, restaurantes
-- Objetos, productos (sin publicidad excesiva)
-- Animales, mascotas
-- Arte, pinturas, esculturas
-- Selfies, fotos con amigos/familia
-- Fotos SIN personas o SIN rostros visibles
-- Pantallas de computadora, escritorios
-- Vehículos, autos, motos
-- Actividades deportivas, gym, ejercicio
-- Eventos sociales, fiestas (sin contenido inapropiado)
-- Viajes, turismo, aventuras
-
-IMPORTANTE: Las historias son contenido temporal y casual.
-NO se requiere que muestre rostros o personas.
-Se permite TODO contenido apropiado y seguro.
-
-${languageInstruction}
-
-Responde SOLO en formato JSON:
-{
-    "approved": true/false,
-    "reason": "explicación breve si se rechaza",
-    "confidence": 0.0-1.0,
-    "categories": ["lista", "de", "problemas"],
-    "category": "nudity|violence|hate|drugs|spam|offensive|approved"
-}`;
-  }
 
   return `Analyze this image for a dating app STORY/HISTORIA and determine if it's appropriate.
 
@@ -341,10 +264,10 @@ ALL appropriate and safe content is allowed.
 
 ${languageInstruction}
 
-Respond ONLY in JSON format:
+Respond ONLY in JSON format. The "reason" field MUST be written in the user's language (per the instruction above), NOT in English:
 {
     "approved": true/false,
-    "reason": "brief explanation if rejected",
+    "reason": "brief explanation in the user's language if rejected",
     "confidence": 0.0-1.0,
     "categories": ["list", "of", "issues"],
     "category": "nudity|violence|hate|drugs|spam|offensive|approved"
@@ -355,37 +278,9 @@ Respond ONLY in JSON format:
  * Construye prompt para moderación de biografías.
  * Homologado con ContentModerationService.kt moderateText(BIOGRAPHY)
  */
-function buildBioModerationPrompt(text, lang, isSpanish, ragContext = '') {
+function buildBioModerationPrompt(text, lang, _isSpanishUnused, ragContext = '') {
+  // Unified prompt — model operates in English, `reason` output follows languageInstruction.
   const languageInstruction = getLanguageInstruction(lang);
-
-  if (isSpanish) {
-    return `Analiza esta biografía de perfil de aplicación de citas y determina si es apropiada.
-
-Texto: "${text}"
-
-RECHAZA si contiene:
-- Contenido sexual explícito o lenguaje vulgar
-- Información de contacto (teléfono, email, redes sociales)
-- Spam o publicidad
-- Lenguaje de odio o discriminación
-- Solicitudes de dinero o estafas
-- Amenazas o intimidación
-- Información personal sensible (dirección, DNI, etc.)
-
-APRUEBA si:
-- Es una descripción personal apropiada
-- No contiene nada de lo anterior
-${ragContext}
-${languageInstruction}
-
-Responde SOLO con JSON:
-{
-  "approved": true/false,
-  "reason": "Motivo del rechazo en español o 'approved'",
-  "category": "sexual|contact_info|spam|hate_speech|scam|threats|personal_info|approved",
-  "confidence": 0.0-1.0
-}`;
-  }
 
   return `Analyze this dating app profile biography and determine if it's appropriate.
 
@@ -406,10 +301,10 @@ APPROVE if:
 ${ragContext}
 ${languageInstruction}
 
-Respond ONLY with JSON:
+Respond ONLY with JSON. The "reason" field MUST be written in the user's language (per the instruction above), NOT in English:
 {
   "approved": true/false,
-  "reason": "Rejection reason or 'approved'",
+  "reason": "Rejection reason in the user's language, or 'approved'",
   "category": "sexual|contact_info|spam|hate_speech|scam|threats|personal_info|approved",
   "confidence": 0.0-1.0
 }`;
@@ -419,36 +314,9 @@ Respond ONLY with JSON:
  * Construye prompt para moderación de mensajes de chat.
  * Homologado con ContentModerationService.kt moderateText(MESSAGE)
  */
-function buildMessageModerationPrompt(text, lang, isSpanish, ragContext = '') {
+function buildMessageModerationPrompt(text, lang, _isSpanishUnused, ragContext = '') {
+  // Unified prompt — model operates in English, `reason` output follows languageInstruction.
   const languageInstruction = getLanguageInstruction(lang);
-
-  if (isSpanish) {
-    return `Analiza este mensaje de chat en una app de citas y determina si es apropiado.
-
-Mensaje: "${text}"
-
-CONTEXTO: Esta es una app de citas (Black Sugar 21). El coqueteo, discutir expectativas de relación y estilo de vida es NORMAL y PERMITIDO.
-
-RECHAZA si contiene:
-- Acoso o lenguaje abusivo
-- Contenido sexual explícito no solicitado
-- Spam o enlaces sospechosos
-- Amenazas o intimidación
-- Lenguaje de odio o discriminación
-- Solicitudes directas de dinero con links de pago
-
-APRUEBA si es un mensaje normal de conversación, coqueteo, o discusión de expectativas de relación.
-${ragContext}
-${languageInstruction}
-
-Responde SOLO con JSON:
-{
-  "approved": true/false,
-  "reason": "Motivo del rechazo en español o 'approved'",
-  "category": "harassment|sexual|spam|threats|hate_speech|scam|approved",
-  "confidence": 0.0-1.0
-}`;
-  }
 
   return `Analyze this chat message in a dating app and determine if it's appropriate.
 
@@ -468,10 +336,10 @@ APPROVE if it's a normal conversation message, flirting, or relationship expecta
 ${ragContext}
 ${languageInstruction}
 
-Respond ONLY with JSON:
+Respond ONLY with JSON. The "reason" field MUST be written in the user's language (per the instruction above), NOT in English:
 {
   "approved": true/false,
-  "reason": "Rejection reason or 'approved'",
+  "reason": "Rejection reason in the user's language, or 'approved'",
   "category": "harassment|sexual|spam|threats|hate_speech|scam|approved",
   "confidence": 0.0-1.0
 }`;
