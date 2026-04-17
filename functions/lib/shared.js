@@ -441,6 +441,102 @@ Dimensions:
   }
 }
 
+// ─── Localized User-Facing Error Messages ───────────────────────────────────
+// Helper so every CF that throws HttpsError at the user gets a message in
+// their device language. Callers pass the 2-letter lang code + a key from
+// the ERROR_MESSAGES table below. Missing key/lang falls back to en.
+
+const ERROR_MESSAGES = {
+  auth_required: {
+    en: 'You need to sign in.', es: 'Necesitas iniciar sesión.', pt: 'Você precisa entrar.', fr: 'Tu dois te connecter.',
+    de: 'Du musst dich anmelden.', ja: 'サインインが必要です。', zh: '需要登录。', ru: 'Необходимо войти.',
+    ar: 'يجب تسجيل الدخول.', id: 'Kamu perlu masuk dulu.',
+  },
+  rate_limit: {
+    en: 'Daily limit reached. Come back tomorrow for fresh credits.',
+    es: 'Límite diario alcanzado. Vuelve mañana para créditos nuevos.',
+    pt: 'Limite diário atingido. Volte amanhã para créditos novos.',
+    fr: 'Limite quotidienne atteinte. Reviens demain pour de nouveaux crédits.',
+    de: 'Tageslimit erreicht. Komm morgen für neue Credits wieder.',
+    ja: '1日の上限に達しました。明日新しいクレジットで戻ってきてください。',
+    zh: '已达每日上限。明天回来获取新额度。',
+    ru: 'Достигнут дневной лимит. Возвращайтесь завтра за новыми кредитами.',
+    ar: 'تم الوصول إلى الحد اليومي. عُد غداً للحصول على أرصدة جديدة.',
+    id: 'Batas harian tercapai. Kembali besok untuk kredit baru.',
+  },
+  match_not_found: {
+    en: 'Match not found. Please refresh and try again.',
+    es: 'Match no encontrado. Actualiza e inténtalo de nuevo.',
+    pt: 'Match não encontrado. Atualize e tente novamente.',
+    fr: 'Match introuvable. Actualise et réessaie.',
+    de: 'Match nicht gefunden. Bitte aktualisiere und versuche es erneut.',
+    ja: 'マッチが見つかりません。更新してもう一度お試しください。',
+    zh: '未找到匹配。请刷新后重试。',
+    ru: 'Мэтч не найден. Обновите и попробуйте снова.',
+    ar: 'لم يتم العثور على التطابق. يرجى التحديث والمحاولة مرة أخرى.',
+    id: 'Match tidak ditemukan. Silakan segarkan dan coba lagi.',
+  },
+  profile_not_found: {
+    en: 'User profile not found.', es: 'Perfil de usuario no encontrado.', pt: 'Perfil de usuário não encontrado.',
+    fr: 'Profil utilisateur introuvable.', de: 'Benutzerprofil nicht gefunden.', ja: 'ユーザープロフィールが見つかりません。',
+    zh: '未找到用户资料。', ru: 'Профиль пользователя не найден.', ar: 'لم يتم العثور على الملف الشخصي.',
+    id: 'Profil pengguna tidak ditemukan.',
+  },
+  invalid_argument: {
+    en: 'Invalid request. Please check and try again.', es: 'Solicitud inválida. Revisa e inténtalo de nuevo.',
+    pt: 'Requisição inválida. Verifique e tente novamente.', fr: 'Demande invalide. Vérifie et réessaie.',
+    de: 'Ungültige Anfrage. Bitte überprüfen und erneut versuchen.', ja: 'リクエストが無効です。確認してもう一度お試しください。',
+    zh: '无效请求。请检查后重试。', ru: 'Неверный запрос. Проверьте и попробуйте снова.',
+    ar: 'طلب غير صالح. يرجى التحقق والمحاولة مرة أخرى.', id: 'Permintaan tidak valid. Periksa dan coba lagi.',
+  },
+  internal: {
+    en: 'Something went wrong. Please try again.', es: 'Algo salió mal. Inténtalo de nuevo.',
+    pt: 'Algo deu errado. Tente novamente.', fr: 'Une erreur est survenue. Réessaie.',
+    de: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.', ja: 'エラーが発生しました。もう一度お試しください。',
+    zh: '出错了。请重试。', ru: 'Что-то пошло не так. Пожалуйста, попробуйте снова.',
+    ar: 'حدث خطأ. يرجى المحاولة مرة أخرى.', id: 'Terjadi kesalahan. Silakan coba lagi.',
+  },
+  generation_failed: {
+    en: 'Generation failed. Please try again.', es: 'La generación falló. Inténtalo de nuevo.',
+    pt: 'A geração falhou. Tente novamente.', fr: 'La génération a échoué. Réessaie.',
+    de: 'Die Generierung ist fehlgeschlagen. Bitte versuche es erneut.', ja: '生成に失敗しました。もう一度お試しください。',
+    zh: '生成失败。请重试。', ru: 'Генерация не удалась. Пожалуйста, попробуйте снова.',
+    ar: 'فشل التوليد. يرجى المحاولة مرة أخرى.', id: 'Generasi gagal. Silakan coba lagi.',
+  },
+  no_photos: {
+    en: 'No photos found. Please upload at least one photo.',
+    es: 'No se encontraron fotos. Sube al menos una foto.',
+    pt: 'Nenhuma foto encontrada. Envie pelo menos uma foto.',
+    fr: 'Aucune photo trouvée. Envoie au moins une photo.',
+    de: 'Keine Fotos gefunden. Lade mindestens ein Foto hoch.',
+    ja: '写真が見つかりません。少なくとも1枚アップロードしてください。',
+    zh: '未找到照片。请至少上传一张照片。',
+    ru: 'Фотографии не найдены. Загрузите хотя бы одну.',
+    ar: 'لم يتم العثور على صور. يرجى رفع صورة واحدة على الأقل.',
+    id: 'Tidak ada foto ditemukan. Unggah minimal satu foto.',
+  },
+  blocked_content: {
+    en: 'Content blocked by safety filters.', es: 'Contenido bloqueado por filtros de seguridad.',
+    pt: 'Conteúdo bloqueado pelos filtros de segurança.', fr: 'Contenu bloqué par les filtres de sécurité.',
+    de: 'Inhalt von Sicherheitsfiltern blockiert.', ja: 'コンテンツは安全フィルターによってブロックされました。',
+    zh: '内容被安全过滤器拦截。', ru: 'Контент заблокирован фильтрами безопасности.',
+    ar: 'تم حظر المحتوى بواسطة فلاتر الأمان.', id: 'Konten diblokir oleh filter keamanan.',
+  },
+};
+
+/**
+ * Return a user-facing HttpsError message in the user's language.
+ * @param {string} key — key in ERROR_MESSAGES (falls back to 'internal')
+ * @param {string} [userLang='en'] — 2-letter ISO code (defensive: accepts region codes)
+ */
+function getLocalizedError(key, userLang = 'en') {
+  const lang = (typeof userLang === 'string' && userLang.length >= 2)
+    ? userLang.toLowerCase().substring(0, 2)
+    : 'en';
+  const byKey = ERROR_MESSAGES[key] || ERROR_MESSAGES.internal;
+  return byKey[lang] || byKey.en;
+}
+
 // ─── PII Redaction ──────────────────────────────────────────────────────────
 // Truncate/hash PII (emails, FCM tokens, phone numbers) before logging so
 // Cloud Logging doesn't retain sensitive data in plaintext.
@@ -570,4 +666,6 @@ module.exports = {
   RATE_LIMIT_MESSAGES,
   redactEmail,
   redactToken,
+  ERROR_MESSAGES,
+  getLocalizedError,
 };

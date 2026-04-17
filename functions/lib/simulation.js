@@ -24,6 +24,7 @@ const {
   parseGeminiJsonResponse,
   getCachedEmbedding,
   trackAICall,
+  getLocalizedError,
 } = require('./shared');
 
 // ---------------------------------------------------------------------------
@@ -1296,16 +1297,16 @@ exports.simulateRelationship = onCall(
     const lang = (userLanguage || 'en').toLowerCase();
 
     if (!matchId || typeof matchId !== 'string') {
-      throw new HttpsError('invalid-argument', 'matchId is required');
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
     // Basic matchId validation: Firestore doc IDs must not contain slashes and have reasonable length
     if (matchId.includes('/') || matchId.length > 200) {
-      throw new HttpsError('invalid-argument', 'matchId is invalid');
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
 
     const db     = admin.firestore();
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new HttpsError('internal', 'AI service unavailable');
+    if (!apiKey) throw new HttpsError('internal', getLocalizedError('internal', lang));
 
     // ── Remote Config gate ────────────────────────────────────────────────
     const simConfig = await getSimulationConfig();
@@ -1381,20 +1382,20 @@ exports.simulateRelationship = onCall(
       // Allow through on transaction failure rather than blocking the user
       rateLimitPassed = true;
     }
-    if (!rateLimitPassed) throw new HttpsError('resource-exhausted', 'Daily limit reached');
+    if (!rateLimitPassed) throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
 
     // ── Fetch data ────────────────────────────────────────────────────────
     const matchDoc = await db.collection('matches').doc(matchId).get();
-    if (!matchDoc.exists) throw new HttpsError('not-found', 'Match not found');
+    if (!matchDoc.exists) throw new HttpsError('not-found', getLocalizedError('match_not_found', lang));
 
     const matchData    = matchDoc.data();
     const usersMatched = matchData.usersMatched || [];
     if (!usersMatched.includes(userId)) {
-      throw new HttpsError('permission-denied', 'Not a participant of this match');
+      throw new HttpsError('permission-denied', getLocalizedError('internal', lang));
     }
 
     const otherUserId = usersMatched.find(id => id !== userId);
-    if (!otherUserId) throw new HttpsError('not-found', 'Could not identify other user');
+    if (!otherUserId) throw new HttpsError('not-found', getLocalizedError('internal', lang));
 
     const [userDoc, otherDoc, messagesSnap] = await Promise.all([
       db.collection('users').doc(userId).get(),
@@ -1404,7 +1405,7 @@ exports.simulateRelationship = onCall(
     ]);
 
     if (!userDoc.exists || !otherDoc.exists) {
-      throw new HttpsError('not-found', 'User profile not found');
+      throw new HttpsError('not-found', getLocalizedError('profile_not_found', lang));
     }
 
     // ── Build persona agents ──────────────────────────────────────────────
@@ -1468,7 +1469,7 @@ exports.simulateRelationship = onCall(
     const validSims = simulationResults.filter(r => r.validTurns >= 2);
     if (validSims.length < 3) {
       logger.error(`[simulateRelationship] Too few valid simulations: ${validSims.length}/${simulationResults.length}`);
-      throw new HttpsError('internal', 'Simulation produced insufficient data. Please try again.');
+      throw new HttpsError('internal', getLocalizedError('generation_failed', lang));
     }
 
     const positiveCount = simulationResults.filter(r => r.isPositive).length;
