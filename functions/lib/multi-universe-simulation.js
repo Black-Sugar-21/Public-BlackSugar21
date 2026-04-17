@@ -235,7 +235,7 @@ async function translatePhraseToLanguage(phrase, fromLang, toLang) {
     if (!phrase || phrase.length === 0) return phrase;
     if (fromLang === toLang) return phrase;
 
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash-lite', // Use lite for fast translation
       generationConfig: { maxOutputTokens: 150, temperature: 0.3 }
@@ -716,7 +716,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
     logger.info(`[SituationInternal] Starting Gemini call for: ${situation.substring(0, 50)}...`);
 
     // Generate 4 approaches using Gemini
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage);
 
     const callDuration = Date.now() - callStart;
