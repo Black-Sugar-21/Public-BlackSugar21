@@ -17,6 +17,10 @@ function getLanguageInstruction(lang) {
   // NOTE: These instructions are critical — they must be at the END of the prompt
   // to override any other language directives. Gemini must generate ALL content
   // (phrases, reactions, insights) in the user's language, never English.
+  // Defensive: coerce to string, empty/null/undefined → EN
+  if (typeof lang !== 'string' || !lang) {
+    return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';
+  }
   if (lang.startsWith('zh')) return '⚠️ CRITICAL: 必须用中文生成所有内容，包括短语、反应、教练建议。绝不能用英文。';
   if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية فقط. لا تستخدم الإنجليزية أبداً.';
   if (lang.startsWith('id') || lang.startsWith('ms')) return '⚠️ KRITIS: SEMUA konten harus dalam Bahasa Indonesia. Jangan gunakan Bahasa Inggris.';
