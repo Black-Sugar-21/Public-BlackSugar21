@@ -764,7 +764,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         situation,
         situationType: 'other',
         matchName: 'Your Match',
-        approaches: generateApproachesFallback(userLanguage),
+        approaches: generateApproachesFallback(userLanguage, situation),
         bestApproachId: '1',
         coachTip: getLocalizedCoachTip('communication_foundation', userLanguage),
         psychInsights: getLocalizedPsychInsight('authenticity', userLanguage),
@@ -810,7 +810,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       situation,
       situationType: 'other',
       matchName: 'Your Match',
-      approaches: generateApproachesFallback(userLanguage),
+      approaches: generateApproachesFallback(userLanguage, situation),
       bestApproachId: '1',
       coachTip: getLocalizedCoachTip('communication_importance', userLanguage),
       psychInsights: getLocalizedPsychInsight('authentic_dialogue', userLanguage),
@@ -868,162 +868,206 @@ CRITICAL GUIDELINES:
 - Phrases must work for ANY relationship type (heterosexual, same-sex, non-binary, polyamorous).
 - Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.
 
-User wants to express (original language preserved): "${situation}"
+The user's situation (verbatim — every noun, verb and detail matters):
+"""
+${situation}
+"""
+
+🎯 CORE RULE — each approach MUST directly address the concrete content of the situation above.
+If the user talks about going out with a friend, mention the friend and the plan.
+If the user wants to confess feelings, state the feeling.
+If the user wants to apologize, name what they're apologizing for.
+Generic openers like "quería hablar contigo", "tenemos que hablar", "hay algo que quiero decirte", "we need to talk",
+"I've been thinking", "hay algo que me ronda la cabeza" — on their own — are FORBIDDEN. A message that could be
+sent for literally any situation has failed. Each phrase MUST reference at least one concrete detail from the user's
+situation (a name, place, plan, feeling, or event they mentioned).
 
 Generate 4 approaches with FIXED tones in this exact order:
-  1. direct — clear, confident, unambiguous
-  2. playful — warm, light, a little humor
-  3. romantic_vulnerable — soft, honest about feelings (adjust intensity for cultural context)
-  4. grounded_honest — calm, real, low-pressure (respectful and genuine)
+  1. direct — clear, confident, unambiguous; names the situation in the first sentence
+  2. playful — warm, light, a little humor; still references the specific topic
+  3. romantic_vulnerable — soft, honest about feelings tied to THIS situation (adjust intensity for cultural context)
+  4. grounded_honest — calm, real, low-pressure (respectful and genuine); states what's happening
 
-Each phrase must be 1-2 sentences, natural, first-person IN ${languageName}.
+Each phrase must be 2-3 sentences, natural, first-person IN ${languageName}.
+
+Self-check before returning each phrase: "Could this message have been written by someone with a totally
+different problem?" If yes, rewrite until the answer is no.
 
 ${langInstr}
 
-⚠️ FINAL CHECK: Before returning, verify every "phrase" field is in ${languageName}, not English. If any phrase is in English but the target language is not English, REWRITE it in ${languageName}.
+⚠️ FINAL CHECKS:
+1. Every "phrase" is in ${languageName}, not English (unless target is English).
+2. Every "phrase" references specific content from the user's situation.
+3. No two phrases sound interchangeable.
 
 Respond ONLY with JSON (phrases in ${languageName}):
 {"approaches":[{"id":"1","tone":"direct","phrase":"..."},{"id":"2","tone":"playful","phrase":"..."},{"id":"3","tone":"romantic_vulnerable","phrase":"..."},{"id":"4","tone":"grounded_honest","phrase":"..."}]}`;
 
     logger.info(`[Gemini] Prompt size: ${prompt.length} chars, language: ${userLang}`);
 
-    // Timeout: fail gracefully if Gemini takes too long. Configurable via RC.
+    // Retry up to 2 times before falling back — a single Gemini hiccup shouldn't collapse to generic fallbacks
     const timeoutMs = cfg.timeoutMs;
-    const geminiPromise = model.generateContent(prompt);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini timeout: exceeded ${timeoutMs}ms`)), timeoutMs)
-    );
-
-    let result;
-    try {
-      result = await Promise.race([geminiPromise, timeoutPromise]);
-      logger.info(`[Gemini] Content generation succeeded`);
-    } catch (timeoutErr) {
-      logger.error(`[Gemini] TIMEOUT after ${timeoutMs}ms:`, timeoutErr.message);
-      return generateApproachesFallback(userLang);
-    }
-
-    const text = result?.response?.text();
-    logger.info(`[Gemini] Response size: ${(text || '').length} chars`);
-
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      logger.error(`[Gemini] Empty response body`);
-      return generateApproachesFallback(userLang);
-    }
-
-    // Log response preview (first 200 chars)
-    logger.info(`[Gemini] Response preview: ${text.substring(0, 200)}`);
-
-    const parsed = parseGeminiJsonResponse(text);
-    if (!parsed) {
-      logger.error(`[Gemini] Failed to parse JSON from response`);
-      logger.debug(`[Gemini] Raw response was: ${text}`);
-      return generateApproachesFallback(userLang);
-    }
-
-    if (!Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
-      logger.error(`[Gemini] Parsed JSON but no approaches array found`);
-      logger.debug(`[Gemini] Parsed object: ${JSON.stringify(parsed)}`);
-      return generateApproachesFallback(userLang);
-    }
-
-    logger.info(`[Gemini] Parsed ${parsed.approaches.length} approaches`);
-
-    const approaches = parsed.approaches;
-    const byTone = new Map();
-    for (const a of approaches) {
-      if (a && typeof a.phrase === 'string' && a.tone) {
-        byTone.set(a.tone, a.phrase.trim());
-        logger.info(`[Gemini] ✓ Tone "${a.tone}": "${a.phrase.substring(0, 40)}..."`);
-      } else {
-        logger.warn(`[Gemini] Invalid approach object:`, JSON.stringify(a));
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let result;
+      try {
+        const geminiPromise = model.generateContent(prompt);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Gemini timeout: exceeded ${timeoutMs}ms`)), timeoutMs)
+        );
+        result = await Promise.race([geminiPromise, timeoutPromise]);
+        logger.info(`[Gemini] attempt ${attempt}: content generation succeeded`);
+      } catch (attemptErr) {
+        logger.warn(`[Gemini] attempt ${attempt} failed: ${attemptErr.message}`);
+        continue;
       }
+
+      const text = result?.response?.text();
+      logger.info(`[Gemini] attempt ${attempt}: response size ${(text || '').length} chars`);
+
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        logger.warn(`[Gemini] attempt ${attempt}: empty response body`);
+        continue;
+      }
+
+      logger.info(`[Gemini] attempt ${attempt}: response preview ${text.substring(0, 200)}`);
+
+      const parsed = parseGeminiJsonResponse(text);
+      if (!parsed) {
+        logger.warn(`[Gemini] attempt ${attempt}: failed to parse JSON`);
+        continue;
+      }
+
+      if (!Array.isArray(parsed?.approaches) || parsed.approaches.length === 0) {
+        logger.warn(`[Gemini] attempt ${attempt}: no approaches array`);
+        continue;
+      }
+
+      logger.info(`[Gemini] Parsed ${parsed.approaches.length} approaches`);
+
+      const approaches = parsed.approaches;
+      const byTone = new Map();
+      for (const a of approaches) {
+        if (a && typeof a.phrase === 'string' && a.tone) {
+          byTone.set(a.tone, a.phrase.trim());
+          logger.info(`[Gemini] ✓ Tone "${a.tone}": "${a.phrase.substring(0, 40)}..."`);
+        } else {
+          logger.warn(`[Gemini] Invalid approach object:`, JSON.stringify(a));
+        }
+      }
+
+      const result_approaches = FIXED_TONES.map((tone, i) => ({
+        id: String(i + 1),
+        tone,
+        phrase: byTone.get(tone) || approaches[i]?.phrase || '',
+      }));
+
+      // Reject this attempt if any phrase is empty — try again rather than ship blanks
+      if (result_approaches.some(a => !a.phrase)) {
+        logger.warn(`[Gemini] attempt ${attempt}: one or more phrases empty after normalize`);
+        continue;
+      }
+
+      logger.info(`[Gemini] Finalized ${result_approaches.length} approaches in ${Date.now() - callStart}ms`);
+      return result_approaches;
     }
 
-    const result_approaches = FIXED_TONES.map((tone, i) => ({
-      id: String(i + 1),
-      tone,
-      phrase: byTone.get(tone) || approaches[i]?.phrase || '',
-    }));
-
-    logger.info(`[Gemini] Finalized ${result_approaches.length} approaches in ${Date.now() - callStart}ms`);
-    return result_approaches;
+    logger.error(`[Gemini] All attempts failed after ${Date.now() - callStart}ms — using situation-aware fallback`);
+    return generateApproachesFallback(userLang, situation);
   } catch (e) {
     logger.error(`[Gemini] Error after ${Date.now() - callStart}ms:`, e.message);
     if (e.stack) logger.error(`[Gemini] Stack:`, e.stack);
-    return generateApproachesFallback(userLang);
+    return generateApproachesFallback(userLang, situation);
   }
 }
 
 /**
- * Fallback approaches when Gemini fails or returns invalid response
+ * Extracts a short, clean snippet of the user's situation to echo back in fallbacks.
+ * Keeps the first ~90 chars of meaningful content — enough to anchor each phrase to the user's topic.
  */
-function generateApproachesFallback(userLang = 'en') {
-  const fallbackPhrases = {
+function extractSituationSnippet(situation) {
+  if (!situation || typeof situation !== 'string') return '';
+  const cleaned = situation
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?;]+$/g, '')
+    .trim();
+  if (cleaned.length <= 90) return cleaned;
+  const cut = cleaned.slice(0, 90);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut) + '…';
+}
+
+/**
+ * Fallback approaches when Gemini fails or returns invalid response.
+ * When `situation` is provided, the templates embed a snippet so they never feel fully generic.
+ */
+function generateApproachesFallback(userLang = 'en', situation = '') {
+  const snippet = extractSituationSnippet(situation);
+  const hasSnippet = snippet.length > 0;
+  const templates = {
     en: [
-      { id: '1', tone: 'direct', phrase: 'I wanted to talk with you about something. Can we chat?' },
-      { id: '2', tone: 'playful', phrase: 'Hey, got a moment? There\'s something I want to say.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'I\'ve been thinking about you, and I want to be honest about how I feel.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'I care about us and want to understand each other better.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Hey — about what I mentioned (${snippet}), I'd love to talk it through with you. What do you think?` : 'I wanted to talk with you about something. Can we chat?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `So… ${snippet} 😅 Didn't want to leave you in the dark. Got a sec?` : 'Hey, got a moment? There\'s something I want to say.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `I've been thinking about you, and I want to be open about this: ${snippet}. I hope that's okay to share.` : 'I\'ve been thinking about you, and I want to be honest about how I feel.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Just being real with you: ${snippet}. No pressure — I just wanted you to know where I'm at.` : 'I care about us and want to understand each other better.' },
     ],
     es: [
-      { id: '1', tone: 'direct', phrase: 'Quería hablar contigo sobre algo. ¿Podemos conversar?' },
-      { id: '2', tone: 'playful', phrase: 'Oye, ¿tienes un momento? Hay algo que quiero decir.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'He estado pensando en ti, y quiero ser honesto sobre cómo me siento.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Me importas y quiero que nos entendamos mejor.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Oye, sobre lo que te comentaba (${snippet}), me gustaría conversarlo contigo. ¿Qué opinas?` : 'Quería hablar contigo sobre algo. ¿Podemos conversar?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Te cuento: ${snippet} 😅 No quería dejarte sin saber. ¿Un momento?` : 'Oye, ¿tienes un momento? Hay algo que quiero decir.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `He estado pensando en ti y quiero ser sincero/a contigo sobre esto: ${snippet}. Espero esté bien compartirlo.` : 'He estado pensando en ti, y quiero ser honesto sobre cómo me siento.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Siendo honesto/a contigo: ${snippet}. Sin presión — solo quería que lo supieras.` : 'Me importas y quiero que nos entendamos mejor.' },
     ],
     pt: [
-      { id: '1', tone: 'direct', phrase: 'Queria falar com você sobre algo. Podemos conversar?' },
-      { id: '2', tone: 'playful', phrase: 'Oie, tem um momento? Tem algo que quero dizer.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'Estive pensando em você, e quero ser honesto sobre como me sinto.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Você me importa e quero que nos entendamos melhor.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Oi, sobre o que te contei (${snippet}), queria conversar contigo. O que achas?` : 'Queria falar com você sobre algo. Podemos conversar?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Te conto: ${snippet} 😅 Não queria te deixar sem saber. Tens um minuto?` : 'Oie, tem um momento? Tem algo que quero dizer.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `Tenho pensado em ti e quero ser sincero/a sobre isto: ${snippet}. Espero que esteja tudo bem partilhar.` : 'Estive pensando em você, e quero ser honesto sobre como me sinto.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Sendo honesto/a contigo: ${snippet}. Sem pressão — só queria que soubesses.` : 'Você me importa e quero que nos entendamos melhor.' },
     ],
     fr: [
-      { id: '1', tone: 'direct', phrase: 'Je voulais te parler de quelque chose. On peut discuter?' },
-      { id: '2', tone: 'playful', phrase: 'Hé, tu as une minute? Il y a quelque chose que je veux dire.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'Je pense à toi, et je veux être honnête sur mes sentiments.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Tu m\'importes et je veux qu\'on se comprenne mieux.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Salut, à propos de ce que je te disais (${snippet}), j'aimerais qu'on en parle. Qu'en penses-tu ?` : 'Je voulais te parler de quelque chose. On peut discuter?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Je t'explique : ${snippet} 😅 Je ne voulais pas te laisser dans le flou. Tu as un moment ?` : 'Hé, tu as une minute? Il y a quelque chose que je veux dire.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `Je pense à toi et je veux être sincère avec toi sur ceci : ${snippet}. J'espère que ça va de partager.` : 'Je pense à toi, et je veux être honnête sur mes sentiments.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Pour être honnête avec toi : ${snippet}. Pas de pression — je voulais juste que tu saches.` : 'Tu m\'importes et je veux qu\'on se comprenne mieux.' },
     ],
     de: [
-      { id: '1', tone: 'direct', phrase: 'Ich wollte mit dir über etwas sprechen. Können wir reden?' },
-      { id: '2', tone: 'playful', phrase: 'Hey, hast du einen Moment? Es gibt etwas, das ich dir sagen möchte.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'Ich habe viel an dir gedacht und möchte dir ehrlich sagen, wie ich mich fühle.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Mir liegt an uns und ich möchte, dass wir uns besser verstehen.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Hey, wegen dem, was ich erwähnt habe (${snippet}) — ich würde gern mit dir darüber reden. Was meinst du?` : 'Ich wollte mit dir über etwas sprechen. Können wir reden?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Also… ${snippet} 😅 Wollte dich nicht im Dunkeln lassen. Hast du kurz Zeit?` : 'Hey, hast du einen Moment? Es gibt etwas, das ich dir sagen möchte.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `Ich habe an dich gedacht und möchte dir gegenüber ehrlich sein: ${snippet}. Ich hoffe, das ist okay.` : 'Ich habe viel an dir gedacht und möchte dir ehrlich sagen, wie ich mich fühle.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Ganz ehrlich: ${snippet}. Kein Druck — ich wollte nur, dass du Bescheid weißt.` : 'Mir liegt an uns und ich möchte, dass wir uns besser verstehen.' },
     ],
     ja: [
-      { id: '1', tone: 'direct', phrase: 'あなたと何かについて話したいのです。話してもいいですか？' },
-      { id: '2', tone: 'playful', phrase: 'ねえ、ちょっと時間ある？言いたいことがあるんだ。' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'ずっとあなたのことを考えていて、本当の気持ちを伝えたいんです。' },
-      { id: '4', tone: 'grounded_honest', phrase: 'あなたのことが大事で、もっと理解し合いたいんです。' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `ねえ、さっき話したこと（${snippet}）について、君と話したいな。どう思う？` : 'あなたと何かについて話したいのです。話してもいいですか？' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `実はね… ${snippet} 😅 伝えておきたくて。少しいい？` : 'ねえ、ちょっと時間ある？言いたいことがあるんだ。' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `君のことを考えていて、正直に伝えたいんだ：${snippet}。話してもいいかな？` : 'ずっとあなたのことを考えていて、本当の気持ちを伝えたいんです。' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `正直に言うと：${snippet}。プレッシャーはかけたくないけど、知っておいてほしくて。` : 'あなたのことが大事で、もっと理解し合いたいんです。' },
     ],
     zh: [
-      { id: '1', tone: 'direct', phrase: '我想和你谈论一些事情。我们可以聊天吗？' },
-      { id: '2', tone: 'playful', phrase: '嘿，你有时间吗？我想说点东西。' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: '我一直在想你，我想坦诚地告诉你我的感受。' },
-      { id: '4', tone: 'grounded_honest', phrase: '你对我很重要，我想让我们更相互了解。' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `嘿，关于我之前说的（${snippet}），想跟你好好聊聊，你觉得呢？` : '我想和你谈论一些事情。我们可以聊天吗？' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `跟你说：${snippet} 😅 不想让你不知道。有空吗？` : '嘿，你有时间吗？我想说点东西。' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `我一直在想你，想坦诚地告诉你：${snippet}。希望我可以跟你分享。` : '我一直在想你，我想坦诚地告诉你我的感受。' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `跟你说实话：${snippet}。没有压力——只是想让你知道。` : '你对我很重要，我想让我们更相互了解。' },
     ],
     ru: [
-      { id: '1', tone: 'direct', phrase: 'Я хотел бы с вами поговорить. Можем ли мы поговорить?' },
-      { id: '2', tone: 'playful', phrase: 'Эй, у тебя есть минутка? Я хочу что-то сказать.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'Я много думал о тебе и хочу честно рассказать о своих чувствах.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Ты мне важен и я хочу, чтобы мы лучше друг друга поняли.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Привет, по поводу того, что я говорил/а (${snippet}), хотел/а бы обсудить с тобой. Что думаешь?` : 'Я хотел бы с вами поговорить. Можем ли мы поговорить?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Расскажу: ${snippet} 😅 Не хотел/а оставлять тебя в неведении. Есть минутка?` : 'Эй, у тебя есть минутка? Я хочу что-то сказать.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `Я думал/а о тебе и хочу быть откровенным/ой: ${snippet}. Надеюсь, это нормально поделиться.` : 'Я много думал о тебе и хочу честно рассказать о своих чувствах.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Если честно: ${snippet}. Без давления — просто хотел/а, чтобы ты знал/а.` : 'Ты мне важен и я хочу, чтобы мы лучше друг друга поняли.' },
     ],
     ar: [
-      { id: '1', tone: 'direct', phrase: 'أريد أن أتحدث معك عن شيء. هل يمكننا التحدث؟' },
-      { id: '2', tone: 'playful', phrase: 'هيه، هل لديك لحظة؟ هناك شيء أريد أن أقوله.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'كنت أفكر فيك، وأريد أن أكون صادقاً بشأن شعوري.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'أنت مهم بالنسبة لي وأريد أن نتفاهم أكثر.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `مرحباً، بخصوص ما ذكرته (${snippet})، أود أن نتحدث عن ذلك. ما رأيك؟` : 'أريد أن أتحدث معك عن شيء. هل يمكننا التحدث؟' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `لأقول لك: ${snippet} 😅 لم أرد أن أتركك دون علم. هل لديك لحظة؟` : 'هيه، هل لديك لحظة؟ هناك شيء أريد أن أقوله.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `كنت أفكر فيك وأريد أن أكون صريحاً/صريحة معك بشأن هذا: ${snippet}. آمل أن يكون من المقبول مشاركته.` : 'كنت أفكر فيك، وأريد أن أكون صادقاً بشأن شعوري.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `بصراحة معك: ${snippet}. بدون ضغط — فقط أردتك أن تعرف.` : 'أنت مهم بالنسبة لي وأريد أن نتفاهم أكثر.' },
     ],
     id: [
-      { id: '1', tone: 'direct', phrase: 'Saya ingin berbicara dengan Anda tentang sesuatu. Bisakah kita berbincang?' },
-      { id: '2', tone: 'playful', phrase: 'Hei, punya sebentar? Ada sesuatu yang ingin saya katakan.' },
-      { id: '3', tone: 'romantic_vulnerable', phrase: 'Saya selalu memikirkan Anda, dan saya ingin jujur tentang perasaan saya.' },
-      { id: '4', tone: 'grounded_honest', phrase: 'Anda penting bagi saya dan saya ingin kita saling memahami lebih baik.' },
+      { id: '1', tone: 'direct', phrase: hasSnippet ? `Hei, soal yang tadi kubilang (${snippet}), aku ingin mengobrolkannya denganmu. Bagaimana menurutmu?` : 'Saya ingin berbicara dengan Anda tentang sesuatu. Bisakah kita berbincang?' },
+      { id: '2', tone: 'playful', phrase: hasSnippet ? `Aku cerita ya: ${snippet} 😅 Tidak mau meninggalkanmu tanpa tahu. Ada waktu sebentar?` : 'Hei, punya sebentar? Ada sesuatu yang ingin saya katakan.' },
+      { id: '3', tone: 'romantic_vulnerable', phrase: hasSnippet ? `Aku memikirkanmu dan ingin jujur padamu soal ini: ${snippet}. Semoga tidak masalah membaginya.` : 'Saya selalu memikirkan Anda, dan saya ingin jujur tentang perasaan saya.' },
+      { id: '4', tone: 'grounded_honest', phrase: hasSnippet ? `Jujur denganmu: ${snippet}. Tanpa tekanan — hanya ingin kamu tahu.` : 'Anda penting bagi saya dan saya ingin kita saling memahami lebih baik.' },
     ],
   };
 
-  const lang = fallbackPhrases[userLang] ? userLang : 'en';
-  return fallbackPhrases[lang];
+  const lang = templates[userLang] ? userLang : 'en';
+  return templates[lang];
 }
 
 /**
