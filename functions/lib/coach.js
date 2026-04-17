@@ -3812,20 +3812,49 @@ exports.getCoachHistory = onCall(
     const db = admin.firestore();
 
     try {
-      let query = db.collection('coachChats').doc(userId)
-        .collection('messages').orderBy('timestamp', 'desc');
+      // Read from BOTH legacy and current subcollections so simulations saved
+      // via the client path (users/{uid}/coachChat/) don't disappear when the
+      // CF returns. Legacy: coachChats/{uid}/messages/ — new: users/{uid}/coachChat/.
+      // Merge + dedup by id + re-sort + apply limit/cursor in-memory.
+      const legacyRef = db.collection('coachChats').doc(userId).collection('messages');
+      const newRef = db.collection('users').doc(userId).collection('coachChat');
 
-      if (beforeTimestamp) {
-        const cursorDate = new Date(beforeTimestamp);
-        if (!isNaN(cursorDate.getTime())) {
-          query = query.startAfter(admin.firestore.Timestamp.fromDate(cursorDate));
-        }
-      }
+      const cursorTs = beforeTimestamp ? new Date(beforeTimestamp) : null;
+      const hasCursor = cursorTs && !isNaN(cursorTs.getTime());
 
-      query = query.limit(limit);
-      const snap = await query.get();
+      // Fetch 2×limit from each path so after merge+dedup we still have ≥limit.
+      const fetchLimit = limit * 2;
+      const buildQ = (ref) => {
+        let q = ref.orderBy('timestamp', 'desc');
+        if (hasCursor) q = q.startAfter(admin.firestore.Timestamp.fromDate(cursorTs));
+        return q.limit(fetchLimit);
+      };
 
-      const messages = snap.docs.map((doc) => {
+      const [legacySnap, newSnap] = await Promise.all([
+        buildQ(legacyRef).get().catch((e) => {
+          logger.warn(`[getCoachHistory] Legacy read failed: ${e.message}`);
+          return {docs: []};
+        }),
+        buildQ(newRef).get().catch((e) => {
+          logger.warn(`[getCoachHistory] New-path read failed: ${e.message}`);
+          return {docs: []};
+        }),
+      ]);
+
+      // Merge + dedup (prefer new-path doc on id collision — it's the current source of truth)
+      const byId = new Map();
+      for (const doc of legacySnap.docs) byId.set(doc.id, doc);
+      for (const doc of newSnap.docs) byId.set(doc.id, doc);  // overrides legacy
+
+      const merged = Array.from(byId.values())
+        .sort((a, b) => {
+          const ta = a.data().timestamp?.toDate?.()?.getTime() ?? 0;
+          const tb = b.data().timestamp?.toDate?.()?.getTime() ?? 0;
+          return tb - ta;  // desc
+        })
+        .slice(0, limit);
+
+      const messages = merged.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -3833,10 +3862,19 @@ exports.getCoachHistory = onCall(
           sender: data.sender || 'coach',
           timestamp: data.timestamp ? data.timestamp.toDate().toISOString() : null,
           ...(data.matchId ? {matchId: data.matchId} : {}),
+          ...(data.type ? {type: data.type} : {}),
           ...(data.suggestions ? {suggestions: data.suggestions} : {}),
           ...(data.activitySuggestions ? {activitySuggestions: data.activitySuggestions} : {}),
+          ...(data.situationApproaches ? {situationApproaches: data.situationApproaches} : {}),
+          ...(data.bestApproachId ? {bestApproachId: data.bestApproachId} : {}),
+          ...(data.multiUniverseResult ? {multiUniverseResult: data.multiUniverseResult} : {}),
         };
       });
+
+      // Keep snap.docs.length semantics for "hasMore" — use max of both sources
+      const hadMoreLegacy = legacySnap.docs.length === fetchLimit;
+      const hadMoreNew = newSnap.docs.length === fetchLimit;
+      const snap = { docs: merged, hasMore: hadMoreLegacy || hadMoreNew };
 
       // Reverse to return in ascending order (oldest first)
       messages.reverse();
@@ -3850,8 +3888,9 @@ exports.getCoachHistory = onCall(
         : dailyCreditsDefault;
 
       logger.info(`[getCoachHistory] Returned ${messages.length} messages for user ${userId}` +
-        (beforeTimestamp ? ` (before ${beforeTimestamp})` : ''));
-      return {success: true, messages, hasMore: snap.docs.length === limit, coachMessagesRemaining: currentCredits};
+        (beforeTimestamp ? ` (before ${beforeTimestamp})` : '') +
+        ` (legacy=${legacySnap.docs.length}, new=${newSnap.docs.length}, merged=${merged.length})`);
+      return {success: true, messages, hasMore: snap.hasMore, coachMessagesRemaining: currentCredits};
     } catch (error) {
       logger.error(`[getCoachHistory] Error: ${error.message}`);
       throw new Error(`Failed to load coach history: ${error.message}`);

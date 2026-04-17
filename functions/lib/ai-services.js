@@ -54,6 +54,9 @@ exports.generateInterestSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const db = admin.firestore();
+    const userLanguage = request.data?.userLanguage || 'en';
     const {bio, userType} = request.data || {};
 
     const validInterests = [
@@ -325,6 +328,8 @@ exports.calculateSafetyScore = onCall(
           if (pattern.test(combined)) quickFlags.push(flag);
         }
 
+        // Rate-limit guard (only for AI-backed path; Mode 2 / fallbacks skip this)
+
         // If quick check found flags, add AI analysis
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({model: AI_MODEL_LITE});
@@ -448,6 +453,8 @@ exports.analyzeConversationChemistry = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
+    const userId = request.auth.uid;
+    const db = admin.firestore();
     const {messages, userLanguage} = request.data || {};
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
@@ -958,6 +965,7 @@ exports.generateConversationStarter = onCall(
     if (!request.auth) throw new Error('Authentication required');
     const {userLanguage} = request.data || {};
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
+    const db = admin.firestore();
 
     const STARTERS_I18N = {
       en: [
@@ -1056,7 +1064,9 @@ exports.optimizeProfilePhotos = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {photos, userId} = request.data || {};
+    const {photos, userId, userLanguage} = request.data || {};
+    const db = admin.firestore();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const photoList = Array.isArray(photos) ? photos : [];
     // ✅ Respuesta homologada: iOS/Android leen optimizedOrder:[String] y scores:[{url,...}]
     const scores = photoList.map((url, i) => ({
@@ -1086,10 +1096,12 @@ exports.findSimilarProfiles = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userId} = request.data || {};
+    const {userId, userLanguage} = request.data || {};
     const uid = userId || request.auth.uid;
 
     const db = admin.firestore();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
+    // No credit check: this CF only filters Firestore data, no Gemini tokens spent.
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) return {success: true, matches: []};
 
@@ -1281,10 +1293,11 @@ exports.generateIcebreakers = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
     if (!request.auth) throw new Error('Authentication required');
-    const {userId1, userId2} = request.data || {};
+    const {userId1, userId2, userLanguage} = request.data || {};
     if (!userId1 || !userId2) throw new Error('userId1 and userId2 are required');
 
     const db = admin.firestore();
+    const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const apiKey = process.env.GEMINI_API_KEY;
 
     // Multilingual fallback starters (10 languages)
@@ -2627,6 +2640,7 @@ exports.getPhotoCoachAnalysis = onCall(
       if (pictureNames.length === 0) return {success: false, error: 'no_photos'};
 
       const userLanguage = request.data?.userLanguage || userDoc.data().deviceLanguage || 'en';
+      const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
       // Download each photo as base64 (in parallel)
       const downloadResults = await Promise.allSettled(

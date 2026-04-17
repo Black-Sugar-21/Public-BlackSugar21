@@ -2,6 +2,7 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const { redactEmail } = require('./shared');
 
 const PROJECT_NUMBER = '706595096331';
 const OPT_IN_URL = 'https://play.google.com/apps/testing/com.black.sugar21';
@@ -42,12 +43,12 @@ async function addToWorkspaceGroup(email) {
   });
 
   if (addRes.ok) {
-    logger.info(`[Testers] AUTO-ADDED ${email} to ${WORKSPACE_GROUP}`);
+    logger.info(`[Testers] AUTO-ADDED ${redactEmail(email)} to ${WORKSPACE_GROUP}`);
     return { added: true };
   }
   const errBody = await addRes.text();
   if (addRes.status === 409 || errBody.includes('ALREADY_EXISTS')) {
-    logger.info(`[Testers] ${email} already in group`);
+    logger.info(`[Testers] ${redactEmail(email)} already in group`);
     return { alreadyMember: true };
   }
   throw new Error(`Add member failed (${addRes.status}): ${errBody}`);
@@ -88,7 +89,7 @@ async function notifyAdminNewTester(db, email) {
   await db.collection('adminNotifications').add({
     type: 'new_tester',
     email,
-    message: `Nuevo tester: ${email}`,
+    message: `Nuevo tester: ${redactEmail(email)}`,
     read: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
@@ -103,13 +104,13 @@ async function notifyAdminNewTester(db, email) {
       token: fcmToken,
       notification: {
         title: '🆕 Nuevo tester',
-        body: `${email} agregado al grupo Workspace. Agrégalo también al Google Group desde: groups.google.com/g/blacksugar21-testers-pro/members`,
+        body: `${redactEmail(email)} agregado al grupo Workspace. Agrégalo también al Google Group desde: groups.google.com/g/blacksugar21-testers-pro/members`,
       },
       data: { type: 'admin_new_tester', email, action: 'https://groups.google.com/g/blacksugar21-testers-pro/members' },
       apns: { payload: { aps: { sound: 'default' } } },
       android: { priority: 'high', notification: { sound: 'default', channelId: 'default_channel' } },
     });
-    logger.info(`[Testers] Admin notified about: ${email}`);
+    logger.info(`[Testers] Admin notified about: ${redactEmail(email)}`);
   } catch (notifErr) {
     logger.warn(`[Testers] Admin notification failed: ${notifErr.message}`);
   }
@@ -134,8 +135,10 @@ exports.onTesterSignup = onDocumentCreated(
 
     const db = admin.firestore();
 
-    // Always notify admin (even duplicates)
-    notifyAdminNewTester(db, email).catch(() => {});
+    // Always notify admin (even duplicates) — fail-open with logging
+    notifyAdminNewTester(db, email).catch((e) => {
+      logger.warn(`[Testers] notifyAdminNewTester failed for ${redactEmail(email)}: ${e.message}`);
+    });
 
     // Check for duplicate signups
     const existing = await db.collection('testerSignups')
@@ -150,7 +153,7 @@ exports.onTesterSignup = onDocumentCreated(
         note: 'Duplicate signup — already registered',
         optInUrl: OPT_IN_URL,
       });
-      logger.info(`[Testers] Duplicate signup: ${email}`);
+      logger.info(`[Testers] Duplicate signup: ${redactEmail(email)}`);
       return;
     }
 
@@ -161,13 +164,13 @@ exports.onTesterSignup = onDocumentCreated(
     try {
       workspaceResult = await addToWorkspaceGroup(email);
     } catch (err) {
-      logger.error(`[Testers] Workspace group failed for ${email}: ${err.message}`);
+      logger.error(`[Testers] Workspace group failed for ${redactEmail(email)}: ${err.message}`);
     }
 
     try {
       appDistResult = await addTesterViaAppDistribution(email);
     } catch (err) {
-      logger.error(`[Testers] App Distribution failed for ${email}: ${err.message}`);
+      logger.error(`[Testers] App Distribution failed for ${redactEmail(email)}: ${err.message}`);
     }
 
     const addedToGroup = workspaceResult?.added || workspaceResult?.alreadyMember || false;
@@ -181,6 +184,6 @@ exports.onTesterSignup = onDocumentCreated(
       ...(workspaceResult?.alreadyMember ? { note: 'Already in group' } : {}),
     });
 
-    logger.info(`[Testers] ${email}: group=${addedToGroup}, appDist=${!!appDistResult?.added}`);
+    logger.info(`[Testers] ${redactEmail(email)}: group=${addedToGroup}, appDist=${!!appDistResult?.added}`);
   },
 );

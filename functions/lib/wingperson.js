@@ -452,7 +452,7 @@ exports.wingPersonAnalysis = onSchedule(
           // Token probably invalid — clean up
           if (sendErr.code === 'messaging/registration-token-not-registered' ||
               sendErr.code === 'messaging/invalid-registration-token') {
-            try { await db.collection('users').doc(userId).update({ fcmToken: admin.firestore.FieldValue.delete() }); } catch (_) {}
+            try { await db.collection('users').doc(userId).update({ fcmToken: admin.firestore.FieldValue.delete() }); } catch (e) { logger.warn(`[cleanup] batch op failed: ${e.message}`); }
           }
           logger.info(`[WingPerson] Send failed for ${userId}: ${sendErr.code || sendErr.message}`);
         }

@@ -131,9 +131,9 @@ async function cleanupStaleTokens(response, tokens, db) {
       if (!snap.empty) {
         batch.update(snap.docs[0].ref, {fcmToken: admin.firestore.FieldValue.delete()});
       }
-    } catch (_) {}
+    } catch (e) { logger.warn(`[cleanup] batch op failed: ${e.message}`); }
   }
-  try { await batch.commit(); } catch (_) {}
+  try { await batch.commit(); } catch (e) { logger.warn(`[cleanup] batch op failed: ${e.message}`); }
   logger.info(`[coachNudgeAgent] Removed ${staleTokens.length} invalid FCM tokens`);
 }
 

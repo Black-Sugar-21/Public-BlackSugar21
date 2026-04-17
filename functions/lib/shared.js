@@ -441,6 +441,110 @@ Dimensions:
   }
 }
 
+// ─── PII Redaction ──────────────────────────────────────────────────────────
+// Truncate/hash PII (emails, FCM tokens, phone numbers) before logging so
+// Cloud Logging doesn't retain sensitive data in plaintext.
+
+function redactEmail(email) {
+  if (typeof email !== 'string' || !email.includes('@')) return '[invalid-email]';
+  const [local, domain] = email.split('@');
+  if (!local || !domain) return '[invalid-email]';
+  const shortLocal = local.length <= 2 ? local[0] + '*' : local.substring(0, 2) + '***';
+  return `${shortLocal}@${domain}`;
+}
+
+function redactToken(token) {
+  if (typeof token !== 'string' || token.length < 8) return '[invalid-token]';
+  return `${token.substring(0, 6)}…${token.substring(token.length - 4)}`;
+}
+
+// ─── Rate Limit Helpers ─────────────────────────────────────────────────────
+// Unified coach-credit rate-limit guard. Shared across all AI CFs so users
+// can't bypass the daily limit by rotating through different Gemini-backed
+// endpoints.
+//
+// Usage:
+//   const { checkCoachCredit, decrementCoachCredit } = require('./shared');
+//   await checkCoachCredit(admin.firestore(), userId, userLanguage); // throws if exhausted
+//   // ... do the Gemini work ...
+//   await decrementCoachCredit(admin.firestore(), userId);           // fail-open
+//
+// The caller handles the Gemini call between check and decrement; if anything
+// between fails, the credit is not consumed (fail-closed on entry, fail-open
+// on decrement because tokens are already spent).
+
+const { HttpsError } = require('firebase-functions/v2/https');
+
+/**
+ * Localized rate-limit error messages (10 languages). Kept identical to
+ * `getLocalizedError('rate_limit', lang)` in multi-universe-simulation.js
+ * so users see a consistent message whichever AI CF they hit.
+ */
+const RATE_LIMIT_MESSAGES = {
+  en: 'Daily limit reached. You have used all your Coach AI credits for today. Come back tomorrow for 3 fresh credits.',
+  es: 'Límite diario alcanzado. Has usado todos tus créditos del Coach IA de hoy. Vuelve mañana para 3 créditos nuevos.',
+  pt: 'Limite diário atingido. Você usou todos os seus créditos do Coach IA de hoje. Volte amanhã para 3 créditos novos.',
+  fr: 'Limite quotidienne atteinte. Tu as utilisé tous tes crédits du Coach IA aujourd\'hui. Reviens demain pour 3 crédits frais.',
+  de: 'Tageslimit erreicht. Du hast alle deine Coach-KI-Credits für heute aufgebraucht. Komm morgen für 3 neue Credits wieder.',
+  ja: '1日の上限に達しました。今日のコーチAIクレジットをすべて使いました。明日3つの新しいクレジットで戻ってきてください。',
+  zh: '已达每日上限。您今天的教练AI额度已用完。明天回来获取3个新额度。',
+  ru: 'Достигнут дневной лимит. Вы использовали все свои кредиты Коуча ИИ на сегодня. Возвращайтесь завтра за 3 новыми кредитами.',
+  ar: 'تم الوصول إلى الحد اليومي. لقد استخدمت كل أرصدة كوتش الذكاء الاصطناعي لهذا اليوم. عُد غداً للحصول على 3 أرصدة جديدة.',
+  id: 'Batas harian tercapai. Kamu telah menggunakan semua kredit Coach AI hari ini. Kembali besok untuk 3 kredit baru.',
+};
+
+/**
+ * Throws HttpsError('resource-exhausted') if the user has 0 coach credits remaining.
+ * Reads `users/{userId}.coachMessagesRemaining`. Throws 'not-found' if user doc is missing.
+ * Call BEFORE spending Gemini tokens.
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} userId
+ * @param {string} [userLanguage='en'] — 2-letter code. Defensive: accepts anything, falls back to en.
+ */
+async function checkCoachCredit(db, userId, userLanguage = 'en') {
+  if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
+  const lang = (typeof userLanguage === 'string' && userLanguage.length >= 2)
+    ? userLanguage.toLowerCase().substring(0, 2)
+    : 'en';
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (!userDoc.exists) {
+    throw new HttpsError('not-found', 'User profile not found');
+  }
+  const remaining = userDoc.data()?.coachMessagesRemaining ?? 3;
+  if (remaining <= 0) {
+    const msg = RATE_LIMIT_MESSAGES[lang] || RATE_LIMIT_MESSAGES.en;
+    logger.warn(`[RateLimit] User ${userId.substring(0, 8)}... rate-limited on Coach AI`);
+    throw new HttpsError('resource-exhausted', msg);
+  }
+  return remaining;
+}
+
+/**
+ * Atomically decrements `users/{userId}.coachMessagesRemaining` by 1.
+ * Fail-open: if the update throws (Firestore outage, etc.) we log but don't
+ * propagate — tokens are already spent, no point failing the response.
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} userId
+ * @param {object} [admin] — optional admin.firestore namespace (pass when FieldValue isn't imported at call site)
+ */
+async function decrementCoachCredit(db, userId, admin = null) {
+  try {
+    const FieldValue = admin?.firestore?.FieldValue
+      || require('firebase-admin').firestore.FieldValue;
+    await db.collection('users').doc(userId).update({
+      coachMessagesRemaining: FieldValue.increment(-1),
+    });
+  } catch (e) {
+    logger.error('[RateLimit] CRITICAL: credit decrement failed — user may bypass limit', {
+      userId: userId.substring(0, 8),
+      error: e.message,
+      errorCode: e.code || 'unknown',
+    });
+  }
+}
+
 module.exports = {
   geminiApiKey,
   placesApiKey,
@@ -461,4 +565,9 @@ module.exports = {
   MODEL_PRICING,
   anthropicApiKey,
   evaluateWithClaude,
+  checkCoachCredit,
+  decrementCoachCredit,
+  RATE_LIMIT_MESSAGES,
+  redactEmail,
+  redactToken,
 };
