@@ -2722,9 +2722,17 @@ Rules:
         category: String(e.category || 'general').substring(0, 30),
         description: String(e.description || '').substring(0, 200),
         url: (() => {
-          const raw = String(e.url || '').substring(0, 500);
-          // Only allow http/https URLs — block javascript:, data:, etc.
-          if (raw && /^https?:\/\//i.test(raw)) return raw;
+          const raw = String(e.url || '').substring(0, 500).trim();
+          if (!raw) return '';
+          // Reject protocol-relative URLs (//evil.com) — they inherit the
+          // current scheme when rendered, bypassing scheme-based filters.
+          if (raw.startsWith('//')) return '';
+          // Only allow absolute http(s) URLs. Blocks javascript:, data:,
+          // about:, blob:, ftp:, file:, mailto:, chrome:, vbscript:, etc.
+          try {
+            const parsed = new URL(raw);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return raw;
+          } catch (_) { /* not a valid absolute URL */ }
           return '';
         })(),
         price: String(e.price || 'TBA').substring(0, 20),
@@ -3054,14 +3062,18 @@ exports.analyzeOutfit = onCall(
       return {success: false, error: 'photo_required'};
     }
 
-    // Validate base64 format (must be valid base64 chars)
-    if (!/^[A-Za-z0-9+/=]+$/.test(photoBase64.substring(0, 100))) {
-      return {success: false, error: 'invalid_photo_format'};
-    }
-
-    // Limit photo size to 5MB base64 (~3.7MB actual)
+    // Limit photo size to 5MB base64 (~3.7MB actual). Enforce BEFORE regex
+    // scan so pathological 50MB inputs are rejected cheaply.
     if (photoBase64.length > 5 * 1024 * 1024 * 1.37) {
       return {success: false, error: 'photo_too_large'};
+    }
+
+    // Validate base64 format against the FULL string (not just the first
+    // 100 chars — an attacker could smuggle HTML/JS at offset > 100 under
+    // the previous implementation). Also reject data URI prefixes so the
+    // payload going to Gemini is guaranteed to be raw base64 bytes.
+    if (/^data:/i.test(photoBase64) || !/^[A-Za-z0-9+/=\s]+$/.test(photoBase64)) {
+      return {success: false, error: 'invalid_photo_format'};
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
