@@ -725,7 +725,9 @@ exports.generateSmartReply = onCall(
       try {
         const prefDoc = await db.collection('users').doc(userId).collection('aiPreferences').doc('smartReply').get();
         if (prefDoc.exists) preferredTone = prefDoc.data().preferredTone || null;
-      } catch (_) {}
+      } catch (e) {
+        logger.warn(`[smartReply] Could not read preferredTone for ${userId.substring(0,8)}: ${e.message}`);
+      }
 
       const toneHint = preferredTone ? `\nThe user tends to prefer "${preferredTone}" replies — put that tone FIRST in the replies array, but still generate all 3.` : '';
 
@@ -2749,7 +2751,9 @@ Rules:
                   if (s) nearbyPlaces.push(s);
                 }
               }
-            } catch (_) {}
+            } catch (e) {
+              logger.warn(`[eventDatePlan] Nearby-place lookup failed for query "${q}": ${e.message}`);
+            }
           }
 
           // Generate mini-blueprint: pre-event → event → post-event
@@ -3070,7 +3074,9 @@ exports.analyzeOutfit = onCall(
     try {
       const appConfigDoc = await db.collection('appConfig').doc('outfit').get();
       if (appConfigDoc.exists) maxPerHour = appConfigDoc.data().maxPerHour || 10;
-    } catch (_) {}
+    } catch (e) {
+      logger.warn(`[analyzeOutfit] Could not read appConfig/outfit, using default ${maxPerHour}/hr: ${e.message}`);
+    }
     const oneHourAgo = new Date(Date.now() - 3600000);
     try {
       const recentAnalyses = await db.collection('coachChats').doc(userId)

@@ -137,7 +137,9 @@ exports.respondToDateCheckIn = onCall(
             if (userDoc.exists) {
               lang = ((userDoc.data().deviceLanguage || 'en').split('-')[0].split('_')[0] || 'en').toLowerCase();
             }
-          } catch (_) {}
+          } catch (e) {
+            logger.warn(`[calculateSafetyScore] Could not read user lang for ${request.auth.uid.substring(0,8)}, defaulting to 'en': ${e.message}`);
+          }
 
           const EMERGENCY_TITLE = {
             en: 'Emergency resources',

@@ -807,14 +807,17 @@ async function fetchHtmlSafe(url, timeoutMs = 5000, maxBytes = 153600) {
           html += decoder.decode(value, {stream: true});
           bytes += value.length;
         }
-        reader.cancel().catch(() => {});
+        // Best-effort cancel of an already-read stream. Failures are not
+        // actionable (we've already got what we need); log at debug level.
+        reader.cancel().catch(e => logger.debug(`[placeScraper] reader.cancel noop: ${e.message}`));
       } else {
         const full = await res.text();
         html = full.substring(0, maxBytes);
       }
       return html;
-    } catch (_) {
+    } catch (e) {
       if (attempt === 0) continue; // Retry once on network errors
+      logger.warn(`[placeScraper] fetch failed after retry: ${e.message}`);
       return null;
     }
   }
@@ -932,7 +935,7 @@ async function scrapeInstagramMetrics(handle) {
         html += decoder.decode(value, {stream: true});
         bytes += value.length;
       }
-      reader.cancel().catch(() => {});
+      reader.cancel().catch(e => logger.debug(`[instaScraper] reader.cancel noop: ${e.message}`));
     } else {
       const full = await res.text();
       html = full.substring(0, 153600);

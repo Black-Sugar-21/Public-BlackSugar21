@@ -4579,7 +4579,9 @@ exports.triggerDateDebriefs = onSchedule(
             ]);
             if (otherDoc.exists) otherName = otherDoc.data().name || null;
             if (userDoc.exists) lang = (userDoc.data().deviceLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
-          } catch (_) {}
+          } catch (e) {
+            logger.warn(`[debriefPrompt] Could not load user/otherUser docs for ${userId.substring(0,8)}: ${e.message}`);
+          }
           const matchName = otherName || DEFAULT_MATCH_NAME[lang] || DEFAULT_MATCH_NAME.en;
 
           // Generate personalized debrief prompt

@@ -357,7 +357,9 @@ exports.coachNudgeAgent = onSchedule(
       try {
         const response = await admin.messaging().sendEach(slice);
         metrics.nudgesSent += response.successCount;
-        cleanupStaleTokens(response, slice.map(m => m.token), db).catch(() => {});
+        cleanupStaleTokens(response, slice.map(m => m.token), db).catch(e => {
+          logger.warn(`[coachNudgeAgent] cleanupStaleTokens failed silently: ${e.message}`);
+        });
         if (response.failureCount > 0) {
           logger.warn(`[coachNudgeAgent] FCM batch failures: ${response.failureCount}/${slice.length}`);
         }
