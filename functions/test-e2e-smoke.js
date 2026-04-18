@@ -20,11 +20,19 @@
  *   GEMINI_API_KEY                  Google AI Studio key (for CFs that
  *                                     init genAI at startup)
  *
- * Run locally:
- *   GOOGLE_APPLICATION_CREDENTIALS=~/private_keys/sa.json \
- *   GOOGLE_CLOUD_PROJECT=black-sugar21 \
- *   GEMINI_API_KEY=... \
- *   node test-e2e-smoke.js
+ * Run locally (3 options):
+ *
+ *   A) Service account JSON:
+ *     GOOGLE_APPLICATION_CREDENTIALS=~/private_keys/sa.json \
+ *     GOOGLE_CLOUD_PROJECT=black-sugar21 \
+ *     node test-e2e-smoke.js
+ *
+ *   B) gcloud Application Default Credentials (run once):
+ *     gcloud auth application-default login
+ *     gcloud config set project black-sugar21
+ *     node test-e2e-smoke.js
+ *
+ *   C) GitHub Actions — uses the SA secret wired in e2e-smoke.yml.
  *
  * Intended to be gated behind `workflow_dispatch` in GH Actions, NOT run
  * on every commit (each run makes real Firestore reads + consumes Gemini
@@ -32,15 +40,33 @@
  */
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const admin = require('firebase-admin');
 
 // ════════════════════════════════════════════════════════════════════════
 // SETUP
 // ════════════════════════════════════════════════════════════════════════
 
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !admin.apps.length) {
-  console.error('❌ GOOGLE_APPLICATION_CREDENTIALS not set. Exiting.');
+// Accept either an explicit SA JSON path (CI / private keys) or gcloud
+// Application Default Credentials (the file dropped by
+// `gcloud auth application-default login`). This lets devs run locally
+// without downloading a key.
+const adcPath = path.join(os.homedir(), '.config/gcloud/application_default_credentials.json');
+const hasAdc = fs.existsSync(adcPath);
+
+if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !hasAdc && !admin.apps.length) {
+  console.error('❌ No credentials found. Either:');
+  console.error('   a) export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json');
+  console.error('   b) run `gcloud auth application-default login`');
   process.exit(1);
+}
+
+// When only gcloud ADC is present, hand firebase-admin the right path so
+// it picks it up via the SDK default chain.
+if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && hasAdc) {
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = adcPath;
 }
 
 admin.initializeApp({

@@ -421,5 +421,16 @@
             ]
         }
     ],
-    "fieldOverrides": []
+    "fieldOverrides": [
+        {
+            "collectionGroup": "multiUniverseCache",
+            "fieldPath": "cachedAt",
+            "indexes": [
+                {
+                    "queryScope": "COLLECTION_GROUP",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ]
 }
