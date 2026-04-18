@@ -574,18 +574,27 @@ function getMessageHash(message, senderLang = 'en') {
  *      evasion attempts we've seen in logs.
  */
 const HOMOGLYPH_MAP = {
-  // Cyrillic → Latin
-  'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x', 'ѕ': 's',
-  'і': 'i', 'ј': 'j', 'ӏ': 'l', 'ԁ': 'd', 'ԛ': 'q', 'ԝ': 'w', 'в': 'b', 'н': 'h',
-  'к': 'k', 'м': 'm', 'т': 't',
-  // Greek → Latin
-  'α': 'a', 'ε': 'e', 'ο': 'o', 'ρ': 'p', 'υ': 'u', 'χ': 'x', 'ι': 'i', 'κ': 'k',
-  'μ': 'm', 'ν': 'v', 'τ': 't', 'β': 'b',
+  // Cyrillic → Latin (lowercase confusables actually used in scam evasions)
+  'а': 'a', 'б': 'b', 'в': 'b', 'г': 'g', 'д': 'd', 'е': 'e', 'з': 'z',
+  'и': 'u', 'й': 'u', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'h', 'о': 'o',
+  'п': 'n', 'р': 'p', 'с': 'c', 'т': 't', 'у': 'y', 'ф': 'f', 'х': 'x',
+  'ч': 'y', 'ь': 'b', 'ы': 'bi',
+  // Extended Cyrillic confusables
+  'ѕ': 's', 'і': 'i', 'ј': 'j', 'ӏ': 'l', 'ԁ': 'd', 'ԛ': 'q', 'ԝ': 'w',
+  // Greek → Latin (complete coverage matching the regex below)
+  'α': 'a', 'β': 'b', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'ζ': 'z', 'η': 'n',
+  'θ': 'th', 'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'v', 'ξ': 'x',
+  'ο': 'o', 'π': 'n', 'ρ': 'p', 'σ': 's', 'τ': 't', 'υ': 'u', 'φ': 'f',
+  'χ': 'x', 'ψ': 'ps', 'ω': 'w',
+  // Latin diacritic confusables that NFKC does NOT collapse on its own
+  'ı': 'i', 'ł': 'l', 'ø': 'o', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ß': 'ss',
 };
 function normalizeForModeration(raw) {
   let s = String(raw || '').normalize('NFKC').toLowerCase();
-  // Homoglyph fold in one pass.
-  s = s.replace(/[а-яαβγδεζηθικλμνξοπρστυφχψωѕіјӏԁԛԝ]/g, ch => HOMOGLYPH_MAP[ch] || ch);
+  // Homoglyph fold in one pass. Regex covers Cyrillic a-ya, extended
+  // Cyrillic confusables, full Greek lowercase, and the 7 Latin diacritic
+  // confusables not handled by NFKC.
+  s = s.replace(/[а-яѕіјӏԁԛԝαβγδεζηθικλμνξοπρστυφχψωıłøđðþß]/g, ch => HOMOGLYPH_MAP[ch] || ch);
   // Collapse zero-width + invisible chars that split flagged terms
   // ("c_a_s_h" style is caught by the blacklist term itself; this handles
   // zero-width separators inside otherwise-flaggable substrings).

@@ -1,5 +1,6 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { getLocalizedError } = require('./shared');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { haversineDistanceKm, queryBoundsForRadius, calcAge } = require('./geo');
@@ -15,7 +16,7 @@ const { haversineDistanceKm, queryBoundsForRadius, calcAge } = require('./geo');
 exports.getDiscoveryFeed = onCall(
   {region: 'us-central1', memory: '1GiB', timeoutSeconds: 90},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', request.data?.userLanguage || 'en'));
 
     const startTime = Date.now();
     const rawLimit = request.data?.limit;

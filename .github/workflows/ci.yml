@@ -13,8 +13,9 @@ on:
 
 jobs:
   backend-tests:
-    name: Backend offline test suite (865+ assertions, 4 files)
+    name: Backend offline test suite (~990 assertions, 6 files)
     runs-on: ubuntu-latest
+    timeout-minutes: 5   # prevents hung tests from pinning the runner indefinitely
     defaults:
       run:
         working-directory: functions
