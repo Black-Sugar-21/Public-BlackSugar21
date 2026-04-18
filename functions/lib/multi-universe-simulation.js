@@ -291,6 +291,15 @@ let _multiverseConfigCache = null;
 let _multiverseConfigCacheTime = 0;
 const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
+// Bump this whenever the cached output shape changes or a user-visible
+// correctness bug is fixed in the generation pipeline. Any cache entry
+// whose `cacheSchemaVersion` is below this value is treated as stale.
+// v1 = pre-alternativePhrases
+// v2 = alternativePhrases added
+// v3 = fixed language-mixed fallback (Gemini failure path no longer embeds
+//      the English STAGE_TEMPLATES priming text into localized fallbacks)
+const CACHE_SCHEMA_VERSION = 3;
+
 async function getMultiUniverseConfig() {
   // Return cached config if fresh
   if (_multiverseConfigCache && (Date.now() - _multiverseConfigCacheTime) < MULTIVERSE_CONFIG_CACHE_TTL) {
@@ -432,16 +441,20 @@ exports.simulateMultiUniverse = onCall(
         }
 
         if (cacheExpireTime > Date.now()) {
-          // Backward-compat: invalidate caches from before alternativePhrases
-          // was introduced (older runs have no alternativePhrases array OR
-          // empty arrays across every stage). Regenerating produces the new
-          // schema AND avoids reusing degraded/mixed-language fallbacks.
+          // Backward-compat: invalidate caches whose schema is older than
+          // the current pipeline. Bumping CACHE_SCHEMA_VERSION on correctness
+          // fixes (e.g. language-mixed fallbacks) guarantees every user sees
+          // clean output on the next call, without needing manual cleanup.
           const stagesArr = Array.isArray(cachedResult.stages) ? cachedResult.stages : [];
           const hasAnyAlternatives = stagesArr.some(s =>
             Array.isArray(s.alternativePhrases) && s.alternativePhrases.length > 0
           );
-          if (stagesArr.length === 0 || !hasAnyAlternatives) {
-            logger.info(`[MultiUniverse] Cache predates alternativePhrases — forcing regeneration`);
+          const cachedSchemaVersion = typeof cachedResult.cacheSchemaVersion === 'number'
+            ? cachedResult.cacheSchemaVersion
+            : 1;
+          const isStaleSchema = cachedSchemaVersion < CACHE_SCHEMA_VERSION;
+          if (stagesArr.length === 0 || !hasAnyAlternatives || isStaleSchema) {
+            logger.info(`[MultiUniverse] Cache stale (schemaV=${cachedSchemaVersion}, current=${CACHE_SCHEMA_VERSION}, hasAlts=${hasAnyAlternatives}) — forcing regeneration`);
           } else {
           logger.info(`[MultiUniverse] ✓ CACHE HIT (valid until ${new Date(cacheExpireTime).toISOString()})`);
           logger.info(`[MultiUniverse] Mode: ${cachedResult.isSoloMode ? 'SOLO' : `match=${matchId.substring(0, 8)}`}`);
@@ -491,6 +504,7 @@ exports.simulateMultiUniverse = onCall(
             stages: localizedStages,
             compatibilityLabel: freshLabel,
             keyInsights: freshInsights,
+            cacheSchemaVersion: cachedSchemaVersion,
             fromCache: true,
           };
           } // end else branch — fresh cache path
@@ -687,6 +701,9 @@ exports.simulateMultiUniverse = onCall(
         matchName,
         matchId,
         userLanguage, // Store language used for this generation
+        // Schema version exposed to clients so they can invalidate persisted
+        // coachChat messages produced by older (buggy) pipeline runs.
+        cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         generatedAt: admin.firestore.FieldValue.serverTimestamp(), // Server timestamp
         // Note: cacheExpire is added during cache write step with Firestore Timestamp
       };
@@ -712,6 +729,10 @@ exports.simulateMultiUniverse = onCall(
           new Date(Date.now() + (cacheMinutes * 60 * 1000))
         ), // Firestore native timestamp
         cachedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Bump CACHE_SCHEMA_VERSION whenever the output shape changes or a
+        // corrupting bug (e.g. language-mixed fallback) is fixed. The cache
+        // read path treats older entries as stale and regenerates cleanly.
+        cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         isSoloMode,
       };
 
@@ -1031,12 +1052,17 @@ Respond ONLY with JSON (phrases in ${languageName}):
       return result_approaches;
     }
 
-    logger.error(`[Gemini] All attempts failed after ${Date.now() - callStart}ms — using situation-aware fallback`);
-    return generateApproachesFallback(userLang, situation);
+    logger.error(`[Gemini] All attempts failed after ${Date.now() - callStart}ms — using non-snippet fallback`);
+    // Multi-universe only: `situation` here is a hardcoded English STAGE_TEMPLATES
+    // priming sentence, NOT real user input. Passing it into the localized
+    // fallback produces language-mixed text like:
+    //   "Oye, sobre lo que te comentaba (First time reaching out...), ..."
+    // Always pass '' so the non-snippet variant of the localized fallback wins.
+    return generateApproachesFallback(userLang, '');
   } catch (e) {
     logger.error(`[Gemini] Error after ${Date.now() - callStart}ms:`, e.message);
     if (e.stack) logger.error(`[Gemini] Stack:`, e.stack);
-    return generateApproachesFallback(userLang, situation);
+    return generateApproachesFallback(userLang, '');
   }
 }
 
