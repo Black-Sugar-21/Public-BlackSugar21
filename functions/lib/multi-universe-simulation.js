@@ -432,6 +432,17 @@ exports.simulateMultiUniverse = onCall(
         }
 
         if (cacheExpireTime > Date.now()) {
+          // Backward-compat: invalidate caches from before alternativePhrases
+          // was introduced (older runs have no alternativePhrases array OR
+          // empty arrays across every stage). Regenerating produces the new
+          // schema AND avoids reusing degraded/mixed-language fallbacks.
+          const stagesArr = Array.isArray(cachedResult.stages) ? cachedResult.stages : [];
+          const hasAnyAlternatives = stagesArr.some(s =>
+            Array.isArray(s.alternativePhrases) && s.alternativePhrases.length > 0
+          );
+          if (stagesArr.length === 0 || !hasAnyAlternatives) {
+            logger.info(`[MultiUniverse] Cache predates alternativePhrases — forcing regeneration`);
+          } else {
           logger.info(`[MultiUniverse] ✓ CACHE HIT (valid until ${new Date(cacheExpireTime).toISOString()})`);
           logger.info(`[MultiUniverse] Mode: ${cachedResult.isSoloMode ? 'SOLO' : `match=${matchId.substring(0, 8)}`}`);
           logger.info(`[MultiUniverse] Cached language: ${cachedResult.userLanguage}, Current user language: ${userLanguage}`);
@@ -482,6 +493,7 @@ exports.simulateMultiUniverse = onCall(
             keyInsights: freshInsights,
             fromCache: true,
           };
+          } // end else branch — fresh cache path
         } else {
           logger.info(`[MultiUniverse] Cache expired at ${new Date(cacheExpireTime).toISOString()}`);
         }
@@ -794,12 +806,16 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
 
     if (!approaches || approaches.length === 0) {
       logger.warn(`[SituationInternal] Gemini returned empty approaches, using fallback`);
+      // Intentionally pass '' — the multi-universe stage `situation` is a
+      // hardcoded English priming template, NOT real user input, so embedding
+      // it as a parenthetical snippet inside the localized Spanish/PT/FR/... template
+      // produces mixed-language text like "Oye, sobre lo que te comentaba (We've been...)".
       return {
         success: true,
         situation,
         situationType: 'other',
         matchName: 'Your Match',
-        approaches: generateApproachesFallback(userLanguage, situation),
+        approaches: generateApproachesFallback(userLanguage, ''),
         bestApproachId: '1',
         coachTip: getLocalizedCoachTip('communication_foundation', userLanguage),
         psychInsights: getLocalizedPsychInsight('authenticity', userLanguage),
@@ -839,13 +855,15 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
     const callDuration = Date.now() - callStart;
     logger.error(`[SituationInternal] Failed after ${callDuration}ms: ${e.message}`, e.stack);
 
-    // Fallback to basic approaches if Gemini fails
+    // Fallback to basic approaches if Gemini fails.
+    // See note above: never embed the English stage priming template as a
+    // snippet inside a localized fallback — pass '' to use the non-snippet variant.
     return {
       success: true,
       situation,
       situationType: 'other',
       matchName: 'Your Match',
-      approaches: generateApproachesFallback(userLanguage, situation),
+      approaches: generateApproachesFallback(userLanguage, ''),
       bestApproachId: '1',
       coachTip: getLocalizedCoachTip('communication_importance', userLanguage),
       psychInsights: getLocalizedPsychInsight('authentic_dialogue', userLanguage),
