@@ -78,6 +78,61 @@ node test-system-unified.js
 - **Timestamps**: Staggered automáticamente para orden natural
 - **Photos**: 5 photos per profile from randomuser.me
 
+## 🧪 CI Matrix (activo desde 2026-04-18)
+
+Ver `.github/workflows/ci.yml` + `.github/workflows/e2e-smoke.yml`.
+
+### Offline gate (cada push + PR)
+
+**Trigger**: `push` a `main` o `pull_request` que toque `functions/**`.
+**Runtime**: <15s. **Secrets**: ninguno.
+
+Corre `npm test` desde `functions/`, que ejecuta 4 suites **puramente static-analysis** (sin admin SDK, sin Gemini API — usan `fs.readFileSync` + regex sobre `lib/*.js`):
+
+| Archivo | Asserts | Cubre |
+|---|---:|---|
+| `test-comprehensive-300.js` | 333 | regex, sanitization, guards, clamping, i18n, safety |
+| `test-post-deploy-350.js` | 394 | code patterns, RAG/Coach/Moderation/Places config |
+| `test-discovery-v2-parity.js` | 111 | orientation, userType, reviewer bypass, gender_mismatch, super-like |
+| `test-situation-sim.js` | 27 | 10-lang directives, edge cases (XSS/SQL/RTL) |
+| **TOTAL** | **865** | **block merge on any failure** |
+
+### E2E smoke (nightly + manual)
+
+**Trigger**: `workflow_dispatch` (manual) + `schedule: cron '0 7 * * *'` (07:00 UTC nightly).
+**Runtime**: <5 min. **Secrets**: `FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21`, `GEMINI_API_KEY`, `REVIEWER_UID` (opcional).
+
+Corre `functions/test-e2e-smoke.js` que hace 6 live checks:
+
+1. Firestore reachable (reviewer doc)
+2. Geohash range query (mirrors `discovery-feed.js:130` — NO composite index, filter in-memory)
+3. Reviewer `isTest` profiles reachable
+4. Remote Config reachable (skip gracefully si SA sin permission)
+5. `coachKnowledge` RAG non-empty
+6. `multiUniverseCache` docs carry `cacheSchemaVersion` (>= 3)
+
+Local:
+```bash
+cd functions
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+GOOGLE_CLOUD_PROJECT=black-sugar21 \
+npm run e2e:smoke
+```
+
+### npm scripts disponibles
+
+```
+npm test              # offline suite (865 asserts, gate CI)
+npm run test:multiverse  # local only (lazy admin SDK init via places-helpers)
+npm run e2e:smoke     # live suite (needs credentials)
+```
+
+### Reglas para extender
+
+- **Nuevo test estático** → agregar al comando encadenado en `npm test`. Debe terminar con `process.exit(failed > 0 ? 1 : 0)`.
+- **Nuevo test live** → agregar a `test-e2e-smoke.js` como nueva `async function test<Name>()` en lugar de nuevo archivo. Degrade graciosamente con `console.warn + passed++` para fallos esperables (permission, index missing).
+- **NO agregar** tests live al `npm test` — rompería CI en runners sin secrets.
+
 ## System Context
 
 ### Testing System Details
