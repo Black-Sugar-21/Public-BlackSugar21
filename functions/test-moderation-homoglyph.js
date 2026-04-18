@@ -83,8 +83,28 @@ assert(typeof MAP.у === 'string' && MAP.у === 'y', 'HOMOGLYPH_MAP: Cyrillic у
 assert(typeof MAP.α === 'string' && MAP.α === 'a', 'HOMOGLYPH_MAP: Greek α → a');
 assert(typeof MAP.ρ === 'string' && MAP.ρ === 'p', 'HOMOGLYPH_MAP: Greek ρ → p');
 assert(typeof MAP.υ === 'string' && MAP.υ === 'u', 'HOMOGLYPH_MAP: Greek υ → u');
+assert(typeof MAP.ς === 'string' && MAP.ς === 's', 'HOMOGLYPH_MAP: Greek final ς → s');
 assert(typeof MAP.ø === 'string' && MAP.ø === 'o', 'HOMOGLYPH_MAP: Latin ø → o');
 assert(typeof MAP.ß === 'string' && MAP.ß === 'ss', 'HOMOGLYPH_MAP: Latin ß → ss');
+
+// Cyrillic chars that previously matched the regex but had no map entry —
+// regression guard for the 2026-04-18 expansion (8 chars + Greek ς).
+assert(typeof MAP.ж === 'string', 'HOMOGLYPH_MAP: Cyrillic ж has entry');
+assert(typeof MAP.ц === 'string', 'HOMOGLYPH_MAP: Cyrillic ц has entry');
+assert(typeof MAP.ш === 'string', 'HOMOGLYPH_MAP: Cyrillic ш has entry');
+assert(typeof MAP.щ === 'string', 'HOMOGLYPH_MAP: Cyrillic щ has entry');
+assert(typeof MAP.ъ === 'string', 'HOMOGLYPH_MAP: Cyrillic ъ has entry');
+assert(typeof MAP.э === 'string', 'HOMOGLYPH_MAP: Cyrillic э has entry');
+assert(typeof MAP.ю === 'string', 'HOMOGLYPH_MAP: Cyrillic ю has entry');
+assert(typeof MAP.я === 'string', 'HOMOGLYPH_MAP: Cyrillic я has entry');
+
+// Integrity guard: every char in the normalize regex must map, otherwise
+// the fallback "|| ch" preserves the Cyrillic char silently.
+const regexChars = [];
+for (let cp = 0x0430; cp <= 0x044F; cp++) regexChars.push(String.fromCodePoint(cp));
+const missing = regexChars.filter(c => typeof MAP[c] !== 'string');
+assert(missing.length === 0,
+  `HOMOGLYPH_MAP: all Cyrillic а-я mapped (missing: ${missing.join(',') || 'none'})`);
 
 // ═══════════════════════════════════════════════════════════════════════
 // 2. Evasion: Cyrillic lookalikes should normalise to Latin

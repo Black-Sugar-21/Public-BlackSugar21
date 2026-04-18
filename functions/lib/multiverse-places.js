@@ -1,8 +1,8 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
-const { placesApiKey } = require('./shared');
+const { placesApiKey, getLocalizedError } = require('./shared');
 const {
   haversineKm, estimateTravelMin, getCategoryQueryMap, getPlacesSearchConfig,
   placesTextSearch, transformPlaceToSuggestion, extractInstagramFromWebsite,
@@ -24,7 +24,7 @@ const {
 exports.getMultiUniversePlaces = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {category, userLanguage, radius, loadCount, excludePlaceIds, matchId, searchQuery} = request.data || {};
 
     try {

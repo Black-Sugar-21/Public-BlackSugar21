@@ -1,8 +1,9 @@
 'use strict';
-const {onCall} = require('firebase-functions/v2/https');
+const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {logger} = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const {getLocalizedError} = require('./shared');
 
 const db = admin.firestore();
 
@@ -12,7 +13,7 @@ const db = admin.firestore();
 exports.scheduleDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, scheduledTime, emergencyContactPhone} = request.data || {};
 
     if (!matchId || !scheduledTime) return {success: false, error: 'missing_params'};
@@ -55,7 +56,7 @@ exports.scheduleDateCheckIn = onCall(
 exports.cancelDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {checkInId} = request.data || {};
     if (!checkInId) return {success: false, error: 'missing_id'};
 
@@ -79,7 +80,7 @@ exports.cancelDateCheckIn = onCall(
 exports.respondToDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {checkInId, response} = request.data || {};
     if (!checkInId || !['ok', 'sos'].includes(response)) return {success: false, error: 'invalid_params'};
 
@@ -190,7 +191,7 @@ exports.respondToDateCheckIn = onCall(
 // 4. processDateCheckIns — scheduled every 5 minutes
 // ---------------------------------------------------------------------------
 exports.processDateCheckIns = onSchedule(
-  {schedule: 'every 5 minutes', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
+  {schedule: 'every 30 minutes', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
   async () => {
     const now = admin.firestore.Timestamp.now();
     const nowMs = Date.now();

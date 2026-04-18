@@ -1,9 +1,9 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
-const { MODEL_PRICING } = require('./shared');
+const { MODEL_PRICING, getLocalizedError } = require('./shared');
 
 /**
  * Callable: Get AI analytics dashboard data.
@@ -12,7 +12,7 @@ const { MODEL_PRICING } = require('./shared');
 exports.getAIAnalytics = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Unauthenticated');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const db = admin.firestore();
     const days = Math.min(request.data?.days || 7, 30);
 

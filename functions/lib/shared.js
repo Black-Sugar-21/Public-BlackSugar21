@@ -749,13 +749,13 @@ const RATE_LIMIT_MESSAGES = {
  * @param {string} [userLanguage='en'] — 2-letter code. Defensive: accepts anything, falls back to en.
  */
 async function checkCoachCredit(db, userId, userLanguage = 'en') {
-  if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
   const lang = (typeof userLanguage === 'string' && userLanguage.length >= 2)
     ? userLanguage.toLowerCase().substring(0, 2)
     : 'en';
+  if (!userId) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
   const userDoc = await db.collection('users').doc(userId).get();
   if (!userDoc.exists) {
-    throw new HttpsError('not-found', 'User profile not found');
+    throw new HttpsError('not-found', getLocalizedError('profile_not_found', lang));
   }
   const remaining = userDoc.data()?.coachMessagesRemaining ?? 3;
   if (remaining <= 0) {

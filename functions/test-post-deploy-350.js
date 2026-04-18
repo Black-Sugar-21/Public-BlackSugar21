@@ -345,32 +345,42 @@ clampTests.forEach((t, i) => {
 // ═══════════════════════════════════════════════════════════════════
 const CAT4 = 'Auth Check Patterns';
 
-test(CAT4, 'sendTestNotification has Authentication required', () => {
-  assert(notifSrc.includes("if (!request.auth) throw new Error('Authentication required')"),
-    'sendTestNotification must check auth');
+// Auth check pattern. Each CF must throw when `request.auth` is null. The
+// message side of the throw can be either the legacy "Authentication required"
+// literal or the newer `getLocalizedError('auth_required', lang)` (10-lang table
+// in shared.js). Both forms exist in the tree during the migration window.
+const hasAuthCheck = (block) =>
+  block.includes("if (!request.auth)") &&
+  (block.includes('Authentication required') || block.includes("getLocalizedError('auth_required'"));
+
+test(CAT4, 'sendTestNotification has auth check', () => {
+  const idx = notifSrc.indexOf('exports.sendTestNotification');
+  const block = notifSrc.substring(idx, idx + 500);
+  assert(hasAuthCheck(block), 'sendTestNotification must check auth');
 });
 
-test(CAT4, 'sendTestNotificationToUser has Authentication required', () => {
+test(CAT4, 'sendTestNotificationToUser has auth check', () => {
   const idx = notifSrc.indexOf('sendTestNotificationToUser');
   const block = notifSrc.substring(idx, idx + 500);
-  assert(block.includes('Authentication required'), 'sendTestNotificationToUser must check auth');
+  assert(hasAuthCheck(block), 'sendTestNotificationToUser must check auth');
 });
 
-test(CAT4, 'dateCoachChat has Authentication required', () => {
+test(CAT4, 'dateCoachChat has auth check', () => {
   const idx = coachSrc.indexOf('exports.dateCoachChat');
   const block = coachSrc.substring(idx, idx + 600);
-  assert(block.includes('Authentication required'), 'dateCoachChat must check auth');
+  assert(hasAuthCheck(block), 'dateCoachChat must check auth');
 });
 
-test(CAT4, 'searchEvents has Authentication required', () => {
+test(CAT4, 'searchEvents has auth check', () => {
   const idx = eventsSrc.indexOf('exports.searchEvents');
   const block = eventsSrc.substring(idx, idx + 600);
-  assert(block.includes('Authentication required'), 'searchEvents must check auth');
+  assert(hasAuthCheck(block), 'searchEvents must check auth');
 });
 
-test(CAT4, 'scheduleDateCheckIn has Authentication required', () => {
-  assert(safetySrc.includes("if (!request.auth) throw new Error('Authentication required')"),
-    'scheduleDateCheckIn must check auth');
+test(CAT4, 'scheduleDateCheckIn has auth check', () => {
+  const idx = safetySrc.indexOf('exports.scheduleDateCheckIn');
+  const block = safetySrc.substring(idx, idx + 500);
+  assert(hasAuthCheck(block), 'scheduleDateCheckIn must check auth');
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -383,8 +393,9 @@ test(CAT5, 'sendTestNotification enforces userId === request.auth.uid', () => {
 });
 
 test(CAT5, 'sendTestNotificationToUser uses request.auth.uid only', () => {
-  const idx = notifSrc.indexOf('sendTestNotificationToUser');
-  const block = notifSrc.substring(idx, idx + 300);
+  // 500-char window tolerates the localized-auth prelude (userLanguage parse + getLocalizedError).
+  const idx = notifSrc.indexOf('exports.sendTestNotificationToUser');
+  const block = notifSrc.substring(idx, idx + 500);
   assert(block.includes('request.auth.uid'), 'Must use auth.uid');
 });
 

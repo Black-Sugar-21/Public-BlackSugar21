@@ -363,12 +363,11 @@ exports.simulateMultiUniverse = onCall(
   },
   async (request) => {
     const startTime = Date.now();
-    const userId = request.auth?.uid;
-    if (!userId) throw new HttpsError('unauthenticated', 'User must be logged in');
-
-    let { matchId = "", userLanguage = 'en' } = request.data;
+    let { matchId = "", userLanguage = 'en' } = request.data || {};
     // Normalize language code to 2-letter ISO 639-1 format (handles "es-MX" → "es")
     userLanguage = normalizeLanguageCode(userLanguage);
+    const userId = request.auth?.uid;
+    if (!userId) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', userLanguage));
     // Validate matchId: must be a short alphanumeric Firestore doc id.
     // Protects against path-injection and oversized payloads.
     if (typeof matchId !== 'string' || matchId.length > 200 || matchId.includes('/')) {

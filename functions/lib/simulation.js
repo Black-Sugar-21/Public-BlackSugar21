@@ -1519,11 +1519,11 @@ exports.simulateRelationship = onCall(
     secrets: [geminiApiKey],
   },
   async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required');
-
-    const userId = request.auth.uid;
     const {matchId, userLanguage} = request.data || {};
     const lang = (userLanguage || 'en').toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
+
+    const userId = request.auth.uid;
 
     if (!matchId || typeof matchId !== 'string') {
       throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));

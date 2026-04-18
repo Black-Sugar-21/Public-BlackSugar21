@@ -655,9 +655,10 @@ async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en'
 exports.dateCoachChat = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey, placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const userId = request.auth.uid;
     const {message, matchId, userLanguage, loadMoreActivities, loadMoreSuggestions, category: _rawCategory, excludePlaceIds: rawExcludePlaceIds, loadCount: rawLoadCount} = request.data || {};
+    const lang = (userLanguage || 'en').toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
+    const userId = request.auth.uid;
     // Normalize category early: handles multilingual display names sent from older app versions
     // (e.g. "Cafetería" → "cafe", "Restaurante" → "restaurant", "Bar/Pub" → "bar")
     const requestCategory = _rawCategory ? normalizeCategory(_rawCategory) : _rawCategory;
@@ -669,17 +670,15 @@ exports.dateCoachChat = onCall(
     const categoryQueryMap = getCategoryQueryMap(placesSearchConfig);
 
     if (!config.enabled) {
-      throw new Error('Date Coach is temporarily unavailable. Please try again later.');
+      throw new HttpsError('unavailable', getLocalizedError('feature_unavailable', lang));
     }
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      throw new Error('Message is required');
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
     if (message.length > config.maxMessageLength) {
-      throw new Error(`Message too long (max ${config.maxMessageLength} characters)`);
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
-
-    const lang = (userLanguage || 'en').toLowerCase();
     const db = admin.firestore();
 
     try {
@@ -1165,7 +1164,7 @@ exports.dateCoachChat = onCall(
 
         const lang = userLanguage || 'es';
         const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error('AI service unavailable');
+        if (!apiKey) throw new HttpsError('unavailable', getLocalizedError('feature_unavailable', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
@@ -1471,7 +1470,7 @@ Example: ["phrase 1", "phrase 2", ...]`;
           + `\nIMPORTANT: If a place has a placeId, include it exactly as given. NEVER include $ symbols in description. For instagram, only include if CERTAIN it exists — otherwise use null. NEVER invent website URLs. For priceLevel, use the value from Google Maps data — if unknown, use null.`;
 
         const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error('AI service unavailable');
+        if (!apiKey) throw new HttpsError('unavailable', getLocalizedError('feature_unavailable', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
         const genAI = new GoogleGenerativeAI(apiKey);
         const lmTokenBudget = lmPsConfig.maxOutputTokensBudget || 8192;
         const lmModel = genAI.getGenerativeModel({
@@ -3211,7 +3210,7 @@ ${isUserPlaceSearch ? 'The "activitySuggestions" array is REQUIRED for this resp
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         logger.error('[dateCoachChat] GEMINI_API_KEY not configured');
-        throw new Error('AI service unavailable');
+        throw new HttpsError('unavailable', getLocalizedError('feature_unavailable', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
@@ -3826,7 +3825,7 @@ Return JSON: {"score":N,"issues":["issue1"]}`;
 exports.getCoachHistory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const {limit: rawLimit, beforeTimestamp} = request.data || {};
     const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 100);
@@ -3925,7 +3924,7 @@ exports.getCoachHistory = onCall(
 exports.deleteCoachMessage = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 15},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const {messageId} = request.data || {};
 
@@ -4129,7 +4128,7 @@ function analyzeConversationPatterns(messages, currentUserId) {
 exports.getRealtimeCoachTips = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const {matchId, userLanguage} = request.data || {};
 
@@ -4180,10 +4179,10 @@ exports.getRealtimeCoachTips = onCall(
 
       // 2. Read match and verify participant
       const matchDoc = await db.collection('matches').doc(matchId).get();
-      if (!matchDoc.exists) throw new Error('Match not found');
+      if (!matchDoc.exists) throw new HttpsError('not-found', getLocalizedError('match_not_found', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
       const matchData = matchDoc.data();
       const usersMatched = matchData.usersMatched || [];
-      if (!usersMatched.includes(userId)) throw new Error('Not a participant');
+      if (!usersMatched.includes(userId)) throw new HttpsError('permission-denied', getLocalizedError('permission_denied', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
       const otherUserId = usersMatched.find((id) => id !== userId);
 
       // 2. Read both profiles + last 20 messages in parallel
@@ -4376,7 +4375,7 @@ Rules:
 
       // 6. Call Gemini
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error('AI service unavailable');
+      if (!apiKey) throw new HttpsError('unavailable', getLocalizedError('feature_unavailable', (typeof lang === 'string' ? lang : 'en').split('-')[0].toLowerCase()));
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE, generationConfig: {maxOutputTokens: 1024, responseMimeType: 'application/json'}});
@@ -4738,7 +4737,7 @@ exports.requestDateDebrief = onCall(
 exports.rateCoachResponse = onCall(
   {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {messageId, rating, reason} = request.data || {};
     if (!messageId || !['helpful', 'not_helpful'].includes(rating)) {
       return {success: false, error: 'invalid_params'};

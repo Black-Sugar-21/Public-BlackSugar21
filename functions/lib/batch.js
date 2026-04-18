@@ -1,15 +1,22 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const { getLocalizedError } = require('./shared');
 
 exports.getBatchPhotoUrls = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {photoRequests} = request.data || {};
+    const {photoRequests, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     if (!Array.isArray(photoRequests) || photoRequests.length === 0) {
       return {success: true, urls: {}, totalPhotos: 0, totalUsers: 0};
+    }
+    // Hard cap: a photo fetch pass works in batches of ~50 profiles.
+    // Any client sending >100 requests is either misuse or DoS probing.
+    if (photoRequests.length > 100) {
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
 
     const bucket = admin.storage().bucket();
@@ -83,7 +90,8 @@ exports.getBatchPhotoUrls = onCall(
 exports.getMatchesWithMetadata = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    const lang = (request.data?.userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const currentUserId = request.auth.uid;
     const db = admin.firestore();
 
@@ -181,8 +189,9 @@ exports.getMatchesWithMetadata = onCall(
 exports.getBatchCompatibilityScores = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {currentUserId, targetUserIds} = request.data || {};
+    const {currentUserId, targetUserIds, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const uid = currentUserId || request.auth.uid;
     if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
       return {success: true, scores: [], validCount: 0};

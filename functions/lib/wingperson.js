@@ -302,8 +302,8 @@ exports.wingPersonAnalysis = onSchedule(
   {
     schedule: 'every 4 hours',
     region: 'us-central1',
-    memory: '1GiB',
-    timeoutSeconds: 540,
+    memory: '512MiB',
+    timeoutSeconds: 300,
     secrets: [geminiApiKey],
   },
   async () => {

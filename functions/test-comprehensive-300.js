@@ -644,8 +644,12 @@ assert(notifAuthCount >= 2, `notifications.js has ${notifAuthCount} auth checks 
 const safetyAuthCount = (safetySrc.match(/if \(!request\.auth\)/g) || []).length;
 assert(safetyAuthCount >= 3, `safety.js has ${safetyAuthCount} auth checks (>=3)`, CAT18);
 
-// Events functions require auth
-assert(eventsSrc.includes("if (!request.auth) throw new Error"), 'searchEvents requires auth', CAT18);
+// Events functions require auth. Accept legacy `throw new Error` or modern
+// `throw new HttpsError(...)` — both signal the auth gate was wired.
+assert(
+  eventsSrc.includes("if (!request.auth) throw new Error") ||
+  eventsSrc.includes("if (!request.auth) throw new HttpsError"),
+  'searchEvents requires auth', CAT18);
 const eventsAuthCount = (eventsSrc.match(/if \(!request\.auth\)/g) || []).length;
 assert(eventsAuthCount >= 2, `events.js has ${eventsAuthCount} auth checks (>=2)`, CAT18);
 

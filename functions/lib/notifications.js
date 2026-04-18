@@ -1,16 +1,18 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const { getLocalizedError } = require('./shared');
 
 exports.sendTestNotification = onCall(async (request) => {
-  if (!request.auth) throw new Error('Authentication required');
-  const {userId, title, body} = request.data;
+  const {userId, title, body, userLanguage} = request.data || {};
+  const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+  if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
 
   // Only allow users to send test notifications to themselves
   if (!userId || userId !== request.auth.uid) {
-    throw new Error('Can only send test notifications to yourself');
+    throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
   }
 
   logger.info('Sending test notification', {userId, title, body});
@@ -73,14 +75,15 @@ exports.sendTestNotification = onCall(async (request) => {
  * Llamar desde la app cuando se obtiene/actualiza el token
  */
 exports.updateFCMToken = onCall(async (request) => {
+  const {userId, fcmToken, userLanguage} = request.data || {};
+  const lang = (userLanguage || 'en').toLowerCase().substring(0, 2);
+
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Authentication required');
+    throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
   }
 
-  const {userId, fcmToken} = request.data;
-
   if (!userId || !fcmToken) {
-    throw new Error('userId and fcmToken are required');
+    throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
   }
 
   if (request.auth.uid !== userId) {
@@ -88,7 +91,7 @@ exports.updateFCMToken = onCall(async (request) => {
       requesterId: request.auth.uid,
       targetUserId: userId
     });
-    throw new HttpsError('permission-denied', 'Can only update your own FCM token');
+    throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
   }
 
   logger.info('Updating FCM token', {userId});
@@ -178,8 +181,9 @@ exports.testSuperLikesResetNotification = onCall(
 exports.testDailyLikesResetNotification = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {userId} = request.data || {};
+    const {userId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const targetId = userId || request.auth.uid;
 
     const db = admin.firestore();
@@ -309,8 +313,9 @@ exports.handlePendingNotification = onDocumentCreated(
 exports.sendTestNotificationToUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {title, body, data: extraData} = request.data || {};
+    const {title, body, data: extraData, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const targetId = request.auth.uid; // Only allow self-targeting
 
     const db = admin.firestore();

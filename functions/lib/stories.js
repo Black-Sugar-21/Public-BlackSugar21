@@ -23,10 +23,11 @@ function isReviewerUid(uid, reviewerSet) { return reviewerSet.has(uid); }
 exports.createStory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {imageUrl, matchId, matchParticipants} = request.data || {};
+    const {imageUrl, matchId, matchParticipants, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const senderId = request.auth.uid;
-    if (!imageUrl) throw new Error('imageUrl is required');
+    if (!imageUrl) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
@@ -71,10 +72,11 @@ exports.createStory = onCall(
 exports.markStoryAsViewed = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {storyId} = request.data || {};
+    const {storyId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const viewerId = request.auth.uid;
-    if (!storyId) throw new Error('storyId is required');
+    if (!storyId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
     await db.collection('stories').doc(storyId).update({
@@ -95,10 +97,11 @@ exports.markStoryAsViewed = onCall(
 exports.deleteStory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {storyId} = request.data || {};
+    const {storyId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const currentUserId = request.auth.uid;
-    if (!storyId) throw new Error('storyId is required');
+    if (!storyId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
     const storyDoc = await db.collection('stories').doc(storyId).get();
@@ -125,10 +128,14 @@ exports.deleteStory = onCall(
 exports.getBatchStoryStatus = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {userIds} = request.data || {};
+    const {userIds, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return {storiesStatus: {}};
+    }
+    if (userIds.length > 500) {
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
 
     const db = admin.firestore();
@@ -176,10 +183,14 @@ exports.getBatchStoryStatus = onCall(
 exports.getBatchPersonalStories = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {userIds} = request.data || {};
+    const {userIds, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return {stories: {}};
+    }
+    if (userIds.length > 500) {
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
 
     const db = admin.firestore();

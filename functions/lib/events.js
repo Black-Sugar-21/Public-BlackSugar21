@@ -1,7 +1,9 @@
 'use strict';
+const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {logger} = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const {defineSecret} = require('firebase-functions/params');
+const {getLocalizedError} = require('./shared');
 
 const ticketmasterApiKey = defineSecret('TICKETMASTER_API_KEY');
 const eventbriteToken = defineSecret('EVENTBRITE_TOKEN');
@@ -411,8 +413,6 @@ const EVENT_CATEGORY_EMOJI = {
 
 // ── Callable: searchEvents ────────────────────────────────────────────────────
 
-const {onCall} = require('firebase-functions/v2/https');
-
 /**
  * Callable CF: Search events near a match's midpoint or user's location.
  * Payload: { matchId?, query?, category?, lat?, lng?, radiusKm? }
@@ -421,7 +421,7 @@ const {onCall} = require('firebase-functions/v2/https');
 exports.searchEvents = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [ticketmasterApiKey, eventbriteToken]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, query, category, lat, lng, radiusKm} = request.data || {};
     const userId = request.auth.uid;
     const lang = request.data?.userLanguage || 'en';
@@ -479,7 +479,7 @@ exports.searchEvents = onCall(
 exports.trackEventInteraction = onCall(
   {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {eventCategory, interactionType} = request.data || {};
     if (!eventCategory || !interactionType) return {success: false};
 

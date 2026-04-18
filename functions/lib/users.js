@@ -8,10 +8,11 @@ const { geminiApiKey, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResp
 exports.unmatchUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {matchId, otherUserId} = request.data || {};
+    const {matchId, otherUserId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const currentUserId = request.auth.uid;
-    if (!matchId) throw new Error('matchId is required');
+    if (!matchId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
     const matchRef = db.collection('matches').doc(matchId);
@@ -87,14 +88,14 @@ exports.unmatchUser = onCall(
 exports.reportUser = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
     const {reportedUserId, reason, matchId, description} = request.data || {};
+    const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const reporterId = request.auth.uid;
-    if (!reportedUserId || !reason) throw new Error('reportedUserId and reason are required');
-    if (reportedUserId === reporterId) throw new Error('Cannot report yourself');
+    if (!reportedUserId || !reason) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
+    if (reportedUserId === reporterId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
-    const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
 
     // ── Rate limiting: máximo 5 reportes por día por reporter (transaction-safe) ──
     // SECURITY: previously a read-then-decide race — 5 rapid clicks before the
@@ -355,10 +356,11 @@ exports.reportUser = onCall(
 exports.blockUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {blockedUserId} = request.data || {};
+    const {blockedUserId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const blockerId = request.auth.uid;
-    if (!blockedUserId) throw new Error('blockedUserId is required');
+    if (!blockedUserId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
 
@@ -430,13 +432,13 @@ exports.blockUser = onCall(
 exports.deleteUserData = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
-    const {userId} = request.data || {};
+    const {userId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     const targetUserId = userId || request.auth.uid;
 
     // Solo se puede borrar la propia cuenta (o admin)
     if (targetUserId !== request.auth.uid) {
-      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
       throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
     }
 

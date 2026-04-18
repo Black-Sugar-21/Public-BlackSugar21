@@ -1,8 +1,9 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { haversineDistanceKm, encodeGeohash, precisionForRadius, normalizeLongitude, queryBoundsForRadius, calcAge } = require('./geo');
+const { getLocalizedError } = require('./shared');
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,15 +32,16 @@ exports.getCompatibleProfileIds = onCall(
     timeoutSeconds: 60,
   },
   async (request) => {
+    const {userId, limit = 50, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
     if (!request.auth) {
-      throw new Error('Authentication required');
+      throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     }
 
-    const {userId, limit = 50} = request.data || {};
     const currentUserId = userId || request.auth.uid;
 
     if (!currentUserId) {
-      throw new Error('userId is required');
+      throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
     }
 
     const db = admin.firestore();

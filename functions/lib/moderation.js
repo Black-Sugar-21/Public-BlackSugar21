@@ -1,12 +1,12 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding, trackAICall } = require('./shared');
+const { geminiApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getCachedEmbedding, trackAICall, getLocalizedError } = require('./shared');
 const { MODERATION_BLACKLIST, SEXUAL_BLACKLIST_TERMS } = require('./notifications');
 
 /** Safely extract text from Gemini result */
@@ -373,7 +373,7 @@ Respond ONLY with JSON. The "reason" field MUST be written in the user's languag
 exports.validateProfileImage = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {imageUrl} = request.data || {};
     if (!imageUrl) throw new Error('imageUrl is required');
 
@@ -404,7 +404,7 @@ exports.validateProfileImage = onCall(
 exports.moderateProfileImage = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {imageBase64, expectedGender, userLanguage, isStory} = request.data || {};
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       throw new Error('imageBase64 is required');
@@ -479,7 +479,7 @@ exports.moderateProfileImage = onCall(
 exports.moderateMessage = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {message, language, type, matchId} = request.data || {};
     if (!message || typeof message !== 'string') {
       return {approved: true, reason: 'empty_message', category: 'approved', confidence: 1.0};
@@ -574,18 +574,22 @@ function getMessageHash(message, senderLang = 'en') {
  *      evasion attempts we've seen in logs.
  */
 const HOMOGLYPH_MAP = {
-  // Cyrillic → Latin (lowercase confusables actually used in scam evasions)
-  'а': 'a', 'б': 'b', 'в': 'b', 'г': 'g', 'д': 'd', 'е': 'e', 'з': 'z',
-  'и': 'u', 'й': 'u', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'h', 'о': 'o',
-  'п': 'n', 'р': 'p', 'с': 'c', 'т': 't', 'у': 'y', 'ф': 'f', 'х': 'x',
-  'ч': 'y', 'ь': 'b', 'ы': 'bi',
+  // Cyrillic → Latin (lowercase confusables actually used in scam evasions).
+  // The regex matches the full а-я range, so every codepoint it accepts
+  // must have an entry here — otherwise the fallback "|| ch" preserves
+  // the Cyrillic char and the NFKC-normalised string still contains it.
+  'а': 'a', 'б': 'b', 'в': 'b', 'г': 'g', 'д': 'd', 'е': 'e', 'ж': 'zh',
+  'з': 'z', 'и': 'u', 'й': 'u', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'h',
+  'о': 'o', 'п': 'n', 'р': 'p', 'с': 'c', 'т': 't', 'у': 'y', 'ф': 'f',
+  'х': 'x', 'ц': 'ts', 'ч': 'y', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'bi',
+  'ь': 'b', 'э': 'e', 'ю': 'yu', 'я': 'ya',
   // Extended Cyrillic confusables
   'ѕ': 's', 'і': 'i', 'ј': 'j', 'ӏ': 'l', 'ԁ': 'd', 'ԛ': 'q', 'ԝ': 'w',
   // Greek → Latin (complete coverage matching the regex below)
   'α': 'a', 'β': 'b', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'ζ': 'z', 'η': 'n',
   'θ': 'th', 'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'v', 'ξ': 'x',
-  'ο': 'o', 'π': 'n', 'ρ': 'p', 'σ': 's', 'τ': 't', 'υ': 'u', 'φ': 'f',
-  'χ': 'x', 'ψ': 'ps', 'ω': 'w',
+  'ο': 'o', 'π': 'n', 'ρ': 'p', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'u',
+  'φ': 'f', 'χ': 'x', 'ψ': 'ps', 'ω': 'w',
   // Latin diacritic confusables that NFKC does NOT collapse on its own
   'ı': 'i', 'ł': 'l', 'ø': 'o', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ß': 'ss',
 };
@@ -594,7 +598,7 @@ function normalizeForModeration(raw) {
   // Homoglyph fold in one pass. Regex covers Cyrillic a-ya, extended
   // Cyrillic confusables, full Greek lowercase, and the 7 Latin diacritic
   // confusables not handled by NFKC.
-  s = s.replace(/[а-яѕіјӏԁԛԝαβγδεζηθικλμνξοπρστυφχψωıłøđðþß]/g, ch => HOMOGLYPH_MAP[ch] || ch);
+  s = s.replace(/[а-яѕіјӏԁԛԝαβγδεζηθικλμνξοπρσςτυφχψωıłøđðþß]/g, ch => HOMOGLYPH_MAP[ch] || ch);
   // Collapse zero-width + invisible chars that split flagged terms
   // ("c_a_s_h" style is caught by the blacklist term itself; this handles
   // zero-width separators inside otherwise-flaggable substrings).
@@ -973,7 +977,7 @@ Respond ONLY with valid JSON (no markdown). The "reason" must be written in ${la
 exports.disputeModeration = onCall(
   {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {messageId, matchId, disputeType, explanation} = request.data || {};
     if (!messageId || !matchId || !['false_positive', 'too_harsh', 'missed_threat'].includes(disputeType)) {
       return {success: false, error: 'invalid_params'};

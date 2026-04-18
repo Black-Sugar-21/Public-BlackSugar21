@@ -1,5 +1,5 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -53,7 +53,7 @@ function safeResponseText(result) {
 exports.generateInterestSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const db = admin.firestore();
     const userLanguage = request.data?.userLanguage || 'en';
@@ -92,6 +92,11 @@ Return only the JSON array, no explanation.`;
       const _aiStart = Date.now();
       const result = await model.generateContent(prompt);
       trackAICall({functionName: 'generateInterestSuggestions', model: AI_MODEL_LITE, operation: 'interests', usage: result.response.usageMetadata, latencyMs: Date.now() - _aiStart});
+      const safety_is = checkGeminiSafety(result, 'generateInterestSuggestions');
+      if (!safety_is.ok) {
+        logger.warn(`[generateInterestSuggestions] Gemini degraded: ${safety_is.reason} — ${safety_is.detail}`);
+        return { success: true, suggestedInterests: [] };
+      }
       const responseText = safeResponseText(result).trim();
       logger.info(`[generateInterestSuggestions] Gemini response: ${responseText.substring(0, 200)}`);
 
@@ -129,10 +134,10 @@ Return only the JSON array, no explanation.`;
 exports.analyzePhotoBeforeUpload = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {imageUrl} = request.data || {};
     // En producción usar Cloud Vision API
-    logger.info(`[analyzePhotoBeforeUpload] Analyzed photo for user ${request.auth.uid}`);
+    logger.info(`[analyzePhotoBeforeUpload] Analyzed photo for user ${request.auth.uid.substring(0, 8)}...`);
     return {approved: true, reason: 'photo_approved', score: 0.95};
   },
 );
@@ -150,14 +155,14 @@ exports.analyzePhotoBeforeUpload = onCall(
 exports.analyzeProfileWithAI = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userId, userLanguage} = request.data || {};
     const targetId = userId || request.auth.uid;
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const db = admin.firestore();
 
     const userDoc = await db.collection('users').doc(targetId).get();
-    if (!userDoc.exists) throw new Error('User not found');
+    if (!userDoc.exists) throw new HttpsError('not-found', getLocalizedError('profile_not_found', lang));
 
     const TEXTS = {
       en: {
@@ -261,13 +266,20 @@ exports.analyzeProfileWithAI = onCall(
 exports.calculateSafetyScore = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, userId, userLanguage, targetUserId} = request.data || {};
     const apiKey = process.env.GEMINI_API_KEY;
     const db = admin.firestore();
 
     const rawLang = userLanguage || 'en';
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+
+    // Rate limit: Gemini call per chat-open. Cap at 30/hour per user.
+    const _rl_safety = await enforceAiRateLimit(db, request.auth.uid, 'calculateSafetyScore', 30);
+    if (!_rl_safety.allowed) {
+      logger.warn(`[calculateSafetyScore] Rate limited: ${request.auth.uid.substring(0, 8)} retry in ${_rl_safety.retryAfterSec}s`);
+      throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
+    }
 
     // Read safety config from Remote Config (coach_config.safetyScore)
     let safetyConfig = {};
@@ -394,6 +406,11 @@ Return ONLY a JSON object:
           generationConfig: {maxOutputTokens: 512, temperature: safetyConfig.temperature || 0.1},
         });
 
+        const safety_ss = checkGeminiSafety(result, 'calculateSafetyScore');
+        if (!safety_ss.ok) {
+          logger.warn(`[calculateSafetyScore] Gemini degraded: ${safety_ss.reason} — ${safety_ss.detail}`);
+        }
+
         let parsed = null;
         try {
           parsed = parseGeminiJsonResponse(safeResponseText(result));
@@ -498,7 +515,7 @@ Return ONLY a JSON object:
 exports.analyzeConversationChemistry = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const db = admin.firestore();
     const {messages, userLanguage} = request.data || {};
@@ -584,7 +601,7 @@ exports.analyzeConversationChemistry = onCall(
 exports.generateSmartReply = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const startTime = Date.now();
     const {matchId, lastMessage, userId, userLanguage} = request.data || {};
     const apiKey = process.env.GEMINI_API_KEY;
@@ -593,6 +610,13 @@ exports.generateSmartReply = onCall(
     // Normalize language
     const rawLang = userLanguage || 'en';
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
+
+    // Rate limit: Gemini call per user-initiated reply. Cap at 20/hour per user.
+    const _rl_smart = await enforceAiRateLimit(db, request.auth.uid, 'generateSmartReply', 20);
+    if (!_rl_smart.allowed) {
+      logger.warn(`[generateSmartReply] Rate limited: ${request.auth.uid.substring(0, 8)} retry in ${_rl_smart.retryAfterSec}s`);
+      throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
+    }
 
     // Multilingual fallback replies
     const FALLBACK = {
@@ -860,7 +884,7 @@ Return ONLY a JSON object:
 exports.trackSmartReplyToneChoice = onCall(
   {region: 'us-central1', memory: '128MiB', timeoutSeconds: 10},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const userId = request.auth.uid;
     const {matchId, tone} = request.data || {};
     if (!tone || !['casual', 'flirty', 'deep'].includes(tone)) return {success: false};
@@ -903,7 +927,7 @@ exports.trackSmartReplyToneChoice = onCall(
 exports.analyzePersonalityCompatibility = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     // ✅ Homologado: iOS/Android envían {userId, targetUserId} — aceptar ambas nomenclaturas
     const d = request.data || {};
     const uid1 = d.userId || d.userId1;
@@ -918,7 +942,7 @@ exports.analyzePersonalityCompatibility = onCall(
     const callerId = request.auth.uid;
     if (callerId !== uid1 && callerId !== uid2) {
       logger.warn(`[analyzePersonalityCompatibility] Permission denied: caller ${callerId.substring(0, 8)} not in {${uid1.substring(0, 8)}, ${uid2.substring(0, 8)}}`);
-      throw new Error('Not authorized to analyze this pair');
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     }
 
     const db = admin.firestore();
@@ -978,7 +1002,7 @@ exports.analyzePersonalityCompatibility = onCall(
 exports.predictMatchSuccess = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     // ✅ Homologado: iOS/Android envían {userId, targetUserId}
     const d = request.data || {};
     const uid1 = d.userId || d.userId1;
@@ -992,7 +1016,7 @@ exports.predictMatchSuccess = onCall(
     const callerId = request.auth.uid;
     if (callerId !== uid1 && callerId !== uid2) {
       logger.warn(`[predictMatchSuccess] Permission denied: caller ${callerId.substring(0, 8)} not in {${uid1.substring(0, 8)}, ${uid2.substring(0, 8)}}`);
-      throw new Error('Not authorized to predict this pair');
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     }
 
     const db = admin.firestore();
@@ -1056,7 +1080,7 @@ exports.predictMatchSuccess = onCall(
 exports.generateConversationStarter = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userLanguage} = request.data || {};
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
     const db = admin.firestore();
@@ -1157,7 +1181,7 @@ exports.generateConversationStarter = onCall(
 exports.optimizeProfilePhotos = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {photos, userId, userLanguage} = request.data || {};
     const db = admin.firestore();
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
@@ -1189,7 +1213,7 @@ exports.optimizeProfilePhotos = onCall(
 exports.findSimilarProfiles = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userId, userLanguage} = request.data || {};
     const uid = userId || request.auth.uid;
 
@@ -1256,7 +1280,7 @@ exports.findSimilarProfiles = onCall(
 exports.getEnhancedCompatibilityScore = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     // ✅ Homologado: iOS/Android envían {currentUserId, candidateId}
     const d = request.data || {};
     const uid1 = d.currentUserId || d.userId1;
@@ -1322,7 +1346,7 @@ exports.getEnhancedCompatibilityScore = onCall(
 exports.detectProfileRedFlags = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userId, userLanguage} = request.data || {};
     const targetId = userId || request.auth.uid;
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
@@ -1386,12 +1410,19 @@ exports.detectProfileRedFlags = onCall(
 exports.generateIcebreakers = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userId1, userId2, userLanguage} = request.data || {};
-    if (!userId1 || !userId2) throw new Error('userId1 and userId2 are required');
-
     const db = admin.firestore();
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!userId1 || !userId2) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
+
+    // Rate limit: Gemini + RAG call per match-open. Cap at 15/hour per user.
+    const _rl_ice = await enforceAiRateLimit(db, request.auth.uid, 'generateIcebreakers', 15);
+    if (!_rl_ice.allowed) {
+      logger.warn(`[generateIcebreakers] Rate limited: ${request.auth.uid.substring(0, 8)} retry in ${_rl_ice.retryAfterSec}s`);
+      throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     // Multilingual fallback starters (10 languages)
@@ -1598,7 +1629,7 @@ Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning"
 exports.predictOptimalMessageTime = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {userLanguage} = request.data || {};
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
@@ -1640,7 +1671,7 @@ exports.predictOptimalMessageTime = onCall(
 exports.getDatingAdvice = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {topic, userLanguage} = request.data || {};
     const lang = (typeof userLanguage === 'string' && userLanguage ? userLanguage : 'en').split('-')[0].split('_')[0].toLowerCase();
 
@@ -1812,33 +1843,28 @@ exports.getDatingAdvice = onCall(
 exports.calculateAIChemistry = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const currentUserId = request.auth.uid;
     const data = request.data || {};
     const targetUserId = data.targetUserId;
     const lang = (data.lang || 'en').substring(0, 2).toLowerCase();
-    if (!targetUserId) throw new Error('targetUserId required');
-    if (currentUserId === targetUserId) throw new Error('Cannot calculate chemistry with yourself');
+    if (!targetUserId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
+    if (currentUserId === targetUserId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', lang));
 
     const db = admin.firestore();
     const apiKey = geminiApiKey.value();
     const startTime = Date.now();
 
     // ── Rate limiting (20 calls/hour per user) ──
-    const rateLimitRef = db.collection('rateLimits').doc(`chemistry_${currentUserId}`);
-    try {
-      const rlDoc = await rateLimitRef.get();
-      if (rlDoc.exists) {
-        const rl = rlDoc.data();
-        const hourAgo = Date.now() - 3600000;
-        if ((rl.lastReset?.toMillis?.() || 0) > hourAgo && (rl.count || 0) >= 20) {
-          logger.warn(`[AIChemistry] Rate limited: ${currentUserId} (${rl.count} calls/hr)`);
-          // Return a decent default instead of error
-          return {success: true, score: 65, reasons: [], tip: '', factors: {}, cached: false, confidence: 'low', rateLimited: true};
-        }
-      }
-    } catch (rlErr) {
-      // Rate limit check failed — continue anyway (non-critical)
+    // Uses the shared helper that runs its check + increment inside a single
+    // Firestore transaction. The previous code did a read-then-check without
+    // atomicity, so N concurrent requests could all pass before any increment
+    // was persisted. The helper lives at users/{uid}/aiRateLimits/{fnName}.
+    const _rl_chem = await enforceAiRateLimit(db, currentUserId, 'calculateAIChemistry', 20);
+    if (!_rl_chem.allowed) {
+      logger.warn(`[AIChemistry] Rate limited: ${currentUserId.substring(0, 8)} retry in ${_rl_chem.retryAfterSec}s`);
+      // Return a decent default instead of an error so the UI stays friendly.
+      return {success: true, score: 65, reasons: [], tip: '', factors: {}, cached: false, confidence: 'low', rateLimited: true};
     }
 
     // ── Cache check (TTL dinámico, language-scoped) ──
@@ -2061,6 +2087,11 @@ Respond ONLY with valid JSON:
       const geminiTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 8000));
       const geminiResult = await Promise.race([geminiPromise, geminiTimeout]);
 
+      const safety_ch = checkGeminiSafety(geminiResult, 'calculateAIChemistry');
+      if (!safety_ch.ok) {
+        logger.warn(`[AIChemistry] Gemini degraded: ${safety_ch.reason} — ${safety_ch.detail}`);
+      }
+
       const text = safeResponseText(geminiResult);
       let parsed = null;
       try {
@@ -2108,17 +2139,11 @@ Respond ONLY with valid JSON:
       cached: false,
     };
 
-    // ── Save to cache + update rate limit ──
+    // ── Save to cache (rate limit was already incremented atomically above) ──
     try {
-      const batch = db.batch();
-      batch.set(cacheRef, {...result, calculatedAt: admin.firestore.FieldValue.serverTimestamp()});
-      batch.set(rateLimitRef, {
-        count: admin.firestore.FieldValue.increment(1),
-        lastReset: admin.firestore.FieldValue.serverTimestamp(),
-      }, {merge: true});
-      await batch.commit();
+      await cacheRef.set({...result, calculatedAt: admin.firestore.FieldValue.serverTimestamp()});
     } catch (writeErr) {
-      logger.warn(`[AIChemistry] Cache/rate write failed: ${writeErr.message}`);
+      logger.warn(`[AIChemistry] Cache write failed: ${writeErr.message}`);
     }
 
     const elapsed = Date.now() - startTime;
@@ -2224,7 +2249,7 @@ function sanitizeBlueprintTitle(rawTitle, myName, theirName, lang) {
 exports.generateDateBlueprint = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [geminiApiKey, placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, userLanguage, duration, preferences} = request.data || {};
     if (!matchId) throw new Error('matchId is required');
 
@@ -2487,6 +2512,10 @@ Return ONLY a JSON object:
           contents: [{role: 'user', parts: [{text: prompt}]}],
           generationConfig: {maxOutputTokens: getTokens(await getAiConfig(), 'blueprint', 2048), temperature: getTemp(await getAiConfig(), 'blueprint', 0.85), responseMimeType: 'application/json'},
         });
+        const safety_bp1 = checkGeminiSafety(result, 'generateDateBlueprint');
+        if (!safety_bp1.ok) {
+          logger.warn(`[DateBlueprint] Gemini degraded (attempt 1): ${safety_bp1.reason} — ${safety_bp1.detail}`);
+        }
         const rawText = safeResponseText(result);
         parsed = JSON.parse(rawText);
       } catch (jsonErr) {
@@ -2497,6 +2526,10 @@ Return ONLY a JSON object:
             contents: [{role: 'user', parts: [{text: prompt + '\n\nIMPORTANT: Return ONLY valid JSON, no markdown, no code blocks.'}]}],
             generationConfig: {maxOutputTokens: getTokens(await getAiConfig(), 'blueprint', 2048), temperature: getTemp(await getAiConfig(), 'blueprintRetry', 0.7)},
           });
+          const safety_bp2 = checkGeminiSafety(result2, 'generateDateBlueprint');
+          if (!safety_bp2.ok) {
+            logger.warn(`[DateBlueprint] Gemini degraded (attempt 2): ${safety_bp2.reason} — ${safety_bp2.detail}`);
+          }
           parsed = parseGeminiJsonResponse(safeResponseText(result2));
         } catch (retryErr) {
           logger.warn(`[DateBlueprint] Both JSON attempts failed: ${retryErr.message}`);
@@ -2590,7 +2623,7 @@ Return ONLY a JSON object:
 exports.generateEventDatePlan = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 90, secrets: [geminiApiKey, placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, userLanguage, category, dateRange} = request.data || {};
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -2700,6 +2733,11 @@ Rules:
 
       const startTime = Date.now();
       const result = await model.generateContent(eventPrompt);
+      const safety_ev = checkGeminiSafety(result, 'generateEventDatePlan');
+      if (!safety_ev.ok) {
+        logger.warn(`[EventDatePlan] Gemini degraded: ${safety_ev.reason} — ${safety_ev.detail}`);
+        return {success: true, events: [], weekendHighlight: ''};
+      }
       const responseText = safeResponseText(result);
       trackAICall({functionName: 'generateEventDatePlan', model: AI_MODEL_NAME, operation: 'event_search', usage: result.response.usageMetadata, latencyMs: Date.now() - startTime, userId});
 
@@ -2906,7 +2944,7 @@ Rules:
 exports.getPhotoCoachAnalysis = onCall(
   {region: 'us-central1', memory: '1GiB', timeoutSeconds: 120, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
 
     try {
       const storage = admin.storage().bucket();
@@ -2996,6 +3034,11 @@ Return ONLY valid JSON with this structure:
 
       const contents = [{role: 'user', parts: [...photoParts, {text: prompt}]}];
       const result = await model.generateContent({contents});
+      const safety_pc = checkGeminiSafety(result, 'getPhotoCoachAnalysis');
+      if (!safety_pc.ok) {
+        logger.warn(`[getPhotoCoachAnalysis] Gemini degraded: ${safety_pc.reason} — ${safety_pc.detail}`);
+        return {success: false, error: safety_pc.reason};
+      }
       const text = safeResponseText(result);
       let analysis = null;
       try {
@@ -3055,7 +3098,7 @@ Return ONLY valid JSON with this structure:
 exports.analyzeOutfit = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {photoBase64, venueType, occasion, userLanguage} = request.data || {};
 
     if (!photoBase64 || typeof photoBase64 !== 'string') {
@@ -3181,6 +3224,11 @@ Rules:
       }];
 
       const result = await model.generateContent({contents});
+      const safety_of = checkGeminiSafety(result, 'analyzeOutfit');
+      if (!safety_of.ok) {
+        logger.warn(`[analyzeOutfit] Gemini degraded: ${safety_of.reason} — ${safety_of.detail}`);
+        return {success: false, error: safety_of.reason};
+      }
       const responseText = safeResponseText(result);
       trackAICall({functionName: 'analyzeOutfit', model: AI_MODEL_NAME, operation: 'outfit_analysis', usage: result.response.usageMetadata, latencyMs: Date.now() - startTime, userId: request.auth.uid});
 

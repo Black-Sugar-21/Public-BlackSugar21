@@ -1,7 +1,7 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
-const { placesApiKey } = require('./shared');
+const { placesApiKey, getLocalizedError } = require('./shared');
 const { forwardGeocode } = require('./geo');
 const {
   calculateMidpoint, haversineKm, estimateTravelMin, getMatchUsersLocations,
@@ -14,7 +14,7 @@ const {
 exports.getDateSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, userLanguage, category, pageToken, loadCount, excludePlaceIds} = request.data || {};
     if (!matchId) throw new Error('matchId is required');
 
@@ -162,7 +162,7 @@ exports.getDateSuggestions = onCall(
 exports.searchPlaces = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', (request.data?.userLanguage || 'en').split('-')[0].toLowerCase()));
     const {matchId, query, userLanguage, pageToken, loadCount, excludePlaceIds} = request.data || {};
     if (!matchId) throw new Error('matchId is required');
     if (!query && !pageToken) throw new Error('query is required');

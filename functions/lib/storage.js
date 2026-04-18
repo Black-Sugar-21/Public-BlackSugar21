@@ -1,7 +1,8 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onObjectFinalized } = require('firebase-functions/v2/storage');
 const { logger } = require('firebase-functions/v2');
+const { getLocalizedError } = require('./shared');
 const admin = require('firebase-admin');
 const path = require('path');
 const os = require('os');
@@ -129,11 +130,11 @@ exports.generateMissingThumbnails = onCall(
     timeoutSeconds: 540,
   },
   async (request) => {
+    const {userId, userLanguage} = request.data || {};
+    const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
     if (!request.auth) {
-      throw new Error('Authentication required');
+      throw new HttpsError('unauthenticated', getLocalizedError('auth_required', lang));
     }
-
-    const {userId} = request.data || {};
     const bucket = admin.storage().bucket();
     const prefix = userId ? `users/${userId}/` : 'users/';
 
