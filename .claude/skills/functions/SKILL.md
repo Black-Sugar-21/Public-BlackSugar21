@@ -68,6 +68,127 @@ getMatchesWithMetadata, getDateSuggestions, getDatingAdvice
 calculateAIChemistry
 ```
 
+## 🛡️ Shared helpers · session 2026-04-17 (MUST READ for all new CFs)
+
+Después del hardening de robustez, todas las CFs que llamen a Gemini o lean datos de match/profile DEBEN usar estos helpers de `shared.js`:
+
+### Gemini safety + retry pattern
+
+Antes de parsear `.text()` en cualquier `generateContent`:
+
+```js
+const { checkGeminiSafety } = require('./shared');
+
+for (let attempt = 1; attempt <= 2; attempt++) {
+  const result = await model.generateContent(prompt);
+  const safety = checkGeminiSafety(result, 'myFnName');
+  if (!safety.ok) {
+    logger.warn(`[myFn] attempt ${attempt}: ${safety.reason} — ${safety.detail}`);
+    continue; // retry
+  }
+  const text = result?.response?.text();
+  // ... parse
+}
+// Fallback path (after 2 attempts): return { ..., degraded: true }
+```
+
+`checkGeminiSafety` inspecciona `promptFeedback?.blockReason` (safety) y `candidates?.[0]?.finishReason` (STOP/MAX_TOKENS/RECITATION). Sin este guard, el código parsea JSON truncado o vacío silenciosamente.
+
+### Kill switch per-feature
+
+Primera línea del handler de cualquier CF AI:
+
+```js
+const { assertAiFeatureEnabled } = require('./shared');
+await assertAiFeatureEnabled('myFeature', lang);
+```
+
+Donde `myFeature` debe agregarse al map `ai_feature_flags` en Remote Config. Lanza `HttpsError('failed-precondition', 'feature_unavailable en user lang')` si está desactivado.
+
+### Rate limit per-user-per-hour para CFs caras
+
+```js
+const { enforceAiRateLimit, getLocalizedError } = require('./shared');
+const rl = await enforceAiRateLimit(db, userId, 'myFnName', 10); // 10/hour
+if (!rl.allowed) {
+  throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
+}
+```
+
+Usa `users/{uid}/aiRateLimits/{fnName}` con transacción de sliding window 1h. Fail-open si Firestore falla.
+
+### Permission guard en cualquier CF que toque match data
+
+```js
+const matchDoc = await db.collection('matches').doc(matchId).get();
+if (!matchDoc.exists) {
+  throw new HttpsError('not-found', getLocalizedError('match_not_found', lang));
+}
+const matchData = matchDoc.data();
+if (!Array.isArray(matchData?.usersMatched) || !matchData.usersMatched.includes(callerId)) {
+  throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
+}
+// …luego leer messages, subcollections, etc.
+```
+
+Sin este guard, cualquier user autenticado pasa matchId ajeno y scraping conversaciones.
+
+### HttpsError localizados (10 idiomas)
+
+Nunca hardcoded English en errors user-facing. Usar `getLocalizedError(key, lang)`:
+
+Keys disponibles (en `shared.js` ERROR_MESSAGES):
+- `auth_required` · `rate_limit` · `match_not_found` · `profile_not_found`
+- `invalid_argument` · `internal` · `generation_failed` · `no_photos`
+- `blocked_content` · `all_stages_failed` · `invalid_result` · `simulation_failed`
+- `permission_denied` · `reports_rate_limit` · `feature_unavailable`
+
+Si necesitas un error message nuevo, agregarlo como entrada con las 10 claves de idioma a `ERROR_MESSAGES` en `shared.js`.
+
+### Context-aware fallback (never generic text)
+
+Cuando Gemini falla en una CF que genera contenido user-facing (frases, approaches, blueprints, insights, etc.), el fallback DEBE embebir un snippet del input del usuario. Nunca servir texto 100% genérico.
+
+```js
+const { extractSituationSnippet } = require('./shared'); // o duplicado local
+const snippet = extractSituationSnippet(userText); // 90 chars word-boundary + ellipsis
+return TABLES[lang].map(tpl => tpl.replace('{snippet}', snippet));
+```
+
+Referencia: `situation-simulation.js` / `multi-universe-simulation.js`.
+
+### FCM token logging — fingerprint only
+
+Nunca loggear ni devolver el token completo:
+
+```js
+const fingerprint = token ? `${token.slice(0, 8)}…${token.slice(-4)}` : null;
+logger.error(`FCM send failed`, { tokenFingerprint: fingerprint });
+```
+
+### Idempotent rate-limit + dedup via determinístic docId
+
+```js
+const docId = `${reporterId}_${reportedUserId}_${Math.floor(Date.now() / 86400000)}`; // day bucket
+const ref = db.collection('reports').doc(docId);
+const existing = await ref.get();
+if (existing.exists) return { action: 'ALREADY_REPORTED_TODAY' };
+// Para counters con races, usar runTransaction
+await db.runTransaction(async (tx) => { /* read + compare + write */ });
+```
+
+### Anti-generic Gemini prompt (3-part pattern)
+
+Para cualquier prompt que genere texto user-facing basado en input del usuario:
+
+1. **CORE RULE explícita**: "Each response MUST reference concrete content from the user's input. Generic openers like X / Y / Z — on their own — are FORBIDDEN."
+2. **Retry x2** rechazando attempts que produzcan output vacío o genérico.
+3. **Context-aware fallback** con snippet del input + `degraded: true`.
+
+Referencia: `situation-simulation.js generateApproaches` / `multi-universe-simulation.js generateApproachesForMultiverse`.
+
+---
+
 ## calculateAIChemistry (NEW)
 
 **File**: `functions/lib/ai-services.js` (line ~642)

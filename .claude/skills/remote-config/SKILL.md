@@ -145,9 +145,9 @@ Leido por CFs `getDateSuggestions` y `searchPlaces`. Cache 5 min via `getPlacesS
 | `defaultCategoryQueryCount` | Number | `4` | Queries paralelas default con categoria |
 | `categoryQueryMap` | Object | `null` | Override dinamico de terminos busqueda por categoria. Si null, usa `DEFAULT_CATEGORY_QUERY_MAP` (14 categorias bilingues). Helper: `getCategoryQueryMap(config)` |
 
-### `moderation_config` (5 campos)
+### `moderation_config` (14 campos · expandido 2026-04-17)
 
-Leido por `moderateMessage` y `autoModerateMessage`. Cache 5 min via `getModerationConfig()`.
+Leido por `moderateMessage`, `autoModerateMessage` y `reportUser`. Cache 5 min via `getModerationConfig()`.
 
 | Campo | Tipo | Default | Rango | Descripcion |
 |---|---|---|---|---|
@@ -156,6 +156,38 @@ Leido por `moderateMessage` y `autoModerateMessage`. Cache 5 min via `getModerat
 | `rag.minScore` | Number | `0.25` | 0-1 | Umbral minimo similaridad COSINE (1-distance) |
 | `rag.fetchMultiplier` | Number | `3` | 1-5 | Multiplica topK para busqueda inicial Firestore |
 | `rag.collection` | String | `'moderationKnowledge'` | — | Coleccion Firestore con chunks |
+| `reportEscalation.banThreshold` | Number | `10` | 5-20 | Reportadores únicos → ban permanente |
+| `reportEscalation.suspendThreshold` | Number | `7` | 4-15 | Reportadores únicos → suspensión temporal |
+| `reportEscalation.aiReviewThreshold` | Number | `5` | 2-10 | Reportadores únicos → AI review + visibility reduced |
+| `reportEscalation.aiAutoSuspendConfidence` | Number | `0.8` | 0.5-1.0 | Confianza IA mínima para auto-suspender |
+| `failurePolicy.profileImage` | String | `'closed'` | closed/open | Si Gemini falla → rechazar foto (safe) o aprobar |
+| `failurePolicy.storyImage` | String | `'open'` | closed/open | Stories son temporales → fail-open acceptable |
+| `failurePolicy.message` | String | `'open'` | closed/open | Mensajes → fail-open para no bloquear chat |
+| `failurePolicy.bio` | String | `'closed'` | closed/open | Bios persisten → fail-closed safer |
+
+### `ai_feature_flags` (15 kill switches · nuevo 2026-04-17)
+
+Leido por `assertAiFeatureEnabled(flag, lang)` via `getAiFeatureFlags()` en `shared.js`. Cache 5 min.
+
+| Campo | Default | Impacto si `false` |
+|---|---|---|
+| `smartReply` | `true` | Deshabilita sugerencias de respuesta en chat |
+| `icebreakers` | `true` | Deshabilita icebreakers AI |
+| `chemistry` | `true` | Deshabilita chemistry score |
+| `blueprint` | `true` | Deshabilita Date Blueprint (AI + Places, cara) |
+| `eventPlan` | `true` | Deshabilita Event Date Plan (Search Grounding, muy cara) |
+| `photoCoach` | `true` | Deshabilita Photo Coach (Gemini Vision, muy cara) |
+| `outfitAnalysis` | `true` | Deshabilita analyzeOutfit |
+| `safetyScore` | `true` | Deshabilita calculateSafetyScore (fallback algorítmico sigue activo) |
+| `personalityCompat` | `true` | Deshabilita analyzePersonalityCompatibility |
+| `matchSuccess` | `true` | Deshabilita predictMatchSuccess |
+| `interestSuggestions` | `true` | Deshabilita generateInterestSuggestions |
+| `situationSim` | `true` | Deshabilita simulateSituation (Ensayar situación) |
+| `multiUniverse` | `true` | Deshabilita simulateMultiUniverse (Universos Posibles) |
+| `realtimeCoachTips` | `true` | Deshabilita getRealtimeCoachTips |
+| `wingPerson` | `true` | Deshabilita wingPersonAnalysis (scheduled push) |
+
+**Uso**: cuando Gemini cae, hay prompt injection detectado, o spike de costos. Un toggle en Firebase Console desactiva el feature en 5min (cache TTL) sin redeploy. El cliente recibe `failed-precondition` HttpsError con mensaje `feature_unavailable` localizado en los 10 idiomas.
 
 ## Reglas de validacion
 

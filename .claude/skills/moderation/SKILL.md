@@ -4,6 +4,41 @@ description: "Sistema completo de moderacion de BlackSugar21 — auto-moderacion
 
 # BlackSugar21 — Content Moderation System
 
+## 🆕 Session 2026-04-17 — hardening changes
+
+### Report escalation thresholds → Remote Config
+`users.js reportUser` lee ahora `moderation_config.reportEscalation` en vez de hardcoded 5/7/10:
+
+| RC path | Default | Efecto |
+|---|---|---|
+| `moderation_config.reportEscalation.banThreshold` | `10` | Unique reporters → `accountStatus: 'banned'` |
+| `moderation_config.reportEscalation.suspendThreshold` | `7` | Unique reporters → `accountStatus: 'suspended'` |
+| `moderation_config.reportEscalation.aiReviewThreshold` | `5` | Unique reporters → AI review + `visibilityReduced: true` |
+| `moderation_config.reportEscalation.aiAutoSuspendConfidence` | `0.8` | Floor Gemini confidence para auto-suspend tras AI review |
+
+### Failure policy per-surface → Remote Config
+`moderation_config.failurePolicy` controla qué hacer cuando Gemini falla en cada builder:
+
+| Surface | Default | Razón |
+|---|---|---|
+| `profileImage` | `'closed'` | Fotos de perfil son persistentes — fail-safe (rechazar) |
+| `bio` | `'closed'` | Bios son persistentes — fail-safe |
+| `storyImage` | `'open'` | Stories son efímeras 24h — fail-open acepta (UX-first) |
+| `message` | `'open'` | Fail-open para no bloquear chat por outage de Gemini |
+
+### Race-safe reportUser
+1. **Rate limit**: ahora vive en `users/{reporterId}/rateLimits/reports` con `runTransaction` y sliding window 24h. 5 reportes rápidos ya no pasan todos.
+2. **Dedup**: docId determinístico `reports/{reporterId}_{reportedUserId}_{dayBucket}` previene al mismo reporter inflar uniqueReporters spam-reporteando al mismo user.
+3. **Idempotency**: si el reportedUser ya está `banned`, skip escalation (evita double-write cuando dos reportes cruzan umbrales simultáneos).
+
+### 4 prompts de moderación unified ES/EN → 10-language
+`buildProfileImagePrompt`, `buildStoryImagePrompt`, `buildBioModerationPrompt`, `buildMessageModerationPrompt` ya no tienen rama `if (isSpanish)`. Usan EN como operational language del modelo + `languageInstruction` fuerza `reason` field en el idioma del usuario. Impacto: 80% de usuarios (pt/fr/de/ja/zh/ru/ar/id) ya no reciben rechazos en inglés.
+
+### Localized concerns en calculateSafetyScore
+`concerns[]` devuelto por `calculateSafetyScore` ahora es localized via tabla `CONCERN_TEXT` × 10 idiomas (`few_photos`, `empty_bio`, `previously_reported`).
+
+---
+
 ## Architecture
 
 La moderacion de contenido opera en 3 capas complementarias:
