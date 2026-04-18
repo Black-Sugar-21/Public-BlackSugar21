@@ -659,6 +659,20 @@ const ERROR_MESSAGES = {
     ar: 'لقد وصلت إلى الحد اليومي البالغ 5 بلاغات. حاول غداً.',
     id: 'Kamu telah mencapai batas 5 laporan per hari. Coba lagi besok.',
   },
+  feature_unavailable: {
+    en: 'This feature is temporarily unavailable. Please try again later.',
+    es: 'Esta función no está disponible temporalmente. Inténtalo más tarde.',
+    pt: 'Este recurso está temporariamente indisponível. Tente novamente mais tarde.',
+    'pt-PT': 'Esta funcionalidade está temporariamente indisponível. Tenta de novo mais tarde.',
+    fr: 'Cette fonctionnalité est temporairement indisponible. Réessaie plus tard.',
+    de: 'Diese Funktion ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.',
+    ja: 'この機能は一時的に利用できません。後でもう一度お試しください。',
+    zh: '此功能暂时不可用。请稍后再试。',
+    'zh-TW': '此功能暫時無法使用。請稍後再試。',
+    ru: 'Эта функция временно недоступна. Попробуйте позже.',
+    ar: 'هذه الميزة غير متاحة مؤقتاً. يرجى المحاولة لاحقاً.',
+    id: 'Fitur ini sementara tidak tersedia. Silakan coba lagi nanti.',
+  },
 };
 
 /**
@@ -777,6 +791,61 @@ async function decrementCoachCredit(db, userId, admin = null) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Feature Flags (kill switches from Remote Config)
+// ─────────────────────────────────────────────────────────────────────────────
+// Lets ops disable a single Gemini CF without redeploy — e.g., Gemini outage,
+// prompt-injection in production, cost spike. Reads `ai_feature_flags` JSON
+// param from Remote Config; falls back to `true` (enabled) on any error so a
+// missing/malformed config can't accidentally take features offline.
+let _aiFeatureFlagsCache = null;
+let _aiFeatureFlagsCacheTime = 0;
+const AI_FLAGS_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+async function getAiFeatureFlags() {
+  if (_aiFeatureFlagsCache && (Date.now() - _aiFeatureFlagsCacheTime) < AI_FLAGS_CACHE_TTL) {
+    return _aiFeatureFlagsCache;
+  }
+  // Default: all features enabled.
+  const defaults = {
+    smartReply: true, icebreakers: true, chemistry: true, blueprint: true,
+    eventPlan: true, photoCoach: true, outfitAnalysis: true, safetyScore: true,
+    personalityCompat: true, matchSuccess: true, interestSuggestions: true,
+    situationSim: true, multiUniverse: true, realtimeCoachTips: true,
+    wingPerson: true,
+  };
+  try {
+    const rc = admin.remoteConfig();
+    const template = await rc.getTemplate();
+    const param = template.parameters['ai_feature_flags'];
+    if (param?.defaultValue?.value) {
+      const parsed = JSON.parse(param.defaultValue.value);
+      const config = {...defaults, ...parsed};
+      _aiFeatureFlagsCache = config;
+      _aiFeatureFlagsCacheTime = Date.now();
+      return config;
+    }
+  } catch (err) {
+    logger.warn(`[getAiFeatureFlags] RC read failed, enabling all: ${err.message}`);
+  }
+  _aiFeatureFlagsCache = defaults;
+  _aiFeatureFlagsCacheTime = Date.now();
+  return defaults;
+}
+
+/**
+ * Check if an AI feature is enabled. Throws `failed-precondition` HttpsError
+ * when disabled, so the client can show a "feature temporarily unavailable"
+ * message in the user's language.
+ */
+async function assertAiFeatureEnabled(flagName, userLang = 'en') {
+  const flags = await getAiFeatureFlags();
+  if (flags[flagName] === false) {
+    const {HttpsError} = require('firebase-functions/v2/https');
+    throw new HttpsError('failed-precondition', getLocalizedError('feature_unavailable', userLang));
+  }
+}
+
 /**
  * Per-user, per-function hourly rate limit for AI CFs that are NOT on the
  * daily coach-credit pool (personality compat, photo coach, date blueprint,
@@ -890,4 +959,6 @@ module.exports = {
   SUPPORTED_REGIONAL,
   checkGeminiSafety,
   enforceAiRateLimit,
+  getAiFeatureFlags,
+  assertAiFeatureEnabled,
 };

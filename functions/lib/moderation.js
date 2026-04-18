@@ -47,6 +47,23 @@ async function getModerationConfig() {
       fetchMultiplier: MOD_RAG_FETCH_MULTIPLIER,
       collection: MOD_RAG_COLLECTION,
     },
+    // Report escalation thresholds — tunable without redeploy.
+    // Previously hardcoded as 5/7/10 in users.js:195-225; moved here so ops
+    // can tighten/loosen bands during brigade attacks without shipping code.
+    reportEscalation: {
+      banThreshold: 10,           // unique reporters → permanent ban
+      suspendThreshold: 7,        // unique reporters → temporary suspension
+      aiReviewThreshold: 5,       // unique reporters → AI-triggered review + visibility reduction
+      aiAutoSuspendConfidence: 0.8, // AI confidence floor to auto-suspend after review
+    },
+    // Fail policy when Gemini is unavailable. fail-closed = reject on failure
+    // (safer for profile images); fail-open = approve (keeps chat flowing).
+    failurePolicy: {
+      profileImage: 'closed',
+      storyImage: 'open',
+      message: 'open',
+      bio: 'closed',
+    },
   };
   try {
     const rc = admin.remoteConfig();

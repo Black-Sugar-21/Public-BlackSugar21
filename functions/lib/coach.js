@@ -5,7 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude, checkGeminiSafety } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude, checkGeminiSafety, getLocalizedError } = require('./shared');
 
 /** Safely extract text from Gemini result — prevents crash on null/undefined response */
 function safeResponseText(result) {
@@ -4639,10 +4639,11 @@ exports.triggerDateDebriefs = onSchedule(
 exports.requestDateDebrief = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
-    if (!request.auth) throw new Error('Authentication required');
+    if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', 'en'));
     const userId = request.auth.uid;
-    const {matchId} = request.data || {};
-    if (!matchId) throw new Error('matchId is required');
+    const {matchId, userLanguage} = request.data || {};
+    const errLang = (userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+    if (!matchId) throw new HttpsError('invalid-argument', getLocalizedError('invalid_argument', errLang));
 
     const db = admin.firestore();
 
@@ -4651,12 +4652,12 @@ exports.requestDateDebrief = onCall(
     // by passing someone else's matchId.
     const matchDoc = await db.collection('matches').doc(matchId).get();
     if (!matchDoc.exists) {
-      throw new HttpsError('not-found', 'Match not found');
+      throw new HttpsError('not-found', getLocalizedError('match_not_found', errLang));
     }
     const usersMatched = matchDoc.data()?.usersMatched || [];
     if (!Array.isArray(usersMatched) || !usersMatched.includes(userId)) {
       logger.warn(`[requestDateDebrief] Permission denied: ${userId.substring(0, 8)} not in match ${matchId.substring(0, 8)}`);
-      throw new HttpsError('permission-denied', 'Not a member of this match');
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', errLang));
     }
     const otherUserId = usersMatched.find(u => u !== userId);
 

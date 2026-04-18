@@ -3,7 +3,7 @@ const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, trackAICall, checkGeminiSafety, enforceAiRateLimit, getLocalizedError } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, trackAICall, checkGeminiSafety, enforceAiRateLimit, getLocalizedError, assertAiFeatureEnabled } = require('./shared');
 const { calcAge } = require('./geo');
 const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 
@@ -440,9 +440,35 @@ Return ONLY a JSON object:
         const flags = [];
         const concerns = [];
 
-        if (!user.pictures || (Array.isArray(user.pictures) && user.pictures.length < 2)) { flags.push('few_photos'); concerns.push('Few profile photos'); score -= 10; }
-        if (!user.bio || user.bio.length < 10) { flags.push('empty_bio'); concerns.push('Incomplete bio'); score -= 10; }
-        if (user.visibilityReduced) { flags.push('previously_reported'); concerns.push('Account has been reported'); score -= 25; }
+        // Localized concern messages — 10 supported languages.
+        // Previously these were English-only, so non-English users saw
+        // their safety risk reasons in English regardless of userLanguage.
+        const CONCERN_TEXT = {
+          few_photos: {
+            en: 'Few profile photos', es: 'Pocas fotos de perfil', pt: 'Poucas fotos de perfil',
+            fr: 'Peu de photos de profil', de: 'Wenige Profilfotos', ja: 'プロフィール写真が少ない',
+            zh: '个人资料照片较少', ru: 'Мало фото профиля', ar: 'عدد قليل من صور الملف الشخصي',
+            id: 'Foto profil sedikit',
+          },
+          empty_bio: {
+            en: 'Incomplete bio', es: 'Biografía incompleta', pt: 'Biografia incompleta',
+            fr: 'Biographie incomplète', de: 'Unvollständige Bio', ja: '自己紹介が不完全',
+            zh: '个人简介不完整', ru: 'Неполная биография', ar: 'السيرة الذاتية غير مكتملة',
+            id: 'Bio tidak lengkap',
+          },
+          previously_reported: {
+            en: 'Account has been reported', es: 'La cuenta ha sido reportada', pt: 'A conta foi denunciada',
+            fr: 'Le compte a été signalé', de: 'Konto wurde gemeldet', ja: 'アカウントが通報されています',
+            zh: '账户已被举报', ru: 'Аккаунт был пожалован', ar: 'تم الإبلاغ عن الحساب',
+            id: 'Akun telah dilaporkan',
+          },
+        };
+        const concernLang = lang;
+        const getConcern = (key) => (CONCERN_TEXT[key]?.[concernLang] || CONCERN_TEXT[key]?.en || '');
+
+        if (!user.pictures || (Array.isArray(user.pictures) && user.pictures.length < 2)) { flags.push('few_photos'); concerns.push(getConcern('few_photos')); score -= 10; }
+        if (!user.bio || user.bio.length < 10) { flags.push('empty_bio'); concerns.push(getConcern('empty_bio')); score -= 10; }
+        if (user.visibilityReduced) { flags.push('previously_reported'); concerns.push(getConcern('previously_reported')); score -= 25; }
         const photos = Array.isArray(user.pictures) ? user.pictures.length : 0;
         if (photos >= 3 && user.bio && user.bio.length >= 20) score = Math.min(score + 5, 95);
 
@@ -2209,6 +2235,9 @@ exports.generateDateBlueprint = onCall(
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
     const durationPreset = duration || 'standard'; // quick | standard | full
 
+    // Kill switch: ops can disable blueprint feature without redeploy.
+    await assertAiFeatureEnabled('blueprint', lang);
+
     // Rate limit: this CF hits Gemini + Google Places — expensive. Cap at 10/hour per user.
     const rl = await enforceAiRateLimit(db, userId, 'generateDateBlueprint', 10);
     if (!rl.allowed) {
@@ -2569,6 +2598,9 @@ exports.generateEventDatePlan = onCall(
     const rawLang = userLanguage || 'en';
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
 
+    // Kill switch: ops can disable eventPlan feature without redeploy.
+    await assertAiFeatureEnabled('eventPlan', lang);
+
     // Rate limit: Gemini Search Grounding + Places — very expensive. Cap at 10/hour per user.
     const _rl_eventPlan = await enforceAiRateLimit(db, userId, 'generateEventDatePlan', 10);
     if (!_rl_eventPlan.allowed) {
@@ -2870,8 +2902,12 @@ exports.getPhotoCoachAnalysis = onCall(
 
       const uid = request.auth.uid;
 
-      // Rate limit: Gemini Vision multi-image analysis is very expensive. Cap at 6/hour per user.
       const _photoLang = ((request.data?.userLanguage) || 'en').split('-')[0].split('_')[0].toLowerCase();
+
+      // Kill switch: ops can disable photoCoach feature without redeploy.
+      await assertAiFeatureEnabled('photoCoach', _photoLang);
+
+      // Rate limit: Gemini Vision multi-image analysis is very expensive. Cap at 6/hour per user.
       const _rl_photo = await enforceAiRateLimit(db, uid, 'getPhotoCoachAnalysis', 6);
       if (!_rl_photo.allowed) {
         logger.warn(`[getPhotoCoachAnalysis] Rate limited: ${uid.substring(0, 8)} retry in ${_rl_photo.retryAfterSec}s`);

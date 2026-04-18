@@ -224,6 +224,19 @@ exports.reportUser = onCall(
     let action = 'PERSONAL_BLOCK';
     let aiAnalysis = null;
 
+    // Remote-Config-driven thresholds: tunables without redeploy.
+    // Defaults match the previous hardcoded 10/7/5/3 + 0.8 AI confidence.
+    let thresholds = {banThreshold: 10, suspendThreshold: 7, aiReviewThreshold: 5, aiAutoSuspendConfidence: 0.8};
+    try {
+      const {getModerationConfig} = require('./moderation');
+      const modCfg = await getModerationConfig();
+      if (modCfg?.reportEscalation) {
+        thresholds = {...thresholds, ...modCfg.reportEscalation};
+      }
+    } catch (cfgErr) {
+      logger.warn(`[reportUser] Could not load escalation thresholds from RC, using defaults: ${cfgErr.message}`);
+    }
+
     // ── Idempotency: si el usuario reportado ya está banned/suspended, no re-ejecutamos
     // el escalamiento (evita double-write concurrente cuando dos reportes cruzan umbrales al mismo tiempo).
     const reportedUserDoc = await db.collection('users').doc(reportedUserId).get();
@@ -234,7 +247,7 @@ exports.reportUser = onCall(
     }
 
     // ── Escalamiento progresivo basado en reportadores ÚNICOS ──
-    if (uniqueReportCount >= 10) {
+    if (uniqueReportCount >= thresholds.banThreshold) {
       // 10+ reportadores únicos → BAN PERMANENTE
       await db.collection('users').doc(reportedUserId).update({
         accountStatus: 'banned',
@@ -245,7 +258,7 @@ exports.reportUser = onCall(
       action = 'BANNED';
       logger.info(`🚫 [reportUser] BANNED ${reportedUserId} — ${uniqueReportCount} unique reporters`);
 
-    } else if (uniqueReportCount >= 7) {
+    } else if (uniqueReportCount >= thresholds.suspendThreshold) {
       // 7-9 reportadores únicos → SUSPENSIÓN TEMPORAL
       await db.collection('users').doc(reportedUserId).update({
         accountStatus: 'suspended',
@@ -256,7 +269,7 @@ exports.reportUser = onCall(
       action = 'SUSPENDED';
       logger.info(`⛔ [reportUser] SUSPENDED ${reportedUserId} — ${uniqueReportCount} unique reporters`);
 
-    } else if (uniqueReportCount >= 5) {
+    } else if (uniqueReportCount >= thresholds.aiReviewThreshold) {
       // 5-6 reportadores únicos → Análisis IA + visibilidad reducida
       await db.collection('users').doc(reportedUserId).update({
         visibilityReduced: true,
@@ -287,7 +300,7 @@ exports.reportUser = onCall(
           const confidence = typeof aiAnalysis.confidence === 'number' ? aiAnalysis.confidence : -1;
           aiAnalysis.reasoning = typeof aiAnalysis.reasoning === 'string' ? aiAnalysis.reasoning : '';
           // Si la IA recomienda suspensión con alta confianza, escalar
-          if (shouldSuspend && confidence >= 0.8) {
+          if (shouldSuspend && confidence >= thresholds.aiAutoSuspendConfidence) {
             await db.collection('users').doc(reportedUserId).update({
               accountStatus: 'suspended',
               suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
