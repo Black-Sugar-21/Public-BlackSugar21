@@ -8,7 +8,8 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "test": "node test-comprehensive-300.js && node test-post-deploy-350.js && node test-discovery-v2-parity.js && node test-situation-sim.js",
-    "test:multiverse": "node test-multiverse-places-local.js"
+    "test:multiverse": "node test-multiverse-places-local.js",
+    "e2e:smoke": "node test-e2e-smoke.js"
   },
   "engines": {
     "node": "20"
