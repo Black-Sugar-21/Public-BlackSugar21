@@ -54,10 +54,14 @@ exports.sendTestNotification = onCall(async (request) => {
     const response = await admin.messaging().send(message);
     logger.info(`Test notification sent: ${response}`);
 
+    // SECURITY: NEVER return the full FCM token — it's a bearer credential that
+    // lets anyone holding it send push notifications to the device. Previously
+    // this endpoint echoed back the full token, which appeared in debug panels /
+    // crash logs / network captures. Return a truncated fingerprint only.
     return {
       success: true,
       messageId: response,
-      token: fcmToken,
+      tokenFingerprint: fcmToken ? `${fcmToken.slice(0, 8)}…${fcmToken.slice(-4)}` : null,
     };
   } catch (error) {
     logger.error(`Error sending test notification: ${error.message}`);

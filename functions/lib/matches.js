@@ -122,8 +122,9 @@ exports.onMatchCreated = onDocumentCreated(
         logger.info(`Notification sent successfully: ${response}`);
         return {success: true, response};
       } catch (error) {
+        // SECURITY: log a truncated token fingerprint, never the full bearer.
         logger.error(`Error sending notification: ${error.message}`, {
-          token,
+          tokenFingerprint: token ? `${token.slice(0, 8)}…${token.slice(-4)}` : null,
           error: error.code,
         });
         return {success: false, error: error.message};

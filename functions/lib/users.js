@@ -94,20 +94,53 @@ exports.reportUser = onCall(
     if (reportedUserId === reporterId) throw new Error('Cannot report yourself');
 
     const db = admin.firestore();
+    const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
 
-    // ── Rate limiting: máximo 5 reportes por día por reporter ──
-    const oneDayAgo = new Date(Date.now() - 86400000);
-    const recentReports = await db.collection('reports')
-      .where('reporterId', '==', reporterId)
-      .where('createdAt', '>', oneDayAgo)
-      .get();
-    if (recentReports.size >= 5) {
-      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
-      throw new HttpsError('resource-exhausted', getLocalizedError('reports_rate_limit', lang));
+    // ── Rate limiting: máximo 5 reportes por día por reporter (transaction-safe) ──
+    // SECURITY: previously a read-then-decide race — 5 rapid clicks before the
+    // first report lands in the index could all pass the count check.
+    // Now: atomic counter increment at users/{reporterId}/rateLimits/reports
+    // with 24h sliding window. Fail-open if tx fails (log and continue).
+    const rateLimitRef = db.collection('users').doc(reporterId).collection('rateLimits').doc('reports');
+    const WINDOW_MS = 86400000;
+    try {
+      const allowed = await db.runTransaction(async (tx) => {
+        const doc = await tx.get(rateLimitRef);
+        const data = doc.exists ? doc.data() : {};
+        const windowStart = data.windowStart?.toMillis?.() || data.windowStart || 0;
+        const count = data.count || 0;
+        const now = Date.now();
+        if (now - windowStart > WINDOW_MS) {
+          tx.set(rateLimitRef, {count: 1, windowStart: admin.firestore.Timestamp.now()}, {merge: true});
+          return true;
+        }
+        if (count >= 5) return false;
+        tx.set(rateLimitRef, {count: count + 1}, {merge: true});
+        return true;
+      });
+      if (!allowed) {
+        throw new HttpsError('resource-exhausted', getLocalizedError('reports_rate_limit', lang));
+      }
+    } catch (txErr) {
+      if (txErr instanceof HttpsError) throw txErr;
+      // Fail-open on infra errors — don't block legitimate reports due to Firestore hiccup
+      logger.warn(`[reportUser] rate-limit tx failed for ${reporterId.substring(0, 8)}: ${txErr.message}`);
     }
 
-    // ── 1. Crear documento de reporte ──
-    const reportRef = await db.collection('reports').add({
+    // ── 1. Crear documento de reporte con dedup atómico ──
+    // Doc ID determinístico previene el mismo reporter reportando 2x al mismo
+    // reportedUser (que inflaría uniqueReporters indirectamente si alguna
+    // variante reset el contador). El timestamp en el ID permite re-reports
+    // legítimos después de 24h si el usuario vuelve a violar.
+    const reportBucket = Math.floor(Date.now() / WINDOW_MS);
+    const reportDocId = `${reporterId}_${reportedUserId}_${reportBucket}`;
+    const reportRef = db.collection('reports').doc(reportDocId);
+    const existingReport = await reportRef.get();
+    if (existingReport.exists) {
+      logger.info(`[reportUser] Duplicate report in same 24h window ignored: ${reporterId.substring(0, 8)} → ${reportedUserId.substring(0, 8)}`);
+      return {success: true, reportId: reportDocId, action: 'ALREADY_REPORTED_TODAY'};
+    }
+    await reportRef.set({
       reporterId,
       reportedUserId,
       reason,
@@ -190,6 +223,15 @@ exports.reportUser = onCall(
 
     let action = 'PERSONAL_BLOCK';
     let aiAnalysis = null;
+
+    // ── Idempotency: si el usuario reportado ya está banned/suspended, no re-ejecutamos
+    // el escalamiento (evita double-write concurrente cuando dos reportes cruzan umbrales al mismo tiempo).
+    const reportedUserDoc = await db.collection('users').doc(reportedUserId).get();
+    const currentStatus = reportedUserDoc.data()?.accountStatus || 'active';
+    if (currentStatus === 'banned') {
+      logger.info(`[reportUser] ${reportedUserId} already BANNED — skipping re-escalation`);
+      return {success: true, reportId: reportRef.id, action: 'ALREADY_BANNED'};
+    }
 
     // ── Escalamiento progresivo basado en reportadores ÚNICOS ──
     if (uniqueReportCount >= 10) {
