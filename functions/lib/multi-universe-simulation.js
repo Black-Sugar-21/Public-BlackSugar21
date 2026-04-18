@@ -444,6 +444,14 @@ exports.simulateMultiUniverse = onCall(
           const localizedStages = await Promise.all(
             cachedResult.stages.map(async stage => {
               const shouldTranslate = cachedResult.userLanguage !== userLanguage;
+              // Translate alternativePhrases if cache was in a different language
+              const translatedAlternatives = (shouldTranslate && Array.isArray(stage.alternativePhrases) && stage.alternativePhrases.length > 0)
+                ? await Promise.all(
+                    stage.alternativePhrases.map(p =>
+                      p ? translatePhraseToLanguage(p, cachedResult.userLanguage || 'en', userLanguage) : ''
+                    )
+                  )
+                : (stage.alternativePhrases || []);
               return {
                 ...stage,
                 stageLabel: getLocalizedStageLabel(stage.stageId, userLanguage),
@@ -452,6 +460,7 @@ exports.simulateMultiUniverse = onCall(
                 bestApproachPhrase: (shouldTranslate && stage.bestApproachPhrase)
                   ? await translatePhraseToLanguage(stage.bestApproachPhrase, cachedResult.userLanguage || 'en', userLanguage)
                   : stage.bestApproachPhrase,
+                alternativePhrases: translatedAlternatives.filter(p => p && p.length > 0),
                 // Always regenerate coachTip with current stage-specific bullet format
                 coachTip: getStageSpecificCoachTip(stage.stageId || stage.id, cachedMatchName, userLanguage),
               };
@@ -573,6 +582,16 @@ exports.simulateMultiUniverse = onCall(
             (b.successScore || 0) > (a.successScore || 0) ? b : a
           );
 
+          // Extract the other 3 approach phrases as alternatives for the
+          // "Más frases" section of the stage detail sheet. Ordered by
+          // successScore desc so the user sees stronger options first.
+          const alternativePhrases = situationResponse.approaches
+            .filter(a => a.id !== bestApproach?.id)
+            .sort((a, b) => (b.successScore || 0) - (a.successScore || 0))
+            .map(a => String(a.phrase || '').trim())
+            .filter(p => p.length > 0)
+            .slice(0, 3);
+
           const localizedStageLabel = getLocalizedStageLabel(stage.id, userLanguage);
           const stageResult = {
             stageId: stage.id,
@@ -582,6 +601,7 @@ exports.simulateMultiUniverse = onCall(
             avgReactionScore: parseFloat(avgReactionScore.toFixed(2)),
             bestApproachId: bestApproach?.id || null,
             bestApproachPhrase: bestApproach?.phrase || '',
+            alternativePhrases, // up to 3 same-context variations users can copy-paste
             // OVERRIDE internal situation sim's generic tip with stage-specific
             // actionable advice. Users complained tips were too vague — each
             // stage now gets concrete guidance for its emotional dynamics.
