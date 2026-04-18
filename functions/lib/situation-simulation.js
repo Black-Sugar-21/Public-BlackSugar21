@@ -613,8 +613,13 @@ exports.simulateSituation = onCall(
   async (request) => {
     let userId = null;
     let matchId = null;
+    // Extract lang before auth check so the localized auth_required message
+    // matches the caller's language even on unauthenticated failures.
+    // Inside the try block, a validated `lang` (clamped to SUPPORTED_LANGS)
+    // shadows this one — this outer copy is only used for the pre-auth error.
+    const authLang = ((request.data?.userLanguage) || 'en').split('-')[0].toLowerCase();
     try {
-      if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required');
+      if (!request.auth) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', authLang));
 
     userId = request.auth.uid;
     const {situation, userLanguage} = request.data || {};
@@ -1006,14 +1011,16 @@ exports.simulateSituation = onCall(
         stack: error.stack
       });
 
-      // If it's already an HttpsError, re-throw it
-      if (error.code && error.code.startsWith('functions/')) {
+      // If it's already an HttpsError, re-throw it. Firebase v2 HttpsError
+      // uses plain codes ('unauthenticated', 'invalid-argument', 'not-found',
+      // etc.) — NOT the legacy `functions/*` prefix. Use instanceof for the
+      // reliable check; the legacy string test is kept as a defensive fallback.
+      if (error instanceof HttpsError || (error.code && error.code.startsWith('functions/'))) {
         throw error;
       }
 
       // Otherwise, wrap in internal error (localized for the user; details logged above)
-      const catchLang = (request.data?.userLanguage || 'en');
-      throw new HttpsError('internal', getLocalizedError('internal', catchLang));
+      throw new HttpsError('internal', getLocalizedError('internal', authLang));
     }
   },
 );
