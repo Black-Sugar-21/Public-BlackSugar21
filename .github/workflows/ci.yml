@@ -1,0 +1,48 @@
+name: CI — Backend Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'functions/**'
+
+jobs:
+  backend-tests:
+    name: Backend offline test suite (333+ assertions)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run offline test suite (test-comprehensive-300)
+        run: npm test
+        # Pure static-analysis tests: read lib/*.js source files with
+        # fs.readFileSync + regex checks. No Firebase/Gemini SDK init
+        # required, so this runs in a clean CI env without secrets and
+        # guards the deploy against regressions in regex-based features
+        # (conflict detection, URL sanitization, rate-limit config,
+        # base64 validation, scorecard strings, etc.).
+
+      - name: Report test summary
+        if: always()
+        run: |
+          echo "## Backend Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Exit code: $?" >> $GITHUB_STEP_SUMMARY
