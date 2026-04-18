@@ -1,9 +1,9 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse } = require('./shared');
+const { geminiApiKey, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getLocalizedError } = require('./shared');
 
 exports.unmatchUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
@@ -25,7 +25,8 @@ exports.unmatchUser = onCall(
     const matchData = matchDoc.data();
     const usersMatched = matchData.usersMatched || matchData.users || [];
     if (!usersMatched.includes(currentUserId)) {
-      throw new Error('Not authorized to unmatch this match');
+      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
     }
 
     // Borrar mensajes en batch (hasta 500)
@@ -101,7 +102,8 @@ exports.reportUser = onCall(
       .where('createdAt', '>', oneDayAgo)
       .get();
     if (recentReports.size >= 5) {
-      throw new Error('Rate limit exceeded — max 5 reports per day');
+      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+      throw new HttpsError('resource-exhausted', getLocalizedError('reports_rate_limit', lang));
     }
 
     // ── 1. Crear documento de reporte ──
@@ -379,7 +381,8 @@ exports.deleteUserData = onCall(
 
     // Solo se puede borrar la propia cuenta (o admin)
     if (targetUserId !== request.auth.uid) {
-      throw new Error('Can only delete your own account');
+      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
     }
 
     const db = admin.firestore();

@@ -1,8 +1,9 @@
 'use strict';
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const { getLocalizedError } = require('./shared');
 
 // Reviewer UIDs from Remote Config (comma-separated)
 let _reviewerUids = null;
@@ -105,7 +106,8 @@ exports.deleteStory = onCall(
 
     // Solo puede borrar el creador
     if (storyDoc.data().senderId !== currentUserId) {
-      throw new Error('Not authorized to delete this story');
+      const lang = (request.data?.userLanguage || 'en').split('-')[0].split('_')[0].toLowerCase();
+      throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
     }
 
     await db.collection('stories').doc(storyId).delete();

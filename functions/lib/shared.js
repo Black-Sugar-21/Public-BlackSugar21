@@ -631,6 +631,34 @@ const ERROR_MESSAGES = {
     ar: 'فشلت المحاكاة. يرجى المحاولة مرة أخرى.',
     id: 'Simulasi gagal. Silakan coba lagi.',
   },
+  permission_denied: {
+    en: 'You don\'t have permission to perform this action.',
+    es: 'No tienes permiso para realizar esta acción.',
+    pt: 'Você não tem permissão para realizar esta ação.',
+    'pt-PT': 'Não tens permissão para realizar esta ação.',
+    fr: 'Tu n\'as pas la permission d\'effectuer cette action.',
+    de: 'Du hast keine Berechtigung für diese Aktion.',
+    ja: 'この操作を実行する権限がありません。',
+    zh: '您无权执行此操作。',
+    'zh-TW': '您沒有權限執行此操作。',
+    ru: 'У вас нет разрешения на это действие.',
+    ar: 'ليس لديك إذن لتنفيذ هذا الإجراء.',
+    id: 'Kamu tidak memiliki izin untuk melakukan tindakan ini.',
+  },
+  reports_rate_limit: {
+    en: 'You\'ve reached the daily limit of 5 reports. Try again tomorrow.',
+    es: 'Has alcanzado el límite diario de 5 reportes. Inténtalo mañana.',
+    pt: 'Você atingiu o limite diário de 5 denúncias. Tente amanhã.',
+    'pt-PT': 'Atingiste o limite diário de 5 denúncias. Tenta amanhã.',
+    fr: 'Tu as atteint la limite quotidienne de 5 signalements. Réessaie demain.',
+    de: 'Du hast das Tageslimit von 5 Meldungen erreicht. Versuche es morgen.',
+    ja: '1日の上限である5件の通報に達しました。明日もう一度お試しください。',
+    zh: '你已达到每日5次举报的上限。请明天再试。',
+    'zh-TW': '你已達到每日5次檢舉的上限。請明天再試。',
+    ru: 'Достигнут дневной лимит в 5 жалоб. Попробуйте завтра.',
+    ar: 'لقد وصلت إلى الحد اليومي البالغ 5 بلاغات. حاول غداً.',
+    id: 'Kamu telah mencapai batas 5 laporan per hari. Coba lagi besok.',
+  },
 };
 
 /**
@@ -750,6 +778,48 @@ async function decrementCoachCredit(db, userId, admin = null) {
 }
 
 /**
+ * Per-user, per-function hourly rate limit for AI CFs that are NOT on the
+ * daily coach-credit pool (personality compat, photo coach, date blueprint,
+ * event plan, etc.). Prevents a single user from burning tokens in a loop.
+ *
+ * Storage: `users/{userId}/aiRateLimits/{fnName}` with `{ count, windowStart }`.
+ * Window: 1 hour sliding (resets when windowStart is older than 3600s).
+ *
+ * Throws nothing — returns `{allowed: true/false, remaining, retryAfterSec}`.
+ * Caller decides how to respond (HttpsError 'resource-exhausted' is typical).
+ */
+async function enforceAiRateLimit(db, userId, fnName, maxPerHour = 30) {
+  if (!userId || !fnName) return {allowed: true, remaining: maxPerHour, retryAfterSec: 0};
+  const ref = db.collection('users').doc(userId).collection('aiRateLimits').doc(fnName);
+  const WINDOW_MS = 3600 * 1000;
+  const now = Date.now();
+  try {
+    return await db.runTransaction(async (tx) => {
+      const doc = await tx.get(ref);
+      const data = doc.exists ? doc.data() : {count: 0, windowStart: 0};
+      const elapsed = now - (data.windowStart || 0);
+      let count = data.count || 0;
+      let windowStart = data.windowStart || now;
+      if (elapsed >= WINDOW_MS) {
+        count = 0;
+        windowStart = now;
+      }
+      if (count >= maxPerHour) {
+        const retryAfterSec = Math.max(1, Math.ceil((WINDOW_MS - elapsed) / 1000));
+        return {allowed: false, remaining: 0, retryAfterSec};
+      }
+      count += 1;
+      tx.set(ref, {count, windowStart, fnName, updatedAt: admin.firestore.FieldValue.serverTimestamp()}, {merge: true});
+      return {allowed: true, remaining: maxPerHour - count, retryAfterSec: 0};
+    });
+  } catch (e) {
+    // Fail-open: if Firestore write fails, don't block the user — log and allow.
+    logger.warn(`[enforceAiRateLimit] ${fnName} tx failed for ${userId.substring(0, 8)}: ${e.message}`);
+    return {allowed: true, remaining: maxPerHour, retryAfterSec: 0};
+  }
+}
+
+/**
  * Inspect a Gemini `generateContent` result for safety blocks / truncation.
  * Returns `{ok: true}` when the response finished cleanly; `{ok: false, reason, detail}` otherwise.
  *
@@ -819,4 +889,5 @@ module.exports = {
   SUPPORTED_LANGUAGES,
   SUPPORTED_REGIONAL,
   checkGeminiSafety,
+  enforceAiRateLimit,
 };

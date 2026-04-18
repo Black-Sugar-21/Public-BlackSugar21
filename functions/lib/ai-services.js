@@ -3,7 +3,7 @@ const { onCall } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, trackAICall } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, trackAICall, checkGeminiSafety, enforceAiRateLimit, getLocalizedError } = require('./shared');
 const { calcAge } = require('./geo');
 const { getMatchUsersLocations, calculateMidpoint, placesTextSearch, transformPlaceToSuggestion, getPlacesSearchConfig, haversineKm } = require('./places-helpers');
 
@@ -747,6 +747,14 @@ Return ONLY a JSON object:
             generationConfig: _srGenCfg,
           });
           trackAICall({functionName: 'generateSmartReply', model: AI_MODEL_LITE, operation: 'smart_reply', usage: result.response.usageMetadata, latencyMs: Date.now() - _srStart, attempt});
+
+          // Guard: safety block or MAX_TOKENS truncation — don't parse partial output
+          const safety = checkGeminiSafety(result, 'generateSmartReply');
+          if (!safety.ok) {
+            logger.warn(`[generateSmartReply] attempt ${attempt}: safety/finish check failed — ${safety.reason}: ${safety.detail}`);
+            lastErr = new Error(`gemini_${safety.reason}`);
+            continue;
+          }
 
           const text = safeResponseText(result);
           let parsed = null;
@@ -1504,6 +1512,14 @@ Return ONLY a JSON array with exactly 3 objects: [{"message": "...", "reasoning"
             generationConfig: _ibGenCfg,
           });
 
+          // Guard: safety block or MAX_TOKENS truncation — don't parse partial output
+          const safety = checkGeminiSafety(result, 'generateIcebreakers');
+          if (!safety.ok) {
+            logger.warn(`[generateIcebreakers] attempt ${attempt}: safety/finish check failed — ${safety.reason}: ${safety.detail}`);
+            lastErr = new Error(`gemini_${safety.reason}`);
+            continue;
+          }
+
           const text = safeResponseText(result);
           let parsed = null;
           try {
@@ -2193,6 +2209,13 @@ exports.generateDateBlueprint = onCall(
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
     const durationPreset = duration || 'standard'; // quick | standard | full
 
+    // Rate limit: this CF hits Gemini + Google Places — expensive. Cap at 10/hour per user.
+    const rl = await enforceAiRateLimit(db, userId, 'generateDateBlueprint', 10);
+    if (!rl.allowed) {
+      logger.warn(`[generateDateBlueprint] Rate limited: ${userId.substring(0, 8)} retry in ${rl.retryAfterSec}s`);
+      throw new (require('firebase-functions/v2/https').HttpsError)('resource-exhausted', getLocalizedError('rate_limit', lang));
+    }
+
     const SUGGESTED_DATE_PLAN_TITLE = {
       en: 'Suggested date plan',
       es: 'Plan de cita sugerido',
@@ -2546,6 +2569,14 @@ exports.generateEventDatePlan = onCall(
     const rawLang = userLanguage || 'en';
     const lang = rawLang.split('-')[0].split('_')[0].toLowerCase();
 
+    // Rate limit: Gemini Search Grounding + Places — very expensive. Cap at 10/hour per user.
+    const _rl_eventPlan = await enforceAiRateLimit(db, userId, 'generateEventDatePlan', 10);
+    if (!_rl_eventPlan.allowed) {
+      logger.warn(`[generateEventDatePlan] Rate limited: ${userId.substring(0, 8)} retry in ${_rl_eventPlan.retryAfterSec}s`);
+      throw new (require('firebase-functions/v2/https').HttpsError)('resource-exhausted', getLocalizedError('rate_limit', lang));
+    }
+
+
     try {
       // 1. Get user location
       const userDoc = await db.collection('users').doc(userId).get();
@@ -2838,6 +2869,15 @@ exports.getPhotoCoachAnalysis = onCall(
       const db = admin.firestore();
 
       const uid = request.auth.uid;
+
+      // Rate limit: Gemini Vision multi-image analysis is very expensive. Cap at 6/hour per user.
+      const _photoLang = ((request.data?.userLanguage) || 'en').split('-')[0].split('_')[0].toLowerCase();
+      const _rl_photo = await enforceAiRateLimit(db, uid, 'getPhotoCoachAnalysis', 6);
+      if (!_rl_photo.allowed) {
+        logger.warn(`[getPhotoCoachAnalysis] Rate limited: ${uid.substring(0, 8)} retry in ${_rl_photo.retryAfterSec}s`);
+        throw new (require('firebase-functions/v2/https').HttpsError)('resource-exhausted', getLocalizedError('rate_limit', _photoLang));
+      }
+
       const userDoc = await db.collection('users').doc(uid).get();
       if (!userDoc.exists) return {success: false, error: 'user_not_found'};
 

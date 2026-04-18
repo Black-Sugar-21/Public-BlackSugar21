@@ -5,7 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude } = require('./shared');
+const { geminiApiKey, placesApiKey, AI_MODEL_NAME, AI_MODEL_LITE, getLanguageInstruction, normalizeCategory, categoryEmojiMap, parseGeminiJsonResponse, validateAndCorrectIntent, validateDominantCategory, getCachedEmbedding, trackAICall, anthropicApiKey, evaluateWithClaude, checkGeminiSafety } = require('./shared');
 
 /** Safely extract text from Gemini result — prevents crash on null/undefined response */
 function safeResponseText(result) {
@@ -4381,6 +4381,15 @@ Rules:
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({model: AI_MODEL_LITE, generationConfig: {maxOutputTokens: 1024, responseMimeType: 'application/json'}});
       const result = await model.generateContent(systemPrompt);
+
+      // Guard: safety/finish check — don't parse truncated or safety-blocked output
+      const safety = checkGeminiSafety(result, 'getRealtimeCoachTips');
+      if (!safety.ok) {
+        logger.warn(`[getRealtimeCoachTips] Gemini safety/finish failed: ${safety.reason} — ${safety.detail}`);
+        // Fall into outer catch's algorithmic fallback with degraded flag
+        throw new Error(`gemini_${safety.reason}`);
+      }
+
       const responseText = safeResponseText(result);
 
       // 7. Parse response
@@ -4397,6 +4406,7 @@ Rules:
           tips: [],
           preDateDetected: false,
           suggestedAction: null,
+          degraded: true,
         };
       }
 
