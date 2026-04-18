@@ -13,7 +13,7 @@ on:
 
 jobs:
   backend-tests:
-    name: Backend offline test suite (333+ assertions)
+    name: Backend offline test suite (865+ assertions, 4 files)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,14 +32,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run offline test suite (test-comprehensive-300)
+      - name: Run offline test suite (4 static suites, 865+ assertions)
         run: npm test
-        # Pure static-analysis tests: read lib/*.js source files with
-        # fs.readFileSync + regex checks. No Firebase/Gemini SDK init
-        # required, so this runs in a clean CI env without secrets and
-        # guards the deploy against regressions in regex-based features
-        # (conflict detection, URL sanitization, rate-limit config,
-        # base64 validation, scorecard strings, etc.).
+        # Pure static-analysis tests across 4 files:
+        #   - test-comprehensive-300.js   (333 asserts — regex, sanitization,
+        #                                    guards, clamping, i18n, safety)
+        #   - test-post-deploy-350.js     (394 asserts — code patterns,
+        #                                    RAG/Coach/Moderation/Places config)
+        #   - test-discovery-v2-parity.js (111 asserts — orientation, userType,
+        #                                    reviewer bypass, gender_mismatch,
+        #                                    super-like, real-data simulation)
+        #   - test-situation-sim.js       (27 asserts — 10-language directives,
+        #                                    edge cases, XSS/SQL/RTL handling)
+        #
+        # All read lib/*.js with fs.readFileSync + regex checks — no Firebase
+        # Admin SDK or Gemini API init, so the job needs zero secrets and
+        # runs in < 15 seconds. Exit code 1 on any failure blocks merge.
 
       - name: Report test summary
         if: always()

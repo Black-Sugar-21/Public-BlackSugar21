@@ -7,9 +7,8 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "node test-comprehensive-300.js",
-    "test:offline": "node test-comprehensive-300.js && node test-multiverse-places-local.js",
-    "test:live": "node test-discovery-v2-parity.js && node test-situation-sim.js"
+    "test": "node test-comprehensive-300.js && node test-post-deploy-350.js && node test-discovery-v2-parity.js && node test-situation-sim.js",
+    "test:multiverse": "node test-multiverse-places-local.js"
   },
   "engines": {
     "node": "20"
