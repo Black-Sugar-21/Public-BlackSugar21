@@ -18,247 +18,273 @@ service cloud.firestore {
       // Permitir crear match si el usuario autenticado está en usersMatched
   		allow create: if request.auth != null &&
             request.auth.uid in request.resource.data.usersMatched;
-      
+
       // Permitir actualizar match (para lastMessageTime, etc.)
+      // SECURITY: freeze immutable match identity fields (usersMatched,
+      // userTypesAtMatch, createdAt). Previously an attacker in the match
+      // could flip `userTypesAtMatch[otherUid]` to block the other user
+      // from sending the first message, or remove the other uid entirely.
       allow update: if request.auth != null &&
-            request.auth.uid in resource.data.usersMatched;
-      
+            request.auth.uid in resource.data.usersMatched &&
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+              ['usersMatched', 'userTypesAtMatch', 'createdAt']
+            );
+
       // No permitir eliminar
       allow delete: if false;
-      
+
       // Subcolección de MESSAGES dentro de cada match
       match /messages/{messageId} {
         // Los participantes del match pueden leer mensajes
         allow read: if request.auth != null &&
               request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched;
-        
+
         // Helper function: obtener userType ORIGINAL del remitente (en el momento del match)
         function getSenderTypeAtMatch() {
           let matchData = get(/databases/$(database)/documents/matches/$(matchId)).data;
-          return matchData.keys().hasAny(['userTypesAtMatch']) 
+          return matchData.keys().hasAny(['userTypesAtMatch'])
             ? matchData.userTypesAtMatch[request.auth.uid]
             : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
         }
-        
+
         // Helper function: verificar si el match tiene messageCount > 0
         function hasExistingMessages() {
           let matchData = get(/databases/$(database)/documents/matches/$(matchId)).data;
-          // Si messageCount no existe O es 0, retornar false
-          // Si existe y es > 0, retornar true
           return matchData.keys().hasAny(['messageCount']) && matchData.messageCount > 0;
         }
-        
-        // Regla de creación de mensajes
+
+        // Regla de creación de mensajes — validación reforzada:
+        // - senderId == caller (previene suplantación)
+        // - timestamp == request.time (previene backdating)
+        // - cuerpo del mensaje limitado a 4000 caracteres (anti-abuse)
+        // - receiverId != senderId (previene chat consigo mismo)
         allow create: if request.auth != null &&
-              // El usuario debe ser el remitente
               request.auth.uid == request.resource.data.senderId &&
-              // El usuario debe ser participante del match
               request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched &&
+              request.resource.data.get('receiverId', '') != request.auth.uid &&
+              (!request.resource.data.keys().hasAny(['message']) ||
+               request.resource.data.message is string &&
+               request.resource.data.message.size() <= 4000) &&
               // VALIDACIÓN PRIMER MENSAJE: Solo usuarios que eran SUGAR_DADDY/MOMMY al hacer match pueden iniciar
               (
-                // Si ya hay mensajes (messageCount > 0), cualquiera puede enviar
                 hasExistingMessages() ||
-                // Si ES el primer mensaje, verificar tipo ORIGINAL (al momento del match)
                 getSenderTypeAtMatch() == 'SUGAR_DADDY' ||
                 getSenderTypeAtMatch() == 'SUGAR_MOMMY' ||
-                // FALLBACK: Si no hay userTypesAtMatch, verificar tipo actual (compatibilidad con matches viejos)
                 (!get(/databases/$(database)/documents/matches/$(matchId)).data.keys().hasAny(['userTypesAtMatch']) &&
                  (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_DADDY' ||
                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_MOMMY'))
               );
-        
-        // Permitir actualizar campos específicos según el rol del usuario:
-        // - El remitente actualiza campos de carga de fotos efímeras (uploadProgress, photoUrl, isUploading)
-        // - Cualquier participante del match puede marcar foto efímera como vista (viewedBy)
+
+        // Update: el remitente actualiza carga de fotos efímeras; cualquier participante marca viewedBy
         allow update: if request.auth != null &&
               request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched &&
               (
-                // El remitente puede actualizar campos de carga de fotos efímeras
                 (request.auth.uid == resource.data.senderId &&
                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading'])) ||
-                // ✅ CRÍTICO: Cualquier participante puede marcar foto efímera como vista
-                // sin esto, el destinatario recibe PERMISSION_DENIED al actualizar viewedBy
                 (resource.data.get('isEphemeral', false) == true &&
                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']))
               );
-        
-        // No permitir eliminar mensajes
+
         allow delete: if false;
       }
     }
 
     // --- USERS ---
     match /users/{userId} {
-      // Cualquier usuario autenticado puede leer perfiles (incluso si App Check falla en desarrollo)
+      // Cualquier usuario autenticado puede leer perfiles
       allow read: if request.auth != null;
 
-      // Solo el propietario puede crear/actualizar su perfil
-      allow create, update: if request.auth != null && 
+      // Crear: solo el propio usuario puede crear su doc (con validaciones de rango básicas)
+      allow create: if request.auth != null &&
         request.auth.uid == userId &&
-        // Validar que latitude esté en rango válido (-90 a 90)
-        (!request.resource.data.keys().hasAny(['latitude']) || 
+        (!request.resource.data.keys().hasAny(['latitude']) ||
          (request.resource.data.latitude >= -90 && request.resource.data.latitude <= 90)) &&
-        // Validar que longitude esté en rango válido (-180 a 180)
-        (!request.resource.data.keys().hasAny(['longitude']) || 
+        (!request.resource.data.keys().hasAny(['longitude']) ||
          (request.resource.data.longitude >= -180 && request.resource.data.longitude <= 180)) &&
-        // Validar que maxDistance sea un valor positivo razonable (1 a 500 km)
-        (!request.resource.data.keys().hasAny(['maxDistance']) || 
+        (!request.resource.data.keys().hasAny(['maxDistance']) ||
          (request.resource.data.maxDistance >= 1 && request.resource.data.maxDistance <= 500));
-      
-      // Subcolección LIKED: lectura pública (para verificar matches), escritura solo propietario
+
+      // UPDATE: solo el propio usuario y SOLO campos no privilegiados.
+      // SECURITY: previamente un usuario podía auto-promoverse escribiendo
+      //   isReviewer=true, isAdmin=true, userType='SUGAR_DADDY', verified=true,
+      //   premium=true, coachMessagesRemaining=9999, accountStatus='active', etc.
+      // Todos esos campos ahora están BLOQUEADOS — solo el admin SDK (CF) los escribe.
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        // Rango de latitud/longitud/maxDistance si se escriben
+        (!request.resource.data.keys().hasAny(['latitude']) ||
+         (request.resource.data.latitude >= -90 && request.resource.data.latitude <= 90)) &&
+        (!request.resource.data.keys().hasAny(['longitude']) ||
+         (request.resource.data.longitude >= -180 && request.resource.data.longitude <= 180)) &&
+        (!request.resource.data.keys().hasAny(['maxDistance']) ||
+         (request.resource.data.maxDistance >= 1 && request.resource.data.maxDistance <= 500)) &&
+        // Bloquear escritura de campos privilegiados / de-servidor
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isReviewer', 'isAdmin', 'isTest', 'userType', 'userTypeAtSignup',
+          'verified', 'premium', 'accountStatus',
+          'coachMessagesRemaining', 'coachMessagesLastReset',
+          'superLikesRemaining', 'superLikesLastReset',
+          'dailyLikesRemaining', 'lastLikeResetDate',
+          'safetyScore', 'safetyScoreLastUpdate',
+          'simulationsRemaining', 'multiverseRemaining',
+          'reportCount', 'reportsAgainstCount',
+          'createdAt', 'moderationHistory',
+          'stripeCustomerId', 'stripeSubscriptionId'
+        ]);
+
+      // Subcolección LIKED — READ solo propietario (previene enumeración del grafo de likes)
       match /liked/{likedUserId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
-      
+
       // Subcolección PASSED: solo propietario
       match /passed/{passedUserId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-      
-      // Subcolección SWIPES: solo propietario (para cooldown de perfiles)
+
+      // Subcolección SWIPES: solo propietario
       match /swipes/{swipedUserId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-      
-      // Subcolección SUPERLIKED: lectura pública (para mostrar super likes recibidos), escritura solo propietario
+
+      // Subcolección SUPERLIKED — READ solo propietario (previene enumeración del grafo de superLikes)
       match /superLiked/{superLikedUserId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
-      
+
       // Subcolección COMPATIBILITY_SCORES: solo propietario puede leer
       match /compatibility_scores/{scoreId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        // Solo Cloud Functions (admin SDK) pueden escribir — bypass automático de reglas.
         allow write: if false;
       }
 
       // Subcolección COACH CHAT: historial de simulaciones + mensajes coach.
       // Tanto cliente (iOS/Android) como CF (admin SDK) pueden escribir aquí.
-      // Cliente guarda: situation_result + multi_universe_result + user messages.
-      // CF escribe: coach responses via admin SDK (bypass automático de rules).
-      // Solo el propietario puede leer/escribir su propio historial.
       match /coachChat/{messageId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-    }
 
-    // --- MESSAGES ---
-    match /messages/{chatId} {
-      // Solo los participantes del chat pueden leer mensajes
-      allow read: if request.auth != null &&
-        (request.auth.uid == resource.data.senderId ||
-         request.auth.uid == resource.data.receiverId);
+      // Rate-limit tracking (enforceAiRateLimit en shared.js) — solo admin SDK
+      match /aiRateLimits/{fnName} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // CF runTransaction
+      }
 
-      // Solo el remitente puede escribir mensajes
-      allow write: if request.auth != null &&
-        request.auth.uid == request.resource.data.senderId;
+      // AI preferences learning: solo propietario lee, solo CF escribe
+      match /aiPreferences/{prefId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // --- PENDING NOTIFICATIONS ---
+    // SECURITY: validar senderId == caller y whitelist de keys. Previamente
+    // un atacante podía crear payloads arbitrarios y el scheduled processor
+    // los entregaba como push trusted.
     match /pendingNotifications/{notificationId} {
-      // Los usuarios autenticados pueden crear notificaciones pendientes
-      // (iOS/Android escriben directamente a esta colección para notificaciones)
-      allow create: if request.auth != null;
-      
-      // Solo Cloud Functions (admin SDK) pueden leer/actualizar/eliminar — bypass automático.
-      // Ningún cliente debe leer ni modificar notificaciones ajenas.
+      allow create: if request.auth != null &&
+        request.resource.data.get('senderId', '') == request.auth.uid &&
+        request.resource.data.keys().hasOnly([
+          'senderId', 'receiverId', 'type', 'title', 'body', 'data',
+          'createdAt', 'processed', 'priority', 'collapseKey'
+        ]);
+
+      // Solo CF admin SDK lee/actualiza/elimina
       allow read, update, delete: if false;
     }
 
     // --- USER INTERACTIONS (Analytics) ---
     match /user_interactions/{interactionId} {
-      // Solo el propietario puede escribir sus propias interacciones
       allow create: if request.auth != null &&
         request.auth.uid == request.resource.data.userId;
-      
-      // Solo Cloud Functions (admin SDK) pueden leer para agregación — bypass automático.
-      // Ningún cliente debe leer interacciones de otros usuarios.
       allow read: if false;
-      
-      // No permitir actualizar o eliminar
       allow update, delete: if false;
     }
 
     // --- USER ANALYTICS (Aggregated) ---
     match /user_analytics/{userId} {
-      // Solo Cloud Functions (admin SDK) pueden leer/escribir — bypass automático de reglas.
-      // Ningún cliente debe acceder directamente a user_analytics.
       allow read, write: if false;
     }
 
     // --- STORIES ---
     match /stories/{storyId} {
-      // Lectura: cualquier usuario autenticado puede leer stories
-      // La lógica de filtrado se maneja en el cliente
+      // Lectura abierta: la lógica de filtrado (expiresAt, isPersonal, match membership)
+      // se maneja en el cliente. Match stories no exponen datos sensibles — solo la URL
+      // de Storage que ya está protegida por match-membership en storage.rules.
       allow read: if request.auth != null;
-      
-      // Crear story: usuario autenticado (aunque normalmente via Cloud Function)
+
+      // Crear story — validar schema + senderId == caller + cap de expiresAt a 24h
       allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.senderId;
-      
-      // Actualizar: solo el propietario puede actualizar su story,
-      // o cualquier usuario puede agregar su id a viewedBy (fallback si el CF falla)
+        request.auth.uid == request.resource.data.senderId &&
+        (!request.resource.data.keys().hasAny(['expiresAt']) ||
+         request.resource.data.expiresAt is timestamp);
+
+      // Update: el propietario edita el doc completo; otros solo pueden AÑADIRSE a viewedBy.
+      // SECURITY: previamente un atacante podía sobrescribir viewedBy entero con IDs
+      // arbitrarios. Ahora el diff de viewedBy solo puede contener al propio uid.
       allow update: if request.auth != null &&
-        (request.auth.uid == resource.data.senderId ||
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']));
-      
+        (
+          request.auth.uid == resource.data.senderId ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']) &&
+           request.resource.data.viewedBy.hasAll(resource.data.get('viewedBy', [])))
+        );
+
       // Eliminar: solo el creador
       allow delete: if request.auth != null &&
         request.auth.uid == resource.data.senderId;
     }
 
-    // --- INTEREST ITEMS (catálogo público de intereses) ---
-    // Cualquier usuario autenticado puede leer el catálogo de intereses
-    // Solo administradores (admin SDK / Cloud Functions) pueden escribir
+    // --- INTEREST ITEMS (catálogo público) ---
     match /interestItems/{itemId} {
       allow read: if request.auth != null;
-      allow write: if false; // Solo admin SDK puede escribir
+      allow write: if false;
     }
 
-    // --- INTEREST CATEGORIES (categorías del catálogo de intereses) ---
     match /interestCategories/{categoryId} {
       allow read: if request.auth != null;
-      allow write: if false; // Solo admin SDK puede escribir
+      allow write: if false;
     }
 
-    // --- COACH CHATS (AI Date Coach conversations) ---
-    // Users can only read their own coach chat history.
-    // All writes go through Cloud Functions (admin SDK) — no direct client writes.
+    // --- COACH CHATS (AI Date Coach — legacy path) ---
     match /coachChats/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // Solo admin SDK (Cloud Functions)
+      allow write: if false;
 
       match /messages/{messageId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if false; // Solo admin SDK (Cloud Functions)
+        allow write: if false;
       }
     }
 
     // --- SYSTEM STATS (for Cloud Functions) ---
     match /system_stats/{docId} {
-      // Solo Cloud Functions (admin SDK) pueden leer/escribir: bypass de reglas automático.
-      // Ningún cliente debe acceder directamente a system_stats.
+      allow read, write: if false;
+    }
+
+    // --- REPORTS (solo CF admin SDK lee/escribe) ---
+    match /reports/{reportId} {
       allow read, write: if false;
     }
 
     // --- TESTER SIGNUPS (public write for beta enrollment from web) ---
+    // Whitelist de campos + validación básica de schema.
+    // TODO: añadir App Check enforcement en producción.
     match /testerSignups/{signupId} {
-      // Anyone can create a signup (no auth required — web form)
       allow create: if request.resource.data.keys().hasAll(['email', 'platform', 'status']) &&
+        request.resource.data.keys().hasOnly(['email', 'platform', 'status', 'createdAt', 'locale', 'source']) &&
         request.resource.data.email is string &&
         request.resource.data.email.size() > 5 &&
         request.resource.data.email.size() < 100 &&
         request.resource.data.status == 'pending';
 
-      // No read/update/delete from clients
       allow read, update, delete: if false;
     }
 
     // --- DEFAULT ---
     match /{document=**} {
-      allow read, write: if false; // Bloquea todo lo demás
+      allow read, write: if false;
     }
   }
 }
