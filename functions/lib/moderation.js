@@ -560,8 +560,46 @@ function getMessageHash(message, senderLang = 'en') {
  * Filtros rápidos sin IA para mensajes obviamente seguros o prohibidos.
  * Reduce ~60% de llamadas a Gemini.
  */
+/**
+ * Normalise user input before running it against the blacklist.
+ *
+ * Two passes:
+ *   1) Unicode NFKC — collapses fullwidth (ｓｅｘ), styled math letters
+ *      (𝐬𝐞𝐱), ligatures (ﬁ), compat chars, combining accents, circled
+ *      digits, superscripts, etc. Native to V8, zero-cost.
+ *   2) Homoglyph substitution — NFKC does NOT turn Cyrillic/Greek
+ *      lookalikes into Latin (e.g. `kа` with Cyrillic а), so we fold
+ *      the most-used confusables to their Latin counterparts. Keeps the
+ *      map short: only the confusables that actually appear in scam /
+ *      evasion attempts we've seen in logs.
+ */
+const HOMOGLYPH_MAP = {
+  // Cyrillic → Latin
+  'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x', 'ѕ': 's',
+  'і': 'i', 'ј': 'j', 'ӏ': 'l', 'ԁ': 'd', 'ԛ': 'q', 'ԝ': 'w', 'в': 'b', 'н': 'h',
+  'к': 'k', 'м': 'm', 'т': 't',
+  // Greek → Latin
+  'α': 'a', 'ε': 'e', 'ο': 'o', 'ρ': 'p', 'υ': 'u', 'χ': 'x', 'ι': 'i', 'κ': 'k',
+  'μ': 'm', 'ν': 'v', 'τ': 't', 'β': 'b',
+};
+function normalizeForModeration(raw) {
+  let s = String(raw || '').normalize('NFKC').toLowerCase();
+  // Homoglyph fold in one pass.
+  s = s.replace(/[а-яαβγδεζηθικλμνξοπρστυφχψωѕіјӏԁԛԝ]/g, ch => HOMOGLYPH_MAP[ch] || ch);
+  // Collapse zero-width + invisible chars that split flagged terms
+  // ("c_a_s_h" style is caught by the blacklist term itself; this handles
+  // zero-width separators inside otherwise-flaggable substrings).
+  s = s.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '');
+  return s.trim();
+}
+
 function applyQuickFilters(message, modConfig = {}) {
+  // Original lowercase kept for length check + URL regex (which relies on
+  // raw characters including punctuation). Blacklist comparison runs
+  // against the normalised form so homoglyph / fullwidth / styled-text
+  // evasions are caught with the same term list.
   const messageLower = message.toLowerCase().trim();
+  const messageNormalized = normalizeForModeration(message);
 
   // 1. Mensajes muy cortos → generalmente seguros (emoji, "hola", "ok")
   const safeLenThreshold = modConfig.safeLengthThreshold || 3;
@@ -573,7 +611,7 @@ function applyQuickFilters(message, modConfig = {}) {
   const additionalTerms = Array.isArray(modConfig.additionalBlacklistTerms) ? modConfig.additionalBlacklistTerms : [];
   const fullBlacklist = additionalTerms.length > 0 ? [...MODERATION_BLACKLIST, ...additionalTerms] : MODERATION_BLACKLIST;
   for (const term of fullBlacklist) {
-    if (messageLower.includes(term)) {
+    if (messageNormalized.includes(term) || messageLower.includes(term)) {
       let category = 'SPAM';
       let severity = 'HIGH';
       if (SEXUAL_BLACKLIST_TERMS.some((st) => term.includes(st))) {
