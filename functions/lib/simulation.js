@@ -1511,6 +1511,20 @@ function getFallbackReportStrings(rawLang) {
 // ---------------------------------------------------------------------------
 // Cloud Function
 // ---------------------------------------------------------------------------
+
+/**
+ * Cloud Function: Run the multi-simulation compatibility engine.
+ * Executes 5-10 independent agent-turn simulations across 4 relationship scenarios,
+ * counts mutual-choice signals, and returns a 0-100 compatibility score.
+ *
+ * Request: { matchId: string, userLanguage?: string }
+ * Response: { score: number, label: string, positiveCount: number, totalCount: number,
+ *   scenarios: Array<{scenario, roundCount, mutualChoice, highlight}>, fromCache: boolean }
+ * @throws {HttpsError} 'unauthenticated' if not signed in
+ * @throws {HttpsError} 'invalid-argument' if matchId is missing or malformed
+ * @throws {HttpsError} 'permission-denied' if feature is in beta and user not in allowlist
+ * @throws {HttpsError} 'resource-exhausted' if daily rate limit is exceeded
+ */
 exports.simulateRelationship = onCall(
   {
     region: 'us-central1',

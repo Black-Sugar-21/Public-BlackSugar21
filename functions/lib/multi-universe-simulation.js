@@ -33,8 +33,13 @@ const { DEBATE_CONFIG_DEFAULTS } = require('./debate-psychology');
 const db = admin.firestore();
 
 /**
- * Analytics tracking for multi-universe simulations
- * Stores: error counts, total cost, duration by stage, success rate
+ * Write multi-universe simulation analytics to Firestore (fire-and-forget).
+ * Updates daily aggregate at `aiAnalytics/multiverse/daily/{date}` and
+ * per-user record at `users/{userId}/multiverseAnalytics/{date}`.
+ * @param {string} userId - authenticated user UID
+ * @param {string} matchId - match document ID, or "solo" for solo mode
+ * @param {{success: boolean, estimatedCost?: number, duration?: number, successfulStages?: number, failedStages?: number, compatibilityScore?: number, errorReason?: string, debateEnabled?: boolean, debateStagesSucceeded?: number, debateStagesFallback?: number}} result - simulation result summary
+ * @returns {Promise<void>}
  */
 async function trackMultiUniverseAnalytics(userId, matchId, result) {
   try {
@@ -282,13 +287,15 @@ const NEUTRAL_STAGE_GUIDANCE = {
 
 /**
  * Build the priming context that feeds one multi-universe stage into Gemini.
- *
- * Context-adaptive with 5 layers:
- *   - match + userContext + chatSummary + matchProfile → enriched dating stage
- *   - match + chatSummary + matchProfile               → dating stage + chat guidance
- *   - match only (no chat, no context)                  → basic dating stage + profile
- *   - solo + userContext                                → NEUTRAL per-stage guidance
- *   - solo (nothing)                                    → neutral open-ended stage
+ * Context-adaptive across 5 layers: match+userContext+chat, match+chat, match-only,
+ * solo+userContext (neutral frame), and solo-only (generic neutral).
+ * @param {{id: string, stageLabel: string, situation: string, neutralSituation: string, order: number}} stage - stage descriptor from MULTI_UNIVERSE_STAGES
+ * @param {string} userContext - user's free-text situation (≤500 chars, may be empty)
+ * @param {string} chatSummary - recent chat messages formatted as chronological text
+ * @param {boolean} isSoloMode - true when no matchId was provided
+ * @param {string} matchProfileSummary - short match profile string from buildMatchProfileSummary
+ * @param {string} ragKnowledge - retrieved psychology knowledge chunks, or empty string
+ * @returns {string} assembled context block ready for Gemini prompt injection
  */
 function buildStageContext(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge) {
   const parts = [];

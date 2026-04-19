@@ -8,7 +8,9 @@ const geminiApiKey = defineSecret('GEMINI_API_KEY');
 const placesApiKey = defineSecret('GOOGLE_PLACES_API_KEY');
 
 // ─── AI Model Constants ──────────────────────────────────────────────────────
+/** @type {string} Full Gemini model — used for synthesis, complex generation */
 const AI_MODEL_NAME = 'gemini-2.5-flash';
+/** @type {string} Lite Gemini model — used for fast/cheap draft calls */
 const AI_MODEL_LITE = 'gemini-2.5-flash-lite';
 
 // ─── Shared Helper Functions ─────────────────────────────────────────────────
@@ -74,6 +76,12 @@ function getRegionalString(table, lang) {
   return table.en || '';
 }
 
+/**
+ * Return a language-enforcement directive for Gemini prompts.
+ * Must be placed at the END of any prompt to override other directives.
+ * @param {string} lang - normalized language code (en, es, ja, zh, ar, pt, pt-PT, zh-TW, zh-HK, …)
+ * @returns {string} instruction string to append to Gemini prompts
+ */
 function getLanguageInstruction(lang) {
   // NOTE: These instructions are critical — they must be at the END of the prompt
   // to override any other language directives. Gemini must generate ALL content
@@ -139,6 +147,12 @@ function normalizeCategory(cat) {
 
 const categoryEmojiMap = {cafe: '☕', restaurant: '🍽️', bar: '🍺', night_club: '💃', movie_theater: '🎬', park: '🌳', museum: '🏛️', bowling_alley: '🎳', art_gallery: '🎨', bakery: '🥐', shopping_mall: '🛍️', spa: '💆', aquarium: '🐠', zoo: '🦁'};
 
+/**
+ * Extract and parse a JSON object from a Gemini response string.
+ * Handles markdown code blocks (```json…```), unclosed blocks, and bare JSON.
+ * @param {string} responseText - raw text from Gemini response.text()
+ * @returns {object|null} parsed object, or null on failure
+ */
 function parseGeminiJsonResponse(responseText) {
   if (!responseText || typeof responseText !== 'string') {
     return null;
@@ -693,6 +707,11 @@ function getLocalizedError(key, userLang = 'en') {
 // Truncate/hash PII (emails, FCM tokens, phone numbers) before logging so
 // Cloud Logging doesn't retain sensitive data in plaintext.
 
+/**
+ * Redact an email address for safe Cloud Logging (e.g. "jo***@example.com").
+ * @param {string} email - raw email address
+ * @returns {string} partially masked email, or '[invalid-email]'
+ */
 function redactEmail(email) {
   if (typeof email !== 'string' || !email.includes('@')) return '[invalid-email]';
   const [local, domain] = email.split('@');
@@ -701,6 +720,11 @@ function redactEmail(email) {
   return `${shortLocal}@${domain}`;
 }
 
+/**
+ * Redact an FCM or auth token for safe Cloud Logging (first 6 + last 4 chars).
+ * @param {string} token - raw token string
+ * @returns {string} masked token, or '[invalid-token]'
+ */
 function redactToken(token) {
   if (typeof token !== 'string' || token.length < 8) return '[invalid-token]';
   return `${token.substring(0, 6)}…${token.substring(token.length - 4)}`;
@@ -836,9 +860,11 @@ async function getAiFeatureFlags() {
 }
 
 /**
- * Check if an AI feature is enabled. Throws `failed-precondition` HttpsError
- * when disabled, so the client can show a "feature temporarily unavailable"
- * message in the user's language.
+ * Check if an AI feature is enabled via Remote Config kill switch.
+ * @param {string} flagName - key in ai_feature_flags RC param (e.g. 'multiUniverse')
+ * @param {string} [userLang='en'] - ISO 2-letter code for localized error message
+ * @returns {Promise<void>}
+ * @throws {HttpsError} 'failed-precondition' when the feature flag is false
  */
 async function assertAiFeatureEnabled(flagName, userLang = 'en') {
   const flags = await getAiFeatureFlags();
@@ -849,15 +875,14 @@ async function assertAiFeatureEnabled(flagName, userLang = 'en') {
 }
 
 /**
- * Per-user, per-function hourly rate limit for AI CFs that are NOT on the
- * daily coach-credit pool (personality compat, photo coach, date blueprint,
- * event plan, etc.). Prevents a single user from burning tokens in a loop.
- *
- * Storage: `users/{userId}/aiRateLimits/{fnName}` with `{ count, windowStart }`.
- * Window: 1 hour sliding (resets when windowStart is older than 3600s).
- *
- * Throws nothing — returns `{allowed: true/false, remaining, retryAfterSec}`.
- * Caller decides how to respond (HttpsError 'resource-exhausted' is typical).
+ * Per-user, per-function hourly rate limit for AI CFs outside the coach-credit pool.
+ * Uses a 1-hour sliding window stored in `users/{userId}/aiRateLimits/{fnName}`.
+ * Fail-open: Firestore errors are logged but never block the user.
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} userId
+ * @param {string} fnName - Cloud Function name used as document key
+ * @param {number} [maxPerHour=30] - max calls allowed within the 1-hour window
+ * @returns {Promise<{allowed: boolean, remaining: number, retryAfterSec: number}>}
  */
 async function enforceAiRateLimit(db, userId, fnName, maxPerHour = 30) {
   if (!userId || !fnName) return {allowed: true, remaining: maxPerHour, retryAfterSec: 0};
@@ -891,17 +916,12 @@ async function enforceAiRateLimit(db, userId, fnName, maxPerHour = 30) {
 }
 
 /**
- * Inspect a Gemini `generateContent` result for safety blocks / truncation.
+ * Inspect a Gemini `generateContent` result for safety blocks or truncation.
  * Returns `{ok: true}` when the response finished cleanly; `{ok: false, reason, detail}` otherwise.
- *
- * Without this check, callers that just do `result.response.text()` will:
- *   - Receive '' when `promptFeedback.blockReason` is set (safety) and silently fall back.
- *   - Parse truncated JSON when `finishReason === 'MAX_TOKENS'` / 'RECITATION'.
- *   - Never distinguish a real AI answer from an empty/degraded one in monitoring.
- *
- * Usage:
- *   const safety = checkGeminiSafety(result, 'dateCoachChat');
- *   if (!safety.ok) { logger.warn(...); return fallback(); }
+ * Distinguishes safety blocks (`blocked`), token cutoff (`truncated`), and missing candidates.
+ * @param {object} result - raw result from model.generateContent()
+ * @param {string} [fnName='unknown'] - calling CF name for log context
+ * @returns {{ok: boolean, reason?: string, detail?: string}}
  */
 function checkGeminiSafety(result, fnName = 'unknown') {
   const response = result?.response;

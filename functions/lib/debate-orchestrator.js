@@ -150,10 +150,11 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
 }
 
 /**
- * Blend heuristic score with LLM synthesis confidence.
- * @param {number} heuristicScore - result from scoreApproach (4-10)
- * @param {number} synthesisConfidence - from synthesizer (1-10)
- * @returns {number} blended score in [4, 10]
+ * Blend a heuristic approach score with the synthesizer's confidence rating.
+ * Weight: 60% heuristic, 40% LLM confidence. Result clamped to [4, 10].
+ * @param {number} heuristicScore - rule-based score from scoreApproach (4-10)
+ * @param {number} synthesisConfidence - LLM confidence from synthesizer (1-10)
+ * @returns {number} blended score in [4, 10], one decimal place
  */
 function scoreApproachWithDebate(heuristicScore, synthesisConfidence) {
   const h = typeof heuristicScore === 'number' && !isNaN(heuristicScore) ? heuristicScore : 5;

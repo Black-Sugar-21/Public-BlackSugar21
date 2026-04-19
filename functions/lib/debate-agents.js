@@ -57,6 +57,16 @@ function getLocalizedToneDescriptions(userLang) {
   return base;
 }
 
+/**
+ * Build the Gemini prompt for a single perspective agent.
+ * @param {object} agent - entry from PERSPECTIVE_AGENTS (id, name, framework, researchers, lens)
+ * @param {Array<{principle: string, researcher: string}>} principles - stage-specific principles for this agent
+ * @param {string} situation - enriched stage context from buildStageContext (max 1500 chars)
+ * @param {string} userLang - 2-letter language code for output language directive
+ * @param {string} stageId - one of 5 stage IDs
+ * @param {boolean} neutralFrame - true for non-dating/communication-coach mode
+ * @returns {string} full prompt string ready for model.generateContent()
+ */
 function buildPerspectivePrompt(agent, principles, situation, userLang, stageId, neutralFrame) {
   const langInstr = getLanguageInstruction(userLang);
   const tones = neutralFrame ? TONES_NEUTRAL : TONES_DATING;
