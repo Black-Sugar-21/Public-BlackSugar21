@@ -454,8 +454,8 @@ Generate EXACTLY 4 distinct approaches. Each approach uses one of these FIXED to
   4. grounded_honest — calm, real, low-pressure; states what's happening and what they want
 
 For EACH approach produce this richer structure (not just one phrase):
-- "phrase": the main message (2-3 sentences, first-person, IN ${languageName}) — this is the copy-paste-and-send version
-- "alternativePhrases": an array of exactly 3 more variations in the SAME tone, same situation, different wording. Each 1-3 sentences. They should be genuinely different (different hook, different framing) — not paraphrases of each other. The user will pick the one that feels most natural.
+- "phrase": the main message (1-2 sentences MAX, first-person, IN ${languageName}) — this is the copy-paste-and-send version. Be direct and concise: one clear thought.
+- "alternativePhrases": an array of exactly 6 more variations in the SAME tone, same situation, different wording. Each variation is 1 sentence only. They should be genuinely different (different hook, different framing, different emotional emphasis) — not paraphrases of each other. The user will scroll and pick the one that feels most natural.
 - "followUpTips": 1-2 sentences telling the user what to do AFTER the match replies. Should help them handle both positive and hesitant reactions. Actionable, specific to the tone (e.g. for "playful" suggest keeping it light; for "direct" suggest pausing before pressing).
 
 Every "phrase" and every entry in "alternativePhrases" MUST reference at least one concrete detail from the user's situation (a name, place, plan, feeling, or event they mentioned). No generic openers.
@@ -467,16 +467,16 @@ ${langInstr}
 
 ⚠️ FINAL CHECKS:
 1. Every "phrase" / "alternativePhrases[i]" / "followUpTips" is in ${languageName}, not English (unless target is English).
-2. "alternativePhrases" has EXACTLY 3 entries.
+2. "alternativePhrases" has EXACTLY 6 entries, each 1 sentence only.
 3. Every phrase references specific content from the user's situation.
 4. No two phrases (main or alternative, within an approach or across approaches) sound interchangeable.
 
 Respond ONLY with JSON in this shape (all text in ${languageName}):
 {"approaches":[
-  {"id":"1","tone":"direct","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
-  {"id":"2","tone":"playful","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
-  {"id":"3","tone":"romantic_vulnerable","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."},
-  {"id":"4","tone":"grounded_honest","phrase":"...","alternativePhrases":["...","...","..."],"followUpTips":"..."}
+  {"id":"1","tone":"direct","phrase":"...","alternativePhrases":["...","...","...","...","...","..."],"followUpTips":"..."},
+  {"id":"2","tone":"playful","phrase":"...","alternativePhrases":["...","...","...","...","...","..."],"followUpTips":"..."},
+  {"id":"3","tone":"romantic_vulnerable","phrase":"...","alternativePhrases":["...","...","...","...","...","..."],"followUpTips":"..."},
+  {"id":"4","tone":"grounded_honest","phrase":"...","alternativePhrases":["...","...","...","...","...","..."],"followUpTips":"..."}
 ]}`;
 
     // Try up to 2 times — a single Gemini hiccup shouldn't collapse to generic fallbacks
@@ -535,7 +535,7 @@ Respond ONLY with JSON in this shape (all text in ${languageName}):
             alternativePhrases: entry.alternativePhrases && entry.alternativePhrases.length
               ? entry.alternativePhrases
               : (Array.isArray(rawApproach.alternativePhrases)
-                  ? rawApproach.alternativePhrases.filter(p => typeof p === 'string').slice(0, 3)
+                  ? rawApproach.alternativePhrases.filter(p => typeof p === 'string').slice(0, 6)
                   : []),
             followUpTips: entry.followUpTips || (typeof rawApproach.followUpTips === 'string' ? rawApproach.followUpTips.trim() : ''),
           };
