@@ -17,12 +17,31 @@ const {
   trackAICall,
 } = require('./shared');
 
+function salvageTruncatedJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch (_) { /* try salvage */ }
+  let fixed = text.trim();
+  const openBraces = (fixed.match(/{/g) || []).length;
+  const closeBraces = (fixed.match(/}/g) || []).length;
+  const openBrackets = (fixed.match(/\[/g) || []).length;
+  const closeBrackets = (fixed.match(/]/g) || []).length;
+  fixed = fixed.replace(/,\s*$/, '');
+  for (let i = 0; i < openBrackets - closeBrackets; i++) fixed += ']';
+  for (let i = 0; i < openBraces - closeBraces; i++) fixed += '}';
+  try {
+    return JSON.parse(fixed);
+  } catch (_) {
+    return null;
+  }
+}
+
 function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
   const langInstr = getLanguageInstruction(userLang);
 
   const perspectiveBlocks = perspectives.map(p => {
     const approaches = p.approaches.map(a =>
-      `    {"tone":"${a.tone}","phrase":"${a.phrase.replace(/"/g, '\\"')}","citedResearch":"${(a.citedResearch || '').replace(/"/g, '\\"')}"}`
+      `    {"tone":${JSON.stringify(a.tone)},"phrase":${JSON.stringify(a.phrase || '')},"citedResearch":${JSON.stringify(a.citedResearch || '')}}`
     ).join(',\n');
     return `  AGENT ${p.perspectiveId} (${p.agentName}):\n  [\n${approaches}\n  ]`;
   }).join('\n\n');
@@ -110,7 +129,7 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
     const result = await model.generateContent(prompt);
 
     const safety = checkGeminiSafety(result, 'debate-synthesizer');
-    if (!safety.ok) {
+    if (!safety.ok && safety.reason !== 'truncated') {
       logger.warn(`[Debate-Synth] attempt ${attempt}: ${safety.reason}`);
       continue;
     }
@@ -121,7 +140,14 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
       continue;
     }
 
-    const parsed = parseGeminiJsonResponse(text);
+    if (safety.reason === 'truncated') {
+      logger.warn(`[Debate-Synth] attempt ${attempt}: truncated — attempting partial JSON salvage`);
+    }
+
+    let parsed = parseGeminiJsonResponse(text);
+    if (!parsed && safety.reason === 'truncated') {
+      parsed = salvageTruncatedJson(text);
+    }
     if (!parsed || !Array.isArray(parsed.approaches) || parsed.approaches.length < 4) {
       logger.warn(`[Debate-Synth] attempt ${attempt}: invalid JSON structure`);
       continue;
@@ -133,7 +159,8 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
       continue;
     }
 
-    await trackAICall(modelName, prompt.length, text.length, 'debate-synthesis');
+    const usage = result?.response?.usageMetadata;
+    await trackAICall({ functionName: 'simulateMultiUniverse', model: modelName, operation: 'debate-synthesis', usage });
 
     return {
       approaches: validApproaches.slice(0, 4).map((a, i) => ({
@@ -153,4 +180,5 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
 module.exports = {
   synthesizeDebateApproaches,
   buildSynthesisPrompt,
+  salvageTruncatedJson,
 };

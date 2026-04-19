@@ -140,7 +140,8 @@ async function generatePerspectiveApproaches(genAI, perspectiveId, situation, us
       continue;
     }
 
-    await trackAICall(modelName, prompt.length, text.length, 'debate-perspective');
+    const usage = result?.response?.usageMetadata;
+    await trackAICall({ functionName: 'simulateMultiUniverse', model: modelName, operation: 'debate-perspective', usage });
 
     return {
       perspectiveId: agent.id,

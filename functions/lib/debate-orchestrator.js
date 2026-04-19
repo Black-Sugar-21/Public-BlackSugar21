@@ -19,6 +19,7 @@ const {
  * Select the best perspective based on stageStrength when synthesis fails.
  */
 function selectBestPerspective(validPerspectives, stageId) {
+  if (!validPerspectives || validPerspectives.length === 0) return null;
   let best = validPerspectives[0];
   let bestScore = 0;
   for (const p of validPerspectives) {
@@ -60,17 +61,20 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
   const debateCfg = { ...DEBATE_CONFIG_DEFAULTS, ...(cfg?.debate || {}) };
   const perspectiveIds = Object.keys(PERSPECTIVE_AGENTS);
 
-  const perspectivePromises = perspectiveIds.map(pId =>
-    Promise.race([
+  const perspectivePromises = perspectiveIds.map(pId => {
+    let timer;
+    return Promise.race([
       generatePerspectiveApproaches(genAI, pId, situation, userLang, stageId, neutralFrame, debateCfg),
-      new Promise((_, rej) =>
-        setTimeout(() => rej(new Error('perspective timeout')), debateCfg.perspectiveTimeoutMs)
-      ),
-    ]).catch(e => {
-      logger.warn(`[Debate] Perspective ${pId} failed: ${e.message}`);
-      return null;
-    })
-  );
+      new Promise((_, rej) => {
+        timer = setTimeout(() => rej(new Error('perspective timeout')), debateCfg.perspectiveTimeoutMs);
+      }),
+    ]).then(r => { clearTimeout(timer); return r; })
+      .catch(e => {
+        clearTimeout(timer);
+        logger.warn(`[Debate] Perspective ${pId} failed: ${e.message}`);
+        return null;
+      });
+  });
 
   const results = await Promise.all(perspectivePromises);
   const validPerspectives = results.filter(Boolean);
@@ -82,13 +86,15 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
     return null;
   }
 
+  let synthTimer;
   try {
     const synthesis = await Promise.race([
       synthesizeDebateApproaches(genAI, validPerspectives, situation, userLang, stageId, stagePsychology, debateCfg),
-      new Promise((_, rej) =>
-        setTimeout(() => rej(new Error('synthesis timeout')), debateCfg.synthesisTimeoutMs)
-      ),
+      new Promise((_, rej) => {
+        synthTimer = setTimeout(() => rej(new Error('synthesis timeout')), debateCfg.synthesisTimeoutMs);
+      }),
     ]);
+    clearTimeout(synthTimer);
 
     return {
       approaches: synthesis.approaches,
@@ -99,6 +105,7 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
       },
     };
   } catch (e) {
+    clearTimeout(synthTimer);
     logger.warn(`[Debate] Stage ${stageId}: synthesis failed (${e.message}) — using best perspective`);
     const best = selectBestPerspective(validPerspectives, stageId);
     return {
@@ -124,8 +131,9 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
  * @returns {number} blended score in [4, 10]
  */
 function scoreApproachWithDebate(heuristicScore, synthesisConfidence) {
-  const llmScore = typeof synthesisConfidence === 'number' ? synthesisConfidence : 5;
-  const blended = 0.6 * heuristicScore + 0.4 * llmScore;
+  const h = typeof heuristicScore === 'number' && !isNaN(heuristicScore) ? heuristicScore : 5;
+  const llmScore = typeof synthesisConfidence === 'number' && !isNaN(synthesisConfidence) ? synthesisConfidence : 5;
+  const blended = 0.6 * h + 0.4 * llmScore;
   return parseFloat(Math.min(10, Math.max(4, blended)).toFixed(1));
 }
 

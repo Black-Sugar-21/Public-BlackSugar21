@@ -252,9 +252,9 @@ const DEBATE_CONFIG_DEFAULTS = {
   perspectiveTemperature: 0.9,
   perspectiveTimeoutMs: 8000,
   synthesisModel: 'gemini-2.5-flash',
-  synthesisMaxTokens: 1200,
+  synthesisMaxTokens: 2400,
   synthesisTemperature: 0.7,
-  synthesisTimeoutMs: 12000,
+  synthesisTimeoutMs: 25000,
   parallelStages: true,
 };
 

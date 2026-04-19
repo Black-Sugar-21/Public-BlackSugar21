@@ -542,7 +542,12 @@ async function getMultiUniverseConfig() {
         ...MULTIVERSE_CONFIG_DEFAULTS,
         ...rcConfig,
         gemini: { ...MULTIVERSE_CONFIG_DEFAULTS.gemini, ...(rcConfig.gemini || {}) },
-        debate: { ...MULTIVERSE_CONFIG_DEFAULTS.debate, ...(rcConfig.debate || {}) },
+        debate: (() => {
+          const merged = { ...MULTIVERSE_CONFIG_DEFAULTS.debate, ...(rcConfig.debate || {}) };
+          merged.synthesisMaxTokens = Math.max(merged.synthesisMaxTokens, DEBATE_CONFIG_DEFAULTS.synthesisMaxTokens);
+          merged.synthesisTimeoutMs = Math.max(merged.synthesisTimeoutMs, DEBATE_CONFIG_DEFAULTS.synthesisTimeoutMs);
+          return merged;
+        })(),
       };
       _multiverseConfigCacheTime = Date.now();
       return _multiverseConfigCache;

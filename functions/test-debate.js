@@ -286,7 +286,7 @@ ok(multiUniverseSrc.includes('DEBATE_CONFIG_DEFAULTS'), 'debate config defaults 
 ok(multiUniverseSrc.includes('debate: { ...DEBATE_CONFIG_DEFAULTS }'), 'debate config merged into MULTIVERSE_CONFIG_DEFAULTS');
 
 // RC deep-merge
-ok(multiUniverseSrc.includes("debate: { ...MULTIVERSE_CONFIG_DEFAULTS.debate, ...(rcConfig.debate || {}) }"),
+ok(multiUniverseSrc.includes('MULTIVERSE_CONFIG_DEFAULTS.debate') && multiUniverseSrc.includes('rcConfig.debate'),
   'debate config deep-merged from Remote Config');
 
 // Cache schema
