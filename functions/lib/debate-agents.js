@@ -23,30 +23,76 @@ const {
 const TONES_DATING = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 const TONES_NEUTRAL = ['direct', 'playful', 'vulnerable', 'grounded_honest'];
 
-function buildPerspectivePrompt(agent, principles, situation, userLang, stageId, neutralFrame) {
-  const langInstr = getLanguageInstruction(userLang);
-  const tones = neutralFrame ? TONES_NEUTRAL : TONES_DATING;
-  const roleContext = neutralFrame
-    ? 'communication coach helping someone navigate a personal situation (friendship, family, work, reunion, or romance)'
-    : 'dating coach helping someone navigate a romantic connection';
-
-  const principleList = principles.map(p =>
-    `  - ${p.principle} (${p.researcher})`
-  ).join('\n');
-
-  const toneDescriptions = {
+function getLocalizedToneDescriptions(userLang) {
+  const base = {
     direct: 'clear, confident, unambiguous',
     playful: 'warm, light, with humor',
     romantic_vulnerable: 'soft, honest about feelings tied to THIS situation',
     vulnerable: 'soft, honest about what THIS situation means emotionally',
     grounded_honest: 'calm, real, low-pressure',
   };
+  if (userLang === 'ja' || userLang.startsWith('ja')) {
+    return {
+      ...base,
+      direct: 'thoughtful and clear in intent — respectful of indirect expression norms (間接的), avoiding bluntness',
+      romantic_vulnerable: 'sincere, warm, emotionally present — expressed with restraint and cultural grace (奥ゆかしさ)',
+      playful: 'warm, light-hearted — using gentle self-deprecation or understatement rather than bold humor',
+    };
+  }
+  if (userLang === 'ko' || userLang.startsWith('ko')) {
+    return {
+      ...base,
+      direct: 'clear and confident, always in a polite register (존댓말) — assertive without being blunt',
+      romantic_vulnerable: 'sincere and emotionally honest — expressed with appropriate warmth for the stage of the relationship',
+    };
+  }
+  if (userLang === 'ar' || userLang.startsWith('ar')) {
+    return {
+      ...base,
+      direct: 'clear and respectful — confident but never forward; culturally dignified tone (محترم)',
+      romantic_vulnerable: 'sincere and respectful about genuine interest — never explicit emotional declaration; warm appreciation without crossing modesty norms',
+      playful: 'warm and light, with wit and charm — never flirtatious in an inappropriate way',
+    };
+  }
+  return base;
+}
+
+function buildPerspectivePrompt(agent, principles, situation, userLang, stageId, neutralFrame) {
+  const langInstr = getLanguageInstruction(userLang);
+  const tones = neutralFrame ? TONES_NEUTRAL : TONES_DATING;
+
+  const isArabic = userLang === 'ar' || userLang.startsWith('ar');
+  const isKorean = userLang === 'ko' || userLang.startsWith('ko');
+  let roleContext;
+  if (neutralFrame) {
+    roleContext = 'communication coach helping someone navigate a personal situation (friendship, family, work, reunion, or meaningful connection)';
+  } else if (isArabic) {
+    roleContext = 'relationship guide helping someone build a sincere, respectful connection in accordance with cultural and social values';
+  } else {
+    roleContext = 'dating coach helping someone navigate a romantic connection';
+  }
+
+  const principleList = principles.map(p =>
+    `  - ${p.principle} (${p.researcher})`
+  ).join('\n');
+
+  const toneDescriptions = getLocalizedToneDescriptions(userLang);
 
   const toneSpec = tones.map(t => `"${t}" — ${toneDescriptions[t]}`).join('\n  ');
 
   const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;
   const isEnglish = userLang === 'en';
   const translateNote = isEnglish ? '' : `\n⚠️ OUTPUT LANGUAGE = ${langName}. The situation above may contain English text — that is context only. Your "phrase" values MUST be fully translated to ${langName}. Write as if you are a native ${langName} speaker. Do NOT output English phrases.`;
+
+  // Cultural adaptation note for high-context / conservative markets
+  let culturalNote = '';
+  if (isArabic) {
+    culturalNote = '\n⚠️ CULTURAL NOTE: Adapt all research principles to Arabic cultural norms — indirect communication, modesty, family-aware framing. Principles referencing "ghosting" or cold audio/video calls may not apply; substitute with culturally appropriate communication norms.';
+  } else if (userLang === 'ja' || userLang.startsWith('ja')) {
+    culturalNote = '\n⚠️ CULTURAL NOTE: Japanese communication is high-context. Principles suggesting direct rejection requests or voice/audio calls as early-stage contact are not culturally appropriate — adapt to indirect but sincere expression. Tatemae/honne balance matters.';
+  } else if (isKorean) {
+    culturalNote = '\n⚠️ CULTURAL NOTE: Korean communication uses formal speech levels. For commitment signals, KakaoTalk deactivation / exchanging personal contact info are the culturally meaningful acts. Adapt digital commitment principles accordingly.';
+  }
 
   return `${langInstr}
 
@@ -66,7 +112,7 @@ SITUATION (for context only — do not mirror its language):
 """
 ${situation}
 """
-${translateNote}
+${translateNote}${culturalNote}
 
 Generate EXACTLY 4 communication approaches, one per tone:
   ${toneSpec}

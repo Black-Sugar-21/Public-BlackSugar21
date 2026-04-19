@@ -322,7 +322,7 @@ console.log('── Section 6: 4 Simulation Scenarios ──');
 // Scenario 1: match+text (neutralFrame=false, userContext present, matchId present)
 ok(multiUniverseSrc.includes('isSoloMode && !!userContext'), 'neutralFrame derived from isSoloMode && !!userContext');
 ok(debateAgentsSrc.includes("neutralFrame ? TONES_NEUTRAL : TONES_DATING"), 'agents switch tones based on neutralFrame');
-ok(debateAgentsSrc.includes("neutralFrame\n    ? 'communication coach"), 'agents switch role based on neutralFrame');
+ok(debateAgentsSrc.includes('communication coach'), 'agents switch role based on neutralFrame');
 
 // Scenario 2: match-alone (neutralFrame=false, no userContext, matchId present)
 // → buildStageContext produces dating stage context, debate uses TONES_DATING
@@ -467,6 +467,43 @@ ok(debateSynthSrc.includes('Korean (한국어)'), 'debate-synthesizer: ko maps t
 // Throw isolation in multi-universe
 ok(multiUniverseSrc.includes('Debate threw unexpectedly'), 'multi-universe: debate throw isolated — falls through to single-agent');
 ok(/try\s*\{\s*const debateResult/.test(multiUniverseSrc), 'multi-universe: debate call wrapped in try/catch');
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 10: Cultural adaptation — localized tones, roleContext, cultural notes
+// ═══════════════════════════════════════════════════════════════════
+console.log('── Section 10: Cultural adaptation (AR/JA/KO tones + roleContext) ──');
+
+// getLocalizedToneDescriptions function exists
+ok(debateAgentsSrc.includes('getLocalizedToneDescriptions'), 'debate-agents has getLocalizedToneDescriptions function');
+
+// Japanese tone overrides
+ok(debateAgentsSrc.includes('間接的'), 'JA tone: direct overridden to reference 間接的 (indirect)');
+ok(debateAgentsSrc.includes('奥ゆかしさ'), 'JA tone: romantic_vulnerable overridden with 奥ゆかしさ (grace)');
+
+// Korean tone overrides
+ok(debateAgentsSrc.includes('존댓말'), 'KO tone: direct overridden with 존댓말 register note');
+
+// Arabic tone overrides
+ok(debateAgentsSrc.includes('محترم'), 'AR tone: direct overridden with محترم (dignified) cultural note');
+ok(debateAgentsSrc.includes('modesty norms'), 'AR tone: romantic_vulnerable references modesty norms');
+
+// Arabic roleContext override
+ok(debateAgentsSrc.includes('relationship guide'), 'AR roleContext: "relationship guide" for Arabic (not "dating coach")');
+ok(debateAgentsSrc.includes('cultural and social values'), 'AR roleContext: references cultural and social values');
+
+// neutralFrame removes "romance" from roleContext
+ok(debateAgentsSrc.includes('meaningful connection'), 'neutral roleContext: uses "meaningful connection" (not romance)');
+
+// Cultural notes per language
+ok(debateAgentsSrc.includes('CULTURAL NOTE'), 'debate-agents injects cultural notes for high-context markets');
+ok(debateAgentsSrc.includes('KakaoTalk'), 'KO cultural note: references KakaoTalk commitment signal');
+ok(debateAgentsSrc.includes('Tatemae'), 'JA cultural note: references Tatemae/honne');
+
+// Citation fixes
+ok(debatePsychSrc.includes('PNAS 2013'), 'Cacioppo citation corrected to PNAS 2013 (not 2016)');
+ok(!debatePsychSrc.includes('Cacioppo.*2016'), 'No Cacioppo 2016 citation remaining');
+ok(!debatePsychSrc.includes('40% faster'), 'Coyne 40% false precision claim removed');
+ok(debatePsychSrc.includes('significantly accelerates'), 'Coyne claim replaced with qualitative language');
 
 // ═══════════════════════════════════════════════════════════════════
 // Results

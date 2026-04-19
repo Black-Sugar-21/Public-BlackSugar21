@@ -253,7 +253,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         researcher: 'Rosenberg, NVC, 2003',
       },
       {
-        principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues — couples who switch to voice/video for repair show 40% faster de-escalation',
+        principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues (tone, pace, warmth) — switching to voice or video significantly accelerates de-escalation',
         researcher: 'Coyne et al., Technology & Relationship Conflict, 2019',
       },
     ],
@@ -270,7 +270,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       },
       {
         principle: 'Partners who met online report higher marital satisfaction and lower divorce rates after 7 years compared to offline-met couples, attributed to intentionality of matching criteria',
-        researcher: 'Cacioppo & Cacioppo, Online vs Offline Love, 2016',
+        researcher: 'Cacioppo et al., Marital Satisfaction Online vs Offline, PNAS 2013',
       },
     ],
     social_dynamics: [
