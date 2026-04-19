@@ -108,6 +108,10 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
     clearTimeout(synthTimer);
     logger.warn(`[Debate] Stage ${stageId}: synthesis failed (${e.message}) — using best perspective`);
     const best = selectBestPerspective(validPerspectives, stageId);
+    if (!best) {
+      logger.error(`[Debate] Stage ${stageId}: no best perspective available`);
+      return null;
+    }
     return {
       approaches: best.approaches.map(a => ({
         ...a,

@@ -113,7 +113,7 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
   const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology);
 
   const modelName = debateCfg.synthesisModel || AI_MODEL_NAME;
-  const maxTokens = debateCfg.synthesisMaxTokens || 1200;
+  const maxTokens = debateCfg.synthesisMaxTokens || 2400;
   const temperature = debateCfg.synthesisTemperature || 0.7;
 
   const model = genAI.getGenerativeModel({

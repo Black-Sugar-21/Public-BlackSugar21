@@ -14,7 +14,6 @@ const {
 } = require('./debate-psychology');
 const {
   AI_MODEL_LITE,
-  GoogleGenerativeAI,
   getLanguageInstruction,
   parseGeminiJsonResponse,
   checkGeminiSafety,
