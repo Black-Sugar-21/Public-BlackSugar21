@@ -451,8 +451,8 @@ async function testEdgeCasesComprehensive() {
 
     let passCount = 0;
     for (const testCase of edgeCases) {
-      // Normalizar para validación
-      const normalized = typeof testCase.input === 'string' ? testCase.input.trim() : testCase.input;
+      // Strict lookup — mirrors CF behavior (places.js line 49: catQueryMap[category] without trim)
+      const normalized = testCase.input;
       const isValid = normalized && catQueryMap[normalized];
 
       if (testCase.shouldFail) {
