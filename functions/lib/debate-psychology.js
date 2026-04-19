@@ -86,7 +86,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       },
       {
         principle: 'Anxious and avoidant attachment styles predict distinct digital communication patterns — anxious users send more follow-up messages when unanswered, avoidant users prefer low-synchronicity media (text over FaceTime)',
-        researcher: 'Fullwood et al., Digital Attachment, 2023',
+        researcher: 'Drouin & Landgraff, Computers in Human Behavior, 2012',
       },
     ],
     social_dynamics: [
@@ -105,6 +105,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'On dating apps, opening messages referencing a specific profile detail (not generic "hey") receive 3× higher response rates; curiosity-gap openers outperform compliments',
         researcher: 'Tyson et al., Dating App Messaging, 2016',
+      },
+      {
+        principle: 'In East Asian (JA/ZH/KO) contexts, initial contact succeeds through demonstrated cultural literacy and shared group identity (in-group signals) rather than individual novelty — Hofstede\'s collectivism dimension predicts this divergence from Western approach patterns',
+        researcher: 'Hofstede, Culture\'s Consequences, 1980/2001',
       },
     ],
     communication_repair: [
@@ -134,7 +138,11 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       },
       {
         principle: 'App-mediated disclosure follows hyperpersonal theory: text-based channels produce idealized impressions faster than FtF, requiring conscious "calibration" moments to prevent expectation crash',
-        researcher: 'Walther & Whitty, Hyperpersonal Model Update, 2021',
+        researcher: 'Walther & Whitty, Journal of Language and Social Psychology, 2021',
+      },
+      {
+        principle: 'Japanese amae (甘え) — the expectation of indulgent acceptance from another — is a culturally-specific attachment mechanism where trust is built through presumed benevolence of the group, not dyadic secure-base declarations',
+        researcher: 'Doi, The Anatomy of Dependence, 1973',
       },
     ],
     social_dynamics: [
@@ -179,6 +187,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Video calls produce equivalent intimacy to in-person contact for established pairs; however, for new matches, audio-only outperforms video due to reduced appearance anxiety',
         researcher: 'Sherman et al., Zoom Intimacy, 2018',
+      },
+      {
+        principle: 'In collectivist cultures (JA/ZH/KO), relational harmony (和, wa / 和谐, héxié) is the primary connection indicator — being included in someone\'s trusted inner circle (uchi/soto in Japanese) matters more than explicit mutual vulnerability',
+        researcher: 'Markus & Kitayama, Culture and the Self, 1991',
       },
     ],
     social_dynamics: [
@@ -255,6 +267,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues (tone, pace, warmth) — switching to voice or video significantly accelerates de-escalation',
         researcher: 'Coyne et al., Technology & Relationship Conflict, 2019',
+      },
+      {
+        principle: 'In Arabic-speaking and many Asian cultures, face-saving (حفظ ماء الوجه / 面子, miànzi) is paramount in conflict — direct confrontation causes irreparable relational damage; repair requires indirect acknowledgment that preserves dignity for both parties',
+        researcher: 'Ting-Toomey, Facework Theory, 1988',
       },
     ],
   },
