@@ -1,6 +1,12 @@
 [
   {
-    "id": "stage_initial_contact_aron_self_expansion",
+    "id": "stage_initial_contact_knapp_initiating",
+    "category": "psychology_stages",
+    "stage": "initial_contact",
+    "language": "en",
+    "text": "Knapp's Relationship Stage Model (Social Intercourse, 1978): Relationships progress through predictable stages — initiating, experimenting, intensifying, integrating, bonding. The initiating stage is dominated by first impressions and phatic communication (small talk with a purpose). People evaluate approachability, attractiveness, and social compatibility within seconds. Practical tip: your first message should signal openness and reduce uncertainty — use a specific observation or shared context rather than a generic greeting."
+  },
+  {
     "category": "psychology_stages",
     "stage": "initial_contact",
     "language": "en",

@@ -761,6 +761,24 @@ assert('References Rosenberg (NVC)', /Rosenberg.*NVC|Rosenberg.*Nonviolent/.test
 assert('References Perel', /Perel/.test(src));
 assert('References Aron (self-expansion)', /Aron.*Self-Expansion|Aron.*36 Questions/.test(src));
 
+// Cross-check: all STAGE_PSYCHOLOGY researchers also appear in STAGE_RESEARCH_CITATIONS
+const citationsBlock2 = src.match(/STAGE_RESEARCH_CITATIONS = \{([\s\S]*?)\n  \};/)?.[1] || '';
+assert('Citations include Knapp (initial_contact sync)', /Knapp/.test(citationsBlock2));
+assert('Citations include Derlega (getting_to_know sync)', /Derlega/.test(citationsBlock2));
+assert('Citations include Zak (building_connection sync)', /Zak/.test(citationsBlock2));
+assert('Citations include Aron', /Aron/.test(citationsBlock2));
+assert('Citations include Fisher', /Fisher/.test(citationsBlock2));
+assert('Citations include Ambady', /Ambady/.test(citationsBlock2));
+assert('Citations include Gottman', /Gottman/.test(citationsBlock2));
+assert('Citations include Sternberg', /Sternberg/.test(citationsBlock2));
+assert('Citations include Chapman', /Chapman/.test(citationsBlock2));
+assert('Citations include Bowlby', /Bowlby/.test(citationsBlock2));
+assert('Citations include Brown', /Brown/.test(citationsBlock2));
+assert('Citations include Perel', /Perel/.test(citationsBlock2));
+assert('Citations include Rosenberg', /Rosenberg/.test(citationsBlock2));
+assert('Citations include Johnson', /Johnson/.test(citationsBlock2));
+assert('Citations include Deci', /Deci/.test(citationsBlock2));
+
 // ───────────────────────────────────────────────────────────────
 // 13. Dynamic RAG retrieval per stage
 // ───────────────────────────────────────────────────────────────
