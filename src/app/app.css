@@ -727,12 +727,13 @@ a:hover {
     padding: 40px 32px;
     border-radius: 20px;
     text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .feature-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(184, 134, 11, 0.15);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(212, 175, 55, 0.22);
 }
 
 .feature-icon {
@@ -827,15 +828,21 @@ a:hover {
     padding: 32px 28px;
     border-radius: 20px;
     text-align: left;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.12);
+    will-change: transform;
 }
 
 .whatsnew-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 16px 40px rgba(131, 27, 252, 0.18);
-    border-color: rgba(212, 175, 55, 0.35);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 22px 55px rgba(131, 27, 252, 0.28), 0 0 0 1px rgba(212, 175, 55, 0.18);
+    border-color: rgba(212, 175, 55, 0.5);
+}
+
+.whatsnew-card:hover .whatsnew-icon {
+    transform: scale(1.1) rotate(-3deg);
+    filter: drop-shadow(0 6px 14px rgba(212, 175, 55, 0.45));
 }
 
 .whatsnew-icon {
@@ -843,6 +850,7 @@ a:hover {
     margin-bottom: 16px;
     display: inline-block;
     filter: drop-shadow(0 4px 10px rgba(212, 175, 55, 0.25));
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.35s ease;
 }
 
 .whatsnew-card h3 {
@@ -1527,6 +1535,24 @@ a:hover {
     display: flex;
     gap: 1rem;
     align-items: flex-start;
+    padding: 8px 10px;
+    margin: 0 -10px;
+    border-radius: 12px;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.coach-feature-item:hover {
+    background: rgba(131, 27, 252, 0.08);
+    transform: translateX(4px);
+}
+
+.coach-feature-item:hover .coach-feature-icon {
+    background: rgba(131, 27, 252, 0.2);
+    transform: scale(1.08);
+}
+
+.coach-feature-icon {
+    transition: background 0.3s ease, transform 0.3s ease;
 }
 
 .coach-feature-icon {

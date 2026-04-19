@@ -25,7 +25,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   // Hero carousel (signals for reliable change detection)
   currentSlide = signal(0);
   private carouselInterval: any;
-  private readonly totalSlides = 7;
+  private readonly totalSlides = 8;
 
   showTesterModal = signal(false);
   testerEmail = signal('');
@@ -108,6 +108,47 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         duration: 0.5,
         stagger: 0.15,
         ease: 'power2.out',
+      });
+
+      // Chat-bubble cascade — the phone mockup's conversation feels "alive"
+      // by fading in each message sequentially when the coach section enters
+      // the viewport. Directional offset: sent bubbles slide in from the
+      // right, received from the left — mirrors a real message arrival.
+      gsap.from('.chat-phone .chat-row.chat-sent', {
+        scrollTrigger: {
+          trigger: '.chat-phone',
+          start: 'top 70%',
+        },
+        x: 24,
+        opacity: 0,
+        duration: 0.45,
+        stagger: 0.18,
+        delay: 0.35,
+        ease: 'power2.out',
+      });
+      gsap.from('.chat-phone .chat-row.chat-received', {
+        scrollTrigger: {
+          trigger: '.chat-phone',
+          start: 'top 70%',
+        },
+        x: -24,
+        opacity: 0,
+        duration: 0.45,
+        stagger: 0.18,
+        delay: 0.55, // slightly after sent so the conversation builds naturally
+        ease: 'power2.out',
+      });
+      // AI chemistry panel pops in last
+      gsap.from('.chat-phone .chat-ai-panel', {
+        scrollTrigger: {
+          trigger: '.chat-phone',
+          start: 'top 65%',
+        },
+        y: 20,
+        opacity: 0,
+        duration: 0.5,
+        delay: 1.4,
+        ease: 'back.out(1.5)',
       });
 
       // 3. ScrollTrigger — Features cards stagger

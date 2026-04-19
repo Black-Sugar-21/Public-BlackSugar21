@@ -83,20 +83,52 @@ export class TranslationService {
 
     // Features Section
     'features.stories.title': {
-      es: 'Más que una foto',
-      en: 'More than a photo'
+      es: 'Tu historia del día',
+      en: 'Your day\'s story',
+      pt: 'A história do seu dia',
+      fr: 'Votre histoire du jour',
+      de: 'Deine Story des Tages',
+      ja: '今日のストーリー',
+      zh: '你今天的故事',
+      ru: 'История вашего дня',
+      ar: 'قصة يومك',
+      id: 'Ceritamu hari ini'
     },
     'features.stories.desc': {
-      es: 'Crea historias para mostrar que eres mucho más que una foto.',
-      en: 'Create stories to show you\'re so much more than a photo.'
+      es: 'Comparte momentos que duran 24 horas. Cada story pasa por moderación Gemini Vision antes de hacerse pública.',
+      en: 'Share moments that last 24 hours. Every story is reviewed by Gemini Vision before going public.',
+      pt: 'Compartilhe momentos que duram 24 horas. Cada story passa pela moderação Gemini Vision antes de ficar visível.',
+      fr: 'Partagez des moments qui durent 24 heures. Chaque story passe par la modération Gemini Vision avant d\'être publiée.',
+      de: 'Teile Momente, die 24 Stunden bleiben. Jede Story wird von Gemini Vision moderiert, bevor sie öffentlich wird.',
+      ja: '24時間だけ残るストーリーを共有。すべてのストーリーは公開前に Gemini Vision で審査されます。',
+      zh: '分享 24 小时后自动消失的瞬间。每条 story 发布前都会经 Gemini Vision 审核。',
+      ru: 'Делитесь моментами, которые длятся 24 часа. Каждая сторис проходит модерацию Gemini Vision перед публикацией.',
+      ar: 'شارك لحظات تدوم 24 ساعة. كل ستوري يمرّ بمراجعة Gemini Vision قبل أن يصبح عامًا.',
+      id: 'Bagikan momen yang bertahan 24 jam. Setiap story dimoderasi oleh Gemini Vision sebelum tayang.'
     },
     'features.connections.title': {
       es: 'Compatibilidad IA',
-      en: 'AI Compatibility'
+      en: 'AI Compatibility',
+      pt: 'Compatibilidade IA',
+      fr: 'Compatibilité IA',
+      de: 'KI-Kompatibilität',
+      ja: 'AI コンパチビリティ',
+      zh: 'AI 匹配度',
+      ru: 'ИИ-совместимость',
+      ar: 'توافق الذكاء الاصطناعي',
+      id: 'Kompatibilitas AI'
     },
     'features.connections.desc': {
-      es: 'Cada perfil muestra un porcentaje de compatibilidad calculado por IA, basado en intereses compartidos, edad, proximidad y preferencias.',
-      en: 'Each profile displays a compatibility percentage calculated by AI, based on shared interests, age, proximity, and preferences.'
+      es: 'Cada perfil muestra un % calculado por IA con 6 factores: intereses, edad, ciudad, energía, valores y metas.',
+      en: 'Each profile shows an AI-calculated % using 6 factors: interests, age, city, energy, values, and goals.',
+      pt: 'Cada perfil mostra um % calculado por IA usando 6 fatores: interesses, idade, cidade, energia, valores e metas.',
+      fr: 'Chaque profil affiche un % calculé par IA avec 6 facteurs : intérêts, âge, ville, énergie, valeurs et objectifs.',
+      de: 'Jedes Profil zeigt einen KI-berechneten % basierend auf 6 Faktoren: Interessen, Alter, Stadt, Energie, Werte und Ziele.',
+      ja: '各プロフィールに AI が 6 つの要素（興味・年齢・都市・エネルギー・価値観・ゴール）で計算した % を表示。',
+      zh: '每个资料都会显示 AI 基于 6 个因素（兴趣、年龄、城市、能量、价值观、目标）计算的匹配百分比。',
+      ru: 'На каждом профиле показан ИИ-процент, рассчитанный по 6 факторам: интересы, возраст, город, энергия, ценности и цели.',
+      ar: 'يعرض كل ملف نسبة يحسبها الذكاء الاصطناعي بناءً على 6 عوامل: الاهتمامات، والعمر، والمدينة، والطاقة، والقيم، والأهداف.',
+      id: 'Setiap profil menampilkan % yang dihitung AI berdasarkan 6 faktor: minat, usia, kota, energi, nilai, dan tujuan.'
     },
     'features.coach.title': {
       es: 'Coach IA',
@@ -311,6 +343,81 @@ export class TranslationService {
       ru: 'Более чистая загрузка без наложенных слоёв, советы коуча с улучшенной читаемостью и карточки мультивселенной в едином стиле приложения.',
       ar: 'تحميلات أنظف دون طبقات متراكمة، ونصائح مدرب أكثر وضوحًا، وبطاقات متعددة الأكوان متناسقة مع بقية التطبيق.',
       id: 'Loading lebih bersih tanpa lapisan bertumpuk, saran coach yang lebih mudah dibaca, dan kartu multiverse yang selaras dengan seluruh aplikasi.'
+    },
+
+    'whatsnew.outfit.title': {
+      es: 'Tu mejor outfit, analizado',
+      en: 'Your best outfit, analyzed',
+      pt: 'Seu melhor look, analisado',
+      fr: 'Votre meilleure tenue, analysée',
+      de: 'Dein bestes Outfit, analysiert',
+      ja: 'あなたの最高のコーデを分析',
+      zh: '最适合你的穿搭，AI 亲测',
+      ru: 'Ваш лучший образ, проанализированный',
+      ar: 'أفضل إطلالة لك، بتحليل ذكي',
+      id: 'Outfit terbaikmu, dianalisis'
+    },
+    'whatsnew.outfit.desc': {
+      es: 'Sube una foto de tu ropa y Gemini Vision te da feedback por pieza: color, corte, ocasión y qué ajustar para la cita.',
+      en: 'Upload a photo of your outfit and Gemini Vision gives you piece-by-piece feedback: color, fit, occasion, and what to tweak for the date.',
+      pt: 'Envie uma foto do seu look e o Gemini Vision te dá feedback peça por peça: cor, caimento, ocasião e o que ajustar para o encontro.',
+      fr: 'Envoyez une photo de votre tenue : Gemini Vision analyse pièce par pièce — couleur, coupe, occasion et ajustements pour le rendez-vous.',
+      de: 'Lade ein Foto deines Outfits hoch — Gemini Vision gibt dir Feedback zu jedem Stück: Farbe, Passform, Anlass und was fürs Date anzupassen ist.',
+      ja: '服の写真をアップすると、Gemini Vision が色・シルエット・TPO をアイテムごとに評価し、デートに向けた調整案を提案します。',
+      zh: '上传你的穿搭照片，Gemini Vision 按单品给出建议：颜色、剪裁、场合，以及约会前该怎么调整。',
+      ru: 'Загрузите фото образа — Gemini Vision даст обратную связь по каждой вещи: цвет, крой, повод и что подправить к свиданию.',
+      ar: 'ارفع صورة ملابسك، ويعطيك Gemini Vision ملاحظات لكل قطعة: اللون، والقصّة، والمناسبة، وما يحتاج إلى تعديل قبل الموعد.',
+      id: 'Unggah foto outfit-mu dan Gemini Vision memberi umpan balik per item: warna, potongan, kesempatan, dan yang perlu disesuaikan untuk kencan.'
+    },
+
+    'whatsnew.scorecard.title': {
+      es: 'Puntúa tu cita',
+      en: 'Rate your date',
+      pt: 'Avalie seu encontro',
+      fr: 'Notez votre rendez-vous',
+      de: 'Bewerte dein Date',
+      ja: 'デートを採点',
+      zh: '给这次约会打分',
+      ru: 'Оцените свидание',
+      ar: 'قيّم موعدك',
+      id: 'Nilai kencanmu'
+    },
+    'whatsnew.scorecard.desc': {
+      es: 'Un scorecard de 4 dimensiones — conversación, química, esfuerzo, diversión — con highlight del momento y una mejora sugerida para la próxima.',
+      en: 'A 4-dimension scorecard — conversation, chemistry, effort, fun — with a moment highlight and one suggested improvement for next time.',
+      pt: 'Um scorecard de 4 dimensões — conversa, química, esforço, diversão — com o destaque do momento e uma sugestão de melhoria para a próxima.',
+      fr: 'Une fiche de score en 4 dimensions — conversation, alchimie, effort, plaisir — avec un moment fort et une amélioration à viser la prochaine fois.',
+      de: 'Eine 4-Dimensionen-Auswertung — Gespräch, Chemie, Einsatz, Spaß — mit einem Moment-Highlight und einem Verbesserungs­vorschlag fürs nächste Mal.',
+      ja: '会話・相性・努力・楽しさの 4 項目で採点。印象的な瞬間と次回への改善提案を 1 つ提示。',
+      zh: '从对话、默契、投入、乐趣四个维度评分，标出最难忘的瞬间，并给出下次可以改进的一点。',
+      ru: 'Оценка по 4 измерениям — беседа, химия, усилия, веселье — с ярким моментом и одним предложением улучшить следующее свидание.',
+      ar: 'بطاقة تقييم من 4 محاور — المحادثة، الكيمياء، الجهد، المتعة — مع إبراز أجمل لحظة واقتراح تحسين واحد للمرة القادمة.',
+      id: 'Scorecard 4 dimensi — percakapan, kimia, usaha, keseruan — dengan sorotan momen dan satu saran perbaikan untuk kencan berikutnya.'
+    },
+
+    'whatsnew.wingperson.title': {
+      es: 'Wing-Person IA',
+      en: 'AI Wing-Person',
+      pt: 'Wing-Person IA',
+      fr: 'Wing-Person IA',
+      de: 'KI-Wingperson',
+      ja: 'AI ウィングパーソン',
+      zh: 'AI 助攻',
+      ru: 'ИИ-помощник',
+      ar: 'مساعد الذكاء الاصطناعي',
+      id: 'Wing-Person AI'
+    },
+    'whatsnew.wingperson.desc': {
+      es: 'Cuando la conversación se enfría, el Wing-Person propone un mensaje para retomar el hilo — con tu tono, no el suyo.',
+      en: 'When the conversation cools down, the Wing-Person suggests a message to pick it back up — in your tone, not its own.',
+      pt: 'Quando a conversa esfria, o Wing-Person sugere uma mensagem para retomar o fio — no seu tom, não no dele.',
+      fr: 'Quand la conversation s\'essouffle, le Wing-Person propose un message pour la relancer — dans votre ton, pas le sien.',
+      de: 'Wenn das Gespräch abkühlt, schlägt der Wing-Person eine Nachricht zum Wieder­aufnehmen vor — in deinem Ton, nicht seinem.',
+      ja: '会話が途切れたら、ウィングパーソンがあなたのトーンで続きのメッセージを提案します。',
+      zh: '当聊天降温时，Wing-Person 会用你的口吻给出一条重新开启话题的建议。',
+      ru: 'Когда разговор затихает, Wing-Person предлагает сообщение, чтобы его оживить — в вашем тоне, а не своём.',
+      ar: 'عندما يبرد الحديث، يقترح Wing-Person رسالة لاستئنافه — بأسلوبك أنت، لا أسلوبه.',
+      id: 'Ketika obrolan mulai dingin, Wing-Person menyarankan pesan untuk melanjutkannya — dengan gayamu, bukan gayanya.'
     },
 
     // Terms Section

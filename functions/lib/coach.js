@@ -3867,13 +3867,32 @@ exports.getCoachHistory = onCall(
       for (const doc of legacySnap.docs) byId.set(doc.id, doc);
       for (const doc of newSnap.docs) byId.set(doc.id, doc);  // overrides legacy
 
+      // Timestamp can be Firestore Timestamp (iOS + current Android) OR Long ms
+      // (legacy Android simulation saves). Normalize to number before sorting.
+      const tsMs = (ts) => {
+        if (!ts) return 0;
+        if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+        if (typeof ts === 'number') return ts;
+        if (ts instanceof Date) return ts.getTime();
+        if (typeof ts === 'string') { const n = Date.parse(ts); return isNaN(n) ? 0 : n; }
+        return 0;
+      };
+
       const merged = Array.from(byId.values())
-        .sort((a, b) => {
-          const ta = a.data().timestamp?.toDate?.()?.getTime() ?? 0;
-          const tb = b.data().timestamp?.toDate?.()?.getTime() ?? 0;
-          return tb - ta;  // desc
-        })
+        .sort((a, b) => tsMs(b.data().timestamp) - tsMs(a.data().timestamp))  // desc
         .slice(0, limit);
+
+      // Defensive timestamp serialization: some Android clients wrote the
+      // timestamp as a Long (ms) instead of Firestore Timestamp, so toDate()
+      // doesn't exist. Support Timestamp | number | Date | ISO string.
+      const toISO = (ts) => {
+        if (!ts) return null;
+        if (typeof ts.toDate === 'function') return ts.toDate().toISOString();
+        if (typeof ts === 'number') return new Date(ts).toISOString();
+        if (ts instanceof Date) return ts.toISOString();
+        if (typeof ts === 'string') return ts;
+        return null;
+      };
 
       const messages = merged.map((doc) => {
         const data = doc.data();
@@ -3881,7 +3900,7 @@ exports.getCoachHistory = onCall(
           id: doc.id,
           message: data.message || '',
           sender: data.sender || 'coach',
-          timestamp: data.timestamp ? data.timestamp.toDate().toISOString() : null,
+          timestamp: toISO(data.timestamp),
           ...(data.matchId ? {matchId: data.matchId} : {}),
           ...(data.type ? {type: data.type} : {}),
           ...(data.suggestions ? {suggestions: data.suggestions} : {}),

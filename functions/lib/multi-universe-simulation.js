@@ -14,6 +14,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 
 const {
   geminiApiKey,
@@ -115,6 +116,49 @@ const MULTI_UNIVERSE_STAGES = [
     order: 5,
   },
 ];
+
+/**
+ * Build the priming context that feeds one multi-universe stage into Gemini.
+ *
+ * Context-adaptive: in solo mode with a user-typed context, the stage template
+ * is neutralized (universal across relationship types — friendship, work,
+ * family, reunion, etc.) so Gemini doesn't force a dating frame onto a
+ * platonic situation. With a match selected the relationship IS dating, so
+ * the original dating-oriented stage template is preserved.
+ *
+ * Layered so missing layers degrade cleanly:
+ *   - match + userContext + chatSummary → dating-framed stage + user ctx + chat
+ *   - match + chatSummary              → dating-framed stage + chat
+ *   - solo + userContext               → NEUTRAL stage + user ctx (no dating prime)
+ *   - no context                       → legacy dating stage template
+ */
+function buildStageContext(stage, userContext, chatSummary, isSoloMode) {
+  const parts = [];
+  if (userContext && userContext.trim().length > 0) {
+    parts.push(`USER'S REAL SITUATION (the user typed this verbatim — every noun, name, plan, and feeling matters):\n"${userContext}"`);
+  }
+  if (chatSummary && chatSummary.trim().length > 0) {
+    parts.push(`RECENT CONVERSATION WITH THE OTHER PERSON (chronological, oldest first):\n${chatSummary}`);
+  }
+
+  // Solo + context: neutral stage that adapts to any relationship type.
+  // The user may be describing friendship, work, family, reunion — not dating.
+  if (isSoloMode && userContext && userContext.trim().length > 0) {
+    parts.push(
+      `RELATIONSHIP STAGE (universe ${stage.order}/5 — ${stage.id}):\n` +
+      `This universe samples the "${stage.id}" phase of WHATEVER relationship the user's situation describes. ` +
+      `CRITICAL: the situation above may be romantic, platonic (friendship, reunion), familial, professional, or any other type. ` +
+      `Interpret "${stage.id}" accordingly — for a friend reunion it means "first reaching out to reconnect", for work it means "first professional approach", etc. ` +
+      `Do NOT default to dating or romantic framing unless the user's own words clearly imply romance.`
+    );
+  } else {
+    // Match mode (with or without user context) OR no context at all:
+    // keep the dating-oriented stage template because the relationship context IS dating.
+    parts.push(`RELATIONSHIP STAGE (this universe is at phase ${stage.order}/5 — ${stage.id}):\n${stage.situation}`);
+  }
+
+  return parts.join('\n\n');
+}
 
 /**
  * Stage labels in 10 languages
@@ -279,7 +323,11 @@ const MULTIVERSE_CONFIG_DEFAULTS = {
   cacheMinutes: 180 * 24 * 60, // 6 months in minutes
   gemini: {
     approachTemperature: 0.85,
-    approachMaxTokens: 800,
+    // Bumped 800 → 1200 → 2000 on 2026-04-18. gemini-2.5-flash uses thinking-mode
+    // internal tokens that count toward maxOutputTokens — 1200 still hit MAX_TOKENS
+    // for Spanish 4-approach output + thinking budget. 2000 gives ~800 thinking +
+    // ~1200 for actual JSON. RC `simulation_config.gemini.approachMaxTokens` overrides.
+    approachMaxTokens: 2000,
     translateTemperature: 0.3,
     translateMaxTokens: 150,
     timeoutMs: 25000,
@@ -298,7 +346,13 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 // v2 = alternativePhrases added
 // v3 = fixed language-mixed fallback (Gemini failure path no longer embeds
 //      the English STAGE_TEMPLATES priming text into localized fallbacks)
-const CACHE_SCHEMA_VERSION = 3;
+// v4 = stages contextualized with userContext + match chat history
+//      (priming no longer stage-template-only; legacy caches regenerate)
+// v5 = fallback path now embeds userContext snippet so MAX_TOKENS/Gemini-failure
+//      stages keep contextual output instead of the generic "quería hablar contigo"
+// v6 = prompt + stage template context-adaptive (neutralFrame) — solo + user context
+//      no longer forces romantic framing onto platonic inputs; max tokens bumped to 2000
+const CACHE_SCHEMA_VERSION = 6;
 
 async function getMultiUniverseConfig() {
   // Return cached config if fresh
@@ -363,9 +417,12 @@ exports.simulateMultiUniverse = onCall(
   },
   async (request) => {
     const startTime = Date.now();
-    let { matchId = "", userLanguage = 'en' } = request.data || {};
+    let { matchId = "", userLanguage = 'en', userContext = "" } = request.data || {};
     // Normalize language code to 2-letter ISO 639-1 format (handles "es-MX" → "es")
     userLanguage = normalizeLanguageCode(userLanguage);
+    // Sanitize userContext: trim + cap at 500 chars to bound Gemini cost.
+    // Bad types silently become empty string (backward compat with older clients).
+    userContext = typeof userContext === 'string' ? userContext.trim().substring(0, 500) : "";
     const userId = request.auth?.uid;
     if (!userId) throw new HttpsError('unauthenticated', getLocalizedError('auth_required', userLanguage));
     // Validate matchId: must be a short alphanumeric Firestore doc id.
@@ -374,6 +431,9 @@ exports.simulateMultiUniverse = onCall(
       throw new HttpsError('invalid-argument', getLocalizedError('match_not_found', userLanguage));
     }
     const isSoloMode = !matchId;  // Empty matchId = solo practice mode
+    const userContextHash = userContext
+      ? crypto.createHash('sha256').update(userContext.toLowerCase()).digest('hex').substring(0, 8)
+      : '';
 
     let analyticsData = {
       userId: userId.substring(0, 4), // anonymize
@@ -422,9 +482,13 @@ exports.simulateMultiUniverse = onCall(
       // Step 2: Check cache (valid for 6 months)
       // Language-scoped cache key — prevents cross-language leaks where a user who
       // generated a simulation in English later sees English strings despite device lang change.
+      // When userContext is present, append its sha256 hash so each context variant has its
+      // own cache slot (user can run the multiverse with multiple scenarios without collision).
       const normalizedUserLang = normalizeLanguageCode(userLanguage || 'en');
       const baseCacheKey = isSoloMode ? 'multiverse_solo' : `multiverse_${matchId}`;
-      const cacheKey = `${baseCacheKey}_${normalizedUserLang}`;
+      const cacheKey = userContextHash
+        ? `${baseCacheKey}_${normalizedUserLang}_${userContextHash}`
+        : `${baseCacheKey}_${normalizedUserLang}`;
       const cacheDoc = await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).get();
 
@@ -574,6 +638,34 @@ exports.simulateMultiUniverse = onCall(
         logger.info(`[MultiUniverse] Match data keys: ${Object.keys(matchData || {}).join(', ').substring(0, 100)}`);
       }
 
+      // Step 3c: Load recent chat history with the match (if match mode).
+      // Feeds every stage so Gemini can reference the *actual* conversation tone +
+      // recent topics instead of a generic dating template. 20 msgs is the same
+      // window `simulateSituation` uses — enough recency, not bloated.
+      let matchChatSummary = '';
+      if (!isSoloMode) {
+        try {
+          const msgSnap = await db.collection('matches').doc(matchId)
+            .collection('messages').orderBy('timestamp', 'desc').limit(20).get();
+          matchChatSummary = msgSnap.docs
+            .reverse()
+            .map((d) => {
+              const data = d.data() || {};
+              const who = data.senderId === userId ? 'You' : (matchName || 'Match');
+              const text = (data.text || data.message || '').toString().trim();
+              return text ? `${who}: ${text}` : '';
+            })
+            .filter((l) => l.length > 0)
+            .slice(-20)
+            .join('\n');
+          logger.info(`[MultiUniverse] Loaded ${msgSnap.docs.length} chat messages for context`);
+        } catch (e) {
+          logger.warn(`[MultiUniverse] Chat history load failed (non-fatal): ${e.message}`);
+        }
+      }
+
+      logger.info(`[MultiUniverse] Context: userCtxHash=${userContextHash || 'none'}, chatMsgLines=${matchChatSummary ? matchChatSummary.split('\n').length : 0}`);
+
       // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
       const stages = [];
       let totalTokens = 0;
@@ -584,10 +676,17 @@ exports.simulateMultiUniverse = onCall(
         try {
           logger.info(`[MultiUniverse] ▶️ Stage ${stage.id} (${stage.order}/5)...`);
 
-          // Call simulateSituation internally via admin SDK
-          // This simulates how the user would approach this relationship stage
+          // Build rich context for this stage: user's real situation + recent chat + stage phase.
+          // Empty parts are skipped so we don't pollute the prompt with empty sections.
+          // isSoloMode toggles the stage template: dating-framed for match mode, neutral
+          // (adapts to any relationship type) for solo + user-typed context.
+          const stageContext = buildStageContext(stage, userContext, matchChatSummary, isSoloMode);
+
+          // Call simulateSituation internally via admin SDK.
+          // - userContextSnippet → embedded in fallback templates on Gemini failure.
+          // - isSoloModeWithContext → tells Gemini not to assume dating framing.
           const situationResponse = await callSituationSimulationInternal(
-            db, userId, matchId, stage.situation, userLanguage
+            db, userId, matchId, stageContext, userLanguage, userContext, isSoloMode && !!userContext
           );
 
           const stageDuration = Date.now() - stageStart;
@@ -700,6 +799,10 @@ exports.simulateMultiUniverse = onCall(
         matchName,
         matchId,
         userLanguage, // Store language used for this generation
+        // Persist hash only — userContext itself may contain PII and we don't
+        // want it retrievable from the cache doc. Hash is enough to correlate
+        // runs with the same input for debugging.
+        userContextHash: userContextHash || null,
         // Schema version exposed to clients so they can invalidate persisted
         // coachChat messages produced by older (buggy) pipeline runs.
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
@@ -812,30 +915,30 @@ exports.simulateMultiUniverse = onCall(
  * Multi-universe has its own rate limit (3/day), separate from situation simulation limit.
  * So calling Gemini directly here doesn't consume user's situation simulation quota.
  */
-async function callSituationSimulationInternal(db, userId, matchId, situation, userLanguage) {
+async function callSituationSimulationInternal(db, userId, matchId, situation, userLanguage, userContextSnippet = '', neutralFrame = false) {
   const callStart = Date.now();
   try {
-    logger.info(`[SituationInternal] Starting Gemini call for: ${situation.substring(0, 50)}...`);
+    logger.info(`[SituationInternal] Starting Gemini call for: ${situation.substring(0, 50)}... (neutralFrame=${neutralFrame})`);
 
     // Generate 4 approaches using Gemini
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage);
+    const approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage, userContextSnippet, neutralFrame);
 
     const callDuration = Date.now() - callStart;
     logger.info(`[SituationInternal] Gemini call completed in ${callDuration}ms`);
 
     if (!approaches || approaches.length === 0) {
       logger.warn(`[SituationInternal] Gemini returned empty approaches, using fallback`);
-      // Intentionally pass '' — the multi-universe stage `situation` is a
-      // hardcoded English priming template, NOT real user input, so embedding
-      // it as a parenthetical snippet inside the localized Spanish/PT/FR/... template
-      // produces mixed-language text like "Oye, sobre lo que te comentaba (We've been...)".
+      // When the caller provided a real user-typed context (userContextSnippet), use it as
+      // the snippet so the fallback template references the user's actual words — otherwise
+      // pass '' to avoid embedding the English stage priming template into a localized
+      // fallback (which would produce mixed-language output).
       return {
         success: true,
         situation,
         situationType: 'other',
         matchName: 'Your Match',
-        approaches: generateApproachesFallback(userLanguage, ''),
+        approaches: generateApproachesFallback(userLanguage, userContextSnippet),
         bestApproachId: '1',
         coachTip: getLocalizedCoachTip('communication_foundation', userLanguage),
         psychInsights: getLocalizedPsychInsight('authenticity', userLanguage),
@@ -876,14 +979,14 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
     logger.error(`[SituationInternal] Failed after ${callDuration}ms: ${e.message}`, e.stack);
 
     // Fallback to basic approaches if Gemini fails.
-    // See note above: never embed the English stage priming template as a
-    // snippet inside a localized fallback — pass '' to use the non-snippet variant.
+    // When user provided a real context, the fallback now embeds it as a snippet so
+    // output stays relevant; otherwise empty string keeps the legacy non-snippet variant.
     return {
       success: true,
       situation,
       situationType: 'other',
       matchName: 'Your Match',
-      approaches: generateApproachesFallback(userLanguage, ''),
+      approaches: generateApproachesFallback(userLanguage, userContextSnippet),
       bestApproachId: '1',
       coachTip: getLocalizedCoachTip('communication_importance', userLanguage),
       psychInsights: getLocalizedPsychInsight('authentic_dialogue', userLanguage),
@@ -895,7 +998,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
 /**
  * Generate 4 approaches using Gemini (direct Gemini call, not via CF)
  */
-async function generateApproachesForMultiverse(genAI, situation, userLang) {
+async function generateApproachesForMultiverse(genAI, situation, userLang, userContextSnippet = '', neutralFrame = false) {
   const callStart = Date.now();
   try {
     logger.info(`[Gemini] Initializing model: ${AI_MODEL_NAME}`);
@@ -927,19 +1030,40 @@ async function generateApproachesForMultiverse(genAI, situation, userLang) {
       'en': 'English',
     }[userLang] || 'English';
 
-    const prompt = `${langInstr}
+    // Role priming adapts to the context type. When the caller signals neutralFrame
+    // (solo mode + user-typed context), Gemini must treat the situation as whatever
+    // the user described — friendship, reunion, work, family, etc. — instead of
+    // forcing a dating/sugar-dating narrative onto a platonic input.
+    const rolePrimingBlock = neutralFrame
+      ? `You are an inclusive communication coach. The user described their own situation below — it may be about any relationship type (friendship, reunion, family, work, romance, etc). Generate 4 approaches that fit the situation the user actually described. Do NOT assume dating unless the user's own words clearly imply a romantic relationship.
 
-🌍 OUTPUT LANGUAGE: ${languageName} — code "${userLang}".
-EVERY "phrase" value in the JSON MUST be written in ${languageName}. Do NOT output English phrases when the user's language is not English.
-
-You are an inclusive dating coach. Generate EXACTLY 4 distinct communication approaches for a multi-universe relationship stage test.
+CRITICAL GUIDELINES:
+- Use completely gender-neutral language. NEVER assume the gender of either person.
+- Use "them/they/this person" instead of gendered terms. If the user's text names the other person or describes them (friend, colleague, family), mirror those terms faithfully.
+- Match the emotional register of the user's situation — warm for a friend reunion, grounded for work, tender for romance. Never inject romance into a platonic scenario.
+- Phrases must work for ANY relationship type.
+- Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.`
+      : `You are an inclusive dating coach. Generate EXACTLY 4 distinct communication approaches for a multi-universe relationship stage test.
 
 CRITICAL GUIDELINES:
 - Use completely gender-neutral language. NEVER assume the gender of either person.
 - Use "them/they/this person/partner" instead of "him/her/boyfriend/girlfriend".
 - This is a sugar dating context where there may be a significant age difference and a mutually beneficial arrangement. Phrases should be appropriate, respectful, and genuine while acknowledging this dynamic.
 - Phrases must work for ANY relationship type (heterosexual, same-sex, non-binary, polyamorous).
-- Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.
+- Be culturally aware: adjust emotional intensity appropriately for high-context and low-context cultures.`;
+
+    // Tone 3 ("romantic_vulnerable") is re-labeled "vulnerable" in neutralFrame mode
+    // so it stops pushing Gemini toward dating framing on platonic inputs.
+    const toneThreeSpec = neutralFrame
+      ? '  3. vulnerable — soft, honest about what THIS situation means emotionally for the user (friendship, reunion, closeness — not romance unless the user\'s text is romantic)'
+      : '  3. romantic_vulnerable — soft, honest about feelings tied to THIS situation (adjust intensity for cultural context)';
+
+    const prompt = `${langInstr}
+
+🌍 OUTPUT LANGUAGE: ${languageName} — code "${userLang}".
+EVERY "phrase" value in the JSON MUST be written in ${languageName}. Do NOT output English phrases when the user's language is not English.
+
+${rolePrimingBlock}
 
 The user's situation (verbatim — every noun, verb and detail matters):
 """
@@ -958,7 +1082,7 @@ situation (a name, place, plan, feeling, or event they mentioned).
 Generate 4 approaches with FIXED tones in this exact order:
   1. direct — clear, confident, unambiguous; names the situation in the first sentence
   2. playful — warm, light, a little humor; still references the specific topic
-  3. romantic_vulnerable — soft, honest about feelings tied to THIS situation (adjust intensity for cultural context)
+${toneThreeSpec}
   4. grounded_honest — calm, real, low-pressure (respectful and genuine); states what's happening
 
 Each phrase must be 2-3 sentences, natural, first-person IN ${languageName}.
@@ -1051,17 +1175,15 @@ Respond ONLY with JSON (phrases in ${languageName}):
       return result_approaches;
     }
 
-    logger.error(`[Gemini] All attempts failed after ${Date.now() - callStart}ms — using non-snippet fallback`);
-    // Multi-universe only: `situation` here is a hardcoded English STAGE_TEMPLATES
-    // priming sentence, NOT real user input. Passing it into the localized
-    // fallback produces language-mixed text like:
-    //   "Oye, sobre lo que te comentaba (First time reaching out...), ..."
-    // Always pass '' so the non-snippet variant of the localized fallback wins.
-    return generateApproachesFallback(userLang, '');
+    logger.error(`[Gemini] All attempts failed after ${Date.now() - callStart}ms — using fallback (snippet=${userContextSnippet ? 'yes' : 'no'})`);
+    // When userContextSnippet is present, embed it in the localized fallback so output
+    // stays contextual instead of generic. When empty, the old non-snippet variant is used
+    // (avoids embedding the hardcoded English stage template into localized phrases).
+    return generateApproachesFallback(userLang, userContextSnippet);
   } catch (e) {
     logger.error(`[Gemini] Error after ${Date.now() - callStart}ms:`, e.message);
     if (e.stack) logger.error(`[Gemini] Stack:`, e.stack);
-    return generateApproachesFallback(userLang, '');
+    return generateApproachesFallback(userLang, userContextSnippet);
   }
 }
 

@@ -7,7 +7,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "node test-comprehensive-300.js && node test-post-deploy-350.js && node test-discovery-v2-parity.js && node test-situation-sim.js && node test-multiverse.js && node test-internal-comprehensive.js && node test-moderation-homoglyph.js",
+    "test": "node test-comprehensive-300.js && node test-post-deploy-350.js && node test-discovery-v2-parity.js && node test-situation-sim.js && node test-multiverse.js && node test-internal-comprehensive.js && node test-moderation-homoglyph.js && node test-multiverse-usercontext.js && node test-multiverse-scenarios.js",
     "test:multiverse": "node test-multiverse-places-local.js",
     "e2e:smoke": "node test-e2e-smoke.js"
   },
