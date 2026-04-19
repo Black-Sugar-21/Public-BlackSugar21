@@ -316,6 +316,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Autonomous commitment (SDT) erodes when external platform metrics (match count, likes, profile views) remain visible — app notification off-boarding is a concrete commitment signal',
         researcher: 'Orben & Przybylski, Social Media & Wellbeing, 2019',
       },
+      {
+        principle: 'Korean 눈치 (nunchi) — the subtle art of reading unspoken social cues — enables commitment communication without explicit declaration; partners signal readiness through consistent attentiveness and action rather than verbal proclamations',
+        researcher: 'Lim & Choi, Korean Communication Patterns, 1996',
+      },
     ],
   },
 };
