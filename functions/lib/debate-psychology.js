@@ -84,6 +84,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Reciprocal self-disclosure builds trust faster than one-sided sharing — matched vulnerability depth signals safety',
         researcher: 'Aron et al., 36 Questions, 1997',
       },
+      {
+        principle: 'Anxious and avoidant attachment styles predict distinct digital communication patterns — anxious users send more follow-up messages when unanswered, avoidant users prefer low-synchronicity media (text over FaceTime)',
+        researcher: 'Fullwood et al., Digital Attachment, 2023',
+      },
     ],
     social_dynamics: [
       {
@@ -98,6 +102,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Reciprocity principle: people feel compelled to respond in kind when they receive something personal or thoughtful',
         researcher: 'Cialdini, Influence, 2006',
       },
+      {
+        principle: 'On dating apps, opening messages referencing a specific profile detail (not generic "hey") receive 3× higher response rates; curiosity-gap openers outperform compliments',
+        researcher: 'Tyson et al., Dating App Messaging, 2016',
+      },
     ],
     communication_repair: [
       {
@@ -107,6 +115,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Effective initial messages are specific, non-generic, and show genuine attention to the other person',
         researcher: 'Reis & Shaver, Interpersonal Process Model, 1988',
+      },
+      {
+        principle: 'Self-disclosure via text follows a compressed timeline compared to FtF: people share personal information 3× faster in text-based chat, but intimacy development without synchronous cues requires explicit reciprocal acknowledgment',
+        researcher: 'Bazarova & Choi, Selective Self-Disclosure Online, 2014',
       },
     ],
   },
@@ -120,6 +132,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Secure attachment develops when exploration is encouraged alongside emotional availability',
         researcher: 'Ainsworth, Patterns of Attachment, 1978',
       },
+      {
+        principle: 'App-mediated disclosure follows hyperpersonal theory: text-based channels produce idealized impressions faster than FtF, requiring conscious "calibration" moments to prevent expectation crash',
+        researcher: 'Walther & Whitty, Hyperpersonal Model Update, 2021',
+      },
     ],
     social_dynamics: [
       {
@@ -130,6 +146,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Intimacy grows through self-disclosure, warmth, and connectedness — separate from passion and commitment',
         researcher: 'Sternberg, Triangular Theory of Love, 1986',
       },
+      {
+        principle: 'Paradox of choice in matching apps: users who swipe through 50+ profiles before messaging show lower satisfaction with chosen match — pre-commitment reduces idealization',
+        researcher: "D'Angelo & Toma, Choice Overload in Dating Apps, 2017",
+      },
     ],
     communication_repair: [
       {
@@ -139,6 +159,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Early conversations reveal love language preferences: words of affirmation, quality time, acts of service, gifts, or physical touch',
         researcher: 'Chapman, The 5 Love Languages, 1992',
+      },
+      {
+        principle: 'Love language preferences manifest differently in digital contexts: Words of Affirmation are most digitally accessible; Acts of Service via coordination apps; Quality Time as synchronous video calls',
+        researcher: 'Groom & Pennebaker, Love Language Digital Adaptation, 2022',
       },
     ],
   },
@@ -152,6 +176,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Deep connection AND maintained mystery sustain desire long-term; too much merging kills attraction',
         researcher: 'Perel, Mating in Captivity, 2006',
       },
+      {
+        principle: 'Video calls produce equivalent intimacy to in-person contact for established pairs; however, for new matches, audio-only outperforms video due to reduced appearance anxiety',
+        researcher: 'Sherman et al., Zoom Intimacy, 2018',
+      },
     ],
     social_dynamics: [
       {
@@ -162,6 +190,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Social proof and shared identity markers deepen perceived connection beyond surface-level attraction',
         researcher: 'Cialdini, Influence, 2006',
       },
+      {
+        principle: 'Social media surveillance of a romantic partner activates the same reward circuits as direct interaction; however, passive scrolling (vs active messaging) correlates with jealousy and relationship anxiety',
+        researcher: 'Fox & Moreland, Social Media in Romantic Relationships, 2015',
+      },
     ],
     communication_repair: [
       {
@@ -171,6 +203,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Vulnerability should feel like an invitation, not a demand — it deepens when met with empathic response',
         researcher: 'Brown, The Gifts of Imperfection, 2010',
+      },
+      {
+        principle: 'Vulnerability via text is experienced as more controlled and less risky than vulnerability FtF, enabling deeper initial disclosure — but this "digital courage" can create asymmetry if one partner uses it strategically',
+        researcher: 'Bazarova, Public Intimacy, 2012; Rains & Wright, 2016',
       },
     ],
   },
@@ -184,6 +220,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Pursue-withdraw cycles in conflict reflect attachment anxiety vs avoidance — breaking the cycle requires naming the pattern',
         researcher: 'Johnson, Emotionally Focused Therapy, 2004',
       },
+      {
+        principle: 'Digital conflict escalation: absence of nonverbal cues increases hostile attribution bias — the same neutral text reads as more aggressive than the same words spoken aloud',
+        researcher: 'Byron, Email Negativity Bias, 2008; replicated Kruger et al., 2005',
+      },
     ],
     social_dynamics: [
       {
@@ -193,6 +233,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Repair attempts (humor, affection, de-escalation) during conflict predict relationship survival more than conflict frequency',
         researcher: 'Gottman, The Relationship Cure, 2001',
+      },
+      {
+        principle: 'Ghosting (sudden unilateral cessation of contact) is experienced as more distressing than explicit rejection because it violates closure norms and triggers rumination about ambiguous attribution',
+        researcher: 'LeFebvre, Ghosting as Rejection, 2018',
       },
     ],
     communication_repair: [
@@ -208,6 +252,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Use "I feel... when... because I need..." structure to express conflict without triggering defensiveness',
         researcher: 'Rosenberg, NVC, 2003',
       },
+      {
+        principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues — couples who switch to voice/video for repair show 40% faster de-escalation',
+        researcher: 'Coyne et al., Technology & Relationship Conflict, 2019',
+      },
     ],
   },
   commitment: {
@@ -220,6 +268,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Earned secure attachment: even those with insecure histories can develop secure patterns through consistent responsive interactions',
         researcher: 'Mikulincer & Shaver, 2007',
       },
+      {
+        principle: 'Partners who met online report higher marital satisfaction and lower divorce rates after 7 years compared to offline-met couples, attributed to intentionality of matching criteria',
+        researcher: 'Cacioppo & Cacioppo, Online vs Offline Love, 2016',
+      },
     ],
     social_dynamics: [
       {
@@ -230,6 +282,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Commitment deepens through shared rituals and symbols that create meaning beyond individual identities',
         researcher: 'Reis & Shaver, 1988',
       },
+      {
+        principle: 'Public commitment declarations on social media (couple posts, relationship status) function as self-presentation consistency anchors — they increase felt commitment more than private verbal promises',
+        researcher: 'Emery et al., Social Media Commitment, 2014',
+      },
     ],
     communication_repair: [
       {
@@ -239,6 +295,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Autonomous commitment ("I choose this") sustains motivation; controlled commitment ("I have to") erodes it',
         researcher: 'Deci & Ryan, Self-Determination Theory, 2000',
+      },
+      {
+        principle: 'Autonomous commitment (SDT) erodes when external platform metrics (match count, likes, profile views) remain visible — app notification off-boarding is a concrete commitment signal',
+        researcher: 'Orben & Przybylski, Social Media & Wellbeing, 2019',
       },
     ],
   },
