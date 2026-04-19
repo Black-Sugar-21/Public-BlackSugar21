@@ -96,12 +96,33 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
     ]);
     clearTimeout(synthTimer);
 
+    let finalApproaches = synthesis.approaches;
+    const tones = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
+
+    // Supplement partial synthesis from best perspective
+    if (finalApproaches.length < 4) {
+      logger.info(`[Debate] Stage ${stageId}: synthesis partial (${finalApproaches.length}/4) — supplementing from perspectives`);
+      const best = selectBestPerspective(validPerspectives, stageId);
+      if (best) {
+        const usedTones = new Set(finalApproaches.map(a => a.tone));
+        for (const ba of best.approaches) {
+          if (finalApproaches.length >= 4) break;
+          const tone = ba.tone || tones[finalApproaches.length];
+          if (!usedTones.has(tone)) {
+            finalApproaches.push({ ...ba, sourceAgents: [best.perspectiveId], confidence: 5 });
+            usedTones.add(tone);
+          }
+        }
+      }
+    }
+
     return {
-      approaches: synthesis.approaches,
+      approaches: finalApproaches.slice(0, 4),
       debateMetadata: {
         perspectivesUsed: validPerspectives.length,
         perspectiveIds: validPerspectives.map(p => p.perspectiveId),
-        synthesisConfidence: synthesis.approaches.map(a => a.confidence || 5),
+        synthesisConfidence: finalApproaches.slice(0, 4).map(a => a.confidence || 5),
+        partial: finalApproaches.length < synthesis.approaches.length ? undefined : (synthesis.approaches.length < 4),
       },
     };
   } catch (e) {

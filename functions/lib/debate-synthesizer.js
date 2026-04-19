@@ -21,19 +21,51 @@ function salvageTruncatedJson(text) {
   try {
     return JSON.parse(text);
   } catch (_) { /* try salvage */ }
+
   let fixed = text.trim();
-  const openBraces = (fixed.match(/{/g) || []).length;
-  const closeBraces = (fixed.match(/}/g) || []).length;
+
+  // Strategy 1: find the last complete object in the approaches array
+  const lastCompleteObj = fixed.lastIndexOf('}');
+  if (lastCompleteObj > 0) {
+    const candidate = fixed.substring(0, lastCompleteObj + 1);
+    // Try closing the array + outer object
+    const attempts = [
+      candidate + ']}',
+      candidate + ',]}',  // trailing comma tolerance
+    ];
+    for (const a of attempts) {
+      try {
+        const parsed = JSON.parse(a);
+        if (parsed?.approaches?.length >= 1) return parsed;
+      } catch (_) { /* try next */ }
+    }
+  }
+
+  // Strategy 2: brute-force brace/bracket balancing
+  fixed = fixed.replace(/,\s*$/, '');
   const openBrackets = (fixed.match(/\[/g) || []).length;
   const closeBrackets = (fixed.match(/]/g) || []).length;
-  fixed = fixed.replace(/,\s*$/, '');
+  const openBraces = (fixed.match(/{/g) || []).length;
+  const closeBraces = (fixed.match(/}/g) || []).length;
   for (let i = 0; i < openBrackets - closeBrackets; i++) fixed += ']';
   for (let i = 0; i < openBraces - closeBraces; i++) fixed += '}';
   try {
-    return JSON.parse(fixed);
-  } catch (_) {
-    return null;
+    const parsed = JSON.parse(fixed);
+    if (parsed?.approaches?.length >= 1) return parsed;
+  } catch (_) { /* fall through */ }
+
+  // Strategy 3: extract complete approach objects via regex
+  const approachRegex = /\{[^{}]*"tone"\s*:\s*"[^"]+"\s*,[^{}]*"phrase"\s*:\s*"[^"]*"[^{}]*\}/g;
+  const matches = fixed.match(approachRegex);
+  if (matches && matches.length >= 1) {
+    const approaches = [];
+    for (const m of matches) {
+      try { approaches.push(JSON.parse(m)); } catch (_) { /* skip broken */ }
+    }
+    if (approaches.length >= 1) return { approaches };
   }
+
+  return null;
 }
 
 function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
@@ -113,7 +145,7 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
   const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology);
 
   const modelName = debateCfg.synthesisModel || AI_MODEL_NAME;
-  const maxTokens = debateCfg.synthesisMaxTokens || 2400;
+  const maxTokens = debateCfg.synthesisMaxTokens || 6000;
   const temperature = debateCfg.synthesisTemperature || 0.7;
 
   const model = genAI.getGenerativeModel({
@@ -145,17 +177,22 @@ async function synthesizeDebateApproaches(genAI, perspectives, situation, userLa
     }
 
     let parsed = parseGeminiJsonResponse(text);
-    if (!parsed && safety.reason === 'truncated') {
+    const isTruncated = safety.reason === 'truncated';
+    if (!parsed && isTruncated) {
       parsed = salvageTruncatedJson(text);
+      if (parsed) logger.info(`[Debate-Synth] salvaged ${parsed.approaches?.length || 0} approaches from truncated output`);
     }
-    if (!parsed || !Array.isArray(parsed.approaches) || parsed.approaches.length < 4) {
-      logger.warn(`[Debate-Synth] attempt ${attempt}: invalid JSON structure`);
+    const minRequired = isTruncated ? 1 : 4;
+    if (!parsed || !Array.isArray(parsed.approaches) || parsed.approaches.length < minRequired) {
+      logger.warn(`[Debate-Synth] attempt ${attempt}: invalid JSON structure (got ${parsed?.approaches?.length || 0}, need ${minRequired})`);
       continue;
     }
 
-    const validApproaches = parsed.approaches.filter(a => a.phrase && a.phrase.length > 10);
-    if (validApproaches.length < 4) {
-      logger.warn(`[Debate-Synth] attempt ${attempt}: ${validApproaches.length}/4 valid phrases`);
+    const validApproaches = parsed.approaches.filter(a =>
+      a.phrase && a.phrase.length > 10 && !/\[(?:specific|mention|insert|add)\b/i.test(a.phrase)
+    );
+    if (validApproaches.length < minRequired) {
+      logger.warn(`[Debate-Synth] attempt ${attempt}: ${validApproaches.length}/${minRequired} valid phrases`);
       continue;
     }
 

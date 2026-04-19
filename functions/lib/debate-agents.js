@@ -133,7 +133,9 @@ async function generatePerspectiveApproaches(genAI, perspectiveId, situation, us
       continue;
     }
 
-    const validApproaches = parsed.approaches.filter(a => a.phrase && a.phrase.length > 10);
+    const validApproaches = parsed.approaches.filter(a =>
+      a.phrase && a.phrase.length > 10 && !/\[(?:specific|mention|insert|add)\b/i.test(a.phrase)
+    );
     if (validApproaches.length < 4) {
       logger.warn(`[Debate-Agent-${agent.id}] attempt ${attempt}: ${validApproaches.length}/4 valid phrases`);
       continue;
