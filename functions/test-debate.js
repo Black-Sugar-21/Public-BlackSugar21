@@ -390,6 +390,50 @@ ok(!debateSynthSrc.includes("require('./debate-agents')"), 'debate-synthesizer d
 ok(!debateSynthSrc.includes("require('./debate-orchestrator')"), 'debate-synthesizer does not import orchestrator');
 
 // ═══════════════════════════════════════════════════════════════════
+console.log('── Section 8: salvageTruncatedJson + placeholder filter ──');
+// ═══════════════════════════════════════════════════════════════════
+
+const { salvageTruncatedJson } = require('./lib/debate-synthesizer');
+
+// Complete JSON — should pass through
+ok(salvageTruncatedJson('{"approaches":[{"tone":"direct","phrase":"Hello"}]}')?.approaches?.length === 1,
+  'salvage: complete JSON passes through');
+
+// Truncated mid-object — last complete approach recovered
+const truncMid = '{"approaches":[{"id":"1","tone":"direct","phrase":"First phrase here","citedResearch":"Bowlby"},{"id":"2","tone":"playful","phrase":"Second phr';
+const salvMid = salvageTruncatedJson(truncMid);
+ok(salvMid && salvMid.approaches && salvMid.approaches.length >= 1, 'salvage: mid-string truncation recovers ≥1 approach');
+
+// Truncated after 3 complete approaches
+const trunc3 = '{"approaches":[{"id":"1","tone":"direct","phrase":"One one one","citedResearch":"A"},{"id":"2","tone":"playful","phrase":"Two two two","citedResearch":"B"},{"id":"3","tone":"vulnerable","phrase":"Three three three","citedResearch":"C"},{"id":"4","tone":"grounded","phrase":"Four fo';
+const salv3 = salvageTruncatedJson(trunc3);
+ok(salv3 && salv3.approaches && salv3.approaches.length >= 3, 'salvage: 3 complete + 1 truncated recovers ≥3');
+
+// Completely broken — returns null
+ok(salvageTruncatedJson('not json at all') === null, 'salvage: garbage returns null');
+ok(salvageTruncatedJson('') === null, 'salvage: empty string returns null');
+ok(salvageTruncatedJson(null) === null, 'salvage: null returns null');
+
+// Placeholder filter in source
+ok(debateAgentsSrc.includes('specific|mention|insert|add'), 'debate-agents has placeholder filter regex');
+ok(debateSynthSrc.includes('specific|mention|insert|add'), 'debate-synthesizer has placeholder filter regex');
+
+// Double language enforcement — langInstr at start AND end
+ok(debateAgentsSrc.match(/\$\{langInstr\}/g)?.length >= 2, 'debate-agents has double language enforcement (start + end)');
+ok(debateSynthSrc.match(/\$\{langInstr\}/g)?.length >= 2, 'debate-synthesizer has double language enforcement (start + end)');
+
+// citedResearch flows to final response
+ok(multiUniverseSrc.includes('app.citedResearch'), 'citedResearch included in final approach mapping');
+ok(multiUniverseSrc.includes('app.sourceAgents'), 'sourceAgents included in final approach mapping');
+
+// Situation validation in debate-agents
+ok(debateAgentsSrc.includes('situation.trim().length < 10'), 'debate-agents validates minimum situation length');
+ok(debateAgentsSrc.includes('substring(0, 1500)'), 'debate-agents truncates long situations');
+
+// perspectiveTimeoutMs increased
+ok(debatePsychSrc.includes('perspectiveTimeoutMs: 12000'), 'perspective timeout increased to 12s');
+
+// ═══════════════════════════════════════════════════════════════════
 // Results
 // ═══════════════════════════════════════════════════════════════════
 console.log('\n══════════════════════════════════════════════════════════');

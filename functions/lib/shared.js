@@ -92,7 +92,7 @@ function getLanguageInstruction(lang) {
   if (lang.startsWith('id') || lang.startsWith('ms')) return '⚠️ KRITIS: SEMUA konten harus dalam Bahasa Indonesia. Jangan gunakan Bahasa Inggris.';
   if (lang.startsWith('pt')) return '⚠️ CRÍTICO: TODO conteúdo DEVE estar em português brasileiro. Use vocabulário do Brasil (ex: "celular" não "telemóvel"; "ônibus" não "autocarro"). Nunca em inglês nem em português europeu.';
   if (lang.startsWith('fr')) return '⚠️ CRITIQUE: TOUT le contenu DOIT être en français. Jamais en anglais.';
-  if (lang.startsWith('ja')) return '⚠️ 重要：すべてのコンテンツは日本語ONLY。英語は絶対に使わないでください。';
+  if (lang.startsWith('ja')) return '⚠️ 必須：すべてのフレーズ・反応・アドバイスは日本語のみで生成すること。英語は一切禁止。どの単語もどの文も必ず日本語で書くこと。';
   if (lang.startsWith('ru')) return '⚠️ КРИТИЧНО: Все содержимое ТОЛЬКО на русском. Никогда не используйте английский.';
   if (lang.startsWith('de')) return '⚠️ KRITISCH: ALLES Inhalte NUR auf Deutsch. Nie auf Englisch.';
   if (lang.startsWith('es')) return '⚠️ CRÍTICO: TODO el contenido DEBE estar en español. Nunca en inglés. Las frases, reacciones y consejos deben estar en español.';

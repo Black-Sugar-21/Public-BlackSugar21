@@ -1171,6 +1171,8 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
         successScore: score,
         signals: ['warmth', 'reciprocation', 'openness'],
         recommendedFor: idx === 0 ? getLocalizedRecommendedFor(userLanguage) : null,
+        ...(app.citedResearch ? { citedResearch: app.citedResearch } : {}),
+        ...(app.sourceAgents ? { sourceAgents: app.sourceAgents } : {}),
       };
     });
 

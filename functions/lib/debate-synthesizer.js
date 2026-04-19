@@ -123,7 +123,9 @@ Respond ONLY with valid JSON:
   {"id":"2","tone":"playful","phrase":"...","sourceAgents":["B","C"],"confidence":7,"citedResearch":"..."},
   {"id":"3","tone":"romantic_vulnerable","phrase":"...","sourceAgents":["A","B"],"confidence":9,"citedResearch":"..."},
   {"id":"4","tone":"grounded_honest","phrase":"...","sourceAgents":["C"],"confidence":8,"citedResearch":"..."}
-]}`;
+]}
+
+${langInstr}`;
 }
 
 /**

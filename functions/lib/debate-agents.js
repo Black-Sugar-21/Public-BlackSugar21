@@ -74,7 +74,9 @@ RULES:
 - Your approaches will be compared against 2 other specialist agents. A synthesizer will pick the best. Make yours distinctly reflect YOUR perspective.
 
 Respond ONLY with valid JSON:
-{"perspectiveId":"${agent.id}","approaches":[{"id":"1","tone":"${tones[0]}","phrase":"...","citedResearch":"..."},{"id":"2","tone":"${tones[1]}","phrase":"...","citedResearch":"..."},{"id":"3","tone":"${tones[2]}","phrase":"...","citedResearch":"..."},{"id":"4","tone":"${tones[3]}","phrase":"...","citedResearch":"..."}]}`;
+{"perspectiveId":"${agent.id}","approaches":[{"id":"1","tone":"${tones[0]}","phrase":"...","citedResearch":"..."},{"id":"2","tone":"${tones[1]}","phrase":"...","citedResearch":"..."},{"id":"3","tone":"${tones[2]}","phrase":"...","citedResearch":"..."},{"id":"4","tone":"${tones[3]}","phrase":"...","citedResearch":"..."}]}
+
+${langInstr}`;
 }
 
 /**
@@ -92,12 +94,17 @@ async function generatePerspectiveApproaches(genAI, perspectiveId, situation, us
   const agent = PERSPECTIVE_AGENTS[perspectiveId];
   if (!agent) throw new Error(`Unknown perspective: ${perspectiveId}`);
 
+  if (!situation || typeof situation !== 'string' || situation.trim().length < 10) {
+    throw new Error(`Situation too short for perspective generation (${situation?.length || 0} chars)`);
+  }
+  const safeSituation = situation.substring(0, 1500);
+
   const principles = (STAGE_PERSPECTIVE_PRINCIPLES[stageId] || {})[perspectiveId] || [];
   if (principles.length === 0) {
     logger.warn(`[Debate-Agent-${agent.id}] No principles for stage ${stageId}`);
   }
 
-  const prompt = buildPerspectivePrompt(agent, principles, situation, userLang, stageId, neutralFrame);
+  const prompt = buildPerspectivePrompt(agent, principles, safeSituation, userLang, stageId, neutralFrame);
 
   const modelName = debateCfg.perspectiveModel || AI_MODEL_LITE;
   const maxTokens = debateCfg.perspectiveMaxTokens || 800;

@@ -250,7 +250,7 @@ const DEBATE_CONFIG_DEFAULTS = {
   perspectiveModel: 'gemini-2.5-flash-lite',
   perspectiveMaxTokens: 800,
   perspectiveTemperature: 0.9,
-  perspectiveTimeoutMs: 8000,
+  perspectiveTimeoutMs: 12000,
   synthesisModel: 'gemini-2.5-flash',
   synthesisMaxTokens: 6000,
   synthesisTemperature: 0.7,
