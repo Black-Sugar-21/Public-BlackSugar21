@@ -68,127 +68,6 @@ getMatchesWithMetadata, getDateSuggestions, getDatingAdvice
 calculateAIChemistry
 ```
 
-## 🛡️ Shared helpers · session 2026-04-17 (MUST READ for all new CFs)
-
-Después del hardening de robustez, todas las CFs que llamen a Gemini o lean datos de match/profile DEBEN usar estos helpers de `shared.js`:
-
-### Gemini safety + retry pattern
-
-Antes de parsear `.text()` en cualquier `generateContent`:
-
-```js
-const { checkGeminiSafety } = require('./shared');
-
-for (let attempt = 1; attempt <= 2; attempt++) {
-  const result = await model.generateContent(prompt);
-  const safety = checkGeminiSafety(result, 'myFnName');
-  if (!safety.ok) {
-    logger.warn(`[myFn] attempt ${attempt}: ${safety.reason} — ${safety.detail}`);
-    continue; // retry
-  }
-  const text = result?.response?.text();
-  // ... parse
-}
-// Fallback path (after 2 attempts): return { ..., degraded: true }
-```
-
-`checkGeminiSafety` inspecciona `promptFeedback?.blockReason` (safety) y `candidates?.[0]?.finishReason` (STOP/MAX_TOKENS/RECITATION). Sin este guard, el código parsea JSON truncado o vacío silenciosamente.
-
-### Kill switch per-feature
-
-Primera línea del handler de cualquier CF AI:
-
-```js
-const { assertAiFeatureEnabled } = require('./shared');
-await assertAiFeatureEnabled('myFeature', lang);
-```
-
-Donde `myFeature` debe agregarse al map `ai_feature_flags` en Remote Config. Lanza `HttpsError('failed-precondition', 'feature_unavailable en user lang')` si está desactivado.
-
-### Rate limit per-user-per-hour para CFs caras
-
-```js
-const { enforceAiRateLimit, getLocalizedError } = require('./shared');
-const rl = await enforceAiRateLimit(db, userId, 'myFnName', 10); // 10/hour
-if (!rl.allowed) {
-  throw new HttpsError('resource-exhausted', getLocalizedError('rate_limit', lang));
-}
-```
-
-Usa `users/{uid}/aiRateLimits/{fnName}` con transacción de sliding window 1h. Fail-open si Firestore falla.
-
-### Permission guard en cualquier CF que toque match data
-
-```js
-const matchDoc = await db.collection('matches').doc(matchId).get();
-if (!matchDoc.exists) {
-  throw new HttpsError('not-found', getLocalizedError('match_not_found', lang));
-}
-const matchData = matchDoc.data();
-if (!Array.isArray(matchData?.usersMatched) || !matchData.usersMatched.includes(callerId)) {
-  throw new HttpsError('permission-denied', getLocalizedError('permission_denied', lang));
-}
-// …luego leer messages, subcollections, etc.
-```
-
-Sin este guard, cualquier user autenticado pasa matchId ajeno y scraping conversaciones.
-
-### HttpsError localizados (10 idiomas)
-
-Nunca hardcoded English en errors user-facing. Usar `getLocalizedError(key, lang)`:
-
-Keys disponibles (en `shared.js` ERROR_MESSAGES):
-- `auth_required` · `rate_limit` · `match_not_found` · `profile_not_found`
-- `invalid_argument` · `internal` · `generation_failed` · `no_photos`
-- `blocked_content` · `all_stages_failed` · `invalid_result` · `simulation_failed`
-- `permission_denied` · `reports_rate_limit` · `feature_unavailable`
-
-Si necesitas un error message nuevo, agregarlo como entrada con las 10 claves de idioma a `ERROR_MESSAGES` en `shared.js`.
-
-### Context-aware fallback (never generic text)
-
-Cuando Gemini falla en una CF que genera contenido user-facing (frases, approaches, blueprints, insights, etc.), el fallback DEBE embebir un snippet del input del usuario. Nunca servir texto 100% genérico.
-
-```js
-const { extractSituationSnippet } = require('./shared'); // o duplicado local
-const snippet = extractSituationSnippet(userText); // 90 chars word-boundary + ellipsis
-return TABLES[lang].map(tpl => tpl.replace('{snippet}', snippet));
-```
-
-Referencia: `situation-simulation.js` / `multi-universe-simulation.js`.
-
-### FCM token logging — fingerprint only
-
-Nunca loggear ni devolver el token completo:
-
-```js
-const fingerprint = token ? `${token.slice(0, 8)}…${token.slice(-4)}` : null;
-logger.error(`FCM send failed`, { tokenFingerprint: fingerprint });
-```
-
-### Idempotent rate-limit + dedup via determinístic docId
-
-```js
-const docId = `${reporterId}_${reportedUserId}_${Math.floor(Date.now() / 86400000)}`; // day bucket
-const ref = db.collection('reports').doc(docId);
-const existing = await ref.get();
-if (existing.exists) return { action: 'ALREADY_REPORTED_TODAY' };
-// Para counters con races, usar runTransaction
-await db.runTransaction(async (tx) => { /* read + compare + write */ });
-```
-
-### Anti-generic Gemini prompt (3-part pattern)
-
-Para cualquier prompt que genere texto user-facing basado en input del usuario:
-
-1. **CORE RULE explícita**: "Each response MUST reference concrete content from the user's input. Generic openers like X / Y / Z — on their own — are FORBIDDEN."
-2. **Retry x2** rechazando attempts que produzcan output vacío o genérico.
-3. **Context-aware fallback** con snippet del input + `degraded: true`.
-
-Referencia: `situation-simulation.js generateApproaches` / `multi-universe-simulation.js generateApproachesForMultiverse`.
-
----
-
 ## calculateAIChemistry (NEW)
 
 **File**: `functions/lib/ai-services.js` (line ~642)
@@ -202,7 +81,7 @@ Referencia: `situation-simulation.js generateApproaches` / `multi-universe-simul
    - Score range: 45-92% (generous for new app)
 2. **Server AI** (~3s): RAG vector search + Gemini flash-lite analysis
    - Blend: 40% algorithmic + 60% AI
-   - RAG queries coachKnowledge (487 chunks) for compatibility advice
+   - RAG queries coachKnowledge (509+ chunks) for compatibility advice
 3. **Cache**: Firestore `chemistryCache/{pairId}` (TTL 7 days)
    - pairId = sorted(userId1, userId2) to avoid duplicates
 
@@ -225,6 +104,62 @@ Referencia: `situation-simulation.js generateApproaches` / `multi-universe-simul
 - **iOS**: `SafetyShieldBanner.swift` in ChatView — color-coded (red/orange/yellow), expandable, dismiss
 - **Android**: `SafetyShieldBanner.kt` in ChatView — same design, Material3 icons
 - Both: triggered every 10 new messages, `Dispatchers.IO`/`Task.detached`, non-blocking UI
+
+## simulateMultiUniverse — Hang the DJ Multi-Universe Simulator
+
+**File**: `functions/lib/multi-universe-simulation.js`
+**Type**: Callable, 1GiB, 300s timeout, requires GEMINI_API_KEY secret
+**Payload**: `{matchId?, userLanguage, userContext?}`
+**Response**: `{success, stages[5], overallScore, starRating, insight, coachTip, cached}`
+
+### 4 Scenarios
+1. **match+text**: matchId + userContext → dating prompt with match profile + chat history + user context
+2. **match-alone**: matchId only → dating prompt with match profile + chat history
+3. **solo+text**: no matchId + userContext → neutral communication coach (friendship/professional/family)
+4. **solo-nothing**: no matchId, no userContext → open-ended neutral stage templates
+
+### Architecture (6-layer context)
+`buildStageContext(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge)`:
+1. **Match profile**: `buildMatchProfileSummary()` — name, age, bio (120 chars), interests (5 max)
+2. **User context**: verbatim user input (≤500 chars, sha256 hash only in logs)
+3. **Chat history**: last 20 messages from `matches/{matchId}/messages`
+4. **Chat guidance**: `CHAT_USAGE_BY_STAGE` — per-stage instructions for Gemini on HOW to use chat
+5. **Stage template**: dating (`stage.situation`) or neutral (`neutralSituation` / `NEUTRAL_STAGE_GUIDANCE`)
+6. **Psychology**: `STAGE_PSYCHOLOGY` (hardcoded) + `retrieveStageKnowledge()` (dynamic RAG from Firestore)
+
+### Psychology Integration (3 layers)
+| Layer | Source | Purpose |
+|---|---|---|
+| `STAGE_PSYCHOLOGY` | Hardcoded constant | 5 stages × 4-5 principles with APA citations (Gottman, Bowlby, Fisher, Sternberg, Brown, Perel, Rosenberg, Aron, Chapman, Johnson, Knapp, Derlega, Zak, Deci & Ryan, Ambady) |
+| `STAGE_RESEARCH_CITATIONS` | Hardcoded, 10 langs | Citation footer appended to coach tips |
+| `retrieveStageKnowledge()` | Dynamic RAG via `coachKnowledge` | COSINE vector search per stage, injected as "ADDITIONAL RESEARCH" |
+
+### Gemini Prompt
+- **Dating mode**: "You are an inclusive dating coach" + sugar dating context
+- **Neutral mode** (`neutralFrame`): "You are an inclusive communication coach" + gender-neutral
+- 4 fixed tones per stage: direct, playful, romantic_vulnerable (or vulnerable in neutral), grounded_honest
+- Anti-generic rules: each phrase MUST reference concrete details from user's situation
+
+### Scoring
+`scoreApproach()`: base 5 + length bonus (max 1.5) + sentence bonus (max 1.0) + specificity bonus (keyword overlap, max 1.5). Range: 4-10.
+
+### Cache
+- Key: `multiverse_{base}_{lang}_{sha256_8}` (clients + server produce identical hash)
+- TTL: 6 months. `CACHE_SCHEMA_VERSION = 9` — any bump invalidates all caches.
+- `isSoloMode` persisted for re-localization on cache hit.
+
+### Tests
+- `test-multiverse-usercontext.js`: 311 assertions (context, psychology, RAG, citations cross-check)
+- `test-multiverse-scenarios.js`: 467 assertions (4 scenarios × 5 stages × 10 langs + edge cases)
+
+## simulateSituation — Single Situation Simulation
+
+**File**: `functions/lib/multi-universe-simulation.js` (also exported standalone)
+**Type**: Callable
+**Payload**: `{matchId?, situationText, userLanguage, userContext?}`
+**Response**: `{success, approaches[4], coachTip}`
+
+Used internally by `simulateMultiUniverse` for each of the 5 stages, and directly by the single-situation coach card.
 
 ## generateSmartReply — Contextual AI Smart Replies (3-Tone)
 
@@ -453,7 +388,8 @@ node scripts/coach-health-monitor.js --dry-run
 
 | Sistema | Colección | Chunks | Uso |
 |---|---|---|---|
-| Coach RAG | `coachKnowledge` | 487 chunks (80+ categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
+| Coach RAG | `coachKnowledge` | 509+ chunks (80+ categorías, 12+ idiomas) | `dateCoachChat` — enriquece respuestas con dating advice curado |
+| Psychology RAG | `coachKnowledge` (category: `psychology_stages`) | 22 chunks (5 stages, EN) | `simulateMultiUniverse` — dynamic per-stage research retrieval via `retrieveStageKnowledge()` |
 | Moderation RAG | `moderationKnowledge` | 93 chunks (13 categorías, 10 idiomas) | `moderateMessage` + `autoModerateMessage` |
 
 Embedding: `gemini-embedding-001` (768 dims, COSINE). Configurables via RC: `coach_config.rag` y `moderation_config.rag`.
@@ -483,8 +419,11 @@ updateCoachKnowledge   → weekly Sunday 3 AM UTC. Auto-generates RAG chunks fro
 ### Modules
 - `functions/index.js` — main entry, exports all CFs
 - `functions/lib/ai-services.js` — AI callable + scheduled CFs (coach, blueprint, chemistry, smart reply, icebreakers, photo coach, etc.)
+- `functions/lib/multi-universe-simulation.js` — Multi-universe simulator (simulateMultiUniverse, simulateSituation). Psychology-grounded 5-stage relationship testing with dynamic RAG retrieval
+- `functions/lib/simulation.js` — Situation simulation standalone CF
 - `functions/lib/safety.js` — Safety Check-In CFs (scheduleDateCheckIn, cancelDateCheckIn, respondToDateCheckIn, processDateCheckIns)
 - `functions/lib/coach.js` — Coach chat pipeline, intent extraction, places search
+- `functions/lib/shared.js` — Shared helpers (getCachedEmbedding, checkGeminiSafety, getLocalizedError, etc.)
 - `functions/lib/geo.js` — Geocoding, geohash utilities
 
 ### Line Map (index.js)
@@ -557,10 +496,10 @@ Cuando el usuario menciona otra ciudad (ej. "Buenos Aires") y Places search se e
 
 Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`overrideLat`/`overrideLng`) se almacenan en `placesCache` junto con los resultados. El path de `loadMore` lee estas coordenadas del caché para mantener la búsqueda en la ciudad mencionada sin necesidad de re-geocodificar.
 
-## Coach RAG — 487 chunks, 80+ categorías (actualizado)
+## Coach RAG — 509+ chunks, 80+ categorías (actualizado)
 
 - **Colección**: `coachKnowledge`
-- **487 chunks**, 80+ categorías ampliadas:
+- **509+ chunks**, 80+ categorías ampliadas (including 22 `psychology_stages` chunks for multi-universe RAG):
   - **11 icebreaker especializados**: `icebreakers` (10 idiomas genéricos) + `icebreakers_travel`, `icebreakers_food`, `icebreakers_fitness`, `icebreakers_music`, `icebreakers_culture`, `icebreakers_nature`, `icebreakers_movies`, `icebreakers_nightlife`, `icebreakers_pets`, `icebreakers_sparse` (empty profiles), `icebreakers_agegap` (age gap matches) — todos `multi` language
   - **10 florist**: `florist_guide` (10 idiomas), `date_flowers` (10 idiomas)
   - **10 liquor**: `liquor_gift` (10 idiomas)
@@ -981,7 +920,7 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 
 ### RAG Knowledge Expansion
 - 160 new RAG chunks added (`approach-suggestions.json`)
-- Total coach RAG chunks: **487** (previously 327)
+- Total coach RAG chunks: **509+** (previously 487) — includes 22 `psychology_stages` chunks for multi-universe simulation
 
 ## Session 2026-04-03 Updates
 
