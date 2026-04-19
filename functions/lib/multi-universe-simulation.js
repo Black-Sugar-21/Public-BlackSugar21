@@ -50,6 +50,12 @@ async function trackMultiUniverseAnalytics(userId, matchId, result) {
       totalDuration: admin.firestore.FieldValue.increment(result.duration || 0),
       successfulStages: admin.firestore.FieldValue.increment(result.successfulStages || 0),
       failedStages: admin.firestore.FieldValue.increment(result.failedStages || 0),
+      ...(result.debateEnabled ? {
+        debateRuns: admin.firestore.FieldValue.increment(1),
+        debateStagesSucceeded: admin.firestore.FieldValue.increment(result.debateStagesSucceeded || 0),
+        debateStagesFallback: admin.firestore.FieldValue.increment(result.debateStagesFallback || 0),
+        debatePerspectivesTotal: admin.firestore.FieldValue.increment(result.debatePerspectivesTotal || 0),
+      } : {}),
     };
 
     // Add error detail if failed
@@ -74,6 +80,11 @@ async function trackMultiUniverseAnalytics(userId, matchId, result) {
       duration: result.duration || 0,
       score: result.compatibilityScore || null,
       errorReason: result.errorReason || null,
+      debateEnabled: result.debateEnabled || false,
+      ...(result.debateEnabled ? {
+        debateStagesSucceeded: result.debateStagesSucceeded || 0,
+        debateStagesFallback: result.debateStagesFallback || 0,
+      } : {}),
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true }).catch(e =>
       logger.warn('[Analytics] Failed to write user stats:', e.message)
@@ -624,6 +635,10 @@ exports.simulateMultiUniverse = onCall(
       failedStages: 0,
       errorReason: null,
       failedStage: null,
+      debateEnabled: !!(cfg?.debate?.enabled),
+      debateStagesSucceeded: 0,
+      debateStagesFallback: 0,
+      debatePerspectivesTotal: 0,
     };
 
     try {
@@ -1128,9 +1143,16 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
           approaches = debateResult.approaches;
           debateMetadata = debateResult.debateMetadata;
           logger.info(`[SituationInternal] Debate produced ${approaches.length} approaches (${debateMetadata.perspectivesUsed} perspectives)`);
+          if (analyticsData) {
+            analyticsData.debateStagesSucceeded++;
+            analyticsData.debatePerspectivesTotal += debateMetadata.perspectivesUsed || 0;
+          }
+        } else if (analyticsData) {
+          analyticsData.debateStagesFallback++;
         }
       } catch (debateErr) {
         logger.warn(`[SituationInternal] Debate threw unexpectedly: ${debateErr.message} — falling through to single-agent`);
+        if (analyticsData) analyticsData.debateStagesFallback++;
       }
     }
 
