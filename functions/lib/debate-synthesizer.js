@@ -70,6 +70,9 @@ function salvageTruncatedJson(text) {
 
 function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
   const langInstr = getLanguageInstruction(userLang);
+  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Chinese (中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean' }[userLang] || userLang;
+  const isEnglish = userLang === 'en';
+  const translateNote = isEnglish ? '' : `\n⚠️ FINAL OUTPUT LANGUAGE = ${langName}. Agent perspectives below may be in English — translate every "phrase" value to ${langName}. Native ${langName} speaker quality required.`;
 
   const perspectiveBlocks = perspectives.map(p => {
     const approaches = p.approaches.map(a =>
@@ -108,8 +111,9 @@ ${situation}
 """
 ${psychBlock}
 
-AGENT PERSPECTIVES:
+AGENT PERSPECTIVES (may be in English — translate to ${langName} in your output):
 ${perspectiveBlocks}
+${translateNote}
 
 IMPORTANT:
 - CRITICAL: Every "phrase" value MUST be written entirely in the user's language (see language instruction above). Even if the SITUATION or agent outputs are in a different language, your final phrases MUST be translated to the user's language. Never output English phrases unless the user's language is English.

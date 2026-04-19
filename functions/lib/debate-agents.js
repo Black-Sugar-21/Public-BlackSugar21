@@ -44,6 +44,10 @@ function buildPerspectivePrompt(agent, principles, situation, userLang, stageId,
 
   const toneSpec = tones.map(t => `"${t}" — ${toneDescriptions[t]}`).join('\n  ');
 
+  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Chinese (中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean' }[userLang] || userLang;
+  const isEnglish = userLang === 'en';
+  const translateNote = isEnglish ? '' : `\n⚠️ OUTPUT LANGUAGE = ${langName}. The situation above may contain English text — that is context only. Your "phrase" values MUST be fully translated to ${langName}. Write as if you are a native ${langName} speaker. Do NOT output English phrases.`;
+
   return `${langInstr}
 
 You are Agent ${agent.id}: the ${agent.name} perspective.
@@ -58,16 +62,17 @@ ${principleList}
 
 You are a ${roleContext}.
 
-SITUATION:
+SITUATION (for context only — do not mirror its language):
 """
 ${situation}
 """
+${translateNote}
 
 Generate EXACTLY 4 communication approaches, one per tone:
   ${toneSpec}
 
 RULES:
-- CRITICAL: Each "phrase" value MUST be written entirely in ${userLang === 'en' ? 'English' : userLang === 'es' ? 'Spanish' : userLang === 'ja' ? 'Japanese (日本語)' : userLang === 'zh' ? 'Chinese (中文)' : userLang === 'pt' ? 'Portuguese' : userLang === 'ar' ? 'Arabic' : userLang === 'de' ? 'German' : userLang === 'fr' ? 'French' : 'the language code ' + userLang}. Never write phrases in English unless the user's language IS English.
+- CRITICAL: Each "phrase" value MUST be written entirely in ${langName}. Never write phrases in English unless the user's language IS English.
 - Each phrase MUST be 2-3 sentences.
 - Each phrase MUST reference specific details from the SITUATION above — never generic.
 - Each phrase MUST reflect YOUR framework's perspective distinctly.
