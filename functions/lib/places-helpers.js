@@ -4,6 +4,14 @@ const admin = require('firebase-admin');
 const { AI_MODEL_LITE } = require('./shared');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+/**
+ * Computes the geographic midpoint between two lat/lng coordinates using spherical math.
+ * @param {number} lat1 - Latitude of point 1
+ * @param {number} lng1 - Longitude of point 1
+ * @param {number} lat2 - Latitude of point 2
+ * @param {number} lng2 - Longitude of point 2
+ * @returns {{latitude: number, longitude: number}}
+ */
 function calculateMidpoint(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180;
   const toDeg = (r) => (r * 180) / Math.PI;
@@ -654,6 +662,7 @@ function extractIgFromHtml(html, sourceLabel) {
   // Collect candidates with priority scores (lower = better)
   const candidates = new Map(); // handle → best priority
 
+  /** Adds an Instagram handle candidate to the priority map if valid. */
   function addCandidate(handle, priority, method) {
     const clean = sanitizeInstagramHandle(handle);
     if (!clean || !isValidIgCandidate(clean)) return;
@@ -1280,6 +1289,15 @@ const _placesL1Cache = new Map();
 const _PLACES_L1_TTL = 15 * 60 * 1000; // 15 min in-memory
 const _PLACES_L1_MAX = 100;
 
+/**
+ * Builds a deterministic cache key for a Places text search query.
+ * @param {string} textQuery - Search query text
+ * @param {{latitude: number, longitude: number}|null} center - Geographic center
+ * @param {number} radiusMeters - Search radius in meters
+ * @param {string} languageCode - BCP-47 language code
+ * @param {string[]|null} includedTypes - Google Places included type filter
+ * @returns {string} Cache key string
+ */
 function _getGeoCacheKey(textQuery, center, radiusMeters, languageCode, includedTypes) {
   const lat = center ? Math.round(center.latitude * 100) / 100 : 0; // ~1km precision
   const lng = center ? Math.round(center.longitude * 100) / 100 : 0;
@@ -1288,11 +1306,28 @@ function _getGeoCacheKey(textQuery, center, radiusMeters, languageCode, included
   return `${textQuery}|${lat},${lng}|${r}|${languageCode || 'es'}|${type}`;
 }
 
-// Sanitize cache key for Firestore document ID (no /, max 1500 bytes)
+/**
+ * Sanitizes a cache key to be a valid Firestore document ID (replaces slashes/spaces, max 200 chars).
+ * @param {string} key - Raw cache key
+ * @returns {string} Safe document ID string
+ */
 function _sanitizeCacheKey(key) {
   return key.replace(/\//g, '_').replace(/\s+/g, '_').substring(0, 200);
 }
 
+/**
+ * Calls Google Places Text Search API with L1 (in-memory) + L2 (Firestore) caching.
+ * @param {string} textQuery - Search query text
+ * @param {{latitude: number, longitude: number}|null} center - Search center
+ * @param {number} radiusMeters - Search radius in meters
+ * @param {string} languageCode - BCP-47 language code
+ * @param {string|null} pageToken - Pagination token for next page
+ * @param {number} [maxResults=20] - Max results per page
+ * @param {boolean} [useRestriction=false] - Use locationRestriction instead of locationBias
+ * @param {string[]|null} [includedTypes=null] - Google Places type filter
+ * @returns {Promise<{places: Object[], nextPageToken?: string}>}
+ * @throws {Error} If GOOGLE_PLACES_API_KEY is not configured or API returns an error
+ */
 async function placesTextSearch(textQuery, center, radiusMeters, languageCode, pageToken, maxResults = 20, useRestriction = false, includedTypes = null) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY not configured');
@@ -1512,6 +1547,17 @@ function isInappropriateVenue(place) {
   return false;
 }
 
+/**
+ * Transforms a raw Google Places result into a date-suggestion object with distances, scores, and photos.
+ * Returns null if the venue is inappropriate.
+ * @param {Object} place - Raw Google Places place object
+ * @param {{lat: number, lng: number}} currentUser - Current user's location
+ * @param {{lat: number, lng: number}} otherUser - Match's location
+ * @param {string} apiKey - Google Places API key (for photo URLs)
+ * @param {Object} placesConfig - RC places search config
+ * @param {Map<string, string>} igCacheMap - Pre-fetched Instagram handle cache
+ * @returns {Object|null} Date suggestion object or null if venue is filtered out
+ */
 function transformPlaceToSuggestion(place, currentUser, otherUser, apiKey, placesConfig, igCacheMap) {
   // Filter out inappropriate venues before transforming
   if (isInappropriateVenue(place)) return null;

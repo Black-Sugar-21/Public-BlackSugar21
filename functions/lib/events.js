@@ -22,6 +22,10 @@ const DEFAULT_CONFIG = {
 let _eventsConfigCache = null;
 let _eventsConfigCacheTime = 0;
 
+/**
+ * Fetches events config from Firestore appConfig/events with 5-min cache.
+ * @returns {Promise<Object>} Events config merged with DEFAULT_CONFIG
+ */
 async function getEventsConfig() {
   if (_eventsConfigCache && Date.now() - _eventsConfigCacheTime < 5 * 60 * 1000) return _eventsConfigCache;
   try {
@@ -36,6 +40,17 @@ async function getEventsConfig() {
 
 // ── Ticketmaster API ─────────────────────────────────────────────────────────
 
+/**
+ * Searches Ticketmaster API for events near a location.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radiusKm - Search radius in km (capped at 200)
+ * @param {string} lang - BCP-47 language code for locale mapping
+ * @param {string} category - Event category filter
+ * @param {number} maxResults - Max events to return
+ * @param {number} searchDaysMs - Future date range in milliseconds
+ * @returns {Promise<Object[]>} Normalized event objects
+ */
 async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   const apiKey = process.env.TICKETMASTER_API_KEY;
   if (!apiKey) return [];
@@ -123,6 +138,11 @@ async function searchTicketmaster(lat, lng, radiusKm, lang, category, maxResults
   }
 }
 
+/**
+ * Maps a Ticketmaster classification object to an internal category string.
+ * @param {Object|null} classification - Ticketmaster classification {segment, genre}
+ * @returns {string} Internal category ('music'|'sports'|'theater'|'comedy'|'festivals'|'other')
+ */
 function mapTmCategory(classification) {
   if (!classification) return 'other';
   const segment = (classification.segment?.name || '').toLowerCase();
@@ -137,6 +157,17 @@ function mapTmCategory(classification) {
 
 // ── Eventbrite API ───────────────────────────────────────────────────────────
 
+/**
+ * Searches Eventbrite API for events near a location.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radiusKm - Search radius in km (capped at 200)
+ * @param {string} lang - BCP-47 language code
+ * @param {string} category - Event category filter
+ * @param {number} maxResults - Max events to return
+ * @param {number} searchDaysMs - Future date range in milliseconds
+ * @returns {Promise<Object[]>} Normalized event objects
+ */
 async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   const token = process.env.EVENTBRITE_TOKEN;
   if (!token) return [];
@@ -200,6 +231,17 @@ async function searchEventbrite(lat, lng, radiusKm, lang, category, maxResults, 
 
 // ── Meetup API (via GraphQL — no key needed for public events) ───────────────
 
+/**
+ * Searches Meetup public GraphQL API for events near a location.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radiusKm - Search radius in km (capped at 100)
+ * @param {string} lang - BCP-47 language code
+ * @param {string} category - Event category filter
+ * @param {number} maxResults - Max events to return
+ * @param {number} searchDaysMs - Future date range in milliseconds
+ * @returns {Promise<Object[]>} Normalized event objects
+ */
 async function searchMeetup(lat, lng, radiusKm, lang, category, maxResults, searchDaysMs) {
   try {
     // Meetup's public GraphQL endpoint for event search
@@ -269,6 +311,12 @@ async function searchMeetup(lat, lng, radiusKm, lang, category, maxResults, sear
   }
 }
 
+/**
+ * Maps a Meetup eventType string to an internal category, preferring the caller's requested category.
+ * @param {string} eventType - Meetup event type string
+ * @param {string|null} requestedCategory - Caller's requested category (used directly if provided)
+ * @returns {string} Internal category string
+ */
 function mapMeetupCategory(eventType, requestedCategory) {
   if (requestedCategory) return requestedCategory;
   if (!eventType) return 'other';

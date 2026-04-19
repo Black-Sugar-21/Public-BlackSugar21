@@ -45,6 +45,10 @@ const SIM_CONFIG_DEFAULTS = {
   turnTemperature: 0.88,  // Creativity of agent responses
 };
 
+/**
+ * Fetches relationship simulation config from Remote Config with in-memory cache.
+ * @returns {Promise<Object>} Config merged with SIMULATION_DEFAULTS
+ */
 async function getSimulationConfig() {
   if (_simConfigCache && (Date.now() - _simConfigCacheTime) < SIM_CONFIG_CACHE_TTL) {
     return _simConfigCache;
@@ -520,6 +524,16 @@ ${personaB.name}:`;
 // Psychology RAG query — retrieves relevant attachment/relationship research
 // to inform the final analysis report
 // ---------------------------------------------------------------------------
+/**
+ * Retrieves psychology RAG chunks relevant to two attachment styles at a given relationship phase.
+ * @param {admin.firestore.Firestore} db - Firestore instance
+ * @param {import('@google/generative-ai').GoogleGenerativeAI} genAI - Gemini client
+ * @param {string} apiKey - Gemini API key
+ * @param {string} attachmentA - Attachment style of persona A
+ * @param {string} attachmentB - Attachment style of persona B
+ * @param {string} phase - Relationship phase label
+ * @returns {Promise<Object[]>} Matching RAG chunk objects sorted by score
+ */
 async function queryPsychologyRAG(db, genAI, apiKey, attachmentA, attachmentB, phase) {
   try {
     const query = `${attachmentA} attachment style with ${attachmentB} attachment style in ${phase} relationship stage`;
@@ -1288,9 +1302,11 @@ ${getLanguageInstruction(lang)}`;
   }
 }
 
-// Localized strings for the structured simulation fallback report — all 10 supported languages.
-// Previously this block was hardcoded in Spanish, so EN/FR/DE/... users received Spanish text
-// on any Gemini parse/validation failure. Keeping templates as functions to interpolate safely.
+/**
+ * Returns localized string template functions for the simulation fallback report (10 languages).
+ * @param {string} rawLang - BCP-47 language code
+ * @returns {Object} Map of template key → string or interpolation function
+ */
 function getFallbackReportStrings(rawLang) {
   const lang = (rawLang || 'en').split('-')[0].split('_')[0].toLowerCase();
   const TABLES = {
@@ -1511,6 +1527,12 @@ function getFallbackReportStrings(rawLang) {
 // ---------------------------------------------------------------------------
 // Cloud Function
 // ---------------------------------------------------------------------------
+/**
+ * CF: Runs a multi-universe relationship simulation between two user profiles (5 scenarios).
+ * @param {Object} request.data - {matchId?: string, userLanguage?: string, isSoloMode?: boolean}
+ * @returns {Promise<{report: Object, universeCount: number}>}
+ * @throws {HttpsError} unauthenticated | resource-exhausted | internal
+ */
 exports.simulateRelationship = onCall(
   {
     region: 'us-central1',

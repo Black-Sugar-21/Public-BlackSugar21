@@ -11,6 +11,13 @@ const {
   CATEGORY_TO_PLACES_TYPE, buildCategoryQueries,
 } = require('./places-helpers');
 
+/**
+ * CF: Returns paginated date-spot suggestions for a match using Google Places + AI scoring.
+ * Supports progressive radius expansion and loadMore exponential backoff.
+ * @param {Object} request.data - {matchId: string, userLanguage?: string, category?: string, pageToken?: string, loadCount?: number, excludePlaceIds?: string[]}
+ * @returns {Promise<{suggestions: Object[], nextPageToken?: string, totalResults: number}>}
+ * @throws {HttpsError} unauthenticated | invalid-argument | not-found
+ */
 exports.getDateSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60, secrets: [placesApiKey]},
   async (request) => {

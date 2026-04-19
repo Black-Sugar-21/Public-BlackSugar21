@@ -7,6 +7,10 @@ const { getLocalizedError } = require('./shared');
 
 // Reviewer UIDs from Remote Config (comma-separated)
 let _reviewerUids = null;
+/**
+ * Fetches the set of reviewer UIDs from Remote Config (cached for the CF instance lifetime).
+ * @returns {Promise<Set<string>>} Set of reviewer UID strings
+ */
 async function getReviewerUids() {
   if (_reviewerUids) return _reviewerUids;
   try {
@@ -18,8 +22,15 @@ async function getReviewerUids() {
   }
   return _reviewerUids;
 }
+/** @param {string} uid @param {Set<string>} reviewerSet @returns {boolean} */
 function isReviewerUid(uid, reviewerSet) { return reviewerSet.has(uid); }
 
+/**
+ * CF: Creates a story document visible to match participants for 24 hours.
+ * @param {Object} request.data - {imageUrl: string, matchId: string, matchParticipants: string[], userLanguage?: string}
+ * @returns {Promise<{success: boolean, storyId: string}>}
+ * @throws {HttpsError} unauthenticated | invalid-argument
+ */
 exports.createStory = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {

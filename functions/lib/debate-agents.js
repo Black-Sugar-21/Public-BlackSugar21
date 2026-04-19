@@ -23,6 +23,11 @@ const {
 const TONES_DATING = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 const TONES_NEUTRAL = ['direct', 'playful', 'vulnerable', 'grounded_honest'];
 
+/**
+ * Returns tone description strings adapted for cultural context (JA/KO/AR overrides).
+ * @param {string} userLang - BCP-47 language code
+ * @returns {Object} Map of tone key → description string
+ */
 function getLocalizedToneDescriptions(userLang) {
   const base = {
     direct: 'clear, confident, unambiguous',
@@ -57,6 +62,16 @@ function getLocalizedToneDescriptions(userLang) {
   return base;
 }
 
+/**
+ * Builds the system+user prompt for one debate agent to generate perspective approaches.
+ * @param {Object} agent - Agent descriptor {id, name, framework}
+ * @param {Object[]} principles - Psychology principles for this agent's framework
+ * @param {string} situation - User's situation text
+ * @param {string} userLang - BCP-47 language code
+ * @param {string} stageId - Relationship stage (e.g. 'initial_contact')
+ * @param {boolean} neutralFrame - If true, omits romantic framing (family/work context)
+ * @returns {string} Complete prompt string for the Gemini model
+ */
 function buildPerspectivePrompt(agent, principles, situation, userLang, stageId, neutralFrame) {
   const langInstr = getLanguageInstruction(userLang);
   const tones = neutralFrame ? TONES_NEUTRAL : TONES_DATING;

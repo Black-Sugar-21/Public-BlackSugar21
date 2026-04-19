@@ -17,6 +17,11 @@ const {
   trackAICall,
 } = require('./shared');
 
+/**
+ * Attempts to parse potentially truncated JSON from a Gemini response using 3 recovery strategies.
+ * @param {string} text - Raw model output that may be valid or truncated JSON
+ * @returns {Object|null} Parsed object with at least one approach, or null if unrecoverable
+ */
 function salvageTruncatedJson(text) {
   try {
     return JSON.parse(text);
@@ -68,6 +73,15 @@ function salvageTruncatedJson(text) {
   return null;
 }
 
+/**
+ * Builds the synthesis prompt that asks Gemini to merge the best approaches from all debate agents.
+ * @param {Object[]} perspectives - Array of {perspectiveId, agentName, approaches[]}
+ * @param {string} situation - User's situation text
+ * @param {string} userLang - BCP-47 language code
+ * @param {string} stageId - Relationship stage identifier
+ * @param {Object|null} stagePsychology - Stage-specific psychology {framework, principles[], guidance}
+ * @returns {string} Synthesis prompt string for the Gemini model
+ */
 function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
   const langInstr = getLanguageInstruction(userLang);
   const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;

@@ -49,6 +49,10 @@ let _coachNudgeConfigCache = null;
 let _coachNudgeConfigCacheTime = 0;
 const COACH_NUDGE_CONFIG_TTL = 5 * 60 * 1000; // 5 min
 
+/**
+ * Fetches coach nudge config from Remote Config with 5-min TTL cache.
+ * @returns {Promise<Object>} Merged config (defaults + RC overrides)
+ */
 async function getCoachNudgeConfig() {
   if (_coachNudgeConfigCache && (Date.now() - _coachNudgeConfigCacheTime) < COACH_NUDGE_CONFIG_TTL) {
     return _coachNudgeConfigCache;
@@ -104,6 +108,11 @@ const NUDGE_BODY = {
   id: '{name} belum membalas. Mau latihan pesan dengan AI Coach?',
 };
 
+/**
+ * Normalizes a BCP-47 language tag to a supported nudge locale, falling back to 'en'.
+ * @param {string} lang - BCP-47 language tag (e.g. 'es-MX')
+ * @returns {string} Supported locale key
+ */
 function pickLang(lang) {
   if (!lang) return 'en';
   const normalized = String(lang).split('-')[0].toLowerCase();
@@ -113,6 +122,13 @@ function pickLang(lang) {
 // ---------------------------------------------------------------------------
 // Clean up stale FCM tokens after send (mirror of scheduled.js:10)
 // ---------------------------------------------------------------------------
+/**
+ * Removes invalid FCM tokens from user documents after a multicast send.
+ * @param {admin.messaging.BatchResponse} response - FCM multicast response
+ * @param {string[]} tokens - Ordered list of FCM tokens that were sent to
+ * @param {admin.firestore.Firestore} db - Firestore instance
+ * @returns {Promise<void>}
+ */
 async function cleanupStaleTokens(response, tokens, db) {
   const staleTokens = [];
   response.responses.forEach((resp, i) => {
@@ -142,6 +158,10 @@ async function cleanupStaleTokens(response, tokens, db) {
 // ---------------------------------------------------------------------------
 // Main scheduled function
 // ---------------------------------------------------------------------------
+/**
+ * Scheduled CF (every 6 hours): scans active matches and sends coach nudge push notifications
+ * to users who haven't replied to their match in over 18 hours.
+ */
 exports.coachNudgeAgent = onSchedule(
   {
     schedule: 'every 6 hours',

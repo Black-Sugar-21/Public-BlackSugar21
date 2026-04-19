@@ -538,6 +538,14 @@ const RAG_MAX_CHUNK_LENGTH = 1500;
 // ─── Moderation RAG: Retrieve moderation rules from moderationKnowledge ──────
 
 // --- Coach RAG ---
+/**
+ * Retrieves relevant psychology knowledge chunks from the RAG collection via embedding similarity.
+ * @param {string} query - User message or topic to search for
+ * @param {string} apiKey - Gemini API key for embeddings
+ * @param {Object} [ragConfig={}] - RAG tuning params (topK, minScore, collection, etc.)
+ * @param {string} [lang='en'] - BCP-47 language code for result filtering
+ * @returns {Promise<string>} Concatenated knowledge snippets, or '' if RAG disabled/fails
+ */
 async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en') {
   if (!apiKey || ragConfig.enabled === false) return '';
 
@@ -652,6 +660,13 @@ async function retrieveCoachKnowledge(query, apiKey, ragConfig = {}, lang = 'en'
  */
 
 // --- Coach main functions ---
+/**
+ * CF: Main AI dating-coach chat endpoint. Handles credit check, RAG retrieval, Gemini generation,
+ * learning update, and quality tracking. Supports 10 languages.
+ * @param {Object} request.data - {message: string, matchId?: string, userLanguage?: string}
+ * @returns {Promise<{response: string, creditsRemaining: number, ragUsed: boolean}>}
+ * @throws {HttpsError} unauthenticated | resource-exhausted | internal
+ */
 exports.dateCoachChat = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey, placesApiKey]},
   async (request) => {
@@ -3940,6 +3955,12 @@ exports.getCoachHistory = onCall(
   },
 );
 
+/**
+ * CF: Soft-deletes a single coach chat message (marks deleted: true). Only the message owner can delete.
+ * @param {Object} request.data - {messageId: string, userLanguage?: string}
+ * @returns {Promise<{success: boolean}>}
+ * @throws {HttpsError} unauthenticated | not-found | permission-denied
+ */
 exports.deleteCoachMessage = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 15},
   async (request) => {
@@ -4144,6 +4165,12 @@ function analyzeConversationPatterns(messages, currentUserId) {
   };
 }
 
+/**
+ * CF: Returns real-time contextual coaching tips based on conversation analysis (chemistry, patterns).
+ * @param {Object} request.data - {matchId: string, userLanguage?: string}
+ * @returns {Promise<{tips: string[], chemistryScore: number}>}
+ * @throws {HttpsError} unauthenticated | not-found
+ */
 exports.getRealtimeCoachTips = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60, secrets: [geminiApiKey]},
   async (request) => {
@@ -5334,6 +5361,10 @@ Return as plain text, separating chunks with "---".`;
 // Scheduled CF that evaluates a sample of recent coach responses using Claude
 // to provide independent, unbiased quality assessment.
 
+/**
+ * Scheduled CF: Samples recent coach responses and evaluates them with Claude Sonnet
+ * for independent quality scoring (relevance, empathy, actionability).
+ */
 exports.evaluateCoachResponses = onSchedule(
   {schedule: 'every 60 minutes', region: 'us-central1', memory: '256MiB', timeoutSeconds: 120, secrets: [anthropicApiKey]},
   async () => {
@@ -5448,6 +5479,10 @@ exports.evaluateCoachResponses = onSchedule(
 // Weekly scheduled CF that analyzes evaluations and generates dynamic
 // improvement instructions for the coach system prompt.
 
+/**
+ * Scheduled CF: Analyzes evaluation results and auto-generates dynamic improvement
+ * instructions to be injected into the coach system prompt.
+ */
 exports.generateCoachImprovements = onSchedule(
   {schedule: 'every sunday 05:00', region: 'us-central1', memory: '512MiB', timeoutSeconds: 120, secrets: [anthropicApiKey]},
   async () => {

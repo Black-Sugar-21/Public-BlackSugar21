@@ -54,8 +54,11 @@ const SITUATION_TYPES = [
 
 const FIXED_TONES = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 
-// Extracts a short, clean snippet of the user's situation to echo back in fallbacks.
-// Keeps the first ~90 chars of meaningful content — enough to anchor the phrase to the user's topic.
+/**
+ * Extracts the first ~90 chars of a situation text (at a word boundary) for use in fallback phrases.
+ * @param {string} situation - User's situation description
+ * @returns {string} Shortened snippet, or '' if blank
+ */
 function extractSituationSnippet(situation) {
   if (!situation || typeof situation !== 'string') return '';
   const cleaned = situation
@@ -69,8 +72,13 @@ function extractSituationSnippet(situation) {
   return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut) + '…';
 }
 
-// Fallback approaches when Gemini API fails or returns invalid JSON — 10 languages supported.
-// When `situation` is provided, the fallbacks embed a snippet so they don't feel generic.
+/**
+ * Generates 4 localized static fallback approach phrases for when the Gemini API fails.
+ * Embeds a situation snippet when available so phrases don't feel generic.
+ * @param {string} [userLang='en'] - BCP-47 language code
+ * @param {string} [situation=''] - User's situation text for snippet extraction
+ * @returns {Object[]} Array of 4 approach objects {tone, phrase, citedResearch}
+ */
 function generateApproachesFallback(userLang = 'en', situation = '') {
   const snippet = extractSituationSnippet(situation);
   const hasSnippet = snippet.length > 0;
@@ -268,6 +276,10 @@ let _situationSimConfigCache = null;
 let _situationSimConfigCacheTime = 0;
 const SITUATION_SIM_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
+/**
+ * Fetches situation simulation config from Remote Config with 5-min in-memory cache.
+ * @returns {Promise<Object>} Config merged with SITUATION_SIM_CONFIG_DEFAULTS
+ */
 async function getSituationSimulationConfig() {
   // Return cached config if fresh
   if (_situationSimConfigCache && (Date.now() - _situationSimConfigCacheTime) < SITUATION_SIM_CONFIG_CACHE_TTL) {
@@ -381,6 +393,13 @@ function scoreReaction(text) {
 // ---------------------------------------------------------------------------
 // Classification + approach generation
 // ---------------------------------------------------------------------------
+/**
+ * Classifies a dating situation into one of the predefined SITUATION_TYPES using Gemini Lite.
+ * @param {import('@google/generative-ai').GoogleGenerativeAI} genAI - Gemini client
+ * @param {string} situation - User's situation description
+ * @param {string} lang - BCP-47 language code
+ * @returns {Promise<string>} Situation type from SITUATION_TYPES, or 'other' on failure
+ */
 async function classifySituation(genAI, situation, lang) {
   try {
     const model = genAI.getGenerativeModel({
@@ -405,6 +424,15 @@ Respond with JSON: {"type": "<category>"}`;
   }
 }
 
+/**
+ * Generates 4 tonal communication approaches for a dating situation using Gemini.
+ * @param {import('@google/generative-ai').GoogleGenerativeAI} genAI - Gemini client
+ * @param {string} situation - User's situation description
+ * @param {Object|null} matchPersona - Optional match persona context
+ * @param {string} userLang - BCP-47 language code
+ * @returns {Promise<Object[]>} Array of approach objects {tone, phrase, matchReaction, score, signals}
+ * @throws {Error} Rethrows on failure for parent catch to handle
+ */
 async function generateApproaches(genAI, situation, matchPersona, userLang) {
   try {
     const langInstr = getLanguageInstruction(userLang);
@@ -561,6 +589,16 @@ Respond ONLY with JSON in this shape (all text in ${languageName}):
   }
 }
 
+/**
+ * Generates a final personalized coach tip based on the winning approach and RAG knowledge.
+ * @param {import('@google/generative-ai').GoogleGenerativeAI} genAI - Gemini client
+ * @param {string} situation - User's situation description
+ * @param {Object} winningApproach - The highest-scored approach object
+ * @param {Object|null} matchPersona - Optional match persona context
+ * @param {string[]} ragChunks - RAG knowledge snippets (up to 3 used)
+ * @param {string} userLang - BCP-47 language code
+ * @returns {Promise<string>} Localized coach tip string
+ */
 async function buildFinalCoachTip(genAI, situation, winningApproach, matchPersona, ragChunks, userLang) {
   try {
     const langInstr = getLanguageInstruction(userLang);
@@ -603,6 +641,12 @@ Respond ONLY with JSON: {"coachTip":"...","psychInsights":"..."}`;
 // ---------------------------------------------------------------------------
 // Cloud Function
 // ---------------------------------------------------------------------------
+/**
+ * CF: Simulates 4 communication approaches for a dating situation and returns the best one with coach tip.
+ * @param {Object} request.data - {situation: string, matchId?: string, userLanguage?: string, neutralFrame?: boolean, stageId?: string}
+ * @returns {Promise<{approaches: Object[], winner: Object, coachTip: string, situationType: string}>}
+ * @throws {HttpsError} unauthenticated | resource-exhausted | internal
+ */
 exports.simulateSituation = onCall(
   {
     region: 'us-central1',

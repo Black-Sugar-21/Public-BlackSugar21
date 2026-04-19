@@ -266,6 +266,11 @@ function calculateRelevance(userMessage, coachResponse, language) {
   return Math.min(100, Math.round(score));
 }
 
+/**
+ * Maps a numeric quality score to a human-readable label.
+ * @param {number} score - Quality score 0–100
+ * @returns {'excellent'|'good'|'fair'|'needs_improvement'}
+ */
 function getQualityLabel(score) {
   if (score >= 80) return 'excellent';
   if (score >= 60) return 'good';
@@ -335,6 +340,11 @@ exports.checkCrossLanguageConsistency = async () => {
   }
 };
 
+/**
+ * Classifies the aggregate quality of coach responses for a given language.
+ * @param {Object[]} responses - Array of coach message documents from Firestore
+ * @returns {'healthy'|'too_brief'|'low_rag_integration'|'low_satisfaction'|'insufficient_data'}
+ */
 function classifyLanguageQuality(responses) {
   if (responses.length < 10) return 'insufficient_data';
   const avgLength = responses.reduce((sum, r) => sum + (r.message || '').length, 0) / responses.length;

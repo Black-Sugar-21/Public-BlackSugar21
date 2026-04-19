@@ -5,6 +5,10 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { encodeGeohash } = require('./geo');
 
+/**
+ * Firestore trigger: recalculates and writes the 'g' geohash field whenever a user's lat/lng changes.
+ * @param {import('firebase-functions/v2/firestore').DocumentUpdatedEvent} event
+ */
 exports.validateGeohashOnUpdate = onDocumentUpdated(
   {document: 'users/{userId}', region: 'us-central1'},
   async (event) => {

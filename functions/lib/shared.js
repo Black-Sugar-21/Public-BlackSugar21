@@ -74,6 +74,12 @@ function getRegionalString(table, lang) {
   return table.en || '';
 }
 
+/**
+ * Returns a strong language-enforcement instruction for Gemini prompts (10 languages + regional variants).
+ * Must be placed at the END of prompts to override other language directives.
+ * @param {string} lang - BCP-47 language code
+ * @returns {string} Language instruction string in the target language
+ */
 function getLanguageInstruction(lang) {
   // NOTE: These instructions are critical — they must be at the END of the prompt
   // to override any other language directives. Gemini must generate ALL content
@@ -101,6 +107,12 @@ function getLanguageInstruction(lang) {
   return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';
 }
 
+/**
+ * Normalizes a free-text place category to one of the 14 canonical internal category keys.
+ * Supports 10 languages + Google Places subtypes.
+ * @param {string|null} cat - Raw category string
+ * @returns {string} Canonical category key (e.g. 'cafe', 'bar', 'restaurant')
+ */
 function normalizeCategory(cat) {
   if (!cat) return 'restaurant';
   const c = cat.toLowerCase();
@@ -139,6 +151,11 @@ function normalizeCategory(cat) {
 
 const categoryEmojiMap = {cafe: '☕', restaurant: '🍽️', bar: '🍺', night_club: '💃', movie_theater: '🎬', park: '🌳', museum: '🏛️', bowling_alley: '🎳', art_gallery: '🎨', bakery: '🥐', shopping_mall: '🛍️', spa: '💆', aquarium: '🐠', zoo: '🦁'};
 
+/**
+ * Parses a Gemini model response that is expected to contain JSON, stripping markdown code fences.
+ * @param {string} responseText - Raw text from the Gemini model
+ * @returns {Object|null} Parsed JSON object, or null on parse failure
+ */
 function parseGeminiJsonResponse(responseText) {
   if (!responseText || typeof responseText !== 'string') {
     return null;
@@ -271,6 +288,9 @@ const _embeddingCache = new Map();
 const EMBEDDING_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const EMBEDDING_CACHE_MAX = 100;
 
+/**
+ * Evicts expired and excess entries from the in-memory embedding cache (TTL 10 min, max 100 entries).
+ */
 function _cleanEmbeddingCache() {
   const now = Date.now();
   for (const [key, entry] of _embeddingCache) {
@@ -447,6 +467,14 @@ async function trackedGenerateContent(model, prompt, {functionName, operation, u
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
+/**
+ * Evaluates a coach response using Claude Haiku as an independent judge (eliminates Gemini self-bias).
+ * @param {string} userMessage - Original user message sent to the coach
+ * @param {string} coachResponse - Coach's response to evaluate
+ * @param {string} lang - BCP-47 language code
+ * @param {string} apiKey - Anthropic API key
+ * @returns {Promise<{relevance: number, quality: string, feedback: string}>}
+ */
 async function evaluateWithClaude(userMessage, coachResponse, lang, apiKey) {
   const Anthropic = require('@anthropic-ai/sdk');
   const client = new Anthropic({apiKey});
@@ -693,6 +721,11 @@ function getLocalizedError(key, userLang = 'en') {
 // Truncate/hash PII (emails, FCM tokens, phone numbers) before logging so
 // Cloud Logging doesn't retain sensitive data in plaintext.
 
+/**
+ * Redacts an email address for safe logging (preserves domain, truncates local part).
+ * @param {string} email - Email address to redact
+ * @returns {string} Redacted form (e.g. 'jo***@example.com') or '[invalid-email]'
+ */
 function redactEmail(email) {
   if (typeof email !== 'string' || !email.includes('@')) return '[invalid-email]';
   const [local, domain] = email.split('@');
@@ -701,6 +734,11 @@ function redactEmail(email) {
   return `${shortLocal}@${domain}`;
 }
 
+/**
+ * Redacts an FCM token or similar long token for safe logging (shows first 6 and last 4 chars).
+ * @param {string} token - Token to redact
+ * @returns {string} Redacted form (e.g. 'abc123…xyz9') or '[invalid-token]'
+ */
 function redactToken(token) {
   if (typeof token !== 'string' || token.length < 8) return '[invalid-token]';
   return `${token.substring(0, 6)}…${token.substring(token.length - 4)}`;
@@ -804,6 +842,11 @@ let _aiFeatureFlagsCache = null;
 let _aiFeatureFlagsCacheTime = 0;
 const AI_FLAGS_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
+/**
+ * Fetches AI feature flags from Firestore appConfig/aiFeatureFlags with 5-min cache.
+ * All features default to enabled when Firestore is unavailable.
+ * @returns {Promise<Object>} Feature flag map {smartReply, icebreakers, chemistry, ...}
+ */
 async function getAiFeatureFlags() {
   if (_aiFeatureFlagsCache && (Date.now() - _aiFeatureFlagsCacheTime) < AI_FLAGS_CACHE_TTL) {
     return _aiFeatureFlagsCache;

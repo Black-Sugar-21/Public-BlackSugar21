@@ -10,6 +10,12 @@ const db = admin.firestore();
 // ---------------------------------------------------------------------------
 // 1. scheduleDateCheckIn — callable
 // ---------------------------------------------------------------------------
+/**
+ * CF: Schedules a date safety check-in that will send an alert if the user doesn't respond.
+ * @param {Object} request.data - {matchId: string, scheduledTime: string, emergencyContactPhone?: string, userLanguage?: string}
+ * @returns {Promise<{success: boolean, checkInId?: string}>}
+ * @throws {HttpsError} unauthenticated
+ */
 exports.scheduleDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
@@ -53,6 +59,12 @@ exports.scheduleDateCheckIn = onCall(
 // ---------------------------------------------------------------------------
 // 2. cancelDateCheckIn — callable
 // ---------------------------------------------------------------------------
+/**
+ * CF: Cancels an active date safety check-in. Only the owner can cancel.
+ * @param {Object} request.data - {checkInId: string, userLanguage?: string}
+ * @returns {Promise<{success: boolean}>}
+ * @throws {HttpsError} unauthenticated
+ */
 exports.cancelDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
@@ -77,6 +89,12 @@ exports.cancelDateCheckIn = onCall(
 // ---------------------------------------------------------------------------
 // 3. respondToDateCheckIn — callable
 // ---------------------------------------------------------------------------
+/**
+ * CF: Records the user's response ('ok' or 'sos') to a date safety check-in alert.
+ * @param {Object} request.data - {checkInId: string, response: 'ok'|'sos', userLanguage?: string}
+ * @returns {Promise<{success: boolean}>}
+ * @throws {HttpsError} unauthenticated
+ */
 exports.respondToDateCheckIn = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (request) => {
