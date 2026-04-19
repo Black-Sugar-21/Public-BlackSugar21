@@ -75,13 +75,13 @@ assert(
 );
 
 assert(
-  'CACHE_SCHEMA_VERSION bumped to 9 (covers v4-v9)',
-  /const CACHE_SCHEMA_VERSION = 9;/.test(src)
+  'CACHE_SCHEMA_VERSION bumped to 10 (covers v4-v10)',
+  /const CACHE_SCHEMA_VERSION = 10;/.test(src)
 );
 
 assert(
-  'callSituationSimulationInternal accepts userContextSnippet + neutralFrame',
-  /async function callSituationSimulationInternal\(db, userId, matchId, situation, userLanguage, userContextSnippet = '', neutralFrame = false\)/.test(src)
+  'callSituationSimulationInternal accepts userContextSnippet + neutralFrame + stageId',
+  /async function callSituationSimulationInternal\(db, userId, matchId, situation, userLanguage, userContextSnippet = '', neutralFrame = false, stageId/.test(src)
 );
 
 assert(
@@ -115,8 +115,8 @@ assert(
 );
 
 assert(
-  'Caller forwards isSoloMode && userContext as neutralFrame',
-  /callSituationSimulationInternal\([\s\S]{0,200}?isSoloMode && !!userContext\s*\)/.test(src)
+  'Caller forwards isSoloMode && userContext as neutralFrame + stage.id',
+  /callSituationSimulationInternal\([\s\S]{0,200}?isSoloMode && !!userContext, stage\.id/.test(src)
 );
 
 assert(

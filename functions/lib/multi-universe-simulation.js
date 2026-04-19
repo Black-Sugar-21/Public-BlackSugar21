@@ -27,6 +27,8 @@ const {
   checkGeminiSafety,
   getCachedEmbedding,
 } = require('./shared');
+const { generateApproachesWithDebate, scoreApproachWithDebate } = require('./debate-orchestrator');
+const { DEBATE_CONFIG_DEFAULTS } = require('./debate-psychology');
 
 const db = admin.firestore();
 
@@ -487,6 +489,7 @@ const MULTIVERSE_CONFIG_DEFAULTS = {
   // Kept for backward compatibility with older RC templates.
   maxPerDay: 3,
   cacheMinutes: 180 * 24 * 60, // 6 months in minutes
+  debate: { ...DEBATE_CONFIG_DEFAULTS },
   gemini: {
     approachTemperature: 0.85,
     // Bumped 800 → 1200 → 2000 on 2026-04-18. gemini-2.5-flash uses thinking-mode
@@ -518,7 +521,8 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 //      stages keep contextual output instead of the generic "quería hablar contigo"
 // v6 = prompt + stage template context-adaptive (neutralFrame) — solo + user context
 //      no longer forces romantic framing onto platonic inputs; max tokens bumped to 2000
-const CACHE_SCHEMA_VERSION = 9;
+// v10 = multi-agent debate system: 3 perspectives + synthesizer per stage
+const CACHE_SCHEMA_VERSION = 10;
 
 async function getMultiUniverseConfig() {
   // Return cached config if fresh
@@ -538,6 +542,7 @@ async function getMultiUniverseConfig() {
         ...MULTIVERSE_CONFIG_DEFAULTS,
         ...rcConfig,
         gemini: { ...MULTIVERSE_CONFIG_DEFAULTS.gemini, ...(rcConfig.gemini || {}) },
+        debate: { ...MULTIVERSE_CONFIG_DEFAULTS.debate, ...(rcConfig.debate || {}) },
       };
       _multiverseConfigCacheTime = Date.now();
       return _multiverseConfigCache;
@@ -835,12 +840,13 @@ exports.simulateMultiUniverse = onCall(
 
       logger.info(`[MultiUniverse] Context: userCtxHash=${userContextHash || 'none'}, chatMsgLines=${matchChatSummary ? matchChatSummary.split('\n').length : 0}`);
 
-      // Step 4: Run 5 situation simulations (sequentially, each via simulateSituation CF)
+      // Step 4: Run 5 situation simulations
       const stages = [];
       let totalTokens = 0;
       const stageDurations = {};
+      const cfg = await getMultiUniverseConfig();
 
-      for (const stage of MULTI_UNIVERSE_STAGES) {
+      async function processStage(stage) {
         const stageStart = Date.now();
         try {
           logger.info(`[MultiUniverse] ▶️ Stage ${stage.id} (${stage.order}/5)...`);
@@ -848,11 +854,8 @@ exports.simulateMultiUniverse = onCall(
           const ragKnowledge = await retrieveStageKnowledge(stage.id, userContext, geminiApiKey.value());
           const stageContext = buildStageContext(stage, userContext, matchChatSummary, isSoloMode, matchProfileSummary, ragKnowledge);
 
-          // Call simulateSituation internally via admin SDK.
-          // - userContextSnippet → embedded in fallback templates on Gemini failure.
-          // - isSoloModeWithContext → tells Gemini not to assume dating framing.
           const situationResponse = await callSituationSimulationInternal(
-            db, userId, matchId, stageContext, userLanguage, userContext, isSoloMode && !!userContext
+            db, userId, matchId, stageContext, userLanguage, userContext, isSoloMode && !!userContext, stage.id
           );
 
           const stageDuration = Date.now() - stageStart;
@@ -863,18 +866,13 @@ exports.simulateMultiUniverse = onCall(
             throw new Error('No valid approaches returned from situation simulation');
           }
 
-          // Calculate average reaction score across all 4 approaches
           const scores = situationResponse.approaches.map(a => a.successScore || 0);
           const avgReactionScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 
-          // Pick the best approach for this stage
           const bestApproach = situationResponse.approaches.reduce((a, b) =>
             (b.successScore || 0) > (a.successScore || 0) ? b : a
           );
 
-          // Extract the other 3 approach phrases as alternatives for the
-          // "Más frases" section of the stage detail sheet. Ordered by
-          // successScore desc so the user sees stronger options first.
           const alternativePhrases = situationResponse.approaches
             .filter(a => a.id !== bestApproach?.id)
             .sort((a, b) => (b.successScore || 0) - (a.successScore || 0))
@@ -891,44 +889,63 @@ exports.simulateMultiUniverse = onCall(
             avgReactionScore: parseFloat(avgReactionScore.toFixed(2)),
             bestApproachId: bestApproach?.id || null,
             bestApproachPhrase: bestApproach?.phrase || '',
-            alternativePhrases, // up to 3 same-context variations users can copy-paste
-            // OVERRIDE internal situation sim's generic tip with stage-specific
-            // actionable advice. Users complained tips were too vague — each
-            // stage now gets concrete guidance for its emotional dynamics.
+            alternativePhrases,
             coachTip: getStageSpecificCoachTip(stage.id, matchName, userLanguage, isSoloMode && !!userContext),
             psyInsights: situationResponse.psychInsights || getLocalizedPsychInsight('compatible_patterns', userLanguage),
+            ...(situationResponse.debateMetadata ? { debateMetadata: situationResponse.debateMetadata } : {}),
           };
-          stages.push(stageResult);
-          analyticsData.successfulStages++;
 
           logger.info(`[MultiUniverse] ✅ Stage ${stage.id}: score=${avgReactionScore.toFixed(1)}, duration=${stageDuration}ms`);
-
-          // Track tokens if available
-          if (situationResponse.tokens) {
-            totalTokens += situationResponse.tokens;
-          }
-
-          // 200ms pause between stages to avoid rate limit (soft throttle)
-          await new Promise(resolve => setTimeout(resolve, 200));
+          return { success: true, stageResult, tokens: situationResponse.tokens || 0 };
         } catch (e) {
           const stageDuration = Date.now() - stageStart;
           stageDurations[stage.id] = stageDuration;
           logger.error(`[MultiUniverse] ❌ Stage ${stage.id} failed after ${stageDuration}ms:`, e.message, e.stack);
 
-          analyticsData.failedStages++;
-          if (!analyticsData.failedStage) {
-            analyticsData.failedStage = stage.id;
-          }
-
           const errorStageLabelLocalized = getLocalizedStageLabel(stage.id, userLanguage);
-          stages.push({
-            stageId: stage.id,
-            stageLabel: errorStageLabelLocalized,
-            order: stage.order,
-            error: e.message,
-            approaches: [],
-            avgReactionScore: 0,
-          });
+          return {
+            success: false,
+            stageResult: {
+              stageId: stage.id,
+              stageLabel: errorStageLabelLocalized,
+              order: stage.order,
+              error: e.message,
+              approaches: [],
+              avgReactionScore: 0,
+            },
+          };
+        }
+      }
+
+      // Parallel when debate is enabled (need speed), sequential otherwise
+      if (cfg.debate?.parallelStages) {
+        logger.info('[MultiUniverse] Running stages in parallel (debate mode)');
+        const settled = await Promise.allSettled(
+          MULTI_UNIVERSE_STAGES.map(stage => processStage(stage))
+        );
+        for (const result of settled) {
+          const val = result.status === 'fulfilled' ? result.value : { success: false, stageResult: { error: result.reason?.message } };
+          stages.push(val.stageResult);
+          if (val.success) {
+            analyticsData.successfulStages++;
+            totalTokens += val.tokens || 0;
+          } else {
+            analyticsData.failedStages++;
+            if (!analyticsData.failedStage) analyticsData.failedStage = val.stageResult?.stageId;
+          }
+        }
+      } else {
+        for (const stage of MULTI_UNIVERSE_STAGES) {
+          const val = await processStage(stage);
+          stages.push(val.stageResult);
+          if (val.success) {
+            analyticsData.successfulStages++;
+            totalTokens += val.tokens || 0;
+          } else {
+            analyticsData.failedStages++;
+            if (!analyticsData.failedStage) analyticsData.failedStage = val.stageResult?.stageId;
+          }
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
 
@@ -1082,14 +1099,32 @@ exports.simulateMultiUniverse = onCall(
  * Multi-universe has its own rate limit (3/day), separate from situation simulation limit.
  * So calling Gemini directly here doesn't consume user's situation simulation quota.
  */
-async function callSituationSimulationInternal(db, userId, matchId, situation, userLanguage, userContextSnippet = '', neutralFrame = false) {
+async function callSituationSimulationInternal(db, userId, matchId, situation, userLanguage, userContextSnippet = '', neutralFrame = false, stageId = 'initial_contact') {
   const callStart = Date.now();
   try {
     logger.info(`[SituationInternal] Starting Gemini call for: ${situation.substring(0, 50)}... (neutralFrame=${neutralFrame})`);
 
-    // Generate 4 approaches using Gemini
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage, userContextSnippet, neutralFrame);
+    const cfg = await getMultiUniverseConfig();
+
+    let approaches = null;
+    let debateMetadata = null;
+
+    if (cfg.debate?.enabled) {
+      const debateResult = await generateApproachesWithDebate(
+        genAI, situation, userLanguage, userContextSnippet, neutralFrame,
+        stageId, STAGE_PSYCHOLOGY[stageId], cfg
+      );
+      if (debateResult) {
+        approaches = debateResult.approaches;
+        debateMetadata = debateResult.debateMetadata;
+        logger.info(`[SituationInternal] Debate produced ${approaches.length} approaches (${debateMetadata.perspectivesUsed} perspectives)`);
+      }
+    }
+
+    if (!approaches) {
+      approaches = await generateApproachesForMultiverse(genAI, situation, userLanguage, userContextSnippet, neutralFrame);
+    }
 
     const callDuration = Date.now() - callStart;
     logger.info(`[SituationInternal] Gemini call completed in ${callDuration}ms`);
@@ -1115,10 +1150,14 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
 
     logger.info(`[SituationInternal] Generated ${approaches.length} approaches`);
 
-    // Score each approach (simulate match reaction)
+    // Score each approach — blend with debate confidence when available
     const approachesWithScores = approaches.map((app, idx) => {
-      const score = scoreApproach(app.phrase, situation, userLanguage);
-      logger.info(`[SituationInternal] Approach ${app.id} (${app.tone}): score=${score}`);
+      const heuristic = scoreApproach(app.phrase, situation, userLanguage);
+      const confidence = debateMetadata?.synthesisConfidence?.[idx];
+      const score = confidence != null
+        ? scoreApproachWithDebate(heuristic, confidence)
+        : heuristic;
+      logger.info(`[SituationInternal] Approach ${app.id} (${app.tone}): score=${score}${confidence != null ? ` (debate confidence=${confidence})` : ''}`);
       return {
         id: app.id,
         tone: app.tone,
@@ -1139,7 +1178,8 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       bestApproachId: approachesWithScores[0]?.id || '1',
       coachTip: getLocalizedCoachTip('approach_variety', userLanguage),
       psychInsights: getLocalizedPsychInsight('variety_communication', userLanguage),
-      tokens: approaches.length * 150, // rough estimate
+      tokens: approaches.length * 150,
+      ...(debateMetadata ? { debateMetadata } : {}),
     };
   } catch (e) {
     const callDuration = Date.now() - callStart;
