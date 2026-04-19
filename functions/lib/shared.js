@@ -88,12 +88,14 @@ function getLanguageInstruction(lang) {
   if (lang === 'pt-PT') return '⚠️ CRÍTICO: TODO o conteúdo DEVE estar em português europeu (Portugal). Usa "tu" e vocabulário de Portugal (ex: "telemóvel" não "celular"; "pequeno-almoço" não "café da manhã"). Nunca em inglês nem em português brasileiro.';
   // Base languages
   if (lang.startsWith('zh')) return '⚠️ CRITICAL: 必须用简体中文（中国大陆）生成所有内容，包括短语、反应、教练建议。绝不能用英文或繁体字。';
-  if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية الفصحى فقط. لا تستخدم الإنجليزية أبداً.';
+  if (lang.startsWith('ar')) return '⚠️ حرج: يجب أن تكون جميع المحتويات بالعربية الفصحى فقط. لا تستخدم الإنجليزية أبداً. استخدم أسلوباً محترماً وغير مباشر يراعي الحساسيات الثقافية والاجتماعية.';
   if (lang.startsWith('id') || lang.startsWith('ms')) return '⚠️ KRITIS: SEMUA konten harus dalam Bahasa Indonesia. Jangan gunakan Bahasa Inggris.';
   if (lang.startsWith('pt')) return '⚠️ CRÍTICO: TODO conteúdo DEVE estar em português brasileiro. Use vocabulário do Brasil (ex: "celular" não "telemóvel"; "ônibus" não "autocarro"). Nunca em inglês nem em português europeu.';
   if (lang.startsWith('fr')) return '⚠️ CRITIQUE: TOUT le contenu DOIT être en français. Jamais en anglais.';
-  if (lang.startsWith('ja')) return '⚠️ 必須：すべてのフレーズ・反応・アドバイスは日本語のみで生成すること。英語は一切禁止。どの単語もどの文も必ず日本語で書くこと。';
+  if (lang.startsWith('ko')) return '⚠️ 필수: 모든 문구·반응·조언은 반드시 한국어로만 작성할 것. 영어 사용 절대 금지. 존댓말(해요체)을 기본으로 사용하며, 상황에 맞는 정중하고 자연스러운 표현을 써야 함.';
+  if (lang.startsWith('ja')) return '⚠️ 必須：すべてのフレーズ・反応・アドバイスは日本語のみで生成すること。英語は一切禁止。どの単語もどの文も必ず日本語で書くこと。日本文化の文脈に合わせ、丁寧で間接的でありながら誠実な表現を使用すること。';
   if (lang.startsWith('ru')) return '⚠️ КРИТИЧНО: Все содержимое ТОЛЬКО на русском. Никогда не используйте английский.';
+  if (lang.startsWith('it')) return '⚠️ CRITICO: TUTTO il contenuto DEVE essere in italiano. Mai in inglese. Le frasi, le reazioni e i consigli devono essere scritti in italiano naturale e autentico.';
   if (lang.startsWith('de')) return '⚠️ KRITISCH: ALLES Inhalte NUR auf Deutsch. Nie auf Englisch.';
   if (lang.startsWith('es')) return '⚠️ CRÍTICO: TODO el contenido DEBE estar en español. Nunca en inglés. Las frases, reacciones y consejos deben estar en español.';
   return 'IMPORTANT: Respond EVERYTHING in ENGLISH.';

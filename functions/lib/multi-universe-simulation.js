@@ -1119,14 +1119,18 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
     let debateMetadata = null;
 
     if (cfg.debate?.enabled) {
-      const debateResult = await generateApproachesWithDebate(
-        genAI, situation, userLanguage, userContextSnippet, neutralFrame,
-        stageId, STAGE_PSYCHOLOGY[stageId], cfg
-      );
-      if (debateResult) {
-        approaches = debateResult.approaches;
-        debateMetadata = debateResult.debateMetadata;
-        logger.info(`[SituationInternal] Debate produced ${approaches.length} approaches (${debateMetadata.perspectivesUsed} perspectives)`);
+      try {
+        const debateResult = await generateApproachesWithDebate(
+          genAI, situation, userLanguage, userContextSnippet, neutralFrame,
+          stageId, STAGE_PSYCHOLOGY[stageId], cfg
+        );
+        if (debateResult) {
+          approaches = debateResult.approaches;
+          debateMetadata = debateResult.debateMetadata;
+          logger.info(`[SituationInternal] Debate produced ${approaches.length} approaches (${debateMetadata.perspectivesUsed} perspectives)`);
+        }
+      } catch (debateErr) {
+        logger.warn(`[SituationInternal] Debate threw unexpectedly: ${debateErr.message} — falling through to single-agent`);
       }
     }
 

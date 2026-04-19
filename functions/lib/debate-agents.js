@@ -44,7 +44,7 @@ function buildPerspectivePrompt(agent, principles, situation, userLang, stageId,
 
   const toneSpec = tones.map(t => `"${t}" — ${toneDescriptions[t]}`).join('\n  ');
 
-  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Chinese (中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean' }[userLang] || userLang;
+  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;
   const isEnglish = userLang === 'en';
   const translateNote = isEnglish ? '' : `\n⚠️ OUTPUT LANGUAGE = ${langName}. The situation above may contain English text — that is context only. Your "phrase" values MUST be fully translated to ${langName}. Write as if you are a native ${langName} speaker. Do NOT output English phrases.`;
 

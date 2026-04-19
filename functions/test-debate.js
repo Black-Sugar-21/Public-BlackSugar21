@@ -434,6 +434,41 @@ ok(debateAgentsSrc.includes('substring(0, 1500)'), 'debate-agents truncates long
 ok(debatePsychSrc.includes('perspectiveTimeoutMs: 12000'), 'perspective timeout increased to 12s');
 
 // ═══════════════════════════════════════════════════════════════════
+// Section 9: Audit fixes — ko/it lang enforcement, zh langName, throw isolation
+// ═══════════════════════════════════════════════════════════════════
+console.log('── Section 9: Audit fixes (ko/it/zh/throw-isolation) ──');
+
+const sharedSrc = fs.readFileSync(path.join(__dirname, 'lib/shared.js'), 'utf-8');
+
+// Korean instruction exists and contains Korean characters
+ok(sharedSrc.includes("startsWith('ko')"), 'shared.js has Korean (ko) language instruction');
+ok(sharedSrc.includes('한국어'), 'Korean instruction contains Korean characters');
+ok(sharedSrc.includes('해요체'), 'Korean instruction specifies 해요체 (polite-casual) formality level');
+ok(sharedSrc.includes('영어 사용 절대 금지'), 'Korean instruction bans English');
+
+// Italian instruction exists
+ok(sharedSrc.includes("startsWith('it')"), 'shared.js has Italian (it) language instruction');
+ok(sharedSrc.includes('italiano'), 'Italian instruction references italiano');
+
+// Arabic instruction has cultural framing
+ok(sharedSrc.includes('محترماً'), 'Arabic instruction includes respectful (محترماً) cultural note');
+
+// Japanese instruction has cultural framing
+ok(sharedSrc.includes('日本文化の文脈'), 'Japanese instruction includes cultural context note');
+
+// zh langName is unambiguous in both debate files
+ok(debateAgentsSrc.includes('Simplified Chinese (简体中文)'), 'debate-agents: zh maps to Simplified Chinese (unambiguous)');
+ok(debateSynthSrc.includes('Simplified Chinese (简体中文)'), 'debate-synthesizer: zh maps to Simplified Chinese (unambiguous)');
+
+// Korean has langName entry
+ok(debateAgentsSrc.includes('Korean (한국어)'), 'debate-agents: ko maps to Korean (한국어)');
+ok(debateSynthSrc.includes('Korean (한국어)'), 'debate-synthesizer: ko maps to Korean (한국어)');
+
+// Throw isolation in multi-universe
+ok(multiUniverseSrc.includes('Debate threw unexpectedly'), 'multi-universe: debate throw isolated — falls through to single-agent');
+ok(/try\s*\{\s*const debateResult/.test(multiUniverseSrc), 'multi-universe: debate call wrapped in try/catch');
+
+// ═══════════════════════════════════════════════════════════════════
 // Results
 // ═══════════════════════════════════════════════════════════════════
 console.log('\n══════════════════════════════════════════════════════════');

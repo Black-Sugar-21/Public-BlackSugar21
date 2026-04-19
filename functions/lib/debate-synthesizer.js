@@ -70,7 +70,7 @@ function salvageTruncatedJson(text) {
 
 function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
   const langInstr = getLanguageInstruction(userLang);
-  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Chinese (中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean' }[userLang] || userLang;
+  const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;
   const isEnglish = userLang === 'en';
   const translateNote = isEnglish ? '' : `\n⚠️ FINAL OUTPUT LANGUAGE = ${langName}. Agent perspectives below may be in English — translate every "phrase" value to ${langName}. Native ${langName} speaker quality required.`;
 
