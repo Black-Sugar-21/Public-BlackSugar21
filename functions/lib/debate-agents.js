@@ -67,7 +67,8 @@ Generate EXACTLY 4 communication approaches, one per tone:
   ${toneSpec}
 
 RULES:
-- Each phrase MUST be 2-3 sentences in the user's language.
+- CRITICAL: Each "phrase" value MUST be written entirely in ${userLang === 'en' ? 'English' : userLang === 'es' ? 'Spanish' : userLang === 'ja' ? 'Japanese (日本語)' : userLang === 'zh' ? 'Chinese (中文)' : userLang === 'pt' ? 'Portuguese' : userLang === 'ar' ? 'Arabic' : userLang === 'de' ? 'German' : userLang === 'fr' ? 'French' : 'the language code ' + userLang}. Never write phrases in English unless the user's language IS English.
+- Each phrase MUST be 2-3 sentences.
 - Each phrase MUST reference specific details from the SITUATION above — never generic.
 - Each phrase MUST reflect YOUR framework's perspective distinctly.
 - Add "citedResearch": a 1-sentence note on which specific principle from YOUR framework informed this phrase.

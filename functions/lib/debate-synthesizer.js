@@ -112,7 +112,7 @@ AGENT PERSPECTIVES:
 ${perspectiveBlocks}
 
 IMPORTANT:
-- Final phrases must be 2-3 sentences in the user's language.
+- CRITICAL: Every "phrase" value MUST be written entirely in the user's language (see language instruction above). Even if the SITUATION or agent outputs are in a different language, your final phrases MUST be translated to the user's language. Never output English phrases unless the user's language is English.
 - Each phrase MUST reference concrete details from the situation.
 - "citedResearch" should name the specific researcher and principle that grounds this phrase.
 - Confidence scores: 1-4 = weak/generic, 5-7 = solid, 8-10 = exceptional and situation-specific.

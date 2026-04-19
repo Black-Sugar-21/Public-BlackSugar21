@@ -544,8 +544,11 @@ async function getMultiUniverseConfig() {
         gemini: { ...MULTIVERSE_CONFIG_DEFAULTS.gemini, ...(rcConfig.gemini || {}) },
         debate: (() => {
           const merged = { ...MULTIVERSE_CONFIG_DEFAULTS.debate, ...(rcConfig.debate || {}) };
-          merged.synthesisMaxTokens = Math.max(merged.synthesisMaxTokens, DEBATE_CONFIG_DEFAULTS.synthesisMaxTokens);
-          merged.synthesisTimeoutMs = Math.max(merged.synthesisTimeoutMs, DEBATE_CONFIG_DEFAULTS.synthesisTimeoutMs);
+          const floor = DEBATE_CONFIG_DEFAULTS;
+          merged.synthesisMaxTokens = Math.max(merged.synthesisMaxTokens, floor.synthesisMaxTokens);
+          merged.synthesisTimeoutMs = Math.max(merged.synthesisTimeoutMs, floor.synthesisTimeoutMs);
+          merged.perspectiveTimeoutMs = Math.max(merged.perspectiveTimeoutMs, floor.perspectiveTimeoutMs);
+          merged.perspectiveMaxTokens = Math.max(merged.perspectiveMaxTokens, floor.perspectiveMaxTokens);
           return merged;
         })(),
       };
