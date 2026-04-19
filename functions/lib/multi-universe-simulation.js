@@ -533,7 +533,7 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 // v6 = prompt + stage template context-adaptive (neutralFrame) — solo + user context
 //      no longer forces romantic framing onto platonic inputs; max tokens bumped to 2000
 // v10 = multi-agent debate system: 3 perspectives + synthesizer per stage
-const CACHE_SCHEMA_VERSION = 10;
+const CACHE_SCHEMA_VERSION = 11;
 
 async function getMultiUniverseConfig() {
   // Return cached config if fresh

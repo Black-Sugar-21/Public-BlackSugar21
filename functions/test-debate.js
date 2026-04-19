@@ -290,7 +290,7 @@ ok(multiUniverseSrc.includes('MULTIVERSE_CONFIG_DEFAULTS.debate') && multiUniver
   'debate config deep-merged from Remote Config');
 
 // Cache schema
-ok(/CACHE_SCHEMA_VERSION\s*=\s*10/.test(multiUniverseSrc), 'CACHE_SCHEMA_VERSION = 10');
+ok(/CACHE_SCHEMA_VERSION\s*=\s*11/.test(multiUniverseSrc), 'CACHE_SCHEMA_VERSION = 11');
 
 // Parallel stages
 ok(multiUniverseSrc.includes('Promise.allSettled'), 'uses Promise.allSettled for parallel stages');

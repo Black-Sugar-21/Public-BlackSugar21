@@ -88,6 +88,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Anxious and avoidant attachment styles predict distinct digital communication patterns — anxious users send more follow-up messages when unanswered, avoidant users prefer low-synchronicity media (text over FaceTime)',
         researcher: 'Drouin & Landgraff, Computers in Human Behavior, 2012',
       },
+      {
+        principle: 'Meta-analysis of 224 studies (N = 79,722) confirms adult attachment anxiety predicts loneliness and rejection sensitivity in digital contact; avoidance predicts emotional suppression and withdrawal — both patterns manifest in early messaging behavior',
+        researcher: 'Zhang et al., Journal of Personality and Social Psychology, 2022',
+      },
     ],
     social_dynamics: [
       {
@@ -124,6 +128,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Self-disclosure via text follows a compressed timeline compared to FtF: people share personal information 3× faster in text-based chat, but intimacy development without synchronous cues requires explicit reciprocal acknowledgment',
         researcher: 'Bazarova & Choi, Selective Self-Disclosure Online, 2014',
       },
+      {
+        principle: 'First impressions via video call are as accurate and normative as in-person for most personality traits — screen-based initial contact preserves the fundamental social judgment dynamics of face-to-face meeting',
+        researcher: 'Mignault et al., Personality and Social Psychology Bulletin, 2024',
+      },
     ],
   },
   getting_to_know: {
@@ -158,6 +166,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Paradox of choice in matching apps: users who swipe through 50+ profiles before messaging show lower satisfaction with chosen match — pre-commitment reduces idealization',
         researcher: "D'Angelo & Toma, Choice Overload in Dating Apps, 2017",
       },
+      {
+        principle: 'The Fast Friends (36 Questions) escalating-disclosure protocol produces equivalent closeness via video call or text chat as face-to-face — mode of communication does not moderate intimacy outcomes',
+        researcher: 'Sprecher, Journal of Social and Personal Relationships, 2021',
+      },
     ],
     communication_repair: [
       {
@@ -171,6 +183,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Love language preferences manifest differently in digital contexts: Words of Affirmation are most digitally accessible; Acts of Service via coordination apps; Quality Time as synchronous video calls',
         researcher: 'Groom & Pennebaker, Love Language Digital Adaptation, 2022',
+      },
+      {
+        principle: 'No evidence that matching a partner\'s primary love language has special benefits — all five expression channels predict satisfaction equally; expressing care frequently across multiple channels matters more than congruence',
+        researcher: 'Impett, Park & Muise, Current Directions in Psychological Science, 2024',
       },
     ],
   },
@@ -206,6 +222,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Social media surveillance of a romantic partner activates the same reward circuits as direct interaction; however, passive scrolling (vs active messaging) correlates with jealousy and relationship anxiety',
         researcher: 'Fox & Moreland, Social Media in Romantic Relationships, 2015',
       },
+      {
+        principle: 'Social Baseline Theory: the brain expects co-regulation as its default state — shared presence (physical or digital) with an attachment figure measurably reduces neural threat-processing costs, making genuine connection feel literally calming',
+        researcher: 'Beckes & Sbarra, Current Opinion in Psychology, 2022',
+      },
     ],
     communication_repair: [
       {
@@ -219,6 +239,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Vulnerability via text is experienced as more controlled and less risky than vulnerability FtF, enabling deeper initial disclosure — but this "digital courage" can create asymmetry if one partner uses it strategically',
         researcher: 'Bazarova, Public Intimacy, 2012; Rains & Wright, 2016',
+      },
+      {
+        principle: 'Cross-cultural validation across 25 countries confirms passion, intimacy, and commitment as universal love dimensions — commitment shows the greatest cross-cultural and temporal stability, making it the most reliable anchor for deepening connection',
+        researcher: 'Sorokowski et al., Journal of Sex Research, 2021',
       },
     ],
   },
@@ -236,6 +260,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Digital conflict escalation: absence of nonverbal cues increases hostile attribution bias — the same neutral text reads as more aggressive than the same words spoken aloud',
         researcher: 'Byron, Email Negativity Bias, 2008; replicated Kruger et al., 2005',
       },
+      {
+        principle: 'EFT maintains "well-established" treatment status across 37 RCTs — strongest outcomes when partners achieve emotional accessibility and responsiveness, confirming that attachment-based vulnerability is the active ingredient in conflict repair',
+        researcher: 'Doss, Roddy, Wiebe & Johnson, Journal of Marital and Family Therapy, 2022',
+      },
     ],
     social_dynamics: [
       {
@@ -249,6 +277,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Ghosting (sudden unilateral cessation of contact) is experienced as more distressing than explicit rejection because it violates closure norms and triggers rumination about ambiguous attribution',
         researcher: 'LeFebvre, Ghosting as Rejection, 2018',
+      },
+      {
+        principle: 'Positive interaction exchanges buffer the impact of negative ones on relationship satisfaction — confirmed in 886 couples; the buffering effect operates independently of conflict frequency, validating the positive-ratio mechanism',
+        researcher: 'Cazzell et al., Journal of Family Psychology, 2022',
       },
     ],
     communication_repair: [
@@ -288,6 +320,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Partners who met online report higher marital satisfaction and lower divorce rates after 7 years compared to offline-met couples, attributed to intentionality of matching criteria',
         researcher: 'Cacioppo et al., Marital Satisfaction Online vs Offline, PNAS 2013',
       },
+      {
+        principle: 'Secure attachment predicts greater adherence to shared relational agreements; avoidant attachment predicts unilateral rule defiance — real-world confirmation that secure attachment enables genuine commitment beyond verbal declaration',
+        researcher: 'Gruneau Brulin, Shaver & Mikulincer, Journal of Social and Personal Relationships, 2022',
+      },
     ],
     social_dynamics: [
       {
@@ -301,6 +337,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Public commitment declarations on social media (couple posts, relationship status) function as self-presentation consistency anchors — they increase felt commitment more than private verbal promises',
         researcher: 'Emery et al., Social Media Commitment, 2014',
+      },
+      {
+        principle: 'Autonomous motivation for romantic pursuit (genuine desire for connection, not fear of being alone) predicts forming lasting partnerships — individuals with autonomous motivation are significantly more likely to be partnered 6 months later',
+        researcher: 'MacDonald et al., Personality and Social Psychology Bulletin, 2025',
       },
     ],
     communication_repair: [

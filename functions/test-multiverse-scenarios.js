@@ -438,7 +438,7 @@ const sourceChecks = [
   ['500-char cap in source', /substring\(0, 500\)/],
   ['isSoloMode computed', /const isSoloMode = !matchId/],
   ['userContextHash computed with sha256', /crypto\.createHash\('sha256'\)[\s\S]*?\.digest\('hex'\)\.substring\(0, 8\)/],
-  ['Schema version 10', /const CACHE_SCHEMA_VERSION = 10;/],
+  ['Schema version 11', /const CACHE_SCHEMA_VERSION = 11;/],
   ['buildStageContext 6 params (+ ragKnowledge)', /function buildStageContext\(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/],
   ['Match chat loaded when !isSoloMode', /if \(!isSoloMode\)\s*\{[\s\S]{0,500}?matches[\s\S]{0,100}?messages/],
   ['Chat loader uses limit(20)', /\.collection\('messages'\)\.orderBy\('timestamp', 'desc'\)\.limit\(20\)/],
