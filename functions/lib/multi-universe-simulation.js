@@ -25,6 +25,7 @@ const {
   trackAICall,
   getLocalizedError: getLocalizedErrorShared,
   checkGeminiSafety,
+  getCachedEmbedding,
 } = require('./shared');
 
 const db = admin.firestore();
@@ -89,72 +90,237 @@ const MULTI_UNIVERSE_STAGES = [
     id: 'initial_contact',
     stageLabel: 'First Contact',
     situation: 'First time reaching out after matching. I want to make a great impression but feel a bit uncertain about what to say.',
+    neutralSituation: 'You want to reach out to someone for the first time — maybe a match, an old friend, or a colleague. Craft a thoughtful, genuine first message that opens the door.',
     order: 1,
   },
   {
     id: 'getting_to_know',
     stageLabel: 'Getting to Know',
     situation: 'We\'ve been messaging and I want to learn more about who they really are, their values, and if we\'re compatible.',
+    neutralSituation: 'You\'ve had initial contact and want to go deeper — learn about their values, goals, and what matters to them. Move beyond surface-level small talk.',
     order: 2,
   },
   {
     id: 'building_connection',
     stageLabel: 'Deep Connection',
     situation: 'We\'ve been talking for a while and I\'m feeling a deeper connection. I want to share something vulnerable and see if they reciprocate.',
+    neutralSituation: 'The relationship is growing and you want to share something personal or vulnerable. Open up about something real — a fear, a hope, or something you\'ve been thinking about.',
     order: 3,
   },
   {
     id: 'conflict_challenge',
     stageLabel: 'Challenge',
     situation: 'We recently disagreed about something important and I want to navigate the conversation constructively without losing the connection.',
+    neutralSituation: 'There\'s friction or a difficult topic to navigate. You want to address it honestly without damaging the relationship — whether it\'s a disagreement, a boundary, or an uncomfortable truth.',
     order: 4,
   },
   {
     id: 'commitment',
     stageLabel: 'Next Step',
     situation: 'Things are going well and I want to suggest we meet in person. I\'m excited but also want to be natural and not too pushy.',
+    neutralSituation: 'Things are going well and you want to take the next step — propose meeting up, deepening the relationship, or committing to something concrete together.',
     order: 5,
   },
 ];
 
 /**
+ * Psychology research frameworks mapped to each relationship stage.
+ * Injected into Gemini prompt so approaches are grounded in peer-reviewed science.
+ * Sources: Bowlby (1969), Gottman (1994), Fisher (2004), Brown (2012), Perel (2006),
+ * Knapp (1978), Sternberg (1986), Rosenberg (2003), Aron (1997), Chapman (1992).
+ */
+const STAGE_PSYCHOLOGY = {
+  initial_contact: {
+    framework: 'Knapp\'s Initiating Stage + Fisher\'s Lust/Attraction Phase + Aron\'s Self-Expansion',
+    principles: [
+      'First impressions form in 7 seconds and are disproportionately sticky (Ambady & Rosenthal, 1993 "thin slices" research)',
+      'Dopamine-driven novelty-seeking peaks at initial contact — messages that trigger curiosity activate reward circuits (Fisher, Why We Love, 2004)',
+      'Self-expansion theory: people are drawn to those who offer new perspectives, experiences, or knowledge (Aron & Aron, 1986)',
+      'Reciprocal self-disclosure builds trust faster than one-sided sharing (Aron et al., 36 Questions, 1997)',
+    ],
+    guidance: 'Generate phrases that spark curiosity and offer something specific about the sender — not generic "how are you" but a concrete detail that invites reciprocal disclosure.',
+  },
+  getting_to_know: {
+    framework: 'Gottman\'s Love Maps + Sternberg\'s Intimacy Component + Chapman\'s Love Languages Discovery',
+    principles: [
+      'Gottman\'s "Love Maps" concept: couples who know each other\'s inner world (fears, dreams, values) have stronger foundations (The Seven Principles, 1999)',
+      'Sternberg\'s Triangular Theory: intimacy grows through self-disclosure, warmth, and connectedness — separate from passion and commitment (1986)',
+      'Chapman\'s Love Languages: early conversations reveal whether someone values words of affirmation, quality time, acts of service, gifts, or physical touch (1992)',
+      'Reciprocity norm: matched vulnerability depth builds trust; too-deep too-fast triggers avoidance (Derlega et al., 1993)',
+    ],
+    guidance: 'Generate phrases that ask about values, dreams, and inner world — not surface facts. Each approach should model reciprocity by sharing something personal too.',
+  },
+  building_connection: {
+    framework: 'Bowlby\'s Attachment + Brown\'s Vulnerability Research + Perel\'s Erotic Intelligence',
+    principles: [
+      'Bowlby\'s Attachment Theory: secure attachment forms when one person becomes a "safe haven" and "secure base" — present in distress, encouraging in exploration (1969/1988)',
+      'Brené Brown\'s vulnerability research: connection requires letting yourself be truly seen; shame resilience is built through empathic witnessing (Daring Greatly, 2012)',
+      'Perel\'s paradox: deep connection AND maintained mystery/curiosity sustain desire long-term; too much merging kills attraction (Mating in Captivity, 2006)',
+      'Oxytocin bonding: shared experiences of mild vulnerability (not trauma-dumping) release bonding hormones (Zak, The Moral Molecule, 2012)',
+    ],
+    guidance: 'Generate phrases that share something personally meaningful — a fear, a hope, a memory — while respecting boundaries. Vulnerability should feel like an invitation, not a demand.',
+  },
+  conflict_challenge: {
+    framework: 'Gottman\'s Four Horsemen + Rosenberg\'s NVC + Johnson\'s EFT Pursue-Withdraw',
+    principles: [
+      'Gottman\'s Four Horsemen predict relationship failure: criticism, contempt, defensiveness, stonewalling. The antidotes: gentle startup, expressing appreciation, taking responsibility, self-soothing (1994)',
+      'Gottman\'s 5:1 ratio: stable relationships maintain 5 positive interactions for every negative one — even during conflict (Why Marriages Succeed or Fail, 1994)',
+      'Rosenberg\'s Nonviolent Communication: observe without evaluating, state feelings, express needs, make requests — not demands (NVC, 2003)',
+      'Johnson\'s EFT: beneath anger or withdrawal lies attachment needs — "I push you away because I\'m terrified you\'ll leave" (Hold Me Tight, 2008)',
+      'Gottman\'s repair attempts: humor, affection, or de-escalation gestures during conflict predict relationship survival more than conflict frequency',
+    ],
+    guidance: 'Generate phrases that use "I feel" language, acknowledge the other\'s perspective first, and propose repair — never blame, contempt, or stonewalling. Each approach should model a different Gottman antidote.',
+  },
+  commitment: {
+    framework: 'Sternberg\'s Commitment Component + Bowlby\'s Secure Base + Gottman\'s Shared Meaning',
+    principles: [
+      'Sternberg\'s commitment component: the decision to love and the decision to maintain that love — separate from intimacy and passion, and the most stable over time (1986)',
+      'Bowlby\'s secure base: commitment works when it offers both a safe haven (comfort in distress) AND a secure base (encouragement to explore the world) — never possessive control (1988)',
+      'Gottman\'s Shared Meaning: lasting relationships create rituals, roles, goals, and symbols that transcend individual identities (The Seven Principles, 1999)',
+      'Self-determination theory: autonomous commitment ("I choose this") sustains motivation; controlled commitment ("I have to") erodes it (Deci & Ryan, 2000)',
+    ],
+    guidance: 'Generate phrases that express genuine choice — "I want to" not "we should." Proposals should be specific and low-pressure, respecting the other\'s autonomy while expressing clear intent.',
+  },
+};
+
+/**
+ * Build a short summary of the match's profile for Gemini prompt enrichment.
+ * Caps output at ~200 chars so it doesn't bloat the context window.
+ */
+function buildMatchProfileSummary(userData) {
+  if (!userData) return '';
+  const parts = [];
+  if (userData.name) parts.push(`Name: ${userData.name}`);
+  if (userData.age) parts.push(`Age: ${userData.age}`);
+  if (userData.bio) parts.push(`Bio: "${(userData.bio || '').substring(0, 120)}"`);
+  if (Array.isArray(userData.interests) && userData.interests.length > 0) {
+    parts.push(`Interests: ${userData.interests.slice(0, 5).join(', ')}`);
+  }
+  return parts.length > 0 ? parts.join(' | ') : '';
+}
+
+const RAG_STAGE_TOP_K = 3;
+const RAG_STAGE_MIN_SCORE = 0.3;
+
+async function retrieveStageKnowledge(stageId, userContext, apiKey) {
+  try {
+    const query = `${stageId} ${userContext || ''}`.trim().substring(0, 300);
+    if (query.length < 5) return '';
+
+    const queryVector = await getCachedEmbedding(query, apiKey, {
+      model: 'gemini-embedding-001',
+      dimensions: 768,
+    });
+    if (!queryVector || queryVector.length !== 768) return '';
+
+    const collRef = db.collection('coachKnowledge');
+    const vectorQuery = collRef.findNearest('embedding', queryVector, {
+      limit: RAG_STAGE_TOP_K * 4,
+      distanceMeasure: 'COSINE',
+      distanceResultField: '_distance',
+    });
+
+    const snapshot = await vectorQuery.get();
+    if (snapshot.empty) return '';
+
+    const docs = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          text: (data.text || '').substring(0, 500),
+          category: data.category || '',
+          stage: data.stage || '',
+          similarity: 1 - (data._distance ?? 1),
+        };
+      })
+      .filter(d =>
+        d.similarity >= RAG_STAGE_MIN_SCORE &&
+        d.text.length > 0 &&
+        d.category === 'psychology_stages' &&
+        d.stage === stageId
+      )
+      .slice(0, RAG_STAGE_TOP_K);
+
+    if (docs.length === 0) return '';
+
+    return 'ADDITIONAL RESEARCH (retrieved from knowledge base):\n' +
+      docs.map(d => `• ${d.text}`).join('\n');
+  } catch (e) {
+    logger.warn(`[RAG-Stage] Failed for ${stageId}: ${e.message}`);
+    return '';
+  }
+}
+
+const CHAT_USAGE_BY_STAGE = {
+  initial_contact: "Continue the tone already established in the chat. Don't restart as if you've never spoken — build on what's already been said.",
+  getting_to_know: "Build on topics already discussed — ask about things they hinted at but didn't elaborate. Reference specific things they said.",
+  building_connection: "Reference shared moments or feelings visible in the chat. Deepen emotional threads that already emerged.",
+  conflict_challenge: "If any tension or disagreement is visible in the chat, reference it specifically. If not, imagine realistic friction based on the dynamics and tone shown.",
+  commitment: "Reference the progression visible in the chat — how the relationship has evolved. The next step should feel like a natural continuation of what's been discussed.",
+};
+
+const NEUTRAL_STAGE_GUIDANCE = {
+  initial_contact: "First reaching out — for a friend: reconnecting after time apart; professional: introducing yourself or proposing something; family: breaking the ice after distance.",
+  getting_to_know: "Going deeper — for a friend: learning what's changed in their life; professional: understanding their goals and finding alignment; family: rebuilding familiarity and trust.",
+  building_connection: "Sharing vulnerability — for a friend: confiding something personal; professional: showing genuine care beyond the transactional; family: addressing unspoken feelings or memories.",
+  conflict_challenge: "Navigating friction — for a friend: addressing a misunderstanding or hurt; professional: managing a disagreement constructively; family: confronting a difficult or avoided topic.",
+  commitment: "Next step — for a friend: planning a reunion or deepening the bond; professional: proposing ongoing collaboration; family: committing to staying closer and more present.",
+};
+
+/**
  * Build the priming context that feeds one multi-universe stage into Gemini.
  *
- * Context-adaptive: in solo mode with a user-typed context, the stage template
- * is neutralized (universal across relationship types — friendship, work,
- * family, reunion, etc.) so Gemini doesn't force a dating frame onto a
- * platonic situation. With a match selected the relationship IS dating, so
- * the original dating-oriented stage template is preserved.
- *
- * Layered so missing layers degrade cleanly:
- *   - match + userContext + chatSummary → dating-framed stage + user ctx + chat
- *   - match + chatSummary              → dating-framed stage + chat
- *   - solo + userContext               → NEUTRAL stage + user ctx (no dating prime)
- *   - no context                       → legacy dating stage template
+ * Context-adaptive with 5 layers:
+ *   - match + userContext + chatSummary + matchProfile → enriched dating stage
+ *   - match + chatSummary + matchProfile               → dating stage + chat guidance
+ *   - match only (no chat, no context)                  → basic dating stage + profile
+ *   - solo + userContext                                → NEUTRAL per-stage guidance
+ *   - solo (nothing)                                    → neutral open-ended stage
  */
-function buildStageContext(stage, userContext, chatSummary, isSoloMode) {
+function buildStageContext(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge) {
   const parts = [];
+
+  if (matchProfileSummary) {
+    parts.push(`MATCH PROFILE:\n${matchProfileSummary}`);
+  }
+
   if (userContext && userContext.trim().length > 0) {
     parts.push(`USER'S REAL SITUATION (the user typed this verbatim — every noun, name, plan, and feeling matters):\n"${userContext}"`);
   }
   if (chatSummary && chatSummary.trim().length > 0) {
     parts.push(`RECENT CONVERSATION WITH THE OTHER PERSON (chronological, oldest first):\n${chatSummary}`);
+    const chatGuide = CHAT_USAGE_BY_STAGE[stage.id];
+    if (chatGuide) {
+      parts.push(`HOW TO USE THE CHAT CONTEXT FOR THIS STAGE:\n${chatGuide}`);
+    }
   }
 
-  // Solo + context: neutral stage that adapts to any relationship type.
-  // The user may be describing friendship, work, family, reunion — not dating.
   if (isSoloMode && userContext && userContext.trim().length > 0) {
+    const guidance = NEUTRAL_STAGE_GUIDANCE[stage.id] || '';
     parts.push(
       `RELATIONSHIP STAGE (universe ${stage.order}/5 — ${stage.id}):\n` +
       `This universe samples the "${stage.id}" phase of WHATEVER relationship the user's situation describes. ` +
       `CRITICAL: the situation above may be romantic, platonic (friendship, reunion), familial, professional, or any other type. ` +
-      `Interpret "${stage.id}" accordingly — for a friend reunion it means "first reaching out to reconnect", for work it means "first professional approach", etc. ` +
+      `Interpret "${stage.id}" accordingly:\n${guidance}\n` +
       `Do NOT default to dating or romantic framing unless the user's own words clearly imply romance.`
     );
+  } else if (isSoloMode) {
+    parts.push(`RELATIONSHIP STAGE (this universe is at phase ${stage.order}/5 — ${stage.id}):\n${stage.neutralSituation || stage.situation}`);
   } else {
-    // Match mode (with or without user context) OR no context at all:
-    // keep the dating-oriented stage template because the relationship context IS dating.
     parts.push(`RELATIONSHIP STAGE (this universe is at phase ${stage.order}/5 — ${stage.id}):\n${stage.situation}`);
+  }
+
+  const psych = STAGE_PSYCHOLOGY[stage.id];
+  if (psych) {
+    parts.push(
+      `PSYCHOLOGY RESEARCH FOR THIS STAGE (${psych.framework}):\n` +
+      psych.principles.map(p => `• ${p}`).join('\n') +
+      `\n\n🎯 ${psych.guidance}`
+    );
+  }
+
+  if (ragKnowledge && ragKnowledge.trim().length > 0) {
+    parts.push(ragKnowledge);
   }
 
   return parts.join('\n\n');
@@ -352,7 +518,7 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 //      stages keep contextual output instead of the generic "quería hablar contigo"
 // v6 = prompt + stage template context-adaptive (neutralFrame) — solo + user context
 //      no longer forces romantic framing onto platonic inputs; max tokens bumped to 2000
-const CACHE_SCHEMA_VERSION = 6;
+const CACHE_SCHEMA_VERSION = 9;
 
 async function getMultiUniverseConfig() {
   // Return cached config if fresh
@@ -549,7 +715,7 @@ exports.simulateMultiUniverse = onCall(
                   : stage.bestApproachPhrase,
                 alternativePhrases: translatedAlternatives.filter(p => p && p.length > 0),
                 // Always regenerate coachTip with current stage-specific bullet format
-                coachTip: getStageSpecificCoachTip(stage.stageId || stage.id, cachedMatchName, userLanguage),
+                coachTip: getStageSpecificCoachTip(stage.stageId || stage.id, cachedMatchName, userLanguage, cachedResult.isSoloMode && !!cachedResult.userContextHash),
               };
             })
           );
@@ -579,6 +745,7 @@ exports.simulateMultiUniverse = onCall(
 
       // Step 3: Load match document (or use default name for solo mode)
       let matchName = 'Your Match';
+      let matchProfileSummary = '';
 
       if (isSoloMode) {
         // Solo mode: use localized default name
@@ -623,12 +790,14 @@ exports.simulateMultiUniverse = onCall(
 
         const otherUserId = matchData.usersMatched.find((uid) => uid !== userId);
 
-        // Step 3b: Load other user's profile (from /users/{otherUserId}) for their name
+        // Step 3b: Load other user's profile for name + enrichment data
         if (otherUserId) {
           try {
             const otherUserDoc = await db.collection('users').doc(otherUserId).get();
             if (otherUserDoc.exists) {
-              matchName = otherUserDoc.data()?.name || 'Your Match';
+              const otherData = otherUserDoc.data();
+              matchName = otherData?.name || 'Your Match';
+              matchProfileSummary = buildMatchProfileSummary(otherData);
             }
           } catch (e) {
             logger.warn(`[MultiUniverse] Could not load other user profile for name, using default`);
@@ -676,11 +845,8 @@ exports.simulateMultiUniverse = onCall(
         try {
           logger.info(`[MultiUniverse] ▶️ Stage ${stage.id} (${stage.order}/5)...`);
 
-          // Build rich context for this stage: user's real situation + recent chat + stage phase.
-          // Empty parts are skipped so we don't pollute the prompt with empty sections.
-          // isSoloMode toggles the stage template: dating-framed for match mode, neutral
-          // (adapts to any relationship type) for solo + user-typed context.
-          const stageContext = buildStageContext(stage, userContext, matchChatSummary, isSoloMode);
+          const ragKnowledge = await retrieveStageKnowledge(stage.id, userContext, geminiApiKey.value());
+          const stageContext = buildStageContext(stage, userContext, matchChatSummary, isSoloMode, matchProfileSummary, ragKnowledge);
 
           // Call simulateSituation internally via admin SDK.
           // - userContextSnippet → embedded in fallback templates on Gemini failure.
@@ -729,7 +895,7 @@ exports.simulateMultiUniverse = onCall(
             // OVERRIDE internal situation sim's generic tip with stage-specific
             // actionable advice. Users complained tips were too vague — each
             // stage now gets concrete guidance for its emotional dynamics.
-            coachTip: getStageSpecificCoachTip(stage.id, matchName, userLanguage),
+            coachTip: getStageSpecificCoachTip(stage.id, matchName, userLanguage, isSoloMode && !!userContext),
             psyInsights: situationResponse.psychInsights || getLocalizedPsychInsight('compatible_patterns', userLanguage),
           };
           stages.push(stageResult);
@@ -803,6 +969,7 @@ exports.simulateMultiUniverse = onCall(
         // want it retrievable from the cache doc. Hash is enough to correlate
         // runs with the same input for debugging.
         userContextHash: userContextHash || null,
+        isSoloMode,
         // Schema version exposed to clients so they can invalidate persisted
         // coachChat messages produced by older (buggy) pipeline runs.
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
@@ -1330,7 +1497,7 @@ function getLocalizedCoachTip(tipKey, userLang = 'en') {
  * than a single paragraph. Client renders newlines naturally. Backward compatible:
  * still a `string`, clients don't need schema changes.
  */
-function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
+function getStageSpecificCoachTip(stageId, matchName, userLang = 'en', neutralFrame = false) {
   const normalizedLang = normalizeLanguageCode(userLang);
   // Solo mode: matchName is a localized placeholder (e.g. "Pareja ideal") — should not be
   // substituted as if it were a real name. Treat all known solo names + 'Your Match' as null.
@@ -1602,10 +1769,343 @@ function getStageSpecificCoachTip(stageId, matchName, userLang = 'en') {
     },
   };
 
-  const stageLangTips = tipLists[stageId];
+  // Neutral tips: relationship-agnostic, for solo+context mode where the user
+  // may be describing friendship, family, work, reunion — not dating.
+  const neutralTipLists = {
+    initial_contact: {
+      en: [
+        'Reference something specific you know about them — a shared memory, a recent event, something they care about',
+        'Avoid generic openers like "hey" or "how are you?" — start with something that shows you thought about them',
+        'End with an open-ended question that makes it easy and natural to respond',
+      ],
+      es: [
+        'Menciona algo específico que sepas de la persona — un recuerdo compartido, un evento reciente, algo que le importa',
+        'Evita aperturas genéricas como "hola" o "¿qué tal?" — empieza con algo que muestre que pensaste en ella',
+        'Termina con una pregunta abierta que haga fácil y natural responder',
+      ],
+      pt: [
+        'Mencione algo específico que você sabe sobre a pessoa — uma memória compartilhada, um evento recente, algo que importa',
+        'Evite aberturas genéricas como "oi" ou "tudo bem?" — comece com algo que mostre que você pensou nela',
+        'Termine com uma pergunta aberta que torne fácil e natural responder',
+      ],
+      fr: [
+        'Mentionne quelque chose de précis que tu sais d\'elle — un souvenir partagé, un événement récent, quelque chose qui compte',
+        'Évite les ouvertures génériques comme "salut" ou "ça va ?" — commence par quelque chose qui montre que tu as pensé à elle',
+        'Termine par une question ouverte qui rend la réponse facile et naturelle',
+      ],
+      de: [
+        'Erwähne etwas Konkretes, das du über die Person weißt — eine gemeinsame Erinnerung, ein aktuelles Ereignis, etwas das ihr wichtig ist',
+        'Vermeide generische Einstiege wie "hey" oder "wie gehts?" — starte mit etwas, das zeigt, dass du an sie gedacht hast',
+        'Schließe mit einer offenen Frage, die eine natürliche Antwort leicht macht',
+      ],
+      ja: [
+        '相手について知っている具体的なことに触れる——共通の思い出、最近のこと、大切にしていること',
+        '「こんにちは」「元気？」など一般的な挨拶は避ける——相手のことを考えたことが伝わる言葉で始める',
+        '返事しやすいように、オープンな質問で締めくくる',
+      ],
+      zh: [
+        '提到你了解的关于对方的具体事情——共同回忆、近况、对方在乎的事',
+        '避免"嗨"或"你好吗？"这类通用开场——用能体现你想过对方的话开头',
+        '用一个开放式问题结尾，让回复变得轻松自然',
+      ],
+      ru: [
+        'Упомяни что-то конкретное, что ты знаешь о человеке — общее воспоминание, недавнее событие, что-то важное для него',
+        'Избегай общих вступлений как "привет" или "как дела?" — начни с чего-то, что покажет, что ты думал о нём',
+        'Закончи открытым вопросом, на который легко и естественно ответить',
+      ],
+      ar: [
+        'اذكر شيئاً محدداً تعرفه عن الشخص — ذكرى مشتركة، حدث حديث، شيء يهمّه',
+        'تجنّب البدايات العامة مثل "مرحباً" أو "كيف حالك؟" — ابدأ بشيء يُظهر أنك فكّرت به',
+        'اختم بسؤال مفتوح يسهّل الرد بشكل طبيعي',
+      ],
+      id: [
+        'Sebut sesuatu spesifik yang kamu tahu tentang mereka — kenangan bersama, kejadian baru, sesuatu yang penting bagi mereka',
+        'Hindari pembuka generik seperti "hai" atau "apa kabar?" — mulai dengan sesuatu yang menunjukkan kamu memikirkannya',
+        'Akhiri dengan pertanyaan terbuka yang membuat balas jadi mudah dan alami',
+      ],
+    },
+    getting_to_know: {
+      en: [
+        'Ask open questions about what matters to them — values, goals, what excites them — not just surface facts',
+        'Share something about yourself in return — reciprocity builds trust in any relationship',
+        'Look for deeper common ground — shared values, similar life experiences, complementary perspectives',
+      ],
+      es: [
+        'Haz preguntas abiertas sobre lo que le importa — valores, metas, lo que le emociona — no solo datos superficiales',
+        'Comparte algo tuyo a cambio — la reciprocidad construye confianza en cualquier relación',
+        'Busca puntos en común más profundos — valores compartidos, experiencias similares, perspectivas complementarias',
+      ],
+      pt: [
+        'Faça perguntas abertas sobre o que importa para a pessoa — valores, metas, o que a empolga — não só dados superficiais',
+        'Compartilhe algo sobre você em troca — reciprocidade constrói confiança em qualquer relação',
+        'Busque pontos em comum mais profundos — valores compartilhados, experiências semelhantes, perspectivas complementares',
+      ],
+      fr: [
+        'Pose des questions ouvertes sur ce qui compte pour la personne — valeurs, objectifs, passions — pas juste des faits superficiels',
+        'Partage quelque chose de toi en retour — la réciprocité crée la confiance dans toute relation',
+        'Cherche des points communs profonds — valeurs partagées, expériences similaires, perspectives complémentaires',
+      ],
+      de: [
+        'Stelle offene Fragen über das, was der Person wichtig ist — Werte, Ziele, was sie begeistert — nicht nur Oberflächliches',
+        'Teile im Gegenzug etwas von dir — Gegenseitigkeit baut Vertrauen in jeder Beziehung',
+        'Suche tiefere Gemeinsamkeiten — geteilte Werte, ähnliche Lebenserfahrungen, ergänzende Perspektiven',
+      ],
+      ja: [
+        '相手にとって大切なことについて聞く——価値観、目標、何にワクワクするか——表面的な事実だけでなく',
+        '自分のことも返しで共有する——相互性はどんな関係でも信頼を築きます',
+        'より深い共通点を探す——共有する価値観、似た経験、補い合う視点',
+      ],
+      zh: [
+        '问对方在乎的事——价值观、目标、热情所在——不只是表面信息',
+        '也分享你自己的事——互惠在任何关系中都能建立信任',
+        '寻找更深层的共同点——共同的价值观、相似的经历、互补的视角',
+      ],
+      ru: [
+        'Задавай открытые вопросы о том, что важно для человека — ценности, цели, что его вдохновляет — не только факты',
+        'Поделись чем-то о себе в ответ — взаимность строит доверие в любых отношениях',
+        'Ищи глубокие точки пересечения — общие ценности, похожий опыт, дополняющие перспективы',
+      ],
+      ar: [
+        'اطرح أسئلة مفتوحة عمّا يهمّ الشخص — القيم، الأهداف، ما يحمّسه — ليس فقط حقائق سطحية',
+        'شارك شيئاً عن نفسك بالمقابل — التبادل يبني الثقة في أي علاقة',
+        'ابحث عن قواسم مشتركة أعمق — قيم مشتركة، تجارب مشابهة، وجهات نظر مكمّلة',
+      ],
+      id: [
+        'Tanya hal-hal terbuka tentang apa yang penting bagi mereka — nilai, tujuan, apa yang mereka semangati — bukan cuma fakta dangkal',
+        'Bagikan sesuatu tentang dirimu sebagai balasan — timbal balik membangun kepercayaan di hubungan apapun',
+        'Cari kesamaan yang lebih dalam — nilai bersama, pengalaman serupa, perspektif yang saling melengkapi',
+      ],
+    },
+    building_connection: {
+      en: [
+        'Share something personal — a fear, a hope, or something you\'ve been reflecting on. Vulnerability deepens any bond',
+        'Use their name naturally — it signals care and creates closeness in any relationship',
+        'Propose a concrete way to spend time together — vague plans die on the vine',
+      ],
+      es: [
+        'Comparte algo personal — un miedo, una esperanza, algo que estés reflexionando. La vulnerabilidad profundiza cualquier vínculo',
+        'Usa su nombre naturalmente — señala cuidado y crea cercanía en cualquier relación',
+        'Propón una forma concreta de pasar tiempo juntos — los planes vagos mueren solos',
+      ],
+      pt: [
+        'Compartilhe algo pessoal — um medo, uma esperança, algo que você tem refletido. Vulnerabilidade aprofunda qualquer vínculo',
+        'Use o nome da pessoa naturalmente — sinaliza cuidado e cria proximidade em qualquer relação',
+        'Proponha uma forma concreta de passar tempo juntos — planos vagos morrem sozinhos',
+      ],
+      fr: [
+        'Partage quelque chose de personnel — une peur, un espoir, une réflexion récente. La vulnérabilité approfondit tout lien',
+        'Utilise son prénom naturellement — ça montre de l\'attention et crée de la proximité',
+        'Propose une façon concrète de passer du temps ensemble — les plans vagues meurent dans l\'œuf',
+      ],
+      de: [
+        'Teile etwas Persönliches — eine Angst, eine Hoffnung, etwas worüber du nachdenkst. Verletzlichkeit vertieft jede Bindung',
+        'Verwende den Namen natürlich — es zeigt Aufmerksamkeit und schafft Nähe in jeder Beziehung',
+        'Schlage etwas Konkretes vor, um gemeinsam Zeit zu verbringen — vage Pläne versanden',
+      ],
+      ja: [
+        '個人的なことを共有する——恐れ、希望、考えていること。弱さを見せることはどんな絆も深めます',
+        '相手の名前を自然に使う——気遣いを示し、どんな関係でも親密さを生みます',
+        '一緒に過ごす具体的な方法を提案する——曖昧な計画は実現しません',
+      ],
+      zh: [
+        '分享一些个人的事——恐惧、希望、你在思考的事。脆弱能加深任何关系',
+        '自然地叫对方的名字——表达关心，在任何关系中创造亲近感',
+        '提出具体的相处方式——模糊的计划只会不了了之',
+      ],
+      ru: [
+        'Поделись чем-то личным — страхом, надеждой, тем, о чём размышляешь. Уязвимость углубляет любую связь',
+        'Используй имя человека естественно — это показывает заботу и создаёт близость в любых отношениях',
+        'Предложи конкретный способ провести время вместе — размытые планы умирают сами',
+      ],
+      ar: [
+        'شارك شيئاً شخصياً — خوف، أمل، شيء تفكّر فيه. الانكشاف يعمّق أي رابط',
+        'استخدم اسمهم بشكل طبيعي — يُظهر اهتمامك ويخلق قرباً في أي علاقة',
+        'اقترح طريقة محددة لقضاء الوقت معاً — الخطط الغامضة تموت وحدها',
+      ],
+      id: [
+        'Bagikan sesuatu yang personal — ketakutan, harapan, sesuatu yang kamu pikirkan. Kerentanan memperdalam ikatan apapun',
+        'Gunakan nama mereka secara natural — menunjukkan perhatian dan menciptakan kedekatan di hubungan apapun',
+        'Ajukan cara konkret untuk menghabiskan waktu bersama — rencana yang kabur akan layu sendiri',
+      ],
+    },
+    conflict_challenge: {
+      en: [
+        'Acknowledge their perspective FIRST ("I see why you feel that way") before sharing yours — validation defuses tension',
+        'Use "I feel" statements, not "you always" — blame escalates, honesty de-escalates',
+        'If emotions run too high, pause and return when calm — responding hot damages any relationship',
+      ],
+      es: [
+        'Reconoce su perspectiva PRIMERO ("entiendo por qué te sientes así") antes de dar la tuya — validar desactiva la tensión',
+        'Usa frases con "yo siento", no "tú siempre" — culpar escala, la honestidad desescala',
+        'Si las emociones están muy altas, pausa y vuelve cuando estés calmado — reaccionar en caliente daña cualquier relación',
+      ],
+      pt: [
+        'Reconheça a perspectiva primeiro ("entendo por que se sente assim") antes de dar a sua — validar alivia a tensão',
+        'Use frases com "eu sinto", não "você sempre" — culpar escala, honestidade desescala',
+        'Se as emoções estão muito altas, pare e volte quando calmo — reagir quente prejudica qualquer relação',
+      ],
+      fr: [
+        'Reconnais sa perspective D\'ABORD ("je comprends pourquoi tu le ressens ainsi") avant la tienne — valider désamorce la tension',
+        'Utilise "je ressens", pas "tu fais toujours" — le blâme escalade, l\'honnêteté désescalade',
+        'Si les émotions montent trop, pause et reviens quand tu es calme — réagir à chaud abîme toute relation',
+      ],
+      de: [
+        'Erkenne die Perspektive ZUERST an ("ich verstehe, warum du das so fühlst") bevor du deine teilst — Validierung baut Spannung ab',
+        'Verwende "ich fühle", nicht "du immer" — Vorwürfe eskalieren, Ehrlichkeit deeskaliert',
+        'Bei hohen Emotionen: Pause machen und ruhig zurückkommen — heiß reagieren schadet jeder Beziehung',
+      ],
+      ja: [
+        '自分の意見の前に、まず相手の視点を認める（「そう感じるのは分かる」）——認めることで緊張が和らぎます',
+        '「私は〜と感じる」と言い、「あなたはいつも」と言わない——責めは悪化させ、誠実さは和らげます',
+        '感情が高ぶりすぎたら、一度離れて落ち着いてから戻る——熱い反応はどんな関係も傷つけます',
+      ],
+      zh: [
+        '先认可对方的视角（"我理解你为什么那样感觉"）再表达你的——认可能化解紧张',
+        '用"我感觉"，不用"你总是"——指责升级，诚实缓解',
+        '如果情绪太激烈，暂停一下冷静后再回来——冲动回应会伤害任何关系',
+      ],
+      ru: [
+        'Признай точку зрения ПЕРВЫМ ("понимаю, почему ты так чувствуешь") прежде чем выразить свою — признание снимает напряжение',
+        'Говори "я чувствую", а не "ты всегда" — обвинения усиливают, честность успокаивает',
+        'Если эмоции слишком сильные, сделай паузу и вернись в спокойствии — горячая реакция вредит любым отношениям',
+      ],
+      ar: [
+        'اعترف بوجهة نظرهم أولاً ("أفهم لماذا تشعر هكذا") قبل مشاركة وجهة نظرك — الاعتراف يُهدّئ التوتر',
+        'استخدم "أنا أشعر" لا "أنت دائماً" — اللوم يُصعّد، الصدق يُهدّئ',
+        'إذا ارتفعت المشاعر، توقف وعُد عندما تهدأ — الرد في لحظة الغضب يضرّ بأي علاقة',
+      ],
+      id: [
+        'Akui perspektif mereka DULU ("aku paham kenapa kamu merasa begitu") sebelum membagikan punyamu — validasi meredakan ketegangan',
+        'Gunakan "aku merasa", bukan "kamu selalu" — menyalahkan menaikkan, kejujuran meredakan',
+        'Jika emosi terlalu tinggi, jeda dan kembali saat tenang — merespons panas merusak hubungan apapun',
+      ],
+    },
+    commitment: {
+      en: [
+        'Propose something specific — a concrete plan with time and place converts far better than "let\'s do something sometime"',
+        'Express what you specifically appreciate about them — genuine, detailed recognition strengthens any bond',
+        'Be clear about what you\'re proposing — ambiguity creates anxiety. State your intention simply and warmly',
+      ],
+      es: [
+        'Propón algo específico — un plan concreto con hora y lugar funciona mucho mejor que "hagamos algo algún día"',
+        'Expresa qué valoras específicamente de la persona — el reconocimiento genuino y detallado fortalece cualquier vínculo',
+        'Sé claro sobre lo que propones — la ambigüedad crea ansiedad. Declara tu intención de forma simple y cálida',
+      ],
+      pt: [
+        'Proponha algo específico — um plano concreto com hora e lugar funciona muito melhor que "vamos fazer algo um dia"',
+        'Expresse o que você aprecia especificamente na pessoa — reconhecimento genuíno e detalhado fortalece qualquer vínculo',
+        'Seja claro sobre o que você propõe — ambiguidade gera ansiedade. Declare sua intenção de forma simples e calorosa',
+      ],
+      fr: [
+        'Propose quelque chose de précis — un plan concret avec heure et lieu fonctionne bien mieux que "on fait quelque chose un jour"',
+        'Exprime ce que tu apprécies spécifiquement — la reconnaissance sincère et détaillée renforce tout lien',
+        'Sois clair sur ce que tu proposes — l\'ambiguïté crée de l\'anxiété. Exprime ton intention simplement et chaleureusement',
+      ],
+      de: [
+        'Schlage etwas Konkretes vor — ein Plan mit Zeit und Ort funktioniert viel besser als "machen wir mal was"',
+        'Drücke aus, was du konkret an der Person schätzt — aufrichtige, detaillierte Anerkennung stärkt jede Bindung',
+        'Sei klar, was du vorschlägst — Mehrdeutigkeit erzeugt Unsicherheit. Formuliere deine Absicht einfach und herzlich',
+      ],
+      ja: [
+        '具体的な提案をする——時間と場所のある具体的な計画は「いつか何かしよう」よりはるかに効果的',
+        '相手の何を具体的に評価しているか伝える——真摯で具体的な認識はどんな絆も強めます',
+        '何を提案しているか明確に——曖昧さは不安を生みます。意図をシンプルに温かく伝えましょう',
+      ],
+      zh: [
+        '提出具体的建议——有时间地点的具体计划比"改天一起做点什么"效果好得多',
+        '具体表达你欣赏对方的什么——真诚、详细的认可能加强任何关系',
+        '明确你提议的内容——模糊会制造焦虑。简单而温暖地表达你的意图',
+      ],
+      ru: [
+        'Предложи что-то конкретное — план с временем и местом работает намного лучше, чем "давай как-нибудь"',
+        'Выражай, что конкретно ценишь в человеке — искреннее, детальное признание укрепляет любую связь',
+        'Будь ясен в том, что предлагаешь — двусмысленность создаёт тревогу. Изложи намерение просто и тепло',
+      ],
+      ar: [
+        'اقترح شيئاً محدداً — خطة ملموسة بوقت ومكان تنجح أكثر بكثير من "نعمل شيء يوماً ما"',
+        'عبّر عمّا تقدّره تحديداً في الشخص — التقدير الصادق والمفصّل يقوّي أي رابط',
+        'كن واضحاً فيما تقترحه — الغموض يخلق قلقاً. عبّر عن نيّتك ببساطة ودفء',
+      ],
+      id: [
+        'Ajukan sesuatu yang spesifik — rencana konkret dengan waktu dan tempat jauh lebih efektif dari "yuk kapan-kapan kita ngapain"',
+        'Ungkapkan apa yang spesifik kamu hargai dari mereka — penghargaan tulus dan detail memperkuat ikatan apapun',
+        'Jelas tentang apa yang kamu ajukan — ambiguitas menciptakan kecemasan. Nyatakan niatmu dengan sederhana dan hangat',
+      ],
+    },
+  };
+
+  const activeTipLists = neutralFrame ? neutralTipLists : tipLists;
+  const stageLangTips = activeTipLists[stageId];
   if (!stageLangTips) return getLocalizedCoachTip('communication_foundation', normalizedLang);
   const tips = stageLangTips[normalizedLang] || stageLangTips.en;
-  return tips.map(t => `• ${t}`).join('\n');
+  const bulletList = tips.map(t => `• ${t}`).join('\n');
+
+  const STAGE_RESEARCH_CITATIONS = {
+    initial_contact: {
+      en: '📚 Based on: Aron\'s Self-Expansion Theory (1986) · Fisher\'s dopamine-novelty attraction (2004) · Ambady\'s thin-slice impressions (1993)',
+      es: '📚 Basado en: Teoría de Auto-Expansión de Aron (1986) · Atracción dopamina-novedad de Fisher (2004) · Impresiones de Ambady (1993)',
+      pt: '📚 Baseado em: Teoria da Auto-Expansão de Aron (1986) · Atração dopamina-novidade de Fisher (2004) · Impressões de Ambady (1993)',
+      fr: '📚 Basé sur : Théorie de l\'auto-expansion d\'Aron (1986) · Attraction dopamine-nouveauté de Fisher (2004) · Impressions d\'Ambady (1993)',
+      de: '📚 Basiert auf: Arons Selbsterweiterungstheorie (1986) · Fishers Dopamin-Neuheitsattraktion (2004) · Ambadys Schnelleindrücke (1993)',
+      ja: '📚 参考: アロンの自己拡張理論 (1986) · フィッシャーのドーパミン新奇性理論 (2004) · アンバディの薄い断片研究 (1993)',
+      zh: '📚 参考: 阿伦的自我扩展理论 (1986) · 费舍尔的多巴胺新奇吸引力 (2004) · 安巴迪的薄片印象 (1993)',
+      ru: '📚 На основе: теории самораскрытия Арона (1986) · дофаминовой аттракции Фишер (2004) · тонких срезов Амбади (1993)',
+      ar: '📚 مبني على: نظرية التوسع الذاتي لآرون (1986) · جاذبية الدوبامين لفيشر (2004) · انطباعات أمبادي (1993)',
+      id: '📚 Berdasarkan: Teori Ekspansi-Diri Aron (1986) · Daya tarik dopamin-kebaruan Fisher (2004) · Kesan tipis Ambady (1993)',
+    },
+    getting_to_know: {
+      en: '📚 Based on: Gottman\'s Love Maps (1999) · Sternberg\'s Intimacy Component (1986) · Chapman\'s Love Languages (1992)',
+      es: '📚 Basado en: Mapas del Amor de Gottman (1999) · Componente de Intimidad de Sternberg (1986) · Lenguajes del Amor de Chapman (1992)',
+      pt: '📚 Baseado em: Mapas do Amor de Gottman (1999) · Componente de Intimidade de Sternberg (1986) · Linguagens do Amor de Chapman (1992)',
+      fr: '📚 Basé sur : Cartes de l\'amour de Gottman (1999) · Composante d\'intimité de Sternberg (1986) · Langages de l\'amour de Chapman (1992)',
+      de: '📚 Basiert auf: Gottmans Liebes-Landkarten (1999) · Sternbergs Intimitätskomponente (1986) · Chapmans Sprachen der Liebe (1992)',
+      ja: '📚 参考: ゴットマンの愛の地図 (1999) · スタンバーグの親密さ理論 (1986) · チャップマンの愛の言語 (1992)',
+      zh: '📚 参考: 戈特曼的爱情地图 (1999) · 斯滕伯格的亲密成分 (1986) · 查普曼的爱的语言 (1992)',
+      ru: '📚 На основе: карт любви Готтмана (1999) · компонента близости Стернберга (1986) · языков любви Чепмена (1992)',
+      ar: '📚 مبني على: خرائط الحب لغوتمان (1999) · مكوّن الحميمية لستيرنبرغ (1986) · لغات الحب لتشابمان (1992)',
+      id: '📚 Berdasarkan: Peta Cinta Gottman (1999) · Komponen Keintiman Sternberg (1986) · Bahasa Cinta Chapman (1992)',
+    },
+    building_connection: {
+      en: '📚 Based on: Bowlby\'s Attachment Theory (1969) · Brown\'s Vulnerability Research (2012) · Perel\'s Erotic Intelligence (2006)',
+      es: '📚 Basado en: Teoría del Apego de Bowlby (1969) · Investigación de Vulnerabilidad de Brown (2012) · Inteligencia Erótica de Perel (2006)',
+      pt: '📚 Baseado em: Teoria do Apego de Bowlby (1969) · Pesquisa de Vulnerabilidade de Brown (2012) · Inteligência Erótica de Perel (2006)',
+      fr: '📚 Basé sur : Théorie de l\'attachement de Bowlby (1969) · Recherche sur la vulnérabilité de Brown (2012) · Intelligence érotique de Perel (2006)',
+      de: '📚 Basiert auf: Bowlbys Bindungstheorie (1969) · Browns Verletzlichkeitsforschung (2012) · Perels Erotische Intelligenz (2006)',
+      ja: '📚 参考: ボウルビィの愛着理論 (1969) · ブラウンの脆弱性研究 (2012) · ペレルのエロティック・インテリジェンス (2006)',
+      zh: '📚 参考: 鲍尔比的依恋理论 (1969) · 布朗的脆弱性研究 (2012) · 佩雷尔的情欲智慧 (2006)',
+      ru: '📚 На основе: теории привязанности Боулби (1969) · исследования уязвимости Браун (2012) · эротического интеллекта Перель (2006)',
+      ar: '📚 مبني على: نظرية التعلّق لبولبي (1969) · أبحاث الهشاشة لبراون (2012) · الذكاء الإيروتيكي لبيرل (2006)',
+      id: '📚 Berdasarkan: Teori Kelekatan Bowlby (1969) · Riset Kerentanan Brown (2012) · Kecerdasan Erotis Perel (2006)',
+    },
+    conflict_challenge: {
+      en: '📚 Based on: Gottman\'s Four Horsemen (1994) · Rosenberg\'s NVC (2003) · Johnson\'s EFT (2008) · Gottman\'s 5:1 Ratio',
+      es: '📚 Basado en: Los 4 Jinetes de Gottman (1994) · CNV de Rosenberg (2003) · TFE de Johnson (2008) · Ratio 5:1 de Gottman',
+      pt: '📚 Baseado em: Os 4 Cavaleiros de Gottman (1994) · CNV de Rosenberg (2003) · TFE de Johnson (2008) · Proporção 5:1 de Gottman',
+      fr: '📚 Basé sur : Les 4 Cavaliers de Gottman (1994) · CNV de Rosenberg (2003) · TFE de Johnson (2008) · Ratio 5:1 de Gottman',
+      de: '📚 Basiert auf: Gottmans 4 Reiter (1994) · Rosenbergs GFK (2003) · Johnsons EFT (2008) · Gottmans 5:1-Verhältnis',
+      ja: '📚 参考: ゴットマンの4つの騎士 (1994) · ローゼンバーグのNVC (2003) · ジョンソンのEFT (2008) · ゴットマンの5:1比率',
+      zh: '📚 参考: 戈特曼的四骑士 (1994) · 罗森伯格的非暴力沟通 (2003) · 约翰逊的情绪聚焦疗法 (2008) · 戈特曼5:1比率',
+      ru: '📚 На основе: 4 всадников Готтмана (1994) · ненасильственного общения Розенберга (2003) · ЭФТ Джонсон (2008) · пропорции 5:1 Готтмана',
+      ar: '📚 مبني على: فرسان غوتمان الأربعة (1994) · التواصل اللاعنفي لروزنبرغ (2003) · العلاج العاطفي لجونسون (2008) · نسبة 5:1 لغوتمان',
+      id: '📚 Berdasarkan: 4 Penunggang Gottman (1994) · NVC Rosenberg (2003) · EFT Johnson (2008) · Rasio 5:1 Gottman',
+    },
+    commitment: {
+      en: '📚 Based on: Sternberg\'s Commitment Theory (1986) · Bowlby\'s Secure Base (1988) · Gottman\'s Shared Meaning (1999) · Deci & Ryan\'s SDT (2000)',
+      es: '📚 Basado en: Teoría del Compromiso de Sternberg (1986) · Base Segura de Bowlby (1988) · Significado Compartido de Gottman (1999) · TAD de Deci y Ryan (2000)',
+      pt: '📚 Baseado em: Teoria do Compromisso de Sternberg (1986) · Base Segura de Bowlby (1988) · Significado Compartilhado de Gottman (1999) · TAD de Deci e Ryan (2000)',
+      fr: '📚 Basé sur : Théorie de l\'engagement de Sternberg (1986) · Base sécure de Bowlby (1988) · Sens partagé de Gottman (1999) · TAD de Deci & Ryan (2000)',
+      de: '📚 Basiert auf: Sternbergs Verpflichtungstheorie (1986) · Bowlbys Sichere Basis (1988) · Gottmans Geteilter Sinn (1999) · SDT von Deci & Ryan (2000)',
+      ja: '📚 参考: スタンバーグのコミットメント理論 (1986) · ボウルビィの安全基地 (1988) · ゴットマンの共有された意味 (1999) · デシとライアンのSDT (2000)',
+      zh: '📚 参考: 斯滕伯格的承诺理论 (1986) · 鲍尔比的安全基地 (1988) · 戈特曼的共同意义 (1999) · 德西和瑞安的自我决定论 (2000)',
+      ru: '📚 На основе: теории обязательств Стернберга (1986) · безопасной базы Боулби (1988) · общего смысла Готтмана (1999) · ТСД Деси и Райана (2000)',
+      ar: '📚 مبني على: نظرية الالتزام لستيرنبرغ (1986) · القاعدة الآمنة لبولبي (1988) · المعنى المشترك لغوتمان (1999) · نظرية تقرير المصير لديسي وريان (2000)',
+      id: '📚 Berdasarkan: Teori Komitmen Sternberg (1986) · Basis Aman Bowlby (1988) · Makna Bersama Gottman (1999) · SDT Deci & Ryan (2000)',
+    },
+  };
+
+  const citation = STAGE_RESEARCH_CITATIONS[stageId];
+  const citationLine = citation ? (citation[normalizedLang] || citation.en) : '';
+  return citationLine ? `${bulletList}\n\n${citationLine}` : bulletList;
 }
 
 /**
@@ -1723,19 +2223,24 @@ function getLocalizedStrongPotential(stageLabel, userLang = 'en') {
 function scoreApproach(phrase, situation, language) {
   if (!phrase || phrase.length === 0) return 5;
 
-  // Base score: 6.0 for any valid phrase
-  const baseScore = 6;
+  const baseScore = 5;
 
-  // Length bonus: longer, more thoughtful approaches score higher
-  // 50 chars = +0.5, 100 chars = +1.0, 150+ chars = +1.5 (max)
   const lengthBonus = Math.min(phrase.length / 100, 1.5);
 
-  // Sentence variety bonus: multiple sentences show more structure
-  // 1 sentence = 0, 2 sentences = +0.5, 3+ = +1.0
-  const sentenceCount = Math.max(1, (phrase.match(/[.!?]/g) || []).length);
+  const sentenceCount = Math.max(1, (phrase.match(/[.!?。！？]/g) || []).length);
   const sentenceBonus = sentenceCount > 1 ? Math.min((sentenceCount - 1) * 0.5, 1.0) : 0;
 
-  let score = baseScore + lengthBonus + (sentenceBonus * 0.3);
+  // Specificity bonus: phrases that reference words from the situation score higher.
+  // Filters out short/common words to avoid false matches.
+  let specificityBonus = 0;
+  if (situation && situation.length > 0) {
+    const situationWords = situation.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+    const phraseLC = phrase.toLowerCase();
+    const matchCount = situationWords.filter(w => phraseLC.includes(w)).length;
+    specificityBonus = Math.min(matchCount * 0.3, 1.5);
+  }
+
+  let score = baseScore + lengthBonus + (sentenceBonus * 0.4) + specificityBonus;
   score = Math.min(10, Math.max(4, score));
 
   return parseFloat(score.toFixed(1));

@@ -63,8 +63,11 @@ function cacheKeyFor(matchId, userContext, lang) {
   return h ? `${base}_${lang}_${h}` : `${base}_${lang}`;
 }
 
-function buildStageContext(stage, userContext, chatSummary, isSoloMode) {
+function buildStageContext(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge) {
   const parts = [];
+  if (matchProfileSummary) {
+    parts.push(`MATCH PROFILE:\n${matchProfileSummary}`);
+  }
   if (userContext && userContext.trim().length > 0) {
     parts.push(`USER'S REAL SITUATION (the user typed this verbatim — every noun, name, plan, and feeling matters):\n"${userContext}"`);
   }
@@ -76,11 +79,15 @@ function buildStageContext(stage, userContext, chatSummary, isSoloMode) {
       `RELATIONSHIP STAGE (universe ${stage.order}/5 — ${stage.id}):\n` +
       `This universe samples the "${stage.id}" phase of WHATEVER relationship the user's situation describes. ` +
       `CRITICAL: the situation above may be romantic, platonic (friendship, reunion), familial, professional, or any other type. ` +
-      `Interpret "${stage.id}" accordingly — for a friend reunion it means "first reaching out to reconnect", for work it means "first professional approach", etc. ` +
       `Do NOT default to dating or romantic framing unless the user's own words clearly imply romance.`
     );
+  } else if (isSoloMode) {
+    parts.push(`RELATIONSHIP STAGE (this universe is at phase ${stage.order}/5 — ${stage.id}):\n${stage.neutralSituation || stage.situation}`);
   } else {
     parts.push(`RELATIONSHIP STAGE (this universe is at phase ${stage.order}/5 — ${stage.id}):\n${stage.situation}`);
+  }
+  if (ragKnowledge && ragKnowledge.trim().length > 0) {
+    parts.push(ragKnowledge);
   }
   return parts.join('\n\n');
 }
@@ -98,11 +105,11 @@ function neutralFrameFor(matchId, userContext) {
 const LANGS = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
 
 const STAGES = [
-  { id: 'initial_contact', order: 1, situation: 'First time reaching out…' },
-  { id: 'getting_to_know', order: 2, situation: 'Getting to know them…' },
-  { id: 'building_connection', order: 3, situation: 'Deeper connection…' },
-  { id: 'conflict_challenge', order: 4, situation: 'Disagreement…' },
-  { id: 'commitment', order: 5, situation: 'Next step…' },
+  { id: 'initial_contact', order: 1, situation: 'First time reaching out…', neutralSituation: 'You want to reach out to someone for the first time.' },
+  { id: 'getting_to_know', order: 2, situation: 'Getting to know them…', neutralSituation: 'You want to go deeper — learn about their values and goals.' },
+  { id: 'building_connection', order: 3, situation: 'Deeper connection…', neutralSituation: 'Share something personal or vulnerable.' },
+  { id: 'conflict_challenge', order: 4, situation: 'Disagreement…', neutralSituation: 'Navigate a difficult topic without damaging the relationship.' },
+  { id: 'commitment', order: 5, situation: 'Next step…', neutralSituation: 'Take the next step together.' },
 ];
 
 // Realistic user-context variants — categorized by relationship type to
@@ -210,10 +217,10 @@ for (const scenario of scenarios) {
           !ctx.includes(stage.situation) &&
           ctx.includes('Do NOT default to dating or romantic framing'));
       } else if (scenario.name === 'nothing') {
-        assert(`[${scenario.name}/${lang}/${stage.id}] legacy dating-only`,
+        assert(`[${scenario.name}/${lang}/${stage.id}] neutral open-ended`,
           !ctx.includes("USER'S REAL SITUATION") &&
           !ctx.includes("RECENT CONVERSATION") &&
-          ctx.includes(stage.situation));
+          ctx.includes(stage.neutralSituation || stage.situation));
       }
     }
   }
@@ -379,11 +386,11 @@ assert('Old client neutralFrame=false (no ctx means no platonic signal)',
 assert('Old client nothing → neutralFrame=false',
   neutralFrameFor('', '') === false);
 
-// Stage context for old-client path uses the legacy dating template
+// Stage context for solo-nothing path uses neutral templates
 for (const stage of STAGES) {
   const ctx = buildStageContext(stage, '', '', true);
-  assert(`[old-client solo/${stage.id}] uses legacy dating template`,
-    ctx.includes(stage.situation) && !ctx.includes('Do NOT default to dating'));
+  assert(`[old-client solo/${stage.id}] uses neutral template`,
+    ctx.includes(stage.neutralSituation || stage.situation) && !ctx.includes('Do NOT default to dating'));
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -431,8 +438,8 @@ const sourceChecks = [
   ['500-char cap in source', /substring\(0, 500\)/],
   ['isSoloMode computed', /const isSoloMode = !matchId/],
   ['userContextHash computed with sha256', /crypto\.createHash\('sha256'\)[\s\S]*?\.digest\('hex'\)\.substring\(0, 8\)/],
-  ['Schema version 6', /const CACHE_SCHEMA_VERSION = 6;/],
-  ['buildStageContext 4 params', /function buildStageContext\(stage, userContext, chatSummary, isSoloMode\)/],
+  ['Schema version 9', /const CACHE_SCHEMA_VERSION = 9;/],
+  ['buildStageContext 6 params (+ ragKnowledge)', /function buildStageContext\(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/],
   ['Match chat loaded when !isSoloMode', /if \(!isSoloMode\)\s*\{[\s\S]{0,500}?matches[\s\S]{0,100}?messages/],
   ['Chat loader uses limit(20)', /\.collection\('messages'\)\.orderBy\('timestamp', 'desc'\)\.limit\(20\)/],
   ['Caller forwards neutralFrame', /isSoloMode && !!userContext/],

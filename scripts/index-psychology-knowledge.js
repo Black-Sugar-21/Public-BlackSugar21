@@ -45,7 +45,8 @@ async function indexPsychologyChunks() {
   const files = [
     'psychology-research.json',
     'psychology-research-es.json',
-    'psychology-research-multilang.json'
+    'psychology-research-multilang.json',
+    'psychology-stages.json'
   ];
 
   let totalChunks = 0;
@@ -121,7 +122,7 @@ async function indexPsychologyChunks() {
   // Verify indexed chunks
   console.log('━━━ Verifying Indexed Chunks ━━━');
   const snap = await db.collection('coachKnowledge')
-    .where('sourceFile', 'in', ['psychology-research.json', 'psychology-research-es.json', 'psychology-research-multilang.json'])
+    .where('sourceFile', 'in', ['psychology-research.json', 'psychology-research-es.json', 'psychology-research-multilang.json', 'psychology-stages.json'])
     .get();
 
   console.log(`✅ Total chunks in Firestore: ${snap.size}`);

@@ -75,8 +75,8 @@ assert(
 );
 
 assert(
-  'CACHE_SCHEMA_VERSION bumped to 6 (covers v4/v5/v6)',
-  /const CACHE_SCHEMA_VERSION = 6;/.test(src)
+  'CACHE_SCHEMA_VERSION bumped to 9 (covers v4-v9)',
+  /const CACHE_SCHEMA_VERSION = 9;/.test(src)
 );
 
 assert(
@@ -105,8 +105,8 @@ assert(
 );
 
 assert(
-  'buildStageContext accepts isSoloMode',
-  /function buildStageContext\(stage, userContext, chatSummary, isSoloMode\)/.test(src)
+  'buildStageContext accepts isSoloMode + matchProfileSummary + ragKnowledge',
+  /function buildStageContext\(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/.test(src)
 );
 
 assert(
@@ -146,8 +146,8 @@ assert(
 
 
 assert(
-  'buildStageContext helper function defined',
-  /function buildStageContext\(stage, userContext, chatSummary, isSoloMode\)/.test(src)
+  'buildStageContext helper function defined with 6 params',
+  /function buildStageContext\(stage, userContext, chatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/.test(src)
 );
 
 assert(
@@ -564,6 +564,266 @@ console.log('\n10. Module export surface');
 assert(
   'Module exports simulateMultiUniverse',
   /exports\.simulateMultiUniverse\s*=\s*onCall/.test(src)
+);
+
+// ───────────────────────────────────────────────────────────────
+// 11. V7 ENHANCEMENTS: match profile, chat guidance, neutral tips, scoring
+// ───────────────────────────────────────────────────────────────
+console.log('\n11. V7 quality enhancements');
+
+// buildMatchProfileSummary function exists
+assert(
+  'buildMatchProfileSummary function defined',
+  /function buildMatchProfileSummary\(userData\)/.test(src)
+);
+
+// buildMatchProfileSummary caps bio at 120 chars
+assert(
+  'buildMatchProfileSummary caps bio at 120 chars',
+  /bio.*substring\(0, 120\)/.test(src)
+);
+
+// buildMatchProfileSummary caps interests at 5
+assert(
+  'buildMatchProfileSummary caps interests at 5',
+  /interests\.slice\(0, 5\)/.test(src)
+);
+
+// CHAT_USAGE_BY_STAGE has all 5 stages
+assert(
+  'CHAT_USAGE_BY_STAGE covers all 5 stages',
+  /CHAT_USAGE_BY_STAGE/.test(src) &&
+  /initial_contact:/.test(src.match(/CHAT_USAGE_BY_STAGE = \{([\s\S]*?)\};/)?.[1] || '') &&
+  /commitment:/.test(src.match(/CHAT_USAGE_BY_STAGE = \{([\s\S]*?)\};/)?.[1] || '')
+);
+
+// Chat guidance injected via "HOW TO USE THE CHAT CONTEXT"
+assert(
+  'buildStageContext injects chat-usage guidance',
+  /HOW TO USE THE CHAT CONTEXT/.test(src)
+);
+
+// NEUTRAL_STAGE_GUIDANCE has all 5 stages
+assert(
+  'NEUTRAL_STAGE_GUIDANCE covers all 5 stages',
+  /NEUTRAL_STAGE_GUIDANCE/.test(src) &&
+  /initial_contact:/.test(src.match(/NEUTRAL_STAGE_GUIDANCE = \{([\s\S]*?)\};/)?.[1] || '') &&
+  /commitment:/.test(src.match(/NEUTRAL_STAGE_GUIDANCE = \{([\s\S]*?)\};/)?.[1] || '')
+);
+
+// neutralSituation field exists on stage definitions
+assert(
+  'MULTI_UNIVERSE_STAGES have neutralSituation field',
+  /neutralSituation:/.test(src)
+);
+
+// Solo-nothing path uses neutralSituation
+assert(
+  'Solo-nothing path uses neutralSituation fallback',
+  /stage\.neutralSituation \|\| stage\.situation/.test(src)
+);
+
+// getStageSpecificCoachTip accepts neutralFrame param
+assert(
+  'getStageSpecificCoachTip accepts neutralFrame parameter',
+  /function getStageSpecificCoachTip\(stageId, matchName, userLang = 'en', neutralFrame = false\)/.test(src)
+);
+
+// Caller passes neutralFrame to coach tip in stage builder
+assert(
+  'Stage builder passes neutralFrame to getStageSpecificCoachTip',
+  /getStageSpecificCoachTip\(stage\.id, matchName, userLanguage, isSoloMode && !!userContext\)/.test(src)
+);
+
+// Neutral tip lists exist (at least one stage in neutral)
+assert(
+  'neutralTipLists defined with initial_contact',
+  /neutralTipLists\s*=\s*\{[\s\S]*?initial_contact:/.test(src)
+);
+
+// scoreApproach has specificity bonus
+assert(
+  'scoreApproach includes specificityBonus',
+  /specificityBonus/.test(src)
+);
+
+// scoreApproach base score is 5 (wider range)
+assert(
+  'scoreApproach base score lowered to 5',
+  /const baseScore = 5;/.test(src)
+);
+
+// isSoloMode persisted in cache result
+assert(
+  'isSoloMode stored in cache result for re-localization',
+  /isSoloMode,/.test(src)
+);
+
+// Match profile passed to buildStageContext from caller
+assert(
+  'Caller passes matchProfileSummary + ragKnowledge to buildStageContext',
+  /buildStageContext\(stage, userContext, matchChatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/.test(src)
+);
+
+// Match profile summary variable declared
+assert(
+  'matchProfileSummary variable declared',
+  /let matchProfileSummary = ''/.test(src)
+);
+
+// buildStageContext injects MATCH PROFILE when present
+assert(
+  'buildStageContext prepends MATCH PROFILE section',
+  /MATCH PROFILE:/.test(src)
+);
+
+// Neutral coach tips cover all 10 languages for at least one stage
+const neutralTipsBlock = src.match(/const neutralTipLists = \{([\s\S]*?)\};[\s\S]*?const activeTipLists/)?.[1] || '';
+for (const lang of LANGS) {
+  assert(
+    `Neutral tips have ${lang} translations`,
+    new RegExp(`${lang}:\\s*\\[`).test(neutralTipsBlock)
+  );
+}
+
+// ───────────────────────────────────────────────────────────────
+// 12. V8 PSYCHOLOGY ENRICHMENT: stage frameworks, research citations, RAG
+// ───────────────────────────────────────────────────────────────
+console.log('\n12. V8 psychology enrichment');
+
+// STAGE_PSYCHOLOGY constant exists with all 5 stages
+assert(
+  'STAGE_PSYCHOLOGY constant defined',
+  /const STAGE_PSYCHOLOGY = \{/.test(src)
+);
+
+for (const stageId of ['initial_contact', 'getting_to_know', 'building_connection', 'conflict_challenge', 'commitment']) {
+  assert(
+    `STAGE_PSYCHOLOGY has ${stageId}`,
+    new RegExp(`${stageId}:\\s*\\{[\\s\\S]*?framework:`).test(
+      src.match(/const STAGE_PSYCHOLOGY = \{([\s\S]*?)\n\};/)?.[1] || ''
+    )
+  );
+}
+
+// Each stage has framework, principles array, and guidance
+assert(
+  'STAGE_PSYCHOLOGY entries have framework field',
+  /framework: 'Knapp/.test(src)
+);
+assert(
+  'STAGE_PSYCHOLOGY entries have principles array',
+  /principles: \[/.test(src)
+);
+assert(
+  'STAGE_PSYCHOLOGY entries have guidance field',
+  /guidance: 'Generate phrases/.test(src)
+);
+
+// Psychology injected into buildStageContext
+assert(
+  'buildStageContext injects PSYCHOLOGY RESEARCH',
+  /PSYCHOLOGY RESEARCH FOR THIS STAGE/.test(src)
+);
+
+// Research citations in coach tips
+assert(
+  'STAGE_RESEARCH_CITATIONS defined',
+  /STAGE_RESEARCH_CITATIONS = \{/.test(src)
+);
+
+// Citations cover all 5 stages
+for (const stageId of ['initial_contact', 'getting_to_know', 'building_connection', 'conflict_challenge', 'commitment']) {
+  assert(
+    `STAGE_RESEARCH_CITATIONS has ${stageId}`,
+    new RegExp(`${stageId}:`).test(
+      src.match(/STAGE_RESEARCH_CITATIONS = \{([\s\S]*?)\n  \};/)?.[1] || ''
+    )
+  );
+}
+
+// Citations have 10 languages
+const citationsBlock = src.match(/STAGE_RESEARCH_CITATIONS = \{([\s\S]*?)\n  \};/)?.[1] || '';
+for (const lang of LANGS) {
+  assert(
+    `Research citations have ${lang} translations`,
+    new RegExp(`${lang}:`).test(citationsBlock)
+  );
+}
+
+// Key researchers referenced
+assert('References Gottman', /Gottman/.test(src));
+assert('References Bowlby', /Bowlby/.test(src));
+assert('References Fisher', /Fisher/.test(src));
+assert('References Sternberg', /Sternberg/.test(src));
+assert('References Brown (vulnerability)', /Brown.*Vulnerability|Brown.*Daring Greatly/.test(src));
+assert('References Rosenberg (NVC)', /Rosenberg.*NVC|Rosenberg.*Nonviolent/.test(src));
+assert('References Perel', /Perel/.test(src));
+assert('References Aron (self-expansion)', /Aron.*Self-Expansion|Aron.*36 Questions/.test(src));
+
+// ───────────────────────────────────────────────────────────────
+// 13. Dynamic RAG retrieval per stage
+// ───────────────────────────────────────────────────────────────
+console.log('\n13. Dynamic RAG retrieval per stage');
+
+assert(
+  'getCachedEmbedding imported from shared',
+  /getCachedEmbedding/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge function defined',
+  /async function retrieveStageKnowledge\(stageId, userContext, apiKey\)/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge queries coachKnowledge collection',
+  /db\.collection\('coachKnowledge'\)/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge filters by psychology_stages category',
+  /category === 'psychology_stages'/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge filters by stage',
+  /stage === stageId/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge uses findNearest for vector search',
+  /\.findNearest\('embedding', queryVector/.test(src)
+);
+
+assert(
+  'retrieveStageKnowledge called before buildStageContext',
+  /const ragKnowledge = await retrieveStageKnowledge\(stage\.id/.test(src)
+);
+
+assert(
+  'ragKnowledge passed to buildStageContext',
+  /buildStageContext\(stage, userContext, matchChatSummary, isSoloMode, matchProfileSummary, ragKnowledge\)/.test(src)
+);
+
+assert(
+  'buildStageContext injects ragKnowledge when present',
+  /if \(ragKnowledge && ragKnowledge\.trim\(\)\.length > 0\)/.test(src)
+);
+
+assert(
+  'RAG output prefixed with ADDITIONAL RESEARCH',
+  /ADDITIONAL RESEARCH \(retrieved from knowledge base\)/.test(src)
+);
+
+assert(
+  'RAG uses COSINE distance measure',
+  /distanceMeasure: 'COSINE'/.test(src)
+);
+
+assert(
+  'RAG filters by minimum similarity score',
+  /RAG_STAGE_MIN_SCORE/.test(src)
 );
 
 // ───────────────────────────────────────────────────────────────
