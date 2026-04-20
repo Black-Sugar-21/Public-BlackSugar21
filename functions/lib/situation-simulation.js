@@ -257,10 +257,25 @@ const SITUATION_SIM_CONFIG_DEFAULTS = {
   maxPerDay: 10,
   maxCharsMinimum: 5,
   maxCharsMaximum: 500,
-  temperature: 0.85,
-  maxOutputTokens: 1200,
   cacheMinutes: 360,
   fallbackApproachesEnabled: true,
+  // Approach generation
+  approachCount: 4,
+  alternativePhrasesCount: 6,
+  phraseMaxSentences: 2,
+  approachModel: null,           // null = AI_MODEL_NAME (gemini-2.5-flash)
+  approachMaxTokens: 2800,
+  approachTemperature: 0.85,
+  approachTimeoutMs: 60000,
+  // Classifier (tone detection)
+  classifyMaxTokens: 60,
+  classifyTemperature: 0.2,
+  // Reactions
+  reactionMaxTokens: 120,
+  reactionTemperature: 0.85,
+  // Coach tip
+  coachTipMaxTokens: 220,
+  coachTipTemperature: 0.6,
 };
 
 // Remote Config cache for situation_simulation_config
@@ -381,11 +396,11 @@ function scoreReaction(text) {
 // ---------------------------------------------------------------------------
 // Classification + approach generation
 // ---------------------------------------------------------------------------
-async function classifySituation(genAI, situation, lang) {
+async function classifySituation(genAI, situation, lang, cfg = SITUATION_SIM_CONFIG_DEFAULTS) {
   try {
     const model = genAI.getGenerativeModel({
       model: AI_MODEL_LITE,
-      generationConfig: {maxOutputTokens: 60, temperature: 0.2, responseMimeType: 'application/json'},
+      generationConfig: {maxOutputTokens: cfg.classifyMaxTokens || 60, temperature: cfg.classifyTemperature ?? 0.2, responseMimeType: 'application/json'},
     });
     const prompt = `Classify this dating situation into exactly ONE of these categories:
 ${SITUATION_TYPES.join(', ')}
@@ -405,7 +420,7 @@ Respond with JSON: {"type": "<category>"}`;
   }
 }
 
-async function generateApproaches(genAI, situation, matchPersona, userLang) {
+async function generateApproaches(genAI, situation, matchPersona, userLang, cfg = SITUATION_SIM_CONFIG_DEFAULTS) {
   try {
     const langInstr = getLanguageInstruction(userLang);
     const languageName = {
@@ -414,9 +429,12 @@ async function generateApproaches(genAI, situation, matchPersona, userLang) {
       'zh': 'Chinese (中文)', 'ru': 'Russian (Русский)', 'ar': 'Arabic (العربية)',
       'id': 'Indonesian (Bahasa Indonesia)', 'en': 'English',
     }[userLang] || 'English';
+    const approachCount = cfg.approachCount || 4;
+    const altCount = cfg.alternativePhrasesCount || 6;
+    const phraseMaxSentences = cfg.phraseMaxSentences || 2;
     const model = genAI.getGenerativeModel({
-      model: AI_MODEL_NAME,
-      generationConfig: {maxOutputTokens: 2800, temperature: 0.85, responseMimeType: 'application/json'},
+      model: cfg.approachModel || AI_MODEL_NAME,
+      generationConfig: {maxOutputTokens: cfg.approachMaxTokens || 2800, temperature: cfg.approachTemperature ?? 0.85, responseMimeType: 'application/json'},
     });
 
     const prompt = `${langInstr}
@@ -447,15 +465,15 @@ Generic openers like "quería hablar contigo", "tenemos que hablar", "hay algo q
 sent for literally any situation has failed. Read the user's situation again and make each phrase unmistakably
 about THAT topic.
 
-Generate EXACTLY 4 distinct approaches. Each approach uses one of these FIXED tones, in this exact order:
+Generate EXACTLY ${approachCount} distinct approaches. Each approach uses one of these FIXED tones, in this exact order:
   1. direct — clear, confident, unambiguous; names the situation in the first sentence
   2. playful — warm, light, a little humor; still references the specific topic (e.g. the friend, the plan, the feeling)
   3. romantic_vulnerable — soft, honest about feelings tied to THIS situation
   4. grounded_honest — calm, real, low-pressure; states what's happening and what they want
 
 For EACH approach produce this richer structure (not just one phrase):
-- "phrase": the main message (1-2 sentences MAX, first-person, IN ${languageName}) — this is the copy-paste-and-send version. Be direct and concise: one clear thought.
-- "alternativePhrases": an array of exactly 6 more variations in the SAME tone, same situation, different wording. Each variation is 1 sentence only. They should be genuinely different (different hook, different framing, different emotional emphasis) — not paraphrases of each other. The user will scroll and pick the one that feels most natural.
+- "phrase": the main message (${phraseMaxSentences} sentence${phraseMaxSentences > 1 ? 's' : ''} MAX, first-person, IN ${languageName}) — this is the copy-paste-and-send version. Be direct and concise: one clear thought.
+- "alternativePhrases": an array of exactly ${altCount} more variations in the SAME tone, same situation, different wording. Each variation is 1 sentence only. They should be genuinely different (different hook, different framing, different emotional emphasis) — not paraphrases of each other. The user will scroll and pick the one that feels most natural.
 - "followUpTips": 1-2 sentences telling the user what to do AFTER the match replies. Should help them handle both positive and hesitant reactions. Actionable, specific to the tone (e.g. for "playful" suggest keeping it light; for "direct" suggest pausing before pressing).
 
 Every "phrase" and every entry in "alternativePhrases" MUST reference at least one concrete detail from the user's situation (a name, place, plan, feeling, or event they mentioned). No generic openers.
@@ -467,7 +485,7 @@ ${langInstr}
 
 ⚠️ FINAL CHECKS:
 1. Every "phrase" / "alternativePhrases[i]" / "followUpTips" is in ${languageName}, not English (unless target is English).
-2. "alternativePhrases" has EXACTLY 6 entries, each 1 sentence only.
+2. "alternativePhrases" has EXACTLY ${altCount} entries, each 1 sentence only.
 3. Every phrase references specific content from the user's situation.
 4. No two phrases (main or alternative, within an approach or across approaches) sound interchangeable.
 
@@ -535,7 +553,7 @@ Respond ONLY with JSON in this shape (all text in ${languageName}):
             alternativePhrases: entry.alternativePhrases && entry.alternativePhrases.length
               ? entry.alternativePhrases
               : (Array.isArray(rawApproach.alternativePhrases)
-                  ? rawApproach.alternativePhrases.filter(p => typeof p === 'string').slice(0, 6)
+                  ? rawApproach.alternativePhrases.filter(p => typeof p === 'string').slice(0, altCount)
                   : []),
             followUpTips: entry.followUpTips || (typeof rawApproach.followUpTips === 'string' ? rawApproach.followUpTips.trim() : ''),
           };
@@ -817,11 +835,11 @@ exports.simulateSituation = onCall(
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // ── Step 1: Classify situation (LITE) ───────────────────────────────
-    const situationType = await classifySituation(genAI, trimmed, lang);
+    const situationType = await classifySituation(genAI, trimmed, lang, config);
 
-    // ── Step 2: Generate 4 approaches (NAME, one call) ──────────────────
+    // ── Step 2: Generate approaches (count from RC) ──────────────────────
     logger.info(`[simulateSituation] Generating approaches for ${matchPersona.name}...`);
-    const approaches = await generateApproaches(genAI, trimmed, matchPersona, lang);
+    const approaches = await generateApproaches(genAI, trimmed, matchPersona, lang, config);
     logger.info(`[simulateSituation] Generated ${approaches.length} approaches`);
     const validApproaches = approaches.filter(a => a.phrase && a.phrase.length > 0);
     logger.info(`[simulateSituation] Valid approaches: ${validApproaches.length}`);
