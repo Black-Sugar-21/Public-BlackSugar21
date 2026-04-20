@@ -116,6 +116,14 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
       }
     }
 
+    // Defensive tone normalization: if Gemini ignores neutralFrame and returns
+    // "romantic_vulnerable" in coach mode, fix it before sending to client
+    if (neutralFrame) {
+      finalApproaches = finalApproaches.map(a =>
+        a.tone === 'romantic_vulnerable' ? { ...a, tone: 'vulnerable' } : a
+      );
+    }
+
     const finalFour = finalApproaches.slice(0, 4);
 
     // Confidence floor: if avg synthesis confidence < 5.5, the synthesizer output is

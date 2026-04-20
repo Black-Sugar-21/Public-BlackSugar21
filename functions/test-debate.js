@@ -267,6 +267,11 @@ ok(debateOrchSrc.includes('winnerCounts'), 'orchestrator computes winner agent c
 ok(debateOrchSrc.includes('winnerAgents'), 'orchestrator includes winnerAgents in debateMetadata');
 ok(debateOrchSrc.includes('[Debate] Stage'), 'orchestrator logs winner agents info');
 
+// defensive tone normalization (neutralFrame)
+ok(debateOrchSrc.includes("a.tone === 'romantic_vulnerable'"), 'orchestrator checks for romantic_vulnerable tone in neutralFrame mode');
+ok(debateOrchSrc.includes("tone: 'vulnerable'"), 'orchestrator normalizes romantic_vulnerable → vulnerable when neutralFrame=true');
+ok(debateOrchSrc.includes('if (neutralFrame)'), 'normalization is gated on neutralFrame flag (no-op in dating mode)');
+
 // confidence floor fallback
 ok(debateOrchSrc.includes('avgConfidence'), 'orchestrator computes average confidence');
 ok(debateOrchSrc.includes('< 5.5'), 'orchestrator applies confidence floor at 5.5');
