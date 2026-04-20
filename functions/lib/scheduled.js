@@ -38,6 +38,9 @@ async function cleanupStaleTokens(response, tokens, db) {
   }
 }
 
+/**
+ * Scheduled CF (every hour): resets daily like counts for users whose midnight has passed in their timezone.
+ */
 exports.resetDailyLikes = onSchedule(
   {schedule: 'every 1 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
   async () => {
@@ -461,6 +464,9 @@ exports.checkMutualLikesAndCreateMatch = onSchedule(
 // Alias — nombre legacy usado en algunas configuraciones
 exports.scheduledCheckMutualLikes = exports.checkMutualLikesAndCreateMatch;
 
+/**
+ * Scheduled CF (every 24 hours): permanently deletes user data for accounts that requested deletion.
+ */
 exports.processScheduledDeletions = onSchedule(
   {schedule: 'every 24 hours', region: 'us-central1', memory: '512MiB', timeoutSeconds: 300},
   async () => {

@@ -9,6 +9,11 @@ const os = require('os');
 const fs = require('fs');
 const sharp = require('sharp');
 
+/**
+ * Storage trigger: generates a 200×200 JPEG thumbnail for profile photos when uploaded to Cloud Storage.
+ * Skips files outside profile photo paths and existing thumbnails.
+ * @param {import('firebase-functions/v2/storage').StorageObjectData} event
+ */
 exports.generateProfileThumbnail = onObjectFinalized(
   {
     region: 'us-central1',

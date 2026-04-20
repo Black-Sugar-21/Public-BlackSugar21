@@ -5,6 +5,12 @@ const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { geminiApiKey, AI_MODEL_LITE, getLanguageInstruction, parseGeminiJsonResponse, getLocalizedError } = require('./shared');
 
+/**
+ * CF: Removes a mutual match — deletes the match document and notifies both users.
+ * @param {Object} request.data - {matchId: string, otherUserId: string, userLanguage?: string}
+ * @returns {Promise<{success: boolean}>}
+ * @throws {HttpsError} unauthenticated | invalid-argument | not-found
+ */
 exports.unmatchUser = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {

@@ -220,6 +220,13 @@ function buildMatchProfileSummary(userData) {
 const RAG_STAGE_TOP_K = 3;
 const RAG_STAGE_MIN_SCORE = 0.3;
 
+/**
+ * Retrieves psychology knowledge chunks relevant to a relationship stage via embedding similarity.
+ * @param {string} stageId - Stage identifier (e.g. 'initial_contact', 'deepening')
+ * @param {string} userContext - User context snippet for query enrichment
+ * @param {string} apiKey - Gemini API key for embeddings
+ * @returns {Promise<string>} Concatenated knowledge snippets, or '' on failure
+ */
 async function retrieveStageKnowledge(stageId, userContext, apiKey) {
   try {
     const query = `${stageId} ${userContext || ''}`.trim().substring(0, 300);
@@ -543,6 +550,10 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 // v12 = debate-psychology Capa 4 enriched with 8 recent (2022-2025) validated citations
 const CACHE_SCHEMA_VERSION = 12;
 
+/**
+ * Fetches multi-universe simulation config from Remote Config with in-memory cache.
+ * @returns {Promise<Object>} Config merged with MULTIVERSE_DEFAULTS
+ */
 async function getMultiUniverseConfig() {
   // Return cached config if fresh
   if (_multiverseConfigCache && (Date.now() - _multiverseConfigCacheTime) < MULTIVERSE_CONFIG_CACHE_TTL) {
@@ -880,6 +891,7 @@ exports.simulateMultiUniverse = onCall(
       const stageDurations = {};
       const cfg = await getMultiUniverseConfig();
 
+      /** Runs situation simulation for one relationship stage and appends result to stages[]. */
       async function processStage(stage) {
         const stageStart = Date.now();
         try {
@@ -2215,10 +2227,11 @@ function getStageSpecificCoachTip(stageId, matchName, userLang = 'en', neutralFr
 /**
  * Localized HttpsError user-facing messages (10 languages).
  * Auth errors are kept in English (occur before lang is parsed).
+ * Delegates to shared.js; all 6 error keys live in shared ERROR_MESSAGES.
+ * @param {string} key - Error key (rate_limit | match_not_found | profile_not_found | etc.)
+ * @param {string} [userLang='en'] - BCP-47 language code
+ * @returns {string} Localized error string
  */
-// Delegates to the shared helper. All 6 keys previously defined locally
-// (rate_limit, match_not_found, profile_not_found, all_stages_failed,
-// invalid_result, simulation_failed) are now in shared.js ERROR_MESSAGES.
 function getLocalizedError(key, userLang = 'en') {
   return getLocalizedErrorShared(key, normalizeLanguageCode(userLang));
 }
@@ -2443,6 +2456,12 @@ function calculateCompatibility(stages, userLanguage = 'en') {
   return { score, stars, label };
 }
 
+/**
+ * Returns a localized compatibility label and emoji for a 0–100 score.
+ * @param {number} score - Compatibility score 0–100
+ * @param {string} [language='en'] - BCP-47 language code
+ * @returns {string} Localized label string with emoji
+ */
 function getCompatibilityLabel(score, language = 'en') {
   const labels = {
     en: {
@@ -2525,6 +2544,13 @@ function getCompatibilityLabel(score, language = 'en') {
   return langLabels.challenging;
 }
 
+/**
+ * Generates a localized bullet-point insights summary from simulation stage results.
+ * @param {Object[]} stages - Completed stage result objects
+ * @param {string} label - Compatibility label (from getCompatibilityLabel)
+ * @param {string} [language='en'] - BCP-47 language code
+ * @returns {string} Multi-line insights text
+ */
 function generateInsights(stages, label, language = 'en') {
   const normalizedLang = normalizeLanguageCode(language);
   const insightLabels = {

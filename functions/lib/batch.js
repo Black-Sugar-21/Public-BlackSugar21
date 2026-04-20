@@ -4,6 +4,12 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { getLocalizedError } = require('./shared');
 
+/**
+ * CF: Fetches signed download URLs for a batch of user profile photos (max 100 requests).
+ * @param {Object} request.data - {photoRequests: Array<{userId, photoIds}>, userLanguage?: string}
+ * @returns {Promise<{success: boolean, urls: Object, totalPhotos: number, totalUsers: number}>}
+ * @throws {HttpsError} unauthenticated | invalid-argument
+ */
 exports.getBatchPhotoUrls = onCall(
   {region: 'us-central1', memory: '512MiB', timeoutSeconds: 60},
   async (request) => {

@@ -13,6 +13,10 @@ let _aiConfigFetchedAt = 0;
 let _aiConfigPromise = null;
 const AI_CONFIG_CACHE_TTL = 5 * 60 * 1000;
 
+/**
+ * Fetches AI config from Firestore with 5-min cache and single-flight dedup.
+ * @returns {Promise<Object>} AI config object (temperatures, maxOutputTokens, etc.)
+ */
 async function getAiConfig() {
   if (_aiConfig && Date.now() - _aiConfigFetchedAt < AI_CONFIG_CACHE_TTL) return _aiConfig;
   // Single-flight: only one fetch at a time
@@ -32,10 +36,24 @@ async function getAiConfig() {
   return _aiConfigPromise;
 }
 
+/**
+ * Reads a named temperature override from AI config, with a default fallback.
+ * @param {Object} aiConfig - AI config object from getAiConfig()
+ * @param {string} key - Temperature key name
+ * @param {number} fallback - Default temperature if key is absent
+ * @returns {number} Temperature value
+ */
 function getTemp(aiConfig, key, fallback) {
   return aiConfig?.temperatures?.[key] ?? fallback;
 }
 
+/**
+ * Reads a named max-output-tokens override from AI config, with a default fallback.
+ * @param {Object} aiConfig - AI config object from getAiConfig()
+ * @param {string} key - Token limit key name
+ * @param {number} fallback - Default token limit if key is absent
+ * @returns {number} Max output tokens value
+ */
 function getTokens(aiConfig, key, fallback) {
   return aiConfig?.maxOutputTokens?.[key] ?? fallback;
 }
@@ -50,6 +68,12 @@ function safeResponseText(result) {
   }
 }
 
+/**
+ * CF: Generates AI-powered interest tag suggestions based on a user's bio and existing interests.
+ * @param {Object} request.data - {userLanguage?: string, bio?: string, currentInterests?: string[]}
+ * @returns {Promise<{suggestions: string[]}>}
+ * @throws {HttpsError} unauthenticated | internal
+ */
 exports.generateInterestSuggestions = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 30, secrets: [geminiApiKey]},
   async (request) => {

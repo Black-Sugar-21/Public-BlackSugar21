@@ -192,6 +192,13 @@ async function retrieveModerationKnowledge(textToModerate, apiKey, lang = 'en', 
  */
 
 // --- Prompt builders ---
+/**
+ * Builds the Gemini prompt for profile-image moderation, with optional gender-mismatch detection.
+ * @param {string} lang - BCP-47 language code for the rejection reason output
+ * @param {*} _isSpanishUnused - Legacy param, unused
+ * @param {boolean|null} expectedGender - true=male expected, false=female expected, null=no check
+ * @returns {string} Prompt string for the Gemini vision model
+ */
 function buildProfileImagePrompt(lang, _isSpanishUnused, expectedGender) {
   // Unified prompt for all 10 supported languages. Prompt body stays in English (model's
   // operational language) and `languageInstruction` forces the `reason` output field into
@@ -370,6 +377,12 @@ Respond ONLY with JSON. The "reason" field MUST be written in the user's languag
  */
 
 // --- Moderation callable functions ---
+/**
+ * CF: Fast, lightweight profile-image pre-flight check (no write side effects). Used before upload.
+ * @param {Object} request.data - {imageUrl: string, userLanguage?: string}
+ * @returns {Promise<{approved: boolean, reason: string, confidence: number, category: string}>}
+ * @throws {HttpsError} unauthenticated | invalid-argument
+ */
 exports.validateProfileImage = onCall(
   {region: 'us-central1', memory: '256MiB', timeoutSeconds: 60},
   async (request) => {
@@ -593,6 +606,12 @@ const HOMOGLYPH_MAP = {
   // Latin diacritic confusables that NFKC does NOT collapse on its own
   'ı': 'i', 'ł': 'l', 'ø': 'o', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ß': 'ss',
 };
+/**
+ * Normalizes text for blacklist matching: NFKC, lowercase, Cyrillic/Greek/Latin homoglyph fold,
+ * and zero-width character removal.
+ * @param {string} raw - Raw input text
+ * @returns {string} Normalized string safe for term comparison
+ */
 function normalizeForModeration(raw) {
   let s = String(raw || '').normalize('NFKC').toLowerCase();
   // Homoglyph fold in one pass. Regex covers Cyrillic a-ya, extended
@@ -606,6 +625,12 @@ function normalizeForModeration(raw) {
   return s.trim();
 }
 
+/**
+ * Runs fast pre-flight safety filters (length, blacklist, URL, phone) before calling the AI.
+ * @param {string} message - Raw message text
+ * @param {Object} [modConfig={}] - Remote Config moderation settings (thresholds, extra terms)
+ * @returns {{isSafe: boolean, category: string, reason: string}|null} Result or null to proceed to AI
+ */
 function applyQuickFilters(message, modConfig = {}) {
   // Original lowercase kept for length check + URL regex (which relies on
   // raw characters including punctuation). Blacklist comparison runs
@@ -730,6 +755,11 @@ async function saveModerationToCache(messageHash, result, db) {
  */
 
 // --- Auto-moderation trigger ---
+/**
+ * Firestore trigger: automatically moderates each new message in matches/{matchId}/messages/{messageId}.
+ * Runs quick filters first, then AI moderation if needed; writes result back to the message doc.
+ * @param {import('firebase-functions/v2/firestore').DocumentCreatedEvent} event
+ */
 exports.autoModerateMessage = onDocumentCreated(
   {document: 'matches/{matchId}/messages/{messageId}', region: 'us-central1', memory: '256MiB', timeoutSeconds: 30},
   async (event) => {

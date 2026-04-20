@@ -4,6 +4,11 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
+/**
+ * Firestore trigger: sends mutual-match push notifications and creates the initial icebreakers
+ * when a new document is created in matches/{matchId}.
+ * @param {import('firebase-functions/v2/firestore').DocumentCreatedEvent} event
+ */
 exports.onMatchCreated = onDocumentCreated(
   {
     document: 'matches/{matchId}',

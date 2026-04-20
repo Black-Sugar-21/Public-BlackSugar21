@@ -5,6 +5,12 @@ const { logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const { getLocalizedError } = require('./shared');
 
+/**
+ * CF: Sends a test push notification to a specific user (sender must be that user).
+ * @param {Object} request.data - {userId: string, title: string, body: string, userLanguage?: string}
+ * @returns {Promise<{success: boolean, messageId?: string}>}
+ * @throws {HttpsError} unauthenticated | permission-denied
+ */
 exports.sendTestNotification = onCall(async (request) => {
   const {userId, title, body, userLanguage} = request.data || {};
   const lang = (userLanguage || 'en').split('-')[0].toLowerCase();
@@ -214,6 +220,11 @@ exports.testDailyLikesResetNotification = onCall(
 // GENERATE MISSING THUMBNAILS (función admin existente — no modificada)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Firestore trigger: processes a queued notification from pendingNotifications/{notificationId}
+ * and delivers it via FCM, then deletes the pending document.
+ * @param {import('firebase-functions/v2/firestore').DocumentCreatedEvent} event
+ */
 exports.handlePendingNotification = onDocumentCreated(
   {document: 'pendingNotifications/{notificationId}', region: 'us-central1'},
   async (event) => {
