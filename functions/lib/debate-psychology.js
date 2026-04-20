@@ -101,6 +101,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Meta-analysis of 21 fMRI romantic love studies confirms initial contact activates ventromedial prefrontal cortex and anterior cingulate reward circuits; curiosity-triggering messages leverage this neural architecture, with VMPFC activation indicating self-expansion rather than mere reward-seeking',
         researcher: 'Yang et al., Neuropsychologia, 2024',
+        source: 'https://pubmed.ncbi.nlm.nih.gov/39293637/',
       },
       {
         principle: 'Reciprocity principle: people feel compelled to respond in kind when they receive something personal or thoughtful',
@@ -135,6 +136,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: "Knapp's relational escalation stages persist in digital dating but are compressed and multimodal — social media and app-based cues accelerate identity presentation across all commitment stages, with enduring technological influence throughout the path toward commitment",
         researcher: 'Sharabi, Communication Research, 2024',
+        source: 'https://doi.org/10.1177/00936502221127498',
       },
     ],
   },
@@ -159,6 +161,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Insecure attachment patterns acquired through early adversity predict reduced relationship satisfaction and elevated conflict in adult romantic dyads, independent of mating effort; attachment style detection during early conversations enables targeted secure-base communication',
         researcher: 'Kwiek et al., Evolutionary Psychology, 2025',
+        source: 'https://doi.org/10.1177/14747049251355861',
       },
     ],
     social_dynamics: [
@@ -219,6 +222,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Lower attachment avoidance (secure base/safe haven functioning) buffers the impact of past adversity on relationship satisfaction; partners who offer genuine emotional availability and comfort during distress strengthen dyadic resilience over time',
         researcher: 'Baumann et al., Family Process, 2024',
+        source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11951461/',
       },
     ],
     social_dynamics: [
@@ -241,6 +245,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Self-expansion experiences with a partner predict higher closeness and perceived "otherness" (partner distinctiveness), which in turn predicts sexual desire — novel shared experiences during connection-building simultaneously deepen intimacy and sustain attraction',
         researcher: 'Goss et al., Journal of Social and Personal Relationships, 2022',
+        source: 'https://doi.org/10.1177/02654075221081137',
       },
     ],
     communication_repair: [
@@ -311,6 +316,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'NVC training (7-week structured program) produces significant improvements in problem-solving confidence and personal control over control conditions; the observe-feel-need-request protocol delivers measurable conflict-management gains in couples',
         researcher: 'Rahmani & Ulu, BMC Psychology, 2025',
+        source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12729115/',
       },
       {
         principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues (tone, pace, warmth) — switching to voice or video significantly accelerates de-escalation',
@@ -361,6 +367,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: "Sternberg's RELIC extension of triangular theory adds personal love narratives and five nested environmental systems (micro to chrono) — commitment resonates more deeply when partners recognize how their shared story fits each person's life narrative",
         researcher: 'Sternberg & Sternberg, Theory & Psychology, 2024',
+        source: 'https://doi.org/10.1177/09593543241270922',
       },
     ],
     communication_repair: [
@@ -383,6 +390,7 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Fulfilling SDT needs (autonomy, competence, relatedness) in sexual motivation predicts both sexual satisfaction and relational well-being; autonomous rather than obligated intimacy sustains long-term desire alongside commitment',
         researcher: 'Price, Busby & Leavitt, Journal of Sex & Marital Therapy, 2023',
+        source: 'https://doi.org/10.1080/0092623X.2022.2094304',
       },
     ],
   },
