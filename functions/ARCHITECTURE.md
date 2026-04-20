@@ -263,14 +263,14 @@ TTL: 5 minutos (cache RC)
 
 ## Test Suite
 
-Todos los tests son estáticos (no requieren API). Total: **2 175 / 2 175 assertions**.
+Todos los tests son estáticos (no requieren API). Total: **2 180 / 2 180 assertions**.
 
 | Archivo | Assertions | Qué cubre |
 |---|---|---|
 | test-debate.js | 492 | Pipeline debate completo: perspectivas, síntesis, scoring, fallbacks, neutralFrame, tone filters, citedResearchers regex, cache schema v14 |
 | test-multiverse-usercontext.js | 311 | userContext hash, neutralFrame derivation, buildStageContext 6 params, RAG injection, STAGE_PSYCHOLOGY/CITATIONS coverage (10 langs) |
 | test-multiverse-scenarios.js | 572 | 4 escenarios de caché, cache key format (`multiverse_match_` prefix), Section 9: 105 asserts de escenarios combinados |
-| test-situation-sim.js | 111 | Section 9: debate robustness en situación-sim, timeouts perspectiva+síntesis, userContext 8th arg, fallback tiers |
+| test-situation-sim.js | 116 | Section 9: debate robustness en situación-sim, timeouts perspectiva+síntesis, userContext 8th arg, fallback tiers, synthesisMaxTokens ≥ 3000 |
 | test-shared-helpers.js | 244 | lib/shared.js: AI models, getLocalizedError 14 keys×10 langs, normalizeLanguageCode, redactEmail/Token, extractSituationSnippet |
 | test-comprehensive-300.js | 333 | Edge cases, cultural, security, i18n, situación-sim general |
 | test-moderation-homoglyph.js | 47 | Homoglyph attack normalization (Cyrillic/Greek lookalikes, fullwidth, zero-width) |
