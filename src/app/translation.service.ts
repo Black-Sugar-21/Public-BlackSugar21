@@ -426,28 +426,28 @@ export class TranslationService {
       en: 'Terms of Use'
     },
     'terms.welcome': {
-      es: 'Bienvenido a Black Sugar 21. Al utilizar nuestra aplicación, aceptas cumplir con los siguientes términos:',
-      en: 'Welcome to Black Sugar 21. By using our application, you agree to comply with the following terms:'
+      es: 'Al usar Black Sugar 21 aceptas estos términos. La app es solo para adultos mayores de 18 años.',
+      en: 'By using Black Sugar 21 you agree to these terms. The app is for adults 18 years or older only.'
     },
     'terms.age': {
-      es: 'Debes tener al menos 18 años de edad para utilizar esta aplicación.',
-      en: 'You must be at least 18 years old to use this application.'
+      es: 'Debes tener al menos 18 años. Nos reservamos el derecho de verificar y suspender cuentas que no cumplan este requisito.',
+      en: 'You must be at least 18 years old. We reserve the right to verify and suspend accounts that do not meet this requirement.'
     },
     'terms.content': {
-      es: 'El contenido es para uso personal y entretenimiento.',
-      en: 'Content is for personal use and entertainment.'
+      es: 'El contenido es para uso personal. Queda prohibido compartir, reproducir o usar el contenido de otros usuarios sin su consentimiento.',
+      en: 'Content is for personal use only. Sharing, reproducing or using other users\' content without their consent is prohibited.'
     },
     'terms.respect': {
-      es: 'Respeta la privacidad y seguridad de otros usuarios.',
-      en: 'Respect the privacy and security of other users.'
+      es: 'Está prohibido el acoso, el engaño, los perfiles falsos y cualquier conducta que afecte la seguridad o bienestar de otros usuarios.',
+      en: 'Harassment, deception, fake profiles, and any conduct affecting the safety or well-being of other users are prohibited.'
     },
     'terms.redistribution': {
-      es: 'Queda prohibida la redistribución del contenido.',
-      en: 'Content redistribution is prohibited.'
+      es: 'El Coach IA y las funciones de simulación son herramientas de orientación. Sus sugerencias no reemplazan el juicio personal ni constituyen asesoramiento profesional.',
+      en: 'The AI Coach and simulation features are guidance tools. Their suggestions do not replace personal judgment or constitute professional advice.'
     },
     'terms.violation': {
-      es: 'Nos reservamos el derecho de suspender cuentas que violen nuestras normas de comunidad.',
-      en: 'We reserve the right to suspend accounts that violate our community standards.'
+      es: 'Los mensajes y fotos son revisados automáticamente por IA para garantizar un entorno seguro. El incumplimiento de estas normas puede resultar en la suspensión permanente de la cuenta.',
+      en: 'Messages and photos are automatically reviewed by AI to ensure a safe environment. Violations of these rules may result in permanent account suspension.'
     },
 
     // Privacy Section
@@ -456,32 +456,32 @@ export class TranslationService {
       en: 'Privacy Policy'
     },
     'privacy.intro': {
-      es: 'Tu privacidad es nuestra prioridad. Manejamos tus datos de manera privada y segura.',
-      en: 'Your privacy is our priority. We handle your data privately and securely.'
+      es: 'Tu privacidad es nuestra prioridad. Esta política describe qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.',
+      en: 'Your privacy is our priority. This policy describes what data we collect, how we use it, and your rights over it.'
     },
     'privacy.collection': {
-      es: 'Recopilación de Datos',
-      en: 'Data Collection'
+      es: 'Datos que recopilamos',
+      en: 'Data we collect'
     },
     'privacy.collectionText': {
-      es: 'Solo recopilamos los datos necesarios para el funcionamiento de la app: número de teléfono (para autenticación), edad verificada 18+, fotos de perfil, ubicación aproximada y preferencias de búsqueda (rango de edad, distancia, orientación).',
-      en: 'We only collect data necessary for app functionality: phone number (for authentication), verified age 18+, profile photos, approximate location, and search preferences (age range, distance, orientation).'
+      es: 'Recopilamos: número de teléfono (autenticación), edad verificada 18+, fotos de perfil, ubicación aproximada, preferencias de búsqueda y mensajes de chat. El Coach IA procesa el contexto que ingresas voluntariamente para personalizar sus respuestas.',
+      en: 'We collect: phone number (authentication), verified age 18+, profile photos, approximate location, search preferences, and chat messages. The AI Coach processes context you voluntarily enter to personalize its responses.'
     },
     'privacy.usage': {
-      es: 'Uso de Datos',
-      en: 'Data Usage'
+      es: 'Cómo usamos tus datos',
+      en: 'How we use your data'
     },
     'privacy.usageText': {
-      es: 'Tus datos nunca serán vendidos a terceros. Se utilizan exclusivamente para mejorar tu experiencia en Black Sugar 21.',
-      en: 'Your data will never be sold to third parties. It is used exclusively to improve your experience on Black Sugar 21.'
+      es: 'Tus datos se usan para conectarte con otras personas, personalizar el Coach IA y moderar contenido automáticamente. Usamos Google Gemini para procesar mensajes y fotos con fines de moderación y coaching. Tus datos nunca se venden a terceros.',
+      en: 'Your data is used to connect you with others, personalize the AI Coach, and automatically moderate content. We use Google Gemini to process messages and photos for moderation and coaching purposes. Your data is never sold to third parties.'
     },
     'privacy.security': {
-      es: 'Seguridad',
-      en: 'Security'
+      es: 'Seguridad y tus derechos',
+      en: 'Security and your rights'
     },
     'privacy.securityText': {
-      es: 'Utilizamos encriptación de grado militar para proteger tu información.',
-      en: 'We use military-grade encryption to protect your information.'
+      es: 'Tus datos se almacenan de forma segura en Firebase (Google). Puedes eliminar tu cuenta y todos tus datos permanentemente desde la app en cualquier momento. Los tokens de notificación y datos sensibles se encriptan y nunca se exponen en registros del sistema.',
+      en: 'Your data is securely stored in Firebase (Google). You can permanently delete your account and all your data from the app at any time. Notification tokens and sensitive data are encrypted and never exposed in system logs.'
     },
 
     // Data Deletion
