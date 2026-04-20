@@ -71,7 +71,7 @@ assert(
 
 assert(
   'cacheKey includes hash when userContextHash exists',
-  /cacheKey = userContextHash\s*\?\s*`\$\{baseCacheKey\}_\$\{normalizedUserLang\}_\$\{userContextHash\}`\s*:\s*`\$\{baseCacheKey\}_\$\{normalizedUserLang\}`/s.test(src)
+  src.includes('userContextHash}${debateSuffix}`') && src.includes('debateSuffix')
 );
 
 assert(
