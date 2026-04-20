@@ -290,7 +290,7 @@ ok(multiUniverseSrc.includes('MULTIVERSE_CONFIG_DEFAULTS.debate') && multiUniver
   'debate config deep-merged from Remote Config');
 
 // Cache schema
-ok(/CACHE_SCHEMA_VERSION\s*=\s*11/.test(multiUniverseSrc), 'CACHE_SCHEMA_VERSION = 11');
+ok(/CACHE_SCHEMA_VERSION\s*=\s*12/.test(multiUniverseSrc), 'CACHE_SCHEMA_VERSION = 12');
 
 // Parallel stages
 ok(multiUniverseSrc.includes('Promise.allSettled'), 'uses Promise.allSettled for parallel stages');
@@ -358,7 +358,7 @@ console.log('── Section 7: Cross-cutting ──');
 // All researchers from STAGE_PSYCHOLOGY should appear in at least 1 perspective
 const allPrinciples = JSON.stringify(STAGE_PERSPECTIVE_PRINCIPLES);
 const knownResearchers = [
-  'Bowlby', 'Gottman', 'Fisher', 'Brown', 'Perel', 'Knapp',
+  'Bowlby', 'Gottman', 'Yang', 'Brown', 'Perel', 'Knapp',
   'Sternberg', 'Rosenberg', 'Aron', 'Chapman', 'Ambady',
   'Johnson', 'Deci', 'Cialdini', 'Zak', 'Derlega',
   'Ainsworth', 'Mikulincer', 'Reis',

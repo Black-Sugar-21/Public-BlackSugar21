@@ -99,8 +99,8 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         researcher: 'Ambady & Rosenthal, 1993',
       },
       {
-        principle: 'Dopamine-driven novelty-seeking peaks at initial contact — messages that trigger curiosity activate reward circuits',
-        researcher: 'Fisher, Why We Love, 2004',
+        principle: 'Meta-analysis of 21 fMRI romantic love studies confirms initial contact activates ventromedial prefrontal cortex and anterior cingulate reward circuits; curiosity-triggering messages leverage this neural architecture, with VMPFC activation indicating self-expansion rather than mere reward-seeking',
+        researcher: 'Yang et al., Neuropsychologia, 2024',
       },
       {
         principle: 'Reciprocity principle: people feel compelled to respond in kind when they receive something personal or thoughtful',
@@ -132,6 +132,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'First impressions via video call are as accurate and normative as in-person for most personality traits — screen-based initial contact preserves the fundamental social judgment dynamics of face-to-face meeting',
         researcher: 'Mignault et al., Personality and Social Psychology Bulletin, 2024',
       },
+      {
+        principle: "Knapp's relational escalation stages persist in digital dating but are compressed and multimodal — social media and app-based cues accelerate identity presentation across all commitment stages, with enduring technological influence throughout the path toward commitment",
+        researcher: 'Sharabi, Communication Research, 2024',
+      },
     ],
   },
   getting_to_know: {
@@ -151,6 +155,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Japanese amae (甘え) — the expectation of indulgent acceptance from another — is a culturally-specific attachment mechanism where trust is built through presumed benevolence of the group, not dyadic secure-base declarations',
         researcher: 'Doi, The Anatomy of Dependence, 1973',
+      },
+      {
+        principle: 'Insecure attachment patterns acquired through early adversity predict reduced relationship satisfaction and elevated conflict in adult romantic dyads, independent of mating effort; attachment style detection during early conversations enables targeted secure-base communication',
+        researcher: 'Kwiek et al., Evolutionary Psychology, 2025',
       },
     ],
     social_dynamics: [
@@ -208,6 +216,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'In collectivist cultures (JA/ZH/KO), relational harmony (和, wa / 和谐, héxié) is the primary connection indicator — being included in someone\'s trusted inner circle (uchi/soto in Japanese) matters more than explicit mutual vulnerability',
         researcher: 'Markus & Kitayama, Culture and the Self, 1991',
       },
+      {
+        principle: 'Lower attachment avoidance (secure base/safe haven functioning) buffers the impact of past adversity on relationship satisfaction; partners who offer genuine emotional availability and comfort during distress strengthen dyadic resilience over time',
+        researcher: 'Baumann et al., Family Process, 2024',
+      },
     ],
     social_dynamics: [
       {
@@ -225,6 +237,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Social Baseline Theory: the brain expects co-regulation as its default state — shared presence (physical or digital) with an attachment figure measurably reduces neural threat-processing costs, making genuine connection feel literally calming',
         researcher: 'Beckes & Sbarra, Current Opinion in Psychology, 2022',
+      },
+      {
+        principle: 'Self-expansion experiences with a partner predict higher closeness and perceived "otherness" (partner distinctiveness), which in turn predicts sexual desire — novel shared experiences during connection-building simultaneously deepen intimacy and sustain attraction',
+        researcher: 'Goss et al., Journal of Social and Personal Relationships, 2022',
       },
     ],
     communication_repair: [
@@ -293,8 +309,8 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         researcher: 'Gottman, The Four Horsemen, 1994',
       },
       {
-        principle: 'Use "I feel... when... because I need..." structure to express conflict without triggering defensiveness',
-        researcher: 'Rosenberg, NVC, 2003',
+        principle: 'NVC training (7-week structured program) produces significant improvements in problem-solving confidence and personal control over control conditions; the observe-feel-need-request protocol delivers measurable conflict-management gains in couples',
+        researcher: 'Rahmani & Ulu, BMC Psychology, 2025',
       },
       {
         principle: 'Repair attempts via text after digital conflict are less effective than voice calls due to absence of prosodic cues (tone, pace, warmth) — switching to voice or video significantly accelerates de-escalation',
@@ -342,6 +358,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Autonomous motivation for romantic pursuit (genuine desire for connection, not fear of being alone) predicts forming lasting partnerships — individuals with autonomous motivation are significantly more likely to be partnered 6 months later',
         researcher: 'MacDonald et al., Personality and Social Psychology Bulletin, 2025',
       },
+      {
+        principle: "Sternberg's RELIC extension of triangular theory adds personal love narratives and five nested environmental systems (micro to chrono) — commitment resonates more deeply when partners recognize how their shared story fits each person's life narrative",
+        researcher: 'Sternberg & Sternberg, Theory & Psychology, 2024',
+      },
     ],
     communication_repair: [
       {
@@ -359,6 +379,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Korean 눈치 (nunchi) — the subtle art of reading unspoken social cues — enables commitment communication without explicit declaration; partners signal readiness through consistent attentiveness and action rather than verbal proclamations',
         researcher: 'Lim & Choi, Korean Communication Patterns, 1996',
+      },
+      {
+        principle: 'Fulfilling SDT needs (autonomy, competence, relatedness) in sexual motivation predicts both sexual satisfaction and relational well-being; autonomous rather than obligated intimacy sustains long-term desire alongside commitment',
+        researcher: 'Price, Busby & Leavitt, Journal of Sex & Marital Therapy, 2023',
       },
     ],
   },
