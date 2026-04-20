@@ -89,7 +89,7 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
   let synthTimer;
   try {
     const synthesis = await Promise.race([
-      synthesizeDebateApproaches(genAI, validPerspectives, situation, userLang, stageId, stagePsychology, debateCfg, userContextSnippet),
+      synthesizeDebateApproaches(genAI, validPerspectives, situation, userLang, stageId, stagePsychology, debateCfg, userContextSnippet, neutralFrame),
       new Promise((_, rej) => {
         synthTimer = setTimeout(() => rej(new Error('synthesis timeout')), debateCfg.synthesisTimeoutMs);
       }),
@@ -189,13 +189,17 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
  *   +0.5 — citedResearch names a specific researcher or year (evidence-grounded)
  *   +0.3 — approach synthesized from multiple agent perspectives
  *
+ * Penalties (applied after blend, before clamp):
+ *   -0.2 — researcher in citedResearch already cited by another approach in the set (diversity penalty)
+ *
  * Weight: 60% heuristic, 40% LLM confidence. Result clamped to [4, 10].
  * @param {number} heuristicScore - rule-based score from scoreApproach (4-10)
  * @param {number} synthesisConfidence - LLM confidence from synthesizer (1-10)
  * @param {object} [approach] - approach object with optional citedResearch and sourceAgents
+ * @param {Set<string>} [citedResearchersInSet] - researchers already cited by other approaches in this set
  * @returns {number} blended score in [4, 10], one decimal place
  */
-function scoreApproachWithDebate(heuristicScore, synthesisConfidence, approach = {}) {
+function scoreApproachWithDebate(heuristicScore, synthesisConfidence, approach = {}, citedResearchersInSet = new Set()) {
   const h = typeof heuristicScore === 'number' && !isNaN(heuristicScore) ? heuristicScore : 5;
   const llmScore = typeof synthesisConfidence === 'number' && !isNaN(synthesisConfidence) ? synthesisConfidence : 5;
   const blended = 0.6 * h + 0.4 * llmScore;
@@ -210,7 +214,13 @@ function scoreApproachWithDebate(heuristicScore, synthesisConfidence, approach =
   const sources = Array.isArray(approach.sourceAgents) ? approach.sourceAgents : [];
   const multiSourceBonus = sources.length > 1 ? 0.3 : 0;
 
-  return parseFloat(Math.min(10, Math.max(4, blended + citedBonus + multiSourceBonus)).toFixed(1));
+  // -0.2 if this approach cites a researcher already cited by another approach in the set
+  // Uses the same academic citation pattern as citedBonus to extract the surname
+  const researcherMatch = cited.match(/([A-Z][a-z]{1,})(?:\s+et\s+al\.?|,\s*\d{4}|\s+\(\d{4}\)|\s+\d{4}\b)/);
+  const researcherKey = researcherMatch ? researcherMatch[1].toLowerCase() : '';
+  const dupPenalty = researcherKey && citedResearchersInSet.has(researcherKey) ? -0.2 : 0;
+
+  return parseFloat(Math.min(10, Math.max(4, blended + citedBonus + multiSourceBonus + dupPenalty)).toFixed(1));
 }
 
 module.exports = {

@@ -83,9 +83,10 @@ function salvageTruncatedJson(text) {
  * @param {string} stageId - stage identifier used for context label
  * @param {object|undefined} stagePsychology - STAGE_PSYCHOLOGY[stageId] or undefined
  * @param {string} [userContextSnippet] - raw user context (≤500 chars) for prioritization hint
+ * @param {boolean} [neutralFrame] - true = communication coach mode (non-dating)
  * @returns {string} full prompt string ready for model.generateContent()
  */
-function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet = '') {
+function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet = '', neutralFrame = false) {
   const langInstr = getLanguageInstruction(userLang);
   const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;
   const isEnglish = userLang === 'en';
@@ -130,7 +131,7 @@ function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stageP
 You are the Debate Synthesizer for a relationship coaching app. ${perspectives.length} specialist agents — each grounded in different psychology research — have generated communication approaches for the same situation. Your job is to produce the BEST possible set of 4 approaches by leveraging all perspectives.
 
 PROCESS:
-1. COMPARE: For each tone (direct, playful, romantic_vulnerable/vulnerable, grounded_honest), examine the candidates from each agent.
+1. COMPARE: For each tone (direct, playful, ${neutralFrame ? 'vulnerable' : 'romantic_vulnerable'}, grounded_honest), examine the candidates from each agent.
 2. SELECT OR MERGE: For each tone, either:
    - Select one agent's phrase as-is (if clearly strongest)
    - Merge the best elements from 2+ agents into a stronger phrase
@@ -165,7 +166,7 @@ Respond ONLY with valid JSON:
 {"approaches":[
   {"id":"1","tone":"direct","phrase":"...","sourceAgents":["A"],"confidence":8,"citedResearch":"..."},
   {"id":"2","tone":"playful","phrase":"...","sourceAgents":["B","C"],"confidence":7,"citedResearch":"..."},
-  {"id":"3","tone":"romantic_vulnerable","phrase":"...","sourceAgents":["A","B"],"confidence":9,"citedResearch":"..."},
+  {"id":"3","tone":"${neutralFrame ? 'vulnerable' : 'romantic_vulnerable'}","phrase":"...","sourceAgents":["A","B"],"confidence":9,"citedResearch":"..."},
   {"id":"4","tone":"grounded_honest","phrase":"...","sourceAgents":["C"],"confidence":8,"citedResearch":"..."}
 ]}
 
@@ -182,14 +183,15 @@ ${langInstr}`;
  * @param {object} [stagePsychology] - STAGE_PSYCHOLOGY[stageId] from multi-universe
  * @param {object} [debateCfg] - override config
  * @param {string} [userContextSnippet] - raw user context for synthesis prioritization
+ * @param {boolean} [neutralFrame] - true = communication coach mode (non-dating)
  * @returns {{ approaches: Array<{id,tone,phrase,sourceAgents,confidence,citedResearch}> }}
  */
-async function synthesizeDebateApproaches(genAI, perspectives, situation, userLang, stageId, stagePsychology, debateCfg = {}, userContextSnippet = '') {
+async function synthesizeDebateApproaches(genAI, perspectives, situation, userLang, stageId, stagePsychology, debateCfg = {}, userContextSnippet = '', neutralFrame = false) {
   if (!perspectives || perspectives.length < 2) {
     throw new Error(`Need at least 2 perspectives, got ${perspectives?.length || 0}`);
   }
 
-  const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet);
+  const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet, neutralFrame);
 
   const modelName = debateCfg.synthesisModel || AI_MODEL_NAME;
   const maxTokens = debateCfg.synthesisMaxTokens || 6000;

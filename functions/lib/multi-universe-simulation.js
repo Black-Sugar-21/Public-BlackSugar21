@@ -1195,12 +1195,29 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
 
     logger.info(`[SituationInternal] Generated ${approaches.length} approaches`);
 
+    // Build set of cited researchers across all approaches for deduplication penalty
+    const citedResearchersInSet = new Set();
+    if (debateMetadata) {
+      const seen = {};
+      for (const app of approaches) {
+        const cited = typeof app.citedResearch === 'string' ? app.citedResearch : '';
+        const m = cited.match(/[A-Z][a-z]{1,}/);
+        if (m) {
+          const key = m[0].toLowerCase();
+          seen[key] = (seen[key] || 0) + 1;
+        }
+      }
+      for (const [key, count] of Object.entries(seen)) {
+        if (count > 1) citedResearchersInSet.add(key);
+      }
+    }
+
     // Score each approach — blend with debate confidence when available
     const approachesWithScores = approaches.map((app, idx) => {
       const heuristic = scoreApproach(app.phrase, situation, userLanguage);
       const confidence = debateMetadata?.synthesisConfidence?.[idx];
       const score = confidence != null
-        ? scoreApproachWithDebate(heuristic, confidence, app)
+        ? scoreApproachWithDebate(heuristic, confidence, app, citedResearchersInSet)
         : heuristic;
       logger.info(`[SituationInternal] Approach ${app.id} (${app.tone}): score=${score}${confidence != null ? ` (debate confidence=${confidence})` : ''}`);
       return {

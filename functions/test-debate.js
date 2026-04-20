@@ -249,6 +249,19 @@ ok(!promptNoCtx.includes("USER'S KEY CONTEXT"), 'buildSynthesisPrompt: no contex
 const promptNullCtx = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, null);
 ok(!promptNullCtx.includes("USER'S KEY CONTEXT"), 'buildSynthesisPrompt: no context block when snippet is null (safe fallback)');
 
+// neutralFrame tone consistency in synthesizer
+ok(debateSynthSrc.includes('neutralFrame'), 'synthesizer accepts neutralFrame param');
+ok(debateSynthSrc.includes("neutralFrame ? 'vulnerable' : 'romantic_vulnerable'"), 'synthesizer uses vulnerable tone when neutralFrame=true');
+
+const promptNeutral = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, '', true);
+ok(promptNeutral.includes('"vulnerable"') && !promptNeutral.includes('"romantic_vulnerable"'), 'neutralFrame=true: prompt uses "vulnerable" not "romantic_vulnerable"');
+
+const promptDating = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, '', false);
+ok(promptDating.includes('"romantic_vulnerable"'), 'neutralFrame=false: prompt uses "romantic_vulnerable"');
+
+const promptDefaultFrame = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact');
+ok(promptDefaultFrame.includes('"romantic_vulnerable"'), 'default (no neutralFrame arg): prompt uses "romantic_vulnerable" (safe default)');
+
 // winner analytics in orchestrator
 ok(debateOrchSrc.includes('winnerCounts'), 'orchestrator computes winner agent counts');
 ok(debateOrchSrc.includes('winnerAgents'), 'orchestrator includes winnerAgents in debateMetadata');
@@ -363,6 +376,24 @@ ok(scoreClampTest <= 10, `score with bonuses still clamped to 10 (got ${scoreCla
 // Backward compatible — no 3rd arg
 const scoreBackcompat = scoreApproachWithDebate(7, 7);
 ok(scoreBackcompat === 7.0, `backward compatible (no approach arg): ${scoreBackcompat}`);
+
+// citedResearch deduplication penalty (-0.2)
+const scoreNoDup = scoreApproachWithDebate(6, 6, { citedResearch: 'Applied Gottman 1994 repair attempts' }, new Set());
+const scoreDup = scoreApproachWithDebate(6, 6, { citedResearch: 'Applied Gottman 1994 repair attempts' }, new Set(['gottman']));
+ok(Math.abs(scoreNoDup - scoreDup - 0.2) < 0.01, `dup penalty is -0.2 (no-dup=${scoreNoDup}, dup=${scoreDup})`);
+
+// penalty is keyed on first capitalized surname (case-insensitive)
+const scoreDupAinsworth = scoreApproachWithDebate(6, 6, { citedResearch: 'Ainsworth 1978 Strange Situation' }, new Set(['ainsworth']));
+const scoreNoDupAinsworth = scoreApproachWithDebate(6, 6, { citedResearch: 'Ainsworth 1978 Strange Situation' }, new Set(['bowlby']));
+ok(scoreDupAinsworth < scoreNoDupAinsworth, 'dup penalty applied when researcher key matches set');
+
+// floor still holds with penalty applied
+const scoreFloor = scoreApproachWithDebate(4, 1, {}, new Set(['gottman']));
+ok(scoreFloor >= 4, `score floor still 4 with dup penalty (got ${scoreFloor})`);
+
+// backward compatible — no 4th arg (no penalty)
+const scoreNoPenaltyArg = scoreApproachWithDebate(6, 6, { citedResearch: 'Gottman 1994' });
+ok(scoreNoPenaltyArg > 6, 'no 4th arg → no penalty, citation bonus applies normally');
 
 // selectBestPerspective
 ok(typeof selectBestPerspective === 'function', 'selectBestPerspective is a function');
