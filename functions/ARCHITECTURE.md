@@ -232,9 +232,38 @@ aplicados vía `Math.max` para timeouts — el CF no puede bajar debajo de defau
 
 ---
 
+## Kill switches (assertAiFeatureEnabled)
+
+CFs con kill switch activo:
+
+- `dateCoachChat` → `assertAiFeatureEnabled('coach', lang)`
+- `simulateSituation` → `assertAiFeatureEnabled('situationSim', lang)`
+- `simulateMultiUniverse` → `assertAiFeatureEnabled('multiUniverse', userLanguage)`
+- `generateDateBlueprint`, `generateEventDatePlan`, `getPhotoCoachAnalysis` (ai-services.js)
+
+Para activar/desactivar: Remote Config > `ai_feature_flags.<key> = false`
+TTL: 5 minutos (cache RC)
+
+---
+
+## Patrones de seguridad aplicados
+
+1. **Firebase v2 secrets**: toda CF que usa `geminiApiKey` DEBE declarar `secrets:[geminiApiKey]`
+   y usar `geminiApiKey.value()` — `process.env.GEMINI_API_KEY` es `undefined` sin esta declaración
+2. **birthDate cross-platform**: usar `.toDate ? .toDate() : new Date(birthDate)`
+   (Android escribe Long, iOS escribe Firestore Timestamp)
+3. **`checkGeminiSafety`** antes de `.text()` en todos los `generateContent` críticos
+4. **`HttpsError` + `getLocalizedError`** en TODOS los `onCall` catch blocks
+5. **`autoModerateMessage` (onDocumentCreated)**: DEBE declarar `secrets:[geminiApiKey]` —
+   los triggers `onDocumentCreated` NO heredan secrets automáticamente.
+   Bug confirmado: sin esta declaración, `process.env.GEMINI_API_KEY` es `undefined` →
+   100% de mensajes evadían moderación IA en producción (fail-open silencioso).
+
+---
+
 ## Test Suite
 
-Todos los tests son estáticos (no requieren API). Total: **1 486 / 1 486 assertions**.
+Todos los tests son estáticos (no requieren API). Total: **2 175 / 2 175 assertions**.
 
 | Archivo | Assertions | Qué cubre |
 |---|---|---|
@@ -242,9 +271,10 @@ Todos los tests son estáticos (no requieren API). Total: **1 486 / 1 486 assert
 | test-multiverse-usercontext.js | 311 | userContext hash, neutralFrame derivation, buildStageContext 6 params, RAG injection, STAGE_PSYCHOLOGY/CITATIONS coverage (10 langs) |
 | test-multiverse-scenarios.js | 572 | 4 escenarios de caché, cache key format (`multiverse_match_` prefix), Section 9: 105 asserts de escenarios combinados |
 | test-situation-sim.js | 111 | Section 9: debate robustness en situación-sim, timeouts perspectiva+síntesis, userContext 8th arg, fallback tiers |
+| test-shared-helpers.js | 244 | lib/shared.js: AI models, getLocalizedError 14 keys×10 langs, normalizeLanguageCode, redactEmail/Token, extractSituationSnippet |
 | test-comprehensive-300.js | 333 | Edge cases, cultural, security, i18n, situación-sim general |
 | test-moderation-homoglyph.js | 47 | Homoglyph attack normalization (Cyrillic/Greek lookalikes, fullwidth, zero-width) |
-| test-internal-comprehensive.js | 91 | Edge cases, sim, cultura, security (20 infra failures pre-existentes fuera de alcance) |
+| test-internal-comprehensive.js | 65 | Edge cases, sim, cultura, security |
 | test-discovery-v2-parity.js | — | V2 discovery feed parity (64 asserts) |
 | test-multiverse.js | — | Multi-universe base |
 | test-e2e-smoke.js | — | End-to-end smoke (requiere live API) |
@@ -257,6 +287,19 @@ Todos los tests son estáticos (no requieren API). Total: **1 486 / 1 486 assert
 ---
 
 ## Patrones críticos de `situation-simulation.js`
+
+## simulateSituation — Pipeline de debate
+
+1. `classifySituation()` → tipo de situación (dating, conflict, etc.)
+2. `generateApproachesWithDebate()` — debate local con 3 perspectivas paralelas:
+   - `attachment_safety` | `social_dynamics` | `communication_repair`
+   - Cada perspectiva con timeout individual (12s) via `Promise.race`
+   - Síntesis con timeout (30s), `neutralFrame=false` (siempre dating)
+   - `situation` completa como 8º arg → `rankPrinciplesByContext` activo
+3. `enrichApproachesWithAlternatives()` → 6 variaciones + `followUpTips` por approach
+4. Fallback: si debate falla → single-agent `generateApproaches()`
+
+---
 
 ### `buildStageContext` — 6 parámetros (desde v9)
 
