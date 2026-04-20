@@ -537,7 +537,7 @@ Respond ONLY with JSON in this shape (all text in ${languageName}):
                 ? a.alternativePhrases
                     .filter(p => typeof p === 'string' && p.trim().length > 0)
                     .map(p => p.trim())
-                    .slice(0, 3)
+                    .slice(0, altCount)
                 : [],
               followUpTips: typeof a.followUpTips === 'string' ? a.followUpTips.trim() : '',
             });
@@ -937,7 +937,7 @@ exports.simulateSituation = onCall(
       tone: a.tone || '',
       phrase: a.phrase || '',
       alternativePhrases: Array.isArray(a.alternativePhrases)
-        ? a.alternativePhrases.filter(p => typeof p === 'string' && p.length > 0).slice(0, 3)
+        ? a.alternativePhrases.filter(p => typeof p === 'string' && p.length > 0).slice(0, config.alternativePhrasesCount || 6)
         : [],
       followUpTips: typeof a.followUpTips === 'string' ? a.followUpTips : '',
       matchReaction: a.matchReaction || '',
