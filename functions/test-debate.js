@@ -253,6 +253,35 @@ ok(scoreMid === 6.0, `balanced score (${scoreMid}) === 6.0`);
 const scoreDefault = scoreApproachWithDebate(6, undefined);
 ok(scoreDefault >= 4 && scoreDefault <= 10, `default confidence score (${scoreDefault}) in range`);
 
+// citedResearch bonus (+0.5 when approach names a researcher + year)
+const scoreNoCite = scoreApproachWithDebate(6, 6, { citedResearch: '' });
+const scoreWithCite = scoreApproachWithDebate(6, 6, { citedResearch: 'Applied Bowlby 1988 secure base concept' });
+ok(scoreWithCite > scoreNoCite, `cited research bonus: ${scoreWithCite} > ${scoreNoCite}`);
+ok(scoreWithCite - scoreNoCite === 0.5, `cited research bonus is exactly 0.5 (got ${scoreWithCite - scoreNoCite})`);
+
+// multiSource bonus (+0.3 when multiple agents contributed)
+const scoreSingle = scoreApproachWithDebate(6, 6, { sourceAgents: ['A'] });
+const scoreMulti = scoreApproachWithDebate(6, 6, { sourceAgents: ['A', 'B'] });
+ok(scoreMulti > scoreSingle, `multi-source bonus: ${scoreMulti} > ${scoreSingle}`);
+ok(Math.abs(scoreMulti - scoreSingle - 0.3) < 0.01, `multi-source bonus is ~0.3 (got ${scoreMulti - scoreSingle})`);
+
+// Both bonuses stack
+const scoreBoth = scoreApproachWithDebate(6, 6, {
+  citedResearch: 'Gottman 1994 — 5:1 ratio informs repair attempt framing',
+  sourceAgents: ['A', 'B', 'C'],
+});
+ok(Math.abs(scoreBoth - scoreNoCite - 0.8) < 0.01, `both bonuses stack to ~0.8 (got ${scoreBoth - scoreNoCite})`);
+
+// Clamp still holds with bonuses
+const scoreClampTest = scoreApproachWithDebate(10, 10, {
+  citedResearch: 'Johnson 2008 EFT', sourceAgents: ['A', 'B'],
+});
+ok(scoreClampTest <= 10, `score with bonuses still clamped to 10 (got ${scoreClampTest})`);
+
+// Backward compatible — no 3rd arg
+const scoreBackcompat = scoreApproachWithDebate(7, 7);
+ok(scoreBackcompat === 7.0, `backward compatible (no approach arg): ${scoreBackcompat}`);
+
 // selectBestPerspective
 ok(typeof selectBestPerspective === 'function', 'selectBestPerspective is a function');
 

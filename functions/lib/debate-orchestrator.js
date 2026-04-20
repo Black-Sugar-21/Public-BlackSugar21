@@ -150,17 +150,33 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
 }
 
 /**
- * Blend a heuristic approach score with the synthesizer's confidence rating.
+ * Blend a heuristic approach score with the synthesizer's confidence rating,
+ * adding bonuses for evidence-grounded and multi-source approaches.
+ *
+ * Bonuses (applied after blend, before clamp):
+ *   +0.5 — citedResearch names a specific researcher or year (evidence-grounded)
+ *   +0.3 — approach synthesized from multiple agent perspectives
+ *
  * Weight: 60% heuristic, 40% LLM confidence. Result clamped to [4, 10].
  * @param {number} heuristicScore - rule-based score from scoreApproach (4-10)
  * @param {number} synthesisConfidence - LLM confidence from synthesizer (1-10)
+ * @param {object} [approach] - approach object with optional citedResearch and sourceAgents
  * @returns {number} blended score in [4, 10], one decimal place
  */
-function scoreApproachWithDebate(heuristicScore, synthesisConfidence) {
+function scoreApproachWithDebate(heuristicScore, synthesisConfidence, approach = {}) {
   const h = typeof heuristicScore === 'number' && !isNaN(heuristicScore) ? heuristicScore : 5;
   const llmScore = typeof synthesisConfidence === 'number' && !isNaN(synthesisConfidence) ? synthesisConfidence : 5;
   const blended = 0.6 * h + 0.4 * llmScore;
-  return parseFloat(Math.min(10, Math.max(4, blended)).toFixed(1));
+
+  // +0.5 if citedResearch references a specific researcher (capital name) or year
+  const cited = typeof approach.citedResearch === 'string' ? approach.citedResearch : '';
+  const citedBonus = /[A-Z][a-z]+.*\d{4}|\d{4}.*[A-Z][a-z]+/.test(cited) ? 0.5 : 0;
+
+  // +0.3 if synthesized from multiple agent perspectives
+  const sources = Array.isArray(approach.sourceAgents) ? approach.sourceAgents : [];
+  const multiSourceBonus = sources.length > 1 ? 0.3 : 0;
+
+  return parseFloat(Math.min(10, Math.max(4, blended + citedBonus + multiSourceBonus)).toFixed(1));
 }
 
 module.exports = {

@@ -1197,7 +1197,7 @@ async function callSituationSimulationInternal(db, userId, matchId, situation, u
       const heuristic = scoreApproach(app.phrase, situation, userLanguage);
       const confidence = debateMetadata?.synthesisConfidence?.[idx];
       const score = confidence != null
-        ? scoreApproachWithDebate(heuristic, confidence)
+        ? scoreApproachWithDebate(heuristic, confidence, app)
         : heuristic;
       logger.info(`[SituationInternal] Approach ${app.id} (${app.tone}): score=${score}${confidence != null ? ` (debate confidence=${confidence})` : ''}`);
       return {
