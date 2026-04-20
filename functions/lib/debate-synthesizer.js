@@ -16,6 +16,7 @@ const {
   checkGeminiSafety,
   trackAICall,
 } = require('./shared');
+const { PERSPECTIVE_AGENTS } = require('./debate-psychology');
 
 /**
  * Attempt to recover a valid JSON object from a truncated Gemini response.
@@ -100,6 +101,25 @@ function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stageP
     ? `\nSTAGE PSYCHOLOGY (${stagePsychology.framework}):\n${stagePsychology.principles.map(p => `  - ${p}`).join('\n')}\n${stagePsychology.guidance}`
     : '';
 
+  // Compute dominant agent for this stage and build weighting note
+  let stageWeightNote = '';
+  if (stageId) {
+    let dominantId = null;
+    let dominantName = null;
+    let dominantScore = -1;
+    for (const [key, agent] of Object.entries(PERSPECTIVE_AGENTS)) {
+      const s = agent.stageStrength[stageId] || 0.5;
+      if (s > dominantScore) {
+        dominantScore = s;
+        dominantId = agent.id;
+        dominantName = agent.name;
+      }
+    }
+    if (dominantId) {
+      stageWeightNote = `\nSTAGE WEIGHT NOTE: For stage "${stageId}", empirical research gives Agent ${dominantId} (${dominantName}) the highest relevance weight (${dominantScore}). When two agents produce approaches of similar quality for this stage, prefer Agent ${dominantId}'s framing or integrate its psychological insight more prominently.\n`;
+    }
+  }
+
   return `${langInstr}
 
 You are the Debate Synthesizer for a relationship coaching app. ${perspectives.length} specialist agents — each grounded in different psychology research — have generated communication approaches for the same situation. Your job is to produce the BEST possible set of 4 approaches by leveraging all perspectives.
@@ -112,7 +132,7 @@ PROCESS:
    - Refine a phrase while preserving its core psychological insight
 3. JUSTIFY: Note which agent(s) influenced each final phrase via "sourceAgents".
 4. SCORE: Rate your confidence in each approach (1-10) based on the selection criteria below.
-
+${stageWeightNote}
 SELECTION CRITERIA (ordered by importance):
 1. SPECIFICITY — Does it reference the user's actual situation? Generic phrases score 1-3.
 2. PSYCHOLOGICAL GROUNDING — Is the underlying research principle sound and well-applied?

@@ -204,6 +204,34 @@ ok(debateSynthSrc.includes('Math.max(1, Math.min(10, a.confidence))'), 'clamps c
 ok(debateSynthSrc.includes('synthesizeDebateApproaches'), 'exports synthesizeDebateApproaches');
 ok(debateSynthSrc.includes('buildSynthesisPrompt'), 'exports buildSynthesisPrompt');
 
+// Stage-strength weighted synthesis note
+ok(debateSynthSrc.includes("require('./debate-psychology')"), 'synthesizer imports PERSPECTIVE_AGENTS from debate-psychology');
+ok(debateSynthSrc.includes('PERSPECTIVE_AGENTS'), 'synthesizer references PERSPECTIVE_AGENTS for stageStrength');
+ok(debateSynthSrc.includes('stageStrength'), 'synthesizer reads stageStrength per stage');
+ok(debateSynthSrc.includes('dominantId'), 'synthesizer computes dominant agent ID');
+ok(debateSynthSrc.includes('STAGE WEIGHT NOTE'), 'synthesizer injects STAGE WEIGHT NOTE into prompt');
+ok(debateSynthSrc.includes('stageWeightNote'), 'stageWeightNote variable used in prompt template');
+
+// Verify stageStrength values are sensible in debate-psychology
+const { buildSynthesisPrompt } = require('./lib/debate-synthesizer');
+const mockPerspective = { perspectiveId: 'A', agentName: 'Test', approaches: [
+  { tone: 'direct', phrase: 'test phrase one two three', citedResearch: '' },
+]};
+const promptIC = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined);
+ok(promptIC.includes('STAGE WEIGHT NOTE'), 'buildSynthesisPrompt injects weight note for initial_contact');
+ok(promptIC.includes('Agent B'), 'initial_contact dominant agent is B (social_dynamics, strength=1.0)');
+ok(promptIC.includes('1'), 'initial_contact weight 1.0 appears in note');
+
+const promptCC = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'conflict_challenge', undefined);
+ok(promptCC.includes('STAGE WEIGHT NOTE'), 'buildSynthesisPrompt injects weight note for conflict_challenge');
+ok(promptCC.includes('Agent C'), 'conflict_challenge dominant agent is C (communication_repair, strength=1.0)');
+
+const promptBC = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'building_connection', undefined);
+ok(promptBC.includes('Agent A'), 'building_connection dominant agent is A (attachment_safety, strength=1.0)');
+
+const promptNoStage = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', undefined, undefined);
+ok(!promptNoStage.includes('STAGE WEIGHT NOTE'), 'no stageId → no weight note injected (safe fallback)');
+
 // ═══════════════════════════════════════════════════════════════════
 // Section 4: debate-orchestrator.js — Pipeline & Fallback Logic
 // ═══════════════════════════════════════════════════════════════════
