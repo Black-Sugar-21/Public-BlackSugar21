@@ -1,50 +1,50 @@
 # BlackSugar21 — Backend Architecture (Firebase Cloud Functions)
 
-> Last updated: 2026-04-19
+> Last updated: 2026-04-20
 
 ## Overview
 
-Node.js Firebase Cloud Functions v2. 34 modules in `lib/`, re-exported via `index.js`.
-Total: ~26 800 lines, 101 exported Cloud Functions.
+Node.js Firebase Cloud Functions v2. 32 modules in `lib/`, re-exported via `index.js`.
+Total: ~26 900 lines, 101 exported Cloud Functions.
 
 ---
 
 ## Module Inventory (`lib/`)
 
-| File | Lines | Domain |
+| File | Lines | Responsabilidad |
 |---|---|---|
-| coach.js | 5 644 | AI dating coach chat, learning, quality eval |
-| ai-services.js | 3 293 | AI features: safety score, smart reply, blueprints, icebreakers |
-| multi-universe-simulation.js | 2 600 | 5-stage multi-universe relationship simulation |
-| simulation.js | 1 845 | Full relationship simulation (persona × persona) |
-| places-helpers.js | 1 725 | Google Places helpers, Instagram extraction, caching |
-| moderation.js | 1 598 | Content moderation: messages, photos, stories, RAG |
-| situation-simulation.js | 1 070 | Single-situation communication approach simulation |
-| shared.js | 1 009 | Shared utilities: language, embedding, AI tracking, rate limits |
-| events.js | 593 | Ticketmaster / Eventbrite / Meetup event search |
-| scheduled.js | 559 | Scheduled jobs: daily likes reset, deletions, match check |
-| users.js | 547 | User actions: unmatch, report, block, delete |
+| coach.js | 5 609 | AI dating coach chat, learning, quality eval |
+| ai-services.js | 3 269 | AI features: safety score, smart reply, blueprints, icebreakers |
+| multi-universe-simulation.js | 2 633 | 5-stage multi-universe relationship simulation (debate pipeline) |
+| simulation.js | 1 837 | Full relationship simulation (persona × persona) |
+| places-helpers.js | 1 679 | Google Places helpers, Instagram extraction, caching |
+| moderation.js | 1 568 | Content moderation: messages, photos, stories, RAG |
+| situation-simulation.js | 1 249 | Single-situation communication approach simulation (debate pipeline) |
+| shared.js | 986 | Shared utilities: language, embedding, AI tracking, rate limits, PII redaction |
+| scheduled.js | 553 | Scheduled jobs: daily likes reset, deletions, match check |
+| events.js | 545 | Ticketmaster / Eventbrite / Meetup event search |
+| users.js | 541 | User actions: unmatch, report, block, delete |
 | wingperson.js | 494 | Proactive match nudge agent |
-| notifications.js | 452 | FCM push notifications and pending notification queue |
-| coach-nudge-agent.js | 424 | Scheduled coach nudge push notifications |
-| safety.js | 420 | Date safety check-in: schedule, cancel, respond, process |
+| notifications.js | 441 | FCM push notifications and pending notification queue |
+| coach-nudge-agent.js | 404 | Scheduled coach nudge push notifications |
+| safety.js | 402 | Date safety check-in: schedule, cancel, respond, process |
 | discovery.js | 400 | Compatible profile discovery |
-| stories.js | 358 | Stories: create, view, delete, batch, cleanup |
-| coach-quality-monitor.js | 358 | Coach response quality monitoring and cross-language checks |
-| places.js | 352 | Date suggestions and place search CFs |
+| debate-psychology.js | 426 | Psychology research principles + DEBATE_CONFIG_DEFAULTS |
+| coach-quality-monitor.js | 348 | Coach response quality monitoring and cross-language checks |
+| stories.js | 347 | Stories: create, view, delete, batch, cleanup |
+| places.js | 345 | Date suggestions and place search CFs |
 | discovery-feed.js | 339 | Discovery feed endpoint |
-| debate-psychology.js | 334 | Psychology research principles for debate agents |
-| matches.js | 332 | Match creation trigger, message trigger |
-| batch.js | 269 | Batch photo URL fetching and compatibility scoring |
-| debate-synthesizer.js | 241 | Debate synthesizer: merges agent perspectives |
-| debate-agents.js | 241 | Debate agent prompt builder (3 psychology perspectives) |
+| matches.js | 327 | Match creation trigger, message trigger |
+| debate-synthesizer.js | 270 | Debate synthesizer: merges agent perspectives into final output |
+| batch.js | 263 | Batch photo URL fetching and compatibility scoring |
+| debate-agents.js | 290 | Debate agent prompt builder (3 psychology perspectives) |
 | geo.js | 230 | Geohash encode, Haversine distance, reverse geocode |
 | multiverse-places.js | 226 | Multi-universe places CF |
-| storage.js | 224 | Profile thumbnail generation (Cloud Storage trigger) |
+| debate-orchestrator.js | 243 | Debate orchestration: selects best perspective, backfills tones |
+| storage.js | 219 | Profile thumbnail generation (Cloud Storage trigger) |
 | testers.js | 189 | Beta tester signup and App Distribution enrollment |
-| debate-orchestrator.js | 169 | Debate orchestration: selects best perspective |
-| geohash.js | 124 | Geohash validation/repair triggers and scheduled update |
 | analytics.js | 123 | AI analytics dashboard and daily health check |
+| geohash.js | 120 | Geohash validation/repair triggers and scheduled update |
 
 ---
 
@@ -131,27 +131,179 @@ Total: ~26 800 lines, 101 exported Cloud Functions.
 | `places-helpers.js` | Google Places text search, Instagram handle resolution, place scoring |
 | `geo.js` | Haversine distance, geohash encode, reverse/forward geocode |
 | `shared.js` | Language instructions, embedding cache, AI tracking, rate limits, PII redaction |
-| `debate-agents.js` | Builds per-agent debate prompts |
-| `debate-synthesizer.js` | Synthesizes multi-agent debate results |
-| `debate-orchestrator.js` | Selects best perspective from debate |
-| `debate-psychology.js` | Psychology principles data (5 stages × 3 agents) |
+| `debate-agents.js` | Builds per-agent debate prompts (3 psychology perspectives) |
+| `debate-synthesizer.js` | Synthesizes multi-agent debate results into final approaches |
+| `debate-orchestrator.js` | Orchestrates debate pipeline for simulateMultiUniverse |
+| `debate-psychology.js` | Psychology principles data (5 stages × 3 agents) + DEBATE_CONFIG_DEFAULTS |
+
+---
+
+## Sistema de Debate Multi-Agente
+
+El pipeline de debate produce enfoques con fundamentación psicológica multi-perspectiva.
+Usado por `simulateMultiUniverse` (vía `debate-orchestrator.js`) y por `simulateSituation`
+(vía `generateApproachesWithDebate` local en `situation-simulation.js`).
+
+```
+Phase 1: 3 perspective agents in parallel [gemini-2.5-flash-lite]
+         perspectiveMaxTokens = 800, perspectiveTemperature = 0.9
+         Promise.race(agentCall, timeout(perspectiveTimeoutMs=12 000ms)) per agent
+         PERSPECTIVES:
+           - attachment_safety      (Bowlby, Johnson, Perel)
+           - social_dynamics        (Cialdini, Hofstede, Ting-Toomey)
+           - communication_repair   (Gottman, Rosenberg, Byron)
+         8th arg: userContext → activates rankPrinciplesByContext for reordering
+                  principles by relevance before building the agent prompt
+
+Phase 2: Synthesizer [gemini-2.5-flash]
+         synthesisMaxTokens = 6 000, synthesisTemperature = 0.7
+         Promise.race(synthesisCall, timeout(synthesisTimeoutMs=45 000ms))
+         neutralFrame-aware: derives dating vs communication coach role priming
+         Filters invalid tones post-synthesis (backfills with neutralFrame-aware defaults)
+
+Phase 3: Scoring (scoreApproachWithDebate)
+         60% heuristic + 40% LLM confidence
+         +0.5 academic citation bonus
+         +0.3 multi-source bonus (≥2 distinct researchers)
+         -0.2 duplicate researcher penalty
+         citedResearchersInSet uses strict academic regex:
+           /([A-Z][a-z]{1,})(?:\s+et\s+al\.?|,\s*\d{4}|\s+\(\d{4}\)|\s+\d{4}\b)/
+         (avoids false positives capturing "The", "This", "He")
+
+Fallback tiers:
+  Tier 1 — 1 perspective fails → synthesize with remaining 2
+  Tier 2 — 2+ perspectives fail → single-agent generation path
+  Tier 3 — synthesis fails → return best perspective by stageStrength score
+```
+
+### `generateApproachesWithDebate` en `situation-simulation.js`
+
+`situation-simulation.js` tiene su **propia** implementación de este pipeline (no usa
+`debate-orchestrator.js`). Diferencias respecto al orquestador de multi-universe:
+
+- Los mismos 3 tiers de fallback
+- `neutralFrame` siempre `false` (contexto de citas siempre)
+- `synthesisTimeoutMs` = 30 000ms (vs 45 000ms en multi-universe)
+- `synthesisMaxTokens` = 3 000 (bump desde 2 000 en commit `62ab498`)
+- `situation` pasa como 8º arg a `generatePerspectiveApproaches` (para que `rankPrinciplesByContext` funcione)
+
+---
+
+## Multi-Universe Simulation — 4 Escenarios de Caché
+
+`neutralFrame` se deriva **server-side**: `isSoloMode && !!userContext`. Nunca viene del cliente.
+
+`CACHE_SCHEMA_VERSION = 14` (historial: v3→v4 context-adaptive → v5 fallback snippet →
+v6 neutralFrame → v9 RAG enrichment → v12 debate bonuses → v13 tone array →
+v14 tones post-filter + cache key prefix `multiverse_match_`)
+
+| Escenario | isSoloMode | userContext | neutralFrame | Cache key |
+|---|---|---|---|---|
+| 1 | false (match) | presente | false | `multiverse_match_{matchId}_{lang}_{hash8}[_d1]` |
+| 2 | false (match) | ausente | false | `multiverse_match_{matchId}_{lang}[_d1]` |
+| 3 | true (solo) | presente | **true** | `multiverse_solo_{lang}_{hash8}[_d1]` |
+| 4 | true (solo) | ausente | false | `multiverse_solo_{lang}[_d1]` |
+
+Sufijo `_d1` se agrega cuando `cfg.debate.enabled = true` (separa slot de caché debate vs no-debate).
+
+`hash8` = primeros 8 hex chars del SHA-256 del `userContext` en minúsculas. El cliente
+genera el mismo hash byte-a-byte para consultar caché sin llamar al servidor.
+
+---
+
+## Remote Config — `simulation_config.debate`
+
+Valores leídos de Remote Config y fusionados con `DEBATE_CONFIG_DEFAULTS` (floor values
+aplicados vía `Math.max` para timeouts — el CF no puede bajar debajo de defaults).
+
+| Campo | Default | Descripción |
+|---|---|---|
+| `enabled` | `false` | Kill switch del pipeline de debate |
+| `minPerspectives` | `2` | Perspectivas mínimas para continuar a síntesis |
+| `perspectiveModel` | `gemini-2.5-flash-lite` | Modelo de agentes de perspectiva |
+| `perspectiveMaxTokens` | `800` | Max output tokens por perspectiva |
+| `perspectiveTemperature` | `0.9` | Temperatura por perspectiva |
+| `perspectiveTimeoutMs` | `12 000` | Timeout por perspectiva (ms) — floor |
+| `synthesisModel` | `gemini-2.5-flash` | Modelo del sintetizador |
+| `synthesisMaxTokens` | `6 000` | Max output tokens del sintetizador |
+| `synthesisTemperature` | `0.7` | Temperatura del sintetizador |
+| `synthesisTimeoutMs` | `45 000` | Timeout síntesis (ms) — floor |
+| `parallelStages` | `true` | Ejecutar los 5 stages del multi-universe en paralelo |
 
 ---
 
 ## Test Suite
 
-| File | Coverage | Last result |
-|---|---|---|
-| test-comprehensive-300.js | Edge cases, situation sim, cultural, security | 333 / 333 pass |
-| test-moderation-homoglyph.js | Homoglyph attack normalization | ALL PASSED |
-| test-multiverse-scenarios.js | Multi-universe scenarios | 467 / 467 pass |
-| test-multiverse-usercontext.js | Multi-universe user context | 311 / 311 pass |
-| test-internal-comprehensive.js | Edge cases, sim, culture, security, i18n | 71 / 91 pass (20 i18n infra failures — pre-existing) |
-| test-debate.js | Debate system assertions | ~380 assertions |
-| test-situation-sim.js | Situation simulation | pass |
-| test-e2e-smoke.js | End-to-end smoke (network) | requires live API |
-| test-live-lang-probe.js | Language probe (network) | requires live API |
-| test-post-deploy-350.js | Post-deploy (network) | requires live API |
-| test-multiverse-places-*.js | Multiverse places (network) | requires live API |
+Todos los tests son estáticos (no requieren API). Total: **1 486 / 1 486 assertions**.
 
-> Note: tests marked "requires live API" make real Gemini/Places API calls and will fail without credentials.
+| Archivo | Assertions | Qué cubre |
+|---|---|---|
+| test-debate.js | 492 | Pipeline debate completo: perspectivas, síntesis, scoring, fallbacks, neutralFrame, tone filters, citedResearchers regex, cache schema v14 |
+| test-multiverse-usercontext.js | 311 | userContext hash, neutralFrame derivation, buildStageContext 6 params, RAG injection, STAGE_PSYCHOLOGY/CITATIONS coverage (10 langs) |
+| test-multiverse-scenarios.js | 572 | 4 escenarios de caché, cache key format (`multiverse_match_` prefix), Section 9: 105 asserts de escenarios combinados |
+| test-situation-sim.js | 111 | Section 9: debate robustness en situación-sim, timeouts perspectiva+síntesis, userContext 8th arg, fallback tiers |
+| test-comprehensive-300.js | 333 | Edge cases, cultural, security, i18n, situación-sim general |
+| test-moderation-homoglyph.js | 47 | Homoglyph attack normalization (Cyrillic/Greek lookalikes, fullwidth, zero-width) |
+| test-internal-comprehensive.js | 91 | Edge cases, sim, cultura, security (20 infra failures pre-existentes fuera de alcance) |
+| test-discovery-v2-parity.js | — | V2 discovery feed parity (64 asserts) |
+| test-multiverse.js | — | Multi-universe base |
+| test-e2e-smoke.js | — | End-to-end smoke (requiere live API) |
+| test-live-lang-probe.js | — | Language probe (requiere live API) |
+| test-post-deploy-350.js | — | Post-deploy (requiere live API) |
+| test-multiverse-places-*.js | — | Multiverse places (requiere live API) |
+
+> Tests marcados sin conteo de assertions requieren credenciales Gemini/Places en vivo.
+
+---
+
+## Patrones críticos de `situation-simulation.js`
+
+### `buildStageContext` — 6 parámetros (desde v9)
+
+```js
+buildStageContext(stageId, stageName, situation, userContext, retrievedKnowledge, neutralFrame)
+```
+
+El label del bloque `userContext` en el prompt es `"BACKGROUND CONTEXT (do NOT echo in phrases)"`.
+Incluye `MESSAGE DIRECTION` hint con ejemplos WRONG ❌ / RIGHT ✅ para evitar que el LLM
+genere frases dirigidas al coach en lugar del match. (`debate-agents.js` tiene OVERRIDE rule
+adicional que refuerza esto cuando `neutralFrame=true`.)
+
+### Flujo de debate en `situation-simulation.js`
+
+```
+simulateSituation CF
+  └─ generateApproachesWithDebate(situation, cfg, ...)  ← función local, no debate-orchestrator
+       ├─ Phase 1: Promise.race × 3 (timeout 12 000ms each)
+       ├─ Phase 2: Promise.race (timeout 30 000ms)
+       │   synthesisMaxTokens = 3 000
+       └─ Fallback Tier 1/2/3 (mismo patrón que debate-orchestrator)
+```
+
+### Patrones de `debate-orchestrator.js`
+
+```
+simulateMultiUniverse CF
+  └─ generateApproachesWithDebate (via debate-orchestrator)
+       ├─ Phase 1: Promise.race × 3 (timeout 12 000ms each)
+       │   8th arg userContext → rankPrinciplesByContext
+       ├─ Phase 2: Promise.race (timeout 45 000ms)
+       │   JSON template tone es neutralFrame-aware
+       │   Post-synthesis: filtra tones inválidos, backfill respetando neutralFrame
+       └─ Fallback Tier 1/2/3
+```
+
+---
+
+## Psychology RAG Enrichment
+
+`retrieveStageKnowledge(stageId, userContext, apiKey)` consulta la colección Firestore
+`coachKnowledge` por stage usando búsqueda vectorial COSINE. Resultados inyectados como
+`ADDITIONAL RESEARCH` en el prompt Gemini junto a `STAGE_PSYCHOLOGY`.
+
+- 21 RAG chunks indexados (EN) en `psychology-stages.json`
+- Colecciones adicionales: `psychology-research.json` (EN general), `psychology-research-es.json` (ES), `psychology-research-multilang.json` (multi-idioma)
+- Script de re-indexado: `scripts/index-psychology-knowledge.js`
+- `buildStageContext` recibe `retrievedKnowledge` como 5º parámetro
+
+Ver `SKILL.md` del skill `psychology-updater` para workflow de actualización de conocimiento.
