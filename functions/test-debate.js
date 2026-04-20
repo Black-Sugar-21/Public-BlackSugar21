@@ -351,9 +351,60 @@ ok(debateOrchSrc.includes('generatePerspectiveApproaches(genAI, pId, situation, 
   'orchestrator forwards neutralFrame to perspective agents');
 
 // ═══════════════════════════════════════════════════════════════════
-// Section 7: Cross-cutting concerns
+// Section 7: rankPrinciplesByContext — context-adaptive ranking
 // ═══════════════════════════════════════════════════════════════════
-console.log('── Section 7: Cross-cutting ──');
+console.log('── Section 7: rankPrinciplesByContext ──');
+
+const { rankPrinciplesByContext } = require('./lib/debate-agents');
+
+const mockPrinciples = [
+  { principle: 'Secure attachment forms when partners offer safe haven during distress', researcher: 'Bowlby, 1988' },
+  { principle: 'Dopamine reward circuits activate during novelty and curiosity in early contact', researcher: 'Yang et al., 2024' },
+  { principle: 'Ghosting causes more distress than explicit rejection due to ambiguous closure', researcher: 'LeFebvre, 2018' },
+  { principle: 'Face-saving in conflict preserves dignity for both parties', researcher: 'Ting-Toomey, 1988' },
+];
+
+// Empty context → original order preserved
+const noCtxResult = rankPrinciplesByContext(mockPrinciples, '');
+ok(noCtxResult === mockPrinciples, 'empty context returns original array reference');
+
+// Null context → original order
+const nullCtxResult = rankPrinciplesByContext(mockPrinciples, null);
+ok(nullCtxResult === mockPrinciples, 'null context returns original array reference');
+
+// Single principle → no reorder needed
+const singleResult = rankPrinciplesByContext([mockPrinciples[0]], 'attachment distress');
+ok(singleResult.length === 1, 'single principle array returned as-is');
+
+// Context about ghosting → LeFebvre floats to top
+const ghostingCtx = 'He ghosted me 3 days ago after asking me out, no message, just stopped answering';
+const ghostingResult = rankPrinciplesByContext(mockPrinciples, ghostingCtx);
+ok(ghostingResult[0].researcher.includes('LeFebvre'), 'ghosting context surfaces LeFebvre first');
+ok(ghostingResult.length === mockPrinciples.length, 'all principles preserved after ranking');
+
+// Context about attachment/distress → Bowlby floats to top
+const attachmentCtx = 'I feel anxious when he does not respond, I need secure attachment signals';
+const attachmentResult = rankPrinciplesByContext(mockPrinciples, attachmentCtx);
+ok(attachmentResult[0].researcher.includes('Bowlby'), 'attachment context surfaces Bowlby first');
+
+// Context with no matching keywords → original order (all scores 0)
+const noMatchCtx = 'went shopping today bought coffee near park';
+const noMatchResult = rankPrinciplesByContext(mockPrinciples, noMatchCtx);
+ok(noMatchResult === mockPrinciples, 'zero-match context returns original array reference');
+
+// Orchestrator passes userContextSnippet to perspective agents
+ok(debateOrchSrc.includes('userContextSnippet'), 'orchestrator has userContextSnippet in signature');
+ok(debateOrchSrc.includes('generatePerspectiveApproaches(genAI, pId, situation, userLang, stageId, neutralFrame, debateCfg, userContextSnippet)'),
+  'orchestrator forwards userContextSnippet to generatePerspectiveApproaches');
+
+// debate-agents.js exports rankPrinciplesByContext
+ok(debateAgentsSrc.includes('rankPrinciplesByContext'), 'debate-agents exports rankPrinciplesByContext');
+ok(debateAgentsSrc.includes('STOPWORDS'), 'debate-agents defines STOPWORDS set');
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 8: Cross-cutting concerns
+// ═══════════════════════════════════════════════════════════════════
+console.log('── Section 8: Cross-cutting ──');
 
 // All researchers from STAGE_PSYCHOLOGY should appear in at least 1 perspective
 const allPrinciples = JSON.stringify(STAGE_PERSPECTIVE_PRINCIPLES);
@@ -390,7 +441,7 @@ ok(!debateSynthSrc.includes("require('./debate-agents')"), 'debate-synthesizer d
 ok(!debateSynthSrc.includes("require('./debate-orchestrator')"), 'debate-synthesizer does not import orchestrator');
 
 // ═══════════════════════════════════════════════════════════════════
-console.log('── Section 8: salvageTruncatedJson + placeholder filter ──');
+console.log('── Section 9: salvageTruncatedJson + placeholder filter ──');
 // ═══════════════════════════════════════════════════════════════════
 
 const { salvageTruncatedJson } = require('./lib/debate-synthesizer');
@@ -434,9 +485,9 @@ ok(debateAgentsSrc.includes('substring(0, 1500)'), 'debate-agents truncates long
 ok(debatePsychSrc.includes('perspectiveTimeoutMs: 12000'), 'perspective timeout increased to 12s');
 
 // ═══════════════════════════════════════════════════════════════════
-// Section 9: Audit fixes — ko/it lang enforcement, zh langName, throw isolation
+// Section 10: Audit fixes — ko/it lang enforcement, zh langName, throw isolation
 // ═══════════════════════════════════════════════════════════════════
-console.log('── Section 9: Audit fixes (ko/it/zh/throw-isolation) ──');
+console.log('── Section 10: Audit fixes (ko/it/zh/throw-isolation) ──');
 
 const sharedSrc = fs.readFileSync(path.join(__dirname, 'lib/shared.js'), 'utf-8');
 
@@ -469,9 +520,9 @@ ok(multiUniverseSrc.includes('Debate threw unexpectedly'), 'multi-universe: deba
 ok(/try\s*\{\s*const debateResult/.test(multiUniverseSrc), 'multi-universe: debate call wrapped in try/catch');
 
 // ═══════════════════════════════════════════════════════════════════
-// Section 10: Cultural adaptation — localized tones, roleContext, cultural notes
+// Section 11: Cultural adaptation — localized tones, roleContext, cultural notes
 // ═══════════════════════════════════════════════════════════════════
-console.log('── Section 10: Cultural adaptation (AR/JA/KO tones + roleContext) ──');
+console.log('── Section 11: Cultural adaptation (AR/JA/KO tones + roleContext) ──');
 
 // getLocalizedToneDescriptions function exists
 ok(debateAgentsSrc.includes('getLocalizedToneDescriptions'), 'debate-agents has getLocalizedToneDescriptions function');

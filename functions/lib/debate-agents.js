@@ -23,6 +23,49 @@ const {
 const TONES_DATING = ['direct', 'playful', 'romantic_vulnerable', 'grounded_honest'];
 const TONES_NEUTRAL = ['direct', 'playful', 'vulnerable', 'grounded_honest'];
 
+const STOPWORDS = new Set([
+  'a','an','the','is','are','was','were','i','you','he','she','it','we','they',
+  'to','of','in','and','or','but','for','on','at','with','as','my','his','her',
+  'our','your','their','this','that','these','those','been','have','has','had',
+  'will','would','could','should','do','did','not','no','be','by','from','up',
+  'out','if','about','so','me','him','us','them','very','just','what','how',
+  'when','que','se','de','en','la','el','los','las','una','un','por','con',
+]);
+
+/**
+ * Reorder principles by relevance to userContext keywords.
+ * Principles matching more context words float to the top, ensuring Gemini
+ * reads the most situationally relevant research first. No truncation —
+ * all principles are kept, just reordered.
+ * @param {Array<{principle:string, researcher:string}>} principles
+ * @param {string} userContext - raw user context snippet (may be empty)
+ * @returns {Array} same array reordered, or original if no signal
+ */
+function rankPrinciplesByContext(principles, userContext) {
+  if (!userContext || !userContext.trim() || principles.length <= 1) return principles;
+
+  const words = userContext.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !STOPWORDS.has(w));
+
+  if (words.length === 0) return principles;
+
+  const scored = principles.map(p => {
+    const haystack = (p.principle + ' ' + p.researcher).toLowerCase();
+    const score = words.reduce((acc, w) => {
+      // Stem long words (strip -ed/-ing/-s variants) so "ghosted" matches "ghosting"
+      const stem = w.length > 6 ? w.slice(0, -2) : w;
+      return acc + (haystack.includes(stem) ? 1 : 0);
+    }, 0);
+    return { p, score };
+  });
+
+  if (scored.every(s => s.score === 0)) return principles;
+
+  return scored.sort((a, b) => b.score - a.score).map(s => s.p);
+}
+
 function getLocalizedToneDescriptions(userLang) {
   const base = {
     direct: 'clear, confident, unambiguous',
@@ -150,9 +193,10 @@ ${langInstr}`;
  * @param {string} stageId - one of 5 stage IDs
  * @param {boolean} neutralFrame - non-dating context
  * @param {object} [debateCfg] - override config
+ * @param {string} [userContext] - raw user context for principle relevance ranking
  * @returns {{ perspectiveId: string, approaches: Array<{id,tone,phrase,citedResearch}> }}
  */
-async function generatePerspectiveApproaches(genAI, perspectiveId, situation, userLang, stageId, neutralFrame, debateCfg = {}) {
+async function generatePerspectiveApproaches(genAI, perspectiveId, situation, userLang, stageId, neutralFrame, debateCfg = {}, userContext = '') {
   const agent = PERSPECTIVE_AGENTS[perspectiveId];
   if (!agent) throw new Error(`Unknown perspective: ${perspectiveId}`);
 
@@ -161,10 +205,11 @@ async function generatePerspectiveApproaches(genAI, perspectiveId, situation, us
   }
   const safeSituation = situation.substring(0, 1500);
 
-  const principles = (STAGE_PERSPECTIVE_PRINCIPLES[stageId] || {})[perspectiveId] || [];
-  if (principles.length === 0) {
+  const rawPrinciples = (STAGE_PERSPECTIVE_PRINCIPLES[stageId] || {})[perspectiveId] || [];
+  if (rawPrinciples.length === 0) {
     logger.warn(`[Debate-Agent-${agent.id}] No principles for stage ${stageId}`);
   }
+  const principles = rankPrinciplesByContext(rawPrinciples, userContext);
 
   const prompt = buildPerspectivePrompt(agent, principles, safeSituation, userLang, stageId, neutralFrame);
 
@@ -231,6 +276,7 @@ async function generatePerspectiveApproaches(genAI, perspectiveId, situation, us
 module.exports = {
   generatePerspectiveApproaches,
   buildPerspectivePrompt,
+  rankPrinciplesByContext,
   TONES_DATING,
   TONES_NEUTRAL,
 };

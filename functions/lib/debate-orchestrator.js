@@ -64,7 +64,7 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
   const perspectivePromises = perspectiveIds.map(pId => {
     let timer;
     return Promise.race([
-      generatePerspectiveApproaches(genAI, pId, situation, userLang, stageId, neutralFrame, debateCfg),
+      generatePerspectiveApproaches(genAI, pId, situation, userLang, stageId, neutralFrame, debateCfg, userContextSnippet),
       new Promise((_, rej) => {
         timer = setTimeout(() => rej(new Error('perspective timeout')), debateCfg.perspectiveTimeoutMs);
       }),
