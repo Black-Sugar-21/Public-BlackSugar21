@@ -24,12 +24,17 @@ const TONES_DATING = ['direct', 'playful', 'romantic_vulnerable', 'grounded_hone
 const TONES_NEUTRAL = ['direct', 'playful', 'vulnerable', 'grounded_honest'];
 
 const STOPWORDS = new Set([
+  // English
   'a','an','the','is','are','was','were','i','you','he','she','it','we','they',
   'to','of','in','and','or','but','for','on','at','with','as','my','his','her',
   'our','your','their','this','that','these','those','been','have','has','had',
   'will','would','could','should','do','did','not','no','be','by','from','up',
   'out','if','about','so','me','him','us','them','very','just','what','how',
-  'when','que','se','de','en','la','el','los','las','una','un','por','con',
+  'when','also','been','more','than','then','some',
+  // Spanish
+  'que','se','de','en','la','el','los','las','una','un','por','con',
+  'para','pero','como','más','esta','esto','estos','estas','tiene','tienen',
+  'están','está','son','fue','era','hay','ser','muy','todo','todos',
 ]);
 
 /**
@@ -42,12 +47,13 @@ const STOPWORDS = new Set([
  * @returns {Array} same array reordered, or original if no signal
  */
 function rankPrinciplesByContext(principles, userContext) {
-  if (!userContext || !userContext.trim() || principles.length <= 1) return principles;
+  if (!userContext || typeof userContext !== 'string' || !userContext.trim() || principles.length <= 1) return principles;
 
   const words = userContext.toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 3 && !STOPWORDS.has(w));
+    .filter(w => w.length > 3 && !STOPWORDS.has(w))
+    .slice(0, 50);
 
   if (words.length === 0) return principles;
 
