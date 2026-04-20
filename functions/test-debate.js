@@ -232,6 +232,28 @@ ok(promptBC.includes('Agent A'), 'building_connection dominant agent is A (attac
 const promptNoStage = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', undefined, undefined);
 ok(!promptNoStage.includes('STAGE WEIGHT NOTE'), 'no stageId → no weight note injected (safe fallback)');
 
+// userContextSnippet injection in synthesizer
+ok(debateSynthSrc.includes('userContextSnippet'), 'synthesizer accepts userContextSnippet param');
+ok(debateSynthSrc.includes("USER'S KEY CONTEXT"), 'synthesizer injects USER\'S KEY CONTEXT block when snippet present');
+ok(debateSynthSrc.includes('userCtxBlock'), 'userCtxBlock variable used in prompt template');
+ok(debateSynthSrc.includes('substring(0, 300)'), 'synthesizer caps context at 300 chars');
+
+const promptWithCtx = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, 'she ghosted me for 3 days');
+ok(promptWithCtx.includes("USER'S KEY CONTEXT"), 'buildSynthesisPrompt: context block present when snippet provided');
+ok(promptWithCtx.includes('she ghosted me for 3 days'), 'buildSynthesisPrompt: snippet appears verbatim in prompt');
+ok(promptWithCtx.includes('score 1-3 on SPECIFICITY'), 'synthesizer penalizes approaches ignoring user context');
+
+const promptNoCtx = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, '');
+ok(!promptNoCtx.includes("USER'S KEY CONTEXT"), 'buildSynthesisPrompt: no context block when snippet is empty');
+
+const promptNullCtx = buildSynthesisPrompt([mockPerspective, mockPerspective], 'test situation', 'en', 'initial_contact', undefined, null);
+ok(!promptNullCtx.includes("USER'S KEY CONTEXT"), 'buildSynthesisPrompt: no context block when snippet is null (safe fallback)');
+
+// winner analytics in orchestrator
+ok(debateOrchSrc.includes('winnerCounts'), 'orchestrator computes winner agent counts');
+ok(debateOrchSrc.includes('winnerAgents'), 'orchestrator includes winnerAgents in debateMetadata');
+ok(debateOrchSrc.includes('[Debate] Stage'), 'orchestrator logs winner agents info');
+
 // ═══════════════════════════════════════════════════════════════════
 // Section 4: debate-orchestrator.js — Pipeline & Fallback Logic
 // ═══════════════════════════════════════════════════════════════════

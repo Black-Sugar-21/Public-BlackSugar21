@@ -89,7 +89,7 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
   let synthTimer;
   try {
     const synthesis = await Promise.race([
-      synthesizeDebateApproaches(genAI, validPerspectives, situation, userLang, stageId, stagePsychology, debateCfg),
+      synthesizeDebateApproaches(genAI, validPerspectives, situation, userLang, stageId, stagePsychology, debateCfg, userContextSnippet),
       new Promise((_, rej) => {
         synthTimer = setTimeout(() => rej(new Error('synthesis timeout')), debateCfg.synthesisTimeoutMs);
       }),
@@ -116,12 +116,24 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
       }
     }
 
+    const finalFour = finalApproaches.slice(0, 4);
+
+    // Log winner analytics — which agents influenced final output (calibration data)
+    const winnerCounts = {};
+    for (const a of finalFour) {
+      for (const src of (Array.isArray(a.sourceAgents) ? a.sourceAgents : [])) {
+        winnerCounts[src] = (winnerCounts[src] || 0) + 1;
+      }
+    }
+    logger.info(`[Debate] Stage ${stageId}: winner agents ${JSON.stringify(winnerCounts)}`);
+
     return {
-      approaches: finalApproaches.slice(0, 4),
+      approaches: finalFour,
       debateMetadata: {
         perspectivesUsed: validPerspectives.length,
         perspectiveIds: validPerspectives.map(p => p.perspectiveId),
-        synthesisConfidence: finalApproaches.slice(0, 4).map(a => a.confidence || 5),
+        synthesisConfidence: finalFour.map(a => a.confidence || 5),
+        winnerAgents: winnerCounts,
         partial: finalApproaches.length < synthesis.approaches.length ? undefined : (synthesis.approaches.length < 4),
       },
     };

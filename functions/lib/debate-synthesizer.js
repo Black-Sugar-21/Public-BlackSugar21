@@ -82,9 +82,10 @@ function salvageTruncatedJson(text) {
  * @param {string} userLang - 2-letter language code for final output language directive
  * @param {string} stageId - stage identifier used for context label
  * @param {object|undefined} stagePsychology - STAGE_PSYCHOLOGY[stageId] or undefined
+ * @param {string} [userContextSnippet] - raw user context (≤500 chars) for prioritization hint
  * @returns {string} full prompt string ready for model.generateContent()
  */
-function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology) {
+function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet = '') {
   const langInstr = getLanguageInstruction(userLang);
   const langName = { en:'English', es:'Spanish', ja:'Japanese (日本語)', zh:'Simplified Chinese (简体中文)', pt:'Portuguese', ar:'Arabic', de:'German', fr:'French', it:'Italian', ko:'Korean (한국어)' }[userLang] || userLang;
   const isEnglish = userLang === 'en';
@@ -99,6 +100,10 @@ function buildSynthesisPrompt(perspectives, situation, userLang, stageId, stageP
 
   const psychBlock = stagePsychology
     ? `\nSTAGE PSYCHOLOGY (${stagePsychology.framework}):\n${stagePsychology.principles.map(p => `  - ${p}`).join('\n')}\n${stagePsychology.guidance}`
+    : '';
+
+  const userCtxBlock = userContextSnippet && typeof userContextSnippet === 'string' && userContextSnippet.trim()
+    ? `\nUSER'S KEY CONTEXT: "${userContextSnippet.trim().substring(0, 300)}" — prioritize approaches that directly and specifically address this context. Approaches that ignore it score 1-3 on SPECIFICITY.\n`
     : '';
 
   // Compute dominant agent for this stage and build weighting note
@@ -146,7 +151,7 @@ ${situation}
 """
 ${psychBlock}
 
-AGENT PERSPECTIVES (may be in English — translate to ${langName} in your output):
+${userCtxBlock}AGENT PERSPECTIVES (may be in English — translate to ${langName} in your output):
 ${perspectiveBlocks}
 ${translateNote}
 
@@ -176,14 +181,15 @@ ${langInstr}`;
  * @param {string} stageId - stage identifier
  * @param {object} [stagePsychology] - STAGE_PSYCHOLOGY[stageId] from multi-universe
  * @param {object} [debateCfg] - override config
+ * @param {string} [userContextSnippet] - raw user context for synthesis prioritization
  * @returns {{ approaches: Array<{id,tone,phrase,sourceAgents,confidence,citedResearch}> }}
  */
-async function synthesizeDebateApproaches(genAI, perspectives, situation, userLang, stageId, stagePsychology, debateCfg = {}) {
+async function synthesizeDebateApproaches(genAI, perspectives, situation, userLang, stageId, stagePsychology, debateCfg = {}, userContextSnippet = '') {
   if (!perspectives || perspectives.length < 2) {
     throw new Error(`Need at least 2 perspectives, got ${perspectives?.length || 0}`);
   }
 
-  const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology);
+  const prompt = buildSynthesisPrompt(perspectives, situation, userLang, stageId, stagePsychology, userContextSnippet);
 
   const modelName = debateCfg.synthesisModel || AI_MODEL_NAME;
   const maxTokens = debateCfg.synthesisMaxTokens || 6000;
