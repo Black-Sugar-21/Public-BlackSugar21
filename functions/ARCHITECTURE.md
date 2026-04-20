@@ -193,9 +193,11 @@ Fallback tiers:
 
 `neutralFrame` se deriva **server-side**: `isSoloMode && !!userContext`. Nunca viene del cliente.
 
-`CACHE_SCHEMA_VERSION = 14` (historial: v3→v4 context-adaptive → v5 fallback snippet →
+`CACHE_SCHEMA_VERSION = 15` (historial: v3→v4 context-adaptive → v5 fallback snippet →
 v6 neutralFrame → v9 RAG enrichment → v12 debate bonuses → v13 tone array →
-v14 tones post-filter + cache key prefix `multiverse_match_`)
+v14 tones post-filter + cache key prefix `multiverse_match_` →
+v15 +10 principios debate 2022-2025: Métellus, Hu/Zhu/Zhang, Flicker, Itzchakov/Reis,
+Lin, Randall, Spengler/Wiebe/Wittenborn, Zahl-Olsen, Mikulincer & Shaver 2024, Lenger)
 
 | Escenario | isSoloMode | userContext | neutralFrame | Cache key |
 |---|---|---|---|---|
@@ -263,11 +265,11 @@ TTL: 5 minutos (cache RC)
 
 ## Test Suite
 
-Todos los tests son estáticos (no requieren API). Total: **2 180 / 2 180 assertions**.
+Todos los tests son estáticos (no requieren API). Total: **2 200 / 2 200 assertions**.
 
 | Archivo | Assertions | Qué cubre |
 |---|---|---|
-| test-debate.js | 492 | Pipeline debate completo: perspectivas, síntesis, scoring, fallbacks, neutralFrame, tone filters, citedResearchers regex, cache schema v14 |
+| test-debate.js | 512 | Pipeline debate completo: perspectivas, síntesis, scoring, fallbacks, neutralFrame, tone filters, citedResearchers regex, cache schema v15, 78 principios |
 | test-multiverse-usercontext.js | 311 | userContext hash, neutralFrame derivation, buildStageContext 6 params, RAG injection, STAGE_PSYCHOLOGY/CITATIONS coverage (10 langs) |
 | test-multiverse-scenarios.js | 572 | 4 escenarios de caché, cache key format (`multiverse_match_` prefix), Section 9: 105 asserts de escenarios combinados |
 | test-situation-sim.js | 116 | Section 9: debate robustness en situación-sim, timeouts perspectiva+síntesis, userContext 8th arg, fallback tiers, synthesisMaxTokens ≥ 3000 |
