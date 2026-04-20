@@ -1,6 +1,6 @@
 # BlackSugar21 — Backend Architecture (Firebase Cloud Functions)
 
-> Last updated: 2026-04-20
+> Last updated: 2026-04-20 — deploy confirmado (7 CFs)
 
 ## Overview
 
