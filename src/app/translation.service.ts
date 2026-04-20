@@ -233,16 +233,16 @@ export class TranslationService {
       id: 'Alam Semesta yang Mungkin'
     },
     'whatsnew.multiverse.desc': {
-      es: 'Simula cómo podría evolucionar una relación en cinco etapas, con consejos prácticos en tu idioma. Tus simulaciones ahora se guardan entre sesiones, así nunca pierdes el hilo.',
-      en: 'Simulate how a relationship could unfold across five stages, with practical advice in your language. Your simulations now persist between sessions, so you never lose the thread.',
-      pt: 'Simule como um relacionamento pode evoluir em cinco etapas, com conselhos práticos no seu idioma. Suas simulações agora persistem entre sessões — você nunca perde o fio.',
-      fr: 'Simulez comment une relation pourrait évoluer en cinq étapes, avec des conseils pratiques dans votre langue. Vos simulations sont maintenant sauvegardées entre les sessions.',
-      de: 'Simuliere, wie sich eine Beziehung in fünf Phasen entwickeln könnte — mit praktischen Tipps in deiner Sprache. Deine Simulationen bleiben jetzt zwischen Sitzungen erhalten.',
-      ja: '5つの段階で関係がどう進展するかをシミュレート。あなたの言語で実用的なアドバイスが得られ、シミュレーションはセッションをまたいで保存されます。',
-      zh: '在五个阶段中模拟一段关系的可能走向，提供母语化的实用建议。你的模拟会在会话间自动保存。',
-      ru: 'Смоделируйте, как могут развиваться отношения на пяти этапах, с практическими советами на вашем языке. Ваши симуляции теперь сохраняются между сессиями.',
-      ar: 'حاكِ كيف يمكن أن تتطور العلاقة عبر خمس مراحل مع نصائح عملية بلغتك. الآن تُحفظ محاكاتك بين الجلسات.',
-      id: 'Simulasikan bagaimana sebuah hubungan berkembang melalui lima tahap, dengan saran praktis dalam bahasamu. Simulasimu kini tersimpan antar sesi.'
+      es: 'Tres agentes IA debaten para generar el mejor enfoque en cada etapa: uno analiza el vínculo emocional, otro la dinámica social y un tercero la comunicación. El resultado: respuestas fundamentadas en psicología de relaciones.',
+      en: 'Three AI agents debate to find the best approach at each stage: one analyzes emotional bonding, another social dynamics, and a third communication repair. The result: responses grounded in relationship psychology.',
+      pt: 'Três agentes IA debatem para encontrar a melhor abordagem em cada etapa: um analisa o vínculo emocional, outro a dinâmica social e um terceiro a comunicação. O resultado: respostas fundamentadas em psicologia.',
+      fr: 'Trois agents IA débattent pour trouver la meilleure approche à chaque étape : l\'un analyse le lien émotionnel, un autre la dynamique sociale, et un troisième la communication. Résultat : des réponses fondées sur la psychologie.',
+      de: 'Drei KI-Agenten debattieren, um den besten Ansatz für jede Phase zu finden: einer analysiert die emotionale Bindung, ein anderer die soziale Dynamik, ein dritter die Kommunikation. Ergebnis: psychologisch fundierte Antworten.',
+      ja: '3つのAIエージェントが各段階で最善のアプローチを議論します。1つは感情的絆、もう1つは社会的ダイナミクス、3つ目はコミュニケーション修復を分析。関係心理学に基づく回答が得られます。',
+      zh: '三个 AI 智能体辩论找出每个阶段的最佳应对方式：一个分析情感联结，另一个分析社交动态，第三个分析沟通修复。结果是基于关系心理学的深度回答。',
+      ru: 'Три ИИ-агента обсуждают лучший подход на каждом этапе: один анализирует эмоциональную связь, другой — социальную динамику, третий — коммуникацию. Результат: ответы, основанные на психологии отношений.',
+      ar: 'ثلاثة وكلاء ذكاء اصطناعي يتناقشون للعثور على أفضل مقاربة في كل مرحلة: أحدهم يحلل الرابط العاطفي، والآخر الديناميكيات الاجتماعية، والثالث التواصل. النتيجة: ردود مبنية على علم نفس العلاقات.',
+      id: 'Tiga agen AI berdebat untuk menemukan pendekatan terbaik di setiap tahap: satu menganalisis ikatan emosional, satu dinamika sosial, satu lagi perbaikan komunikasi. Hasilnya: respons berdasarkan psikologi hubungan.'
     },
 
     'whatsnew.coach.title': {
@@ -258,16 +258,16 @@ export class TranslationService {
       id: 'AI Coach yang lebih hebat'
     },
     'whatsnew.coach.desc': {
-      es: '5 créditos diarios para simular citas, historial completo al volver a la app y mensajes siempre en tu idioma. Con protección adicional contra abuso.',
-      en: '5 daily credits to simulate dates, full history when you return, and messages always in your language — plus added abuse protection.',
-      pt: '5 créditos diários para simular encontros, histórico completo ao voltar ao app e mensagens sempre no seu idioma — com proteção extra contra abusos.',
-      fr: '5 crédits quotidiens pour simuler des rendez-vous, un historique complet à votre retour et des messages toujours dans votre langue — avec une protection anti-abus renforcée.',
-      de: '5 tägliche Credits für Date-Simulationen, vollständige Chronik bei deiner Rückkehr und Nachrichten stets in deiner Sprache — mit zusätzlichem Missbrauchsschutz.',
-      ja: 'デートをシミュレーションする5つのデイリークレジット、再訪時の完全な履歴、常にあなたの言語で届くメッセージ。不正利用への保護も強化。',
-      zh: '每日 5 个模拟约会积分，重新打开应用即可看到完整历史，所有消息始终以你的母语呈现，并加强了防滥用保护。',
-      ru: '5 ежедневных кредитов на симуляцию свиданий, полная история при возвращении и сообщения всегда на вашем языке — с усиленной защитой от злоупотреблений.',
-      ar: '5 أرصدة يومية لمحاكاة المواعيد، وسجل كامل عند عودتك، ورسائل دائمًا بلغتك — مع حماية إضافية من الإساءة.',
-      id: '5 kredit harian untuk simulasi kencan, riwayat lengkap saat kamu kembali, dan pesan selalu dalam bahasamu — plus perlindungan tambahan dari penyalahgunaan.'
+      es: 'El Coach IA ahora coordina agentes especializados para darte consejos más precisos. Mejorado con protección contra fallos de IA, respuestas siempre en tu idioma y kill switches para garantizar disponibilidad del servicio.',
+      en: 'The AI Coach now coordinates specialized agents to give you more precise advice. Enhanced with AI failure protection, responses always in your language, and kill switches to guarantee service availability.',
+      pt: 'O Coach IA agora coordena agentes especializados para dar conselhos mais precisos. Aprimorado com proteção contra falhas de IA, respostas sempre no seu idioma e kill switches para garantir disponibilidade.',
+      fr: 'Le Coach IA coordonne désormais des agents spécialisés pour des conseils plus précis. Amélioré avec protection contre les pannes IA, réponses dans votre langue et kill switches pour garantir la disponibilité.',
+      de: 'Der KI-Coach koordiniert jetzt spezialisierte Agenten für präzisere Ratschläge. Verbessert mit KI-Ausfallschutz, Antworten stets in deiner Sprache und Kill-Switches für garantierte Verfügbarkeit.',
+      ja: 'AIコーチが専門エージェントを調整してより的確なアドバイスを提供するようになりました。AI障害対策、常にあなたの言語での回答、サービス保証のためのkillスイッチで強化されています。',
+      zh: 'AI 教练现在协调专业智能体以提供更精准的建议。新增 AI 故障保护、始终以你的母语回复，以及保障服务可用性的 kill switch。',
+      ru: 'ИИ-коуч теперь координирует специализированных агентов для более точных советов. Улучшен защитой от сбоев ИИ, ответами всегда на вашем языке и kill-переключателями для гарантии доступности.',
+      ar: 'يُنسّق Coach الذكاء الاصطناعي الآن وكلاء متخصصين لتقديم نصائح أكثر دقة. محسّن بحماية من أعطال الذكاء الاصطناعي، وردود دائمًا بلغتك، ومفاتيح إيقاف لضمان توفر الخدمة.',
+      id: 'AI Coach kini mengkoordinasikan agen-agen spesialis untuk memberi saran yang lebih tepat. Ditingkatkan dengan perlindungan kegagalan AI, respons selalu dalam bahasamu, dan kill switch untuk menjamin ketersediaan layanan.'
     },
 
     'whatsnew.rehearse.title': {
@@ -283,16 +283,16 @@ export class TranslationService {
       id: 'Latih situasi apapun'
     },
     'whatsnew.rehearse.desc': {
-      es: 'Prueba cuatro enfoques distintos antes de enviar un mensaje — cada uno con su propio puntaje y explicación. Todo integrado con tus créditos del Coach.',
-      en: 'Try four different approaches before you send a message — each with its own score and explanation. Fully integrated with your Coach credits.',
-      pt: 'Teste quatro abordagens diferentes antes de enviar uma mensagem — cada uma com sua pontuação e explicação. Tudo integrado aos créditos do Coach.',
-      fr: 'Testez quatre approches différentes avant d\'envoyer un message — chacune avec son score et son explication. Entièrement intégré aux crédits du Coach.',
-      de: 'Probiere vier verschiedene Ansätze, bevor du eine Nachricht sendest — jeder mit eigener Bewertung und Erklärung. Vollständig mit deinen Coach-Credits integriert.',
-      ja: 'メッセージを送る前に4つの異なるアプローチを試せます。それぞれにスコアと説明付き。Coachのクレジットと完全に連動。',
-      zh: '发送消息前，先尝试四种不同的方式——每一种都有自己的评分与解释，并与 Coach 积分完全打通。',
-      ru: 'Протестируйте четыре разных подхода перед отправкой сообщения — у каждого свой балл и объяснение. Полностью интегрировано с кредитами Coach.',
-      ar: 'جرّب أربع مقاربات مختلفة قبل إرسال الرسالة — لكل منها نقاطها وشرحها. ومتكامل بالكامل مع أرصدة Coach.',
-      id: 'Coba empat pendekatan berbeda sebelum kirim pesan — masing-masing dengan skor dan penjelasannya. Terintegrasi penuh dengan kredit Coach.'
+      es: 'Tres agentes IA debaten la mejor forma de responder a tu situación y sintetizan cuatro enfoques — directo, juguetón, romántico y honesto — cada uno con frases concretas y variaciones para elegir. Integrado con tus créditos del Coach.',
+      en: 'Three AI agents debate the best way to respond to your situation and synthesize four approaches — direct, playful, romantic, and honest — each with concrete phrases and variations to choose from. Integrated with your Coach credits.',
+      pt: 'Três agentes IA debatem a melhor forma de responder à sua situação e sintetizam quatro abordagens — direta, brincalhona, romântica e honesta — cada uma com frases concretas e variações. Integrado aos créditos do Coach.',
+      fr: 'Trois agents IA débattent de la meilleure façon de répondre à votre situation et synthétisent quatre approches — directe, ludique, romantique et honnête — avec des phrases concrètes et des variantes. Intégré aux crédits Coach.',
+      de: 'Drei KI-Agenten debattieren die beste Reaktion auf deine Situation und fassen vier Ansätze zusammen — direkt, verspielt, romantisch und ehrlich — jeweils mit konkreten Phrasen und Variationen. Mit Coach-Credits integriert.',
+      ja: '3つのAIエージェントがあなたの状況への最善の返答を議論し、直接的・遊び心・ロマンチック・誠実な4つのアプローチに集約します。各アプローチに具体的なフレーズと変形例付き。Coach クレジットと連動。',
+      zh: '三个 AI 智能体辩论应对你的情境的最佳方式，并综合出四种方法——直接、俏皮、浪漫与诚实——每种都有具体话术和变体供你选择。与 Coach 积分打通。',
+      ru: 'Три ИИ-агента обсуждают лучшую реакцию на вашу ситуацию и синтезируют четыре подхода — прямой, игривый, романтичный и честный — с конкретными фразами и вариациями. Интегрировано с кредитами Coach.',
+      ar: 'ثلاثة وكلاء ذكاء اصطناعي يتناقشون في أفضل رد على وضعك ويصوغون أربعة مقاربات — مباشرة، مرحة، رومانسية وصادقة — مع عبارات محددة وتنويعات للاختيار. متكامل مع أرصدة Coach.',
+      id: 'Tiga agen AI memperdebatkan respons terbaik untuk situasimu dan mensintesis empat pendekatan — langsung, jenaka, romantis, dan jujur — masing-masing dengan frasa konkret dan variasinya. Terintegrasi dengan kredit Coach.'
     },
 
     'whatsnew.security.title': {
