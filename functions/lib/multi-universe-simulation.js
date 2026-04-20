@@ -688,9 +688,12 @@ exports.simulateMultiUniverse = onCall(
       // own cache slot (user can run the multiverse with multiple scenarios without collision).
       const normalizedUserLang = normalizeLanguageCode(userLanguage || 'en');
       const baseCacheKey = isSoloMode ? 'multiverse_solo' : `multiverse_${matchId}`;
+      // Debate pipeline produces structurally different output (sourceAgents, confidence, debateMetadata)
+      // — separate cache slot so toggling debate.enabled never serves stale non-debate results
+      const debateSuffix = cfg?.debate?.enabled ? '_d1' : '';
       const cacheKey = userContextHash
-        ? `${baseCacheKey}_${normalizedUserLang}_${userContextHash}`
-        : `${baseCacheKey}_${normalizedUserLang}`;
+        ? `${baseCacheKey}_${normalizedUserLang}_${userContextHash}${debateSuffix}`
+        : `${baseCacheKey}_${normalizedUserLang}${debateSuffix}`;
       const cacheDoc = await db.collection('users').doc(userId)
         .collection('multiUniverseCache').doc(cacheKey).get();
 

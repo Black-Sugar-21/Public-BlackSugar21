@@ -118,6 +118,26 @@ async function generateApproachesWithDebate(genAI, situation, userLang, userCont
 
     const finalFour = finalApproaches.slice(0, 4);
 
+    // Confidence floor: if avg synthesis confidence < 5.5, the synthesizer output is
+    // too weak — fall back to the best perspective directly (better than generic blend)
+    const avgConfidence = finalFour.reduce((s, a) => s + (a.confidence || 5), 0) / (finalFour.length || 1);
+    if (avgConfidence < 5.5) {
+      logger.warn(`[Debate] Stage ${stageId}: low synthesis confidence (avg=${avgConfidence.toFixed(1)}) — falling back to best perspective`);
+      const best = selectBestPerspective(validPerspectives, stageId);
+      if (best) {
+        return {
+          approaches: best.approaches.map(a => ({ ...a, sourceAgents: [best.perspectiveId], confidence: 5 })),
+          debateMetadata: {
+            perspectivesUsed: 1,
+            perspectiveIds: [best.perspectiveId],
+            synthesisConfidence: [5, 5, 5, 5],
+            winnerAgents: { [best.perspectiveId]: 4 },
+            confidenceFallback: true,
+          },
+        };
+      }
+    }
+
     // Log winner analytics — which agents influenced final output (calibration data)
     const winnerCounts = {};
     for (const a of finalFour) {

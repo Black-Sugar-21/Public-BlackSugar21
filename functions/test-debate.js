@@ -254,6 +254,21 @@ ok(debateOrchSrc.includes('winnerCounts'), 'orchestrator computes winner agent c
 ok(debateOrchSrc.includes('winnerAgents'), 'orchestrator includes winnerAgents in debateMetadata');
 ok(debateOrchSrc.includes('[Debate] Stage'), 'orchestrator logs winner agents info');
 
+// confidence floor fallback
+ok(debateOrchSrc.includes('avgConfidence'), 'orchestrator computes average confidence');
+ok(debateOrchSrc.includes('< 5.5'), 'orchestrator applies confidence floor at 5.5');
+ok(debateOrchSrc.includes('confidenceFallback'), 'orchestrator sets confidenceFallback flag in metadata');
+ok(debateOrchSrc.includes('low synthesis confidence'), 'orchestrator logs low confidence warning before fallback');
+
+// cache key separation (debate vs non-debate)
+const multiUnivSrc = fs.readFileSync(path.join(__dirname, 'lib/multi-universe-simulation.js'), 'utf-8');
+ok(multiUnivSrc.includes('debateSuffix'), 'multi-universe builds debate-specific cache suffix');
+ok(multiUnivSrc.includes("'_d1'"), 'debate cache suffix is _d1 when enabled');
+ok(multiUnivSrc.includes('debate.enabled'), 'cache suffix depends on debate.enabled flag');
+// debate suffix appended to both context-hash and no-context-hash variants
+ok(multiUnivSrc.includes('userContextHash}${debateSuffix}'), 'debate suffix appended after context hash');
+ok(multiUnivSrc.includes('normalizedUserLang}${debateSuffix}'), 'debate suffix appended after lang when no context hash');
+
 // ═══════════════════════════════════════════════════════════════════
 // Section 4: debate-orchestrator.js — Pipeline & Fallback Logic
 // ═══════════════════════════════════════════════════════════════════
