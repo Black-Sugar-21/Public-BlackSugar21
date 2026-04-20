@@ -259,6 +259,23 @@ const scoreWithCite = scoreApproachWithDebate(6, 6, { citedResearch: 'Applied Bo
 ok(scoreWithCite > scoreNoCite, `cited research bonus: ${scoreWithCite} > ${scoreNoCite}`);
 ok(scoreWithCite - scoreNoCite === 0.5, `cited research bonus is exactly 0.5 (got ${scoreWithCite - scoreNoCite})`);
 
+// No false positive on casual narrative (no academic citation pattern)
+const scoreNarrative = scoreApproachWithDebate(6, 6, { citedResearch: '2020 John arrived and things changed' });
+ok(scoreNarrative === scoreNoCite, `no false positive on casual narrative (${scoreNarrative} === ${scoreNoCite})`);
+const scoreNoYear = scoreApproachWithDebate(6, 6, { citedResearch: 'Based on attachment theory principles' });
+ok(scoreNoYear === scoreNoCite, `no bonus for text without year (${scoreNoYear} === ${scoreNoCite})`);
+// Valid academic patterns all get the bonus
+const patterns = [
+  'Gottman, 1994 — 5:1 ratio',
+  'Johnson (2008) EFT approach',
+  'Yang et al., Neuropsychologia, 2024',
+  'Rahmani & Ulu, BMC Psychology, 2025',
+];
+for (const p of patterns) {
+  const s = scoreApproachWithDebate(6, 6, { citedResearch: p });
+  ok(s > scoreNoCite, `academic pattern gets bonus: "${p.substring(0, 30)}..."`);
+}
+
 // multiSource bonus (+0.3 when multiple agents contributed)
 const scoreSingle = scoreApproachWithDebate(6, 6, { sourceAgents: ['A'] });
 const scoreMulti = scoreApproachWithDebate(6, 6, { sourceAgents: ['A', 'B'] });

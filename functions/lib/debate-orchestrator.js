@@ -168,9 +168,11 @@ function scoreApproachWithDebate(heuristicScore, synthesisConfidence, approach =
   const llmScore = typeof synthesisConfidence === 'number' && !isNaN(synthesisConfidence) ? synthesisConfidence : 5;
   const blended = 0.6 * h + 0.4 * llmScore;
 
-  // +0.5 if citedResearch references a specific researcher (capital name) or year
+  // +0.5 if citedResearch contains an academic citation pattern:
+  // CapitalizedName followed by year with separator (comma/parens/et al.)
+  // Avoids false positives on casual narrative like "2020 John met her"
   const cited = typeof approach.citedResearch === 'string' ? approach.citedResearch : '';
-  const citedBonus = /[A-Z][a-z]+.*\d{4}|\d{4}.*[A-Z][a-z]+/.test(cited) ? 0.5 : 0;
+  const citedBonus = /[A-Z][a-z]{1,}(?:\s+et\s+al\.?|,\s*\d{4}|\s+\(\d{4}\)|\s+\d{4}\b)/.test(cited) ? 0.5 : 0;
 
   // +0.3 if synthesized from multiple agent perspectives
   const sources = Array.isArray(approach.sourceAgents) ? approach.sourceAgents : [];
