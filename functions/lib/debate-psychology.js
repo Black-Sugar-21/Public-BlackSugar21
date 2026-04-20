@@ -92,6 +92,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Meta-analysis of 224 studies (N = 79,722) confirms adult attachment anxiety predicts loneliness and rejection sensitivity in digital contact; avoidance predicts emotional suppression and withdrawal — both patterns manifest in early messaging behavior',
         researcher: 'Zhang et al., Journal of Personality and Social Psychology, 2022',
       },
+      {
+        principle: 'Attachment anxiety in dating app users predicts lower perceived success and worse affective well-being after use; however, perceiving higher anonymity affordance on the platform attenuates this association — anonymity partially shields anxious users from rejection cues during early contact',
+        researcher: 'Métellus et al., Journal of Marital and Family Therapy, 2025',
+      },
     ],
     social_dynamics: [
       {
@@ -181,6 +185,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'The Fast Friends (36 Questions) escalating-disclosure protocol produces equivalent closeness via video call or text chat as face-to-face — mode of communication does not moderate intimacy outcomes',
         researcher: 'Sprecher, Journal of Social and Personal Relationships, 2021',
       },
+      {
+        principle: 'Online dating expedites Knapp\'s relational escalation stages and prioritizes minimal-effort interactions — users fulfill relational needs with less behavioral investment, producing rapid but potentially shallow closeness that requires conscious depth calibration',
+        researcher: 'Hu, Zhu & Zhang, Cyberpsychology, Behavior, and Social Networking, 2024',
+      },
     ],
     communication_repair: [
       {
@@ -198,6 +206,14 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'No evidence that matching a partner\'s primary love language has special benefits — all five expression channels predict satisfaction equally; expressing care frequently across multiple channels matters more than congruence',
         researcher: 'Impett, Park & Muise, Current Directions in Psychological Science, 2024',
+      },
+      {
+        principle: 'Less than half of people have an identifiable primary love language; relationship quality is more strongly linked to satisfaction across a range of loving behaviors — especially verbal affirmations, encouragement for individual pursuits, and support during difficult times — than to speaking one dominant love language',
+        researcher: 'Flicker & Sancier-Barbosa, Journal of Marital and Family Therapy, 2025',
+      },
+      {
+        principle: 'Listening quality is the primary behavioral driver of perceived partner responsiveness: partners who listen with attention, understanding, and non-judgment generate the felt experience of being understood, validated, and cared for that is the bedrock of intimacy',
+        researcher: 'Itzchakov & Reis, Current Opinion in Psychology, 2023',
       },
     ],
   },
@@ -265,6 +281,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Cross-cultural validation across 25 countries confirms passion, intimacy, and commitment as universal love dimensions — commitment shows the greatest cross-cultural and temporal stability, making it the most reliable anchor for deepening connection',
         researcher: 'Sorokowski et al., Journal of Sex Research, 2021',
       },
+      {
+        principle: 'Human-AI pseudo-intimacy research shows that self-disclosure to AI companions triggers perceived responsiveness cues without genuine reciprocal understanding — authentic vulnerability requires a partner capable of truly being changed by what they hear, which remains the defining threshold between real and simulated connection',
+        researcher: 'Lin et al., Emotional AI and Pseudo-Intimacy, PMC, 2025',
+      },
     ],
   },
   conflict_challenge: {
@@ -285,6 +305,14 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'EFT maintains "well-established" treatment status across 37 RCTs — strongest outcomes when partners achieve emotional accessibility and responsiveness, confirming that attachment-based vulnerability is the active ingredient in conflict repair',
         researcher: 'Doss, Roddy, Wiebe & Johnson, Journal of Marital and Family Therapy, 2022',
       },
+      {
+        principle: 'Attachment anxiety in online versus offline conflict scenarios mirrors in cognitive and emotional responses but is transformed in behavioral responses — digitally mediated conflict amplifies anxious surveillance behaviors while reducing direct repair attempts, requiring explicit channel-switching to break the cycle',
+        researcher: 'Randall et al., International Journal of Human-Computer Interaction, 2024',
+      },
+      {
+        principle: 'First comprehensive meta-analysis of EFT across 20 RCTs and quasi-experimental studies (N = 332 couples) found large pre-post effect sizes (d = .93) and 70% symptom-free rates at treatment end — emotional accessibility and responsiveness are the measurable active ingredients',
+        researcher: 'Spengler, Lee, Wiebe & Wittenborn, Couple and Family Psychology, 2024',
+      },
     ],
     social_dynamics: [
       {
@@ -302,6 +330,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Positive interaction exchanges buffer the impact of negative ones on relationship satisfaction — confirmed in 886 couples; the buffering effect operates independently of conflict frequency, validating the positive-ratio mechanism',
         researcher: 'Cazzell et al., Journal of Family Psychology, 2022',
+      },
+      {
+        principle: 'Gottman\'s Seven Principles program is equally effective when delivered online versus in-person (N = 490 couples, propensity-score matched) — digital delivery does not dilute relationship skill gains, making app-mediated relationship education a valid complement to face-to-face therapy',
+        researcher: 'Zahl-Olsen, Thuen & Bertelsen, Journal of Marital and Family Therapy, 2024',
       },
     ],
     communication_repair: [
@@ -345,6 +377,14 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Secure attachment predicts greater adherence to shared relational agreements; avoidant attachment predicts unilateral rule defiance — real-world confirmation that secure attachment enables genuine commitment beyond verbal declaration',
         researcher: 'Gruneau Brulin, Shaver & Mikulincer, Journal of Social and Personal Relationships, 2022',
+      },
+      {
+        principle: 'Attachment orientations regulate interpersonal emotion co-regulation strategies: secure attachment enables both passive (comfort-seeking) and active (reappraisal) co-regulation; insecure attachment restricts the repertoire, making committed partners\' emotional availability a direct determinant of dyadic regulation capacity',
+        researcher: 'Mikulincer & Shaver, Current Opinion in Psychology / Frontiers in Psychology, 2024',
+      },
+      {
+        principle: 'Partner sexual autonomy support — the perception that one\'s partner respects and encourages genuine autonomous sexual motivation — uniquely predicts sexual satisfaction and relational well-being above and beyond general interpersonal autonomy support, validating SDT\'s need-differentiation at the commitment stage',
+        researcher: 'Lenger et al., PMC / Archives of Sexual Behavior, 2025',
       },
     ],
     social_dynamics: [

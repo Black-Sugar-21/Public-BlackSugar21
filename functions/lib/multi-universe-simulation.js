@@ -548,7 +548,8 @@ const MULTIVERSE_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 min
 //      no longer forces romantic framing onto platonic inputs; max tokens bumped to 2000
 // v10 = multi-agent debate system: 3 perspectives + synthesizer per stage
 // v12 = debate-psychology Capa 4 enriched with 8 recent (2022-2025) validated citations
-const CACHE_SCHEMA_VERSION = 12;
+// v15 = debate-psychology Capa 4 extended with 10 new 2022-2025 verified principles (Ainsworth, Bowlby, Brown, Chapman, Johnson EFT, Gottman, Knapp, Mikulincer, Reis, SDT)
+const CACHE_SCHEMA_VERSION = 15;
 
 /**
  * Fetches multi-universe simulation config from Remote Config with in-memory cache.
