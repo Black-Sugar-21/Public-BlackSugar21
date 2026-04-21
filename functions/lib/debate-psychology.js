@@ -198,6 +198,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Trait EI uniquely predicts relationship satisfaction above and beyond Big Five personality dimensions; the self-regulation and empathy facets are the strongest individual predictors — people who can name and manage their own emotions create safer emotional climates from the first exchange',
         researcher: 'Malouff et al., Journal of Family Psychology, 2014',
       },
+      {
+        principle: 'Systematic review and meta-analysis of 90 effect sizes from 78 samples confirms trait EI predicts romantic relationship satisfaction with mean r = .37 — individuals higher in EI create emotional climates that make partners feel understood, validated, and cared for from the earliest contact onward',
+        researcher: 'Jardine, Vannier & Voyer, Personality and Individual Differences, 2022',
+      },
     ],
     cultural_intelligence: [
       {
@@ -385,6 +389,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Intercultural couples who develop shared "third culture" communication norms — deliberately negotiating which cultural practices from each partner to retain and which to adapt — show significantly higher relationship satisfaction than couples who default to one partner\'s cultural frame',
         researcher: 'Cottrell, Marriage & Family Review, 1990; Piller, 2017; replicated Sun & Starosta, 2023',
+      },
+      {
+        principle: 'Comprehensive scoping review of 46 intercultural relationship studies identifies cultural humility, flexible communication adaptation, and deliberate construction of shared relational rituals as the core behavioral competencies that distinguish thriving intercultural couples from those experiencing cultural fatigue and communication breakdown',
+        researcher: 'Yurtaeva & Charura, Journal of Social and Personal Relationships, 2024',
       },
     ],
     social_dynamics: [
@@ -586,6 +594,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Couples with higher average trait EI show significantly lower physiological stress responses to relationship conflict and faster return to baseline after disagreements — emotional intelligence functions as a biological buffer against the cumulative physiological wear of committed relationships',
         researcher: 'Fitness, Personal Relationships, 2001; review Brackett, Rivers & Salovey, 2011',
       },
+      {
+        principle: '"Valuing" — the active recognition and communication of the worth you see in your partner — is the strongest EI-linked mechanism predicting long-term relationship satisfaction; partners of high-EI individuals report higher wellbeing independently, confirming that emotional intelligence benefits both the holder and their partner',
+        researcher: 'Xiao, Double, Pinkus & MacCann, Journal of Social and Personal Relationships, 2025',
+      },
     ],
     cultural_intelligence: [
       {
@@ -603,6 +615,10 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Digital commitment signals vary culturally: "official" social media pairing (relationship status, couple profile photos) is a meaningful commitment marker in individualist Western cultures; in collectivist cultures, being introduced within family messaging groups (LINE, KakaoTalk, WhatsApp family) carries equivalent or greater weight',
         researcher: 'Emery et al., 2014; Lim & Choi, 1996; extended by Toma & Hancock, 2016',
+      },
+      {
+        principle: 'Meta-analysis of 20 studies finds no significant difference in relationship satisfaction between culturally diverse and monocultural couples — intercultural relationships carry no inherent satisfaction deficit, provided partners actively negotiate cultural differences rather than defaulting to one partner\'s cultural frame',
+        researcher: 'Uhlich, Personal Relationships, 2022',
       },
     ],
     social_dynamics: [
