@@ -67,6 +67,44 @@ const PERSPECTIVE_AGENTS = {
       commitment: 1.0,
     },
   },
+  emotional_intelligence: {
+    id: 'D',
+    name: 'Emotional Intelligence & Presence',
+    framework: 'Emotional Intelligence + Polyvagal Theory + Interpersonal Neurobiology',
+    lens: 'What is the emotional subtext? What does the nervous system need to feel safe enough to connect?',
+    researchers: [
+      'Goleman (1995)',
+      'Porges (2011)',
+      'Siegel (2012)',
+      'van der Kolk (2014)',
+    ],
+    stageStrength: {
+      initial_contact: 0.6,
+      getting_to_know: 0.75,
+      building_connection: 0.95,
+      conflict_challenge: 1.0,
+      commitment: 0.85,
+    },
+  },
+  cultural_intelligence: {
+    id: 'E',
+    name: 'Cultural Intelligence',
+    framework: 'Cross-Cultural Psychology + Cultural Intelligence (CQ) + Face Negotiation Theory',
+    lens: 'What cultural frames shape this dynamic? How do collectivist, high-context, or face-saving norms alter the optimal approach?',
+    researchers: [
+      'Hofstede (2001)',
+      'Ting-Toomey (1988)',
+      'Earley & Ang (2003)',
+      'Hall (1976)',
+    ],
+    stageStrength: {
+      initial_contact: 0.9,
+      getting_to_know: 0.85,
+      building_connection: 0.75,
+      conflict_challenge: 1.0,
+      commitment: 0.85,
+    },
+  },
 };
 
 /**
@@ -143,6 +181,42 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         source: 'https://doi.org/10.1177/00936502221127498',
       },
     ],
+    emotional_intelligence: [
+      {
+        principle: 'Emotional self-awareness — accurately recognizing one\'s own feelings in real time — is the foundational EI skill: people with low self-awareness either flood others with unregulated emotion or appear flat and unreadable, both of which undermine early connection',
+        researcher: 'Goleman, Emotional Intelligence, 1995',
+      },
+      {
+        principle: 'Neuroception of safety: the autonomic nervous system scans for threat cues before conscious thought; warm word choice, considered pacing, and genuine curiosity activate the ventral vagal social engagement system — the neurobiological prerequisite for willingness to connect',
+        researcher: 'Porges, The Polyvagal Theory, 2011',
+      },
+      {
+        principle: 'Emotional intelligence predicts more accurate encoding and decoding of emotional cues in text-based digital communication; high-EI individuals infer emotional tone from punctuation, response latency, and word choice — reading the subtext under the message',
+        researcher: 'Schutte et al., Cognition & Emotion, 2001; extended by Mayer et al., 2016',
+      },
+      {
+        principle: 'Trait EI uniquely predicts relationship satisfaction above and beyond Big Five personality dimensions; the self-regulation and empathy facets are the strongest individual predictors — people who can name and manage their own emotions create safer emotional climates from the first exchange',
+        researcher: 'Malouff et al., Journal of Family Psychology, 2014',
+      },
+    ],
+    cultural_intelligence: [
+      {
+        principle: 'Cultural Intelligence (CQ) is a four-factor learnable skill — cognitive (cultural knowledge), metacognitive (cultural awareness), motivational (drive to adapt), behavioral (adapting communication style) — high CQ individuals adjust opener tone, directness, and formality to match the recipient\'s cultural register',
+        researcher: 'Earley & Ang, Cultural Intelligence, 2003',
+      },
+      {
+        principle: 'In high-context cultures (AR, JA, ZH, KO), indirect openers that signal cultural respect (formality, shared group membership, respectful framing) outperform direct self-promotion; the message is in the implied meaning, not the explicit words',
+        researcher: 'Hall, Beyond Culture, 1976',
+      },
+      {
+        principle: 'Individualist cultures (US, AU, Western EU) expect self-focused openers highlighting uniqueness; collectivist cultures expect group-referenced or contextually embedded openings — mismatching the cultural script reads as socially unintelligent',
+        researcher: 'Hofstede, Culture\'s Consequences, 2001; Triandis, 1995',
+      },
+      {
+        principle: 'Meta-analysis of 98 cross-cultural communication studies confirms high-context vs low-context communication style divergence is the single largest predictor of miscommunication in intercultural digital first contact — explicitly flagging one\'s communication style is a high-CQ repair strategy',
+        researcher: 'Zakaria & Cogburn, Journal of International Management, 2010; replicated Kim et al., 2022',
+      },
+    ],
   },
   getting_to_know: {
     attachment_safety: [
@@ -166,6 +240,42 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         principle: 'Insecure attachment patterns acquired through early adversity predict reduced relationship satisfaction and elevated conflict in adult romantic dyads, independent of mating effort; attachment style detection during early conversations enables targeted secure-base communication',
         researcher: 'Kwiek et al., Evolutionary Psychology, 2025',
         source: 'https://doi.org/10.1177/14747049251355861',
+      },
+    ],
+    emotional_intelligence: [
+      {
+        principle: 'Empathy — the second pillar of EI — develops in this stage as the ability to accurately feel what the other person is feeling, not just understand it cognitively; empathic accuracy in conversation predicts relationship satisfaction 6 months later',
+        researcher: 'Ickes, Empathic Accuracy, 1993; Goleman, Social Intelligence, 2006',
+      },
+      {
+        principle: 'The "window of tolerance" (Siegel/Ogden) describes the optimal zone of emotional arousal for authentic connection — staying regulated enables curiosity; hyperarousal triggers defensiveness, hypoarousal triggers flatness. Pacing self-disclosure to stay within this window deepens rather than overwhelms early intimacy',
+        researcher: 'Siegel, The Developing Mind, 2012; Ogden et al., 2006',
+      },
+      {
+        principle: 'Alexithymia (difficulty identifying and describing feelings) is negatively associated with relationship satisfaction and intimacy depth; prompting a partner with emotionally specific questions ("What felt meaningful about that?") scaffolds emotional self-awareness in those who struggle to access it',
+        researcher: 'Vanheule et al., British Journal of Medical Psychology, 2007; meta-analysis Frías-Ibáñez et al., 2022',
+      },
+      {
+        principle: 'Co-regulation of affect — each person\'s nervous system influencing the other\'s through prosodic mirroring, synchronized response timing, and attunement signals — is measurable in chat via response latency matching and mirroring of emotional intensity; disruptions in co-regulation predict early dropout in digital relationships',
+        researcher: 'Porges, 2011; Feldman, Biological Psychiatry, 2007',
+      },
+    ],
+    cultural_intelligence: [
+      {
+        principle: 'Polychronic time cultures (MENA, Latin America, Southern EU) experience relationship development as fluid and relationship-paced; monochronic cultures (Northern EU, US) expect punctual, linear disclosure milestones — intercultural partners misread the other\'s pace as disinterest or pressure',
+        researcher: 'Hall, The Dance of Life, 1983; Hofstede, 2001',
+      },
+      {
+        principle: 'Long-term orientation cultures (EA, SE Asia) signal getting-to-know interest through future-oriented references (family, career, shared plans) much earlier than short-term orientation cultures where this reads as premature pressure',
+        researcher: 'Hofstede et al., Cultures and Organizations, 2010',
+      },
+      {
+        principle: 'Self-disclosure rates in cross-cultural online dating vary systematically: high-context cultures disclose personal information later but signal trust through consistent presence and responsiveness; low-context cultures disclose more but interpret slow disclosure as concealment',
+        researcher: 'Chen, Computer-Mediated Communication, 2014; replicated Rains et al., 2022',
+      },
+      {
+        principle: 'Cultural humility — remaining genuinely curious about a specific person\'s cultural experience rather than applying group-level stereotypes — is a more effective CQ strategy than cultural competence (claiming to "know" another\'s culture); it invites the partner to teach rather than be categorized',
+        researcher: 'Hook et al., Journal of Counseling Psychology, 2013; Tervalon & Murray-García, 1998',
       },
     ],
     social_dynamics: [
@@ -241,6 +351,42 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11951461/',
       },
     ],
+    emotional_intelligence: [
+      {
+        principle: 'Somatic markers of safety: the body signals relational quality before the mind articulates it — tension, openness, energy level, and gut response are data, not noise. High-EI individuals listen to these signals and name them, which accelerates authentic intimacy',
+        researcher: 'van der Kolk, The Body Keeps the Score, 2014; Damasio, 1994',
+      },
+      {
+        principle: 'Interpersonal neurobiology: deep connection requires "integration" — two distinct minds remaining themselves while creating genuine resonance; the felt sense of being "seen" (not merged with) is the neural signature of secure human bonding',
+        researcher: 'Siegel, Mindsight, 2010; The Developing Mind, 2012',
+      },
+      {
+        principle: '"Name it to tame it": labeling an emotion with a specific word (not just "bad" or "fine") reduces amygdala activation and enables prefrontal regulation; partners who invite emotional labeling ("That sounds like it felt lonely?") actively co-regulate each other\'s nervous systems',
+        researcher: 'Lieberman et al., Psychological Science, 2007; Hariri et al., 2000',
+      },
+      {
+        principle: 'Emotional granularity — the ability to differentiate nuanced emotional states (disappointed vs rejected vs embarrassed) — predicts greater psychological and physical wellbeing and more adaptive social behavior; building emotional vocabulary with a partner deepens the felt quality of connection',
+        researcher: 'Barrett, How Emotions Are Made, 2017; Tugade et al., Journal of Personality, 2004',
+      },
+    ],
+    cultural_intelligence: [
+      {
+        principle: 'Behavioral adaptation CQ: adjusting touch proximity, eye contact, and directness to match the other\'s cultural comfort zone prevents the most common early misreadings (interpreted aggression, coldness, or disrespect) without requiring explicit negotiation',
+        researcher: 'Earley & Ang, 2003; Ang et al., Management and Organization Review, 2007',
+      },
+      {
+        principle: 'Physical proximity norms vary dramatically: Southern European and MENA cultures interpret close physical distance and brief touch as warmth and inclusion; Northern European and East Asian cultures experience the same as intrusive — calibrating spatial behavior signals cultural intelligence',
+        researcher: 'Hall, The Hidden Dimension, 1966; Watson & Graves, 1966',
+      },
+      {
+        principle: 'Gift-giving as relational investment (Mauss, 1925): in collectivist cultures, offering material care (food, shared resources, thoughtful gifts) is a primary language of connection, not superficiality — rejecting or ignoring these gestures communicates relational disrespect',
+        researcher: 'Mauss, The Gift, 1925; extended by Carrier, 1995',
+      },
+      {
+        principle: 'Intercultural couples who develop shared "third culture" communication norms — deliberately negotiating which cultural practices from each partner to retain and which to adapt — show significantly higher relationship satisfaction than couples who default to one partner\'s cultural frame',
+        researcher: 'Cottrell, Marriage & Family Review, 1990; Piller, 2017; replicated Sun & Starosta, 2023',
+      },
+    ],
     social_dynamics: [
       {
         principle: 'Shared experiences of mild vulnerability (not trauma-dumping) release oxytocin bonding hormones',
@@ -314,6 +460,42 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
         researcher: 'Spengler, Lee, Wiebe & Wittenborn, Couple and Family Psychology, 2024',
       },
     ],
+    emotional_intelligence: [
+      {
+        principle: 'Emotional flooding (Gottman) is physiologically driven — heart rate above 100 bpm causes cognitive lockdown and makes productive conflict impossible; the high-EI move is to call a genuine 20-minute self-soothing break before re-engaging, not to push through',
+        researcher: 'Gottman, Why Marriages Succeed or Fail, 1994; Goleman, 1995',
+      },
+      {
+        principle: '"Name it to tame it" in conflict: labeling one\'s own escalating emotional state aloud ("I notice I\'m feeling defensive right now") reduces limbic activation and creates the micro-pause needed for prefrontal re-engagement — the most accessible somatic regulation skill for digital conflict',
+        researcher: 'Siegel, Mindsight, 2010; Lieberman et al., 2007',
+      },
+      {
+        principle: 'Emotional intelligence specifically predicts constructive conflict behavior (compromise, collaboration, emotional validation) over destructive behavior (contempt, stonewalling) — the regulation and empathy facets are the strongest predictors of repair initiation rather than escalation',
+        researcher: 'Smith et al., Personality and Individual Differences, 2008; meta-analysis Malouff et al., 2014',
+      },
+      {
+        principle: 'Trauma-informed conflict: unresolved somatic trauma activates fight-flight-freeze responses during conflict that are disproportionate to the current trigger — recognizing the "body taking over" is an EI skill that de-personalizes the other\'s intensity and opens space for curiosity rather than counter-attack',
+        researcher: 'van der Kolk, The Body Keeps the Score, 2014; Levine, Waking the Tiger, 1997',
+      },
+    ],
+    cultural_intelligence: [
+      {
+        principle: 'Indirect conflict styles (obliging, avoiding, compromising) are not conflict avoidance in collectivist cultures — they are relationship-preserving strategies that protect face for both parties; labeling them as "passive" or "avoidant" from a Western frame misreads competent cultural behavior as dysfunction',
+        researcher: 'Ting-Toomey & Oetzel, Managing Intercultural Conflict, 2001; extended Oetzel et al., 2008',
+      },
+      {
+        principle: 'Face threats in conflict (AN Arabic: حفظ الوجه, ZH: 面子 miànzi, JA: 体裁 taisai) operate on two dimensions: self-face (own dignity) and other-face (partner\'s dignity); successful intercultural conflict repair addresses both simultaneously, never sacrificing other-face to "win"',
+        researcher: 'Ting-Toomey, Facework Theory, 1988; cross-cultural replication Merkin, 2018',
+      },
+      {
+        principle: 'Online disinhibition effect amplifies cultural communication style differences in conflict: low-context directness becomes bluntness, high-context indirectness becomes silence — intercultural couples need explicit meta-communication agreements before conflicts occur, not during',
+        researcher: 'Suler, CyberPsychology & Behavior, 2004; applied Yum & Hara, 2005',
+      },
+      {
+        principle: 'Cultural humility in conflict: replacing "I understand your culture" (competence claim) with "Help me understand how you\'re experiencing this" (curiosity stance) consistently produces faster de-escalation in intercultural conflicts — the inquiry itself signals respect for the other\'s unique perspective',
+        researcher: 'Hook et al., Journal of Counseling Psychology, 2013; Mosher et al., 2017',
+      },
+    ],
     social_dynamics: [
       {
         principle: 'Stable relationships maintain 5 positive interactions for every negative one — even during conflict',
@@ -385,6 +567,42 @@ const STAGE_PERSPECTIVE_PRINCIPLES = {
       {
         principle: 'Partner sexual autonomy support — the perception that one\'s partner respects and encourages genuine autonomous sexual motivation — uniquely predicts sexual satisfaction and relational well-being above and beyond general interpersonal autonomy support, validating SDT\'s need-differentiation at the commitment stage',
         researcher: 'Lenger et al., PMC / Archives of Sexual Behavior, 2025',
+      },
+    ],
+    emotional_intelligence: [
+      {
+        principle: 'Emotional intelligence is the strongest non-ability predictor of relationship satisfaction in long-term committed dyads — it outperforms agreeableness, conscientiousness, and attachment security as a predictor precisely because it operates dynamically (moment-to-moment regulation) rather than as a static trait',
+        researcher: 'Bracket et al., Psychological Inquiry, 2011; Malouff et al., Journal of Family Psychology, 2014',
+      },
+      {
+        principle: 'Earned secure attachment (Siegel): adults with insecure early attachment histories who develop a coherent narrative of their experience show neural and relational outcomes equivalent to those with originally secure attachment — commitment to a high-EI partner accelerates this earned security',
+        researcher: 'Siegel, The Developing Mind, 2012; Main & Goldwyn, 1984',
+      },
+      {
+        principle: 'Polyvagal-informed commitment: genuine "I choose this" requires ventral vagal safety — commitment made from a state of chronic sympathetic activation (fear of abandonment, fawn response) is compliance, not authentic choice; helping a partner feel safe is the precondition for receiving authentic, lasting commitment',
+        researcher: 'Porges, The Polyvagal Theory, 2011; Dana, Polyvagal Theory in Therapy, 2018',
+      },
+      {
+        principle: 'Couples with higher average trait EI show significantly lower physiological stress responses to relationship conflict and faster return to baseline after disagreements — emotional intelligence functions as a biological buffer against the cumulative physiological wear of committed relationships',
+        researcher: 'Fitness, Personal Relationships, 2001; review Brackett, Rivers & Salovey, 2011',
+      },
+    ],
+    cultural_intelligence: [
+      {
+        principle: 'Family approval as a relational milestone: in collectivist cultures, introducing a partner to family is not a pressure move — it is a commitment signal that carries more weight than verbal declaration; withholding this introduction reads as the partner\'s shame or lack of seriousness, not appropriate pacing',
+        researcher: 'Triandis, Individualism and Collectivism, 1995; Kalmijn, 1998',
+      },
+      {
+        principle: 'Cultural scripts for "defining the relationship" (DTR conversation) are absent or indirect in many high-context cultures — in JA, KO, AR, and ZH contexts, commitment emerges through behavioral consistency and public acknowledgment rather than explicit verbal agreement, requiring patience from low-context partners',
+        researcher: 'Gudykunst & Ting-Toomey, 1988; Knapp & Vangelisti, 2000',
+      },
+      {
+        principle: 'Intercultural couples face unique stressors (family disapproval, communication code-switching, cultural fatigue) but demonstrate specific protective factors: high CQ, explicit meta-communication about cultural differences, and "third culture" construction significantly predict relationship longevity',
+        researcher: 'Piller, Bilingual Couples Talk, 2002; Zhang & Kline, 2009; Sun & Starosta, 2023',
+      },
+      {
+        principle: 'Digital commitment signals vary culturally: "official" social media pairing (relationship status, couple profile photos) is a meaningful commitment marker in individualist Western cultures; in collectivist cultures, being introduced within family messaging groups (LINE, KakaoTalk, WhatsApp family) carries equivalent or greater weight',
+        researcher: 'Emery et al., 2014; Lim & Choi, 1996; extended by Toma & Hancock, 2016',
       },
     ],
     social_dynamics: [
