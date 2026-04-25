@@ -162,8 +162,43 @@ service cloud.firestore {
 
       // Subcolección COACH CHAT: historial de simulaciones + mensajes coach.
       // Tanto cliente (iOS/Android) como CF (admin SDK) pueden escribir aquí.
+      // Schema validation 2026-04-25 (audit Round-N): sin validación, un usuario
+      // podía forjar `sender: 'coach'` con contenido custom — la próxima carga
+      // de history pasaba ese mensaje al prompt de Gemini como "previous coach
+      // reply" → vector de prompt-injection / preference manipulation. Ahora
+      // los clientes solo escriben mensajes propios; los mensajes con
+      // `sender: 'coach'` van vía CF (admin SDK bypassa rules).
       match /coachChat/{messageId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Create: cliente solo escribe sender=user|system con su propio senderId.
+        // Cap size 16KB (mensaje + payloads como situationApproaches caben).
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && (
+            // Caso 1: mensaje del usuario hacia el coach.
+            (request.resource.data.sender == 'user'
+              && (request.resource.data.senderId == null || request.resource.data.senderId == userId)
+              && request.resource.data.message is string
+              && request.resource.data.message.size() <= 8000
+            )
+            // Caso 2: cliente persiste un payload de simulación (situationApproaches /
+            // multiUniverseResult) que vino del CF. Marca sender='system' para no
+            // confundir con mensajes del coach generados server-side.
+            || (request.resource.data.sender == 'system'
+              && request.resource.data.size() <= 50
+            )
+          );
+        // Update: solo el propio user puede tocar campos no-críticos (ej. read flag).
+        // Bloquea la mutación de sender/message/timestamp/payloads.
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.sender == resource.data.sender
+          && request.resource.data.senderId == resource.data.senderId
+          && request.resource.data.message == resource.data.message
+          && request.resource.data.timestamp == resource.data.timestamp;
+        // Delete: cliente puede borrar su propio mensaje (deleteCoachMessage CF
+        // usa admin SDK y bypassa esto, pero swipe-to-delete UI puede borrar local).
+        allow delete: if request.auth != null && request.auth.uid == userId;
       }
 
       // Rate-limit tracking (enforceAiRateLimit en shared.js) — solo admin SDK
