@@ -189,6 +189,55 @@ Leido por `assertAiFeatureEnabled(flag, lang)` via `getAiFeatureFlags()` en `sha
 
 **Uso**: cuando Gemini cae, hay prompt injection detectado, o spike de costos. Un toggle en Firebase Console desactiva el feature en 5min (cache TTL) sin redeploy. El cliente recibe `failed-precondition` HttpsError con mensaje `feature_unavailable` localizado en los 10 idiomas.
 
+### `simulation_config` (multi-universe + situation-sim debate, audit MiroFish round 9 2026-04-26)
+
+Leido por `simulateMultiUniverse` y `simulateSituation`. Cache 5 min via `getMultiUniverseConfig()`.
+
+#### Top-level
+
+| Campo | Tipo | Default | Descripcion |
+|---|---|---|---|
+| `enabled` | Boolean | `true` | Kill switch para simulaciones (multi-universe + situation-sim) |
+
+#### `simulation_config.debate` (multi-agent debate pipeline)
+
+| Campo | Tipo | Default | Rango | Descripcion |
+|---|---|---|---|---|
+| `enabled` | Boolean | `false` | — | Kill switch maestro del debate (master ON/OFF). Si `false`, ambos CFs caen a single-agent. |
+| `minPerspectives` | Number | `2` | 1-5 | Minimo de perspectivas validas para sintesis. Si valid<min → fallback single-agent |
+| `perspectiveModel` | String | `'gemini-2.5-flash-lite'` | — | Modelo Gemini para perspective agents (drafts, baratos) |
+| `perspectiveMaxTokens` | Number | `800` | 400-2000 | Max output tokens por perspective |
+| `perspectiveTemperature` | Number | `0.9` | 0.0-1.0 | Temperatura perspective (alta = mas variacion) |
+| `perspectiveTimeoutMs` | Number | `12000` | ≥5000 | Timeout por perspective (AbortController cancela Gemini call). Floor guard ≥5000ms |
+| `synthesisModel` | String | `'gemini-2.5-flash'` | — | Modelo Gemini para synthesizer (output final, calidad) |
+| `synthesisMaxTokens` | Number | `6000` | ≥2000 | Max output tokens synth. Floor guard ≥2000 (CJK/AR + adviceMode requieren ≥6000) |
+| `synthesisTemperature` | Number | `0.7` | 0.0-1.0 | Temperatura synthesizer |
+| `synthesisTimeoutMs` | Number | `45000` | ≥10000 | Timeout synth (con AbortController). Round 6 subido de 30s a 45s |
+| `parallelStages` | Boolean | `true` | — | Multi-universe: 5 stages en paralelo via Promise.allSettled. Si `false`, secuencial con sleep 200ms |
+| `topKPerspectives` | Number | `5` | 1-5 | Round 7: cap perspectives by `stageStrength`. `<5` slicea top-K (saves ~40% tokens stages "easy"). Default 5 (todas) |
+| `abTestSplitPercent` | Number | `100` | 0-100 | Round 7: AB test split. User-hash bucket (`parseInt(userId.substring(0,8), 16) % 100`). Default 100 = todos en debate. `50` = 50/50 split. `0` = single-agent only (effectively disables) |
+
+**Cache key behavior** (`multi-universe-simulation.js:720`):
+- `cacheKey = multiverse_{base}_{lang}_{sha256_8}` + suffix `_d1` cuando `debate.enabled=true`
+- Aislamiento entre toggle: cache de debate-on no contamina cache de debate-off
+
+**AB test bucketing** (audit D round 7):
+- Bucket determinista: `parseInt(userId.substring(0, 8), 16) % 100`
+- Estabilidad per-usuario: mismo userId siempre va al mismo bucket
+- `userInDebateBucket = userBucket < abTestSplitPercent` → si `false`, force `debate.enabled=false` para este request
+- Analytics: `debateEnabled` (effective), `debateMasterEnabled` (RC), `abTestBucket` (0-99), `abSplitPercent`
+- Daily counter: `aiAnalytics/multiverse/daily/{day}` con `abControlRuns` + `abTreatmentRuns`
+
+**Telemetria nueva (round 7-9)** — daily counters per `aiAnalytics/multiverse/daily/{YYYY-MM-DD}`:
+- `debateRuns`, `debateStagesSucceeded`, `debateStagesFallback`, `debatePerspectivesTotal`
+- `confidenceLow` / `confidenceMid` / `confidenceHigh` (B3 calibration histogram buckets)
+- `attributionDiscrepancyTotal` (B4 self-report vs trigram-measured sourceAgents)
+- `abControlRuns` / `abTreatmentRuns`
+
+### `coach_config.placeSearch` subcampos
+
+(Ya documentado arriba en `coach_config`.)
+
 ## Reglas de validacion
 
 1. `daily_likes_limit` es SIEMPRE 100 — NUNCA cambiar a valores random
@@ -198,6 +247,10 @@ Leido por `assertAiFeatureEnabled(flag, lang)` via `getAiFeatureFlags()` en `sha
 5. `coach_max_input_length` rango 100-10000
 6. `coach_daily_credits` rango 1-100
 7. `ai_moderation_confidence_threshold` rango 0.0-1.0
-8. CFs server-side (`coach_config`, `places_search_config`, `moderation_config`) tienen cache de 5 minutos
+8. CFs server-side (`coach_config`, `places_search_config`, `moderation_config`, `simulation_config`) tienen cache de 5 minutos
 9. Clientes iOS/Android tienen intervalo de fetch de 3600 segundos
 10. `categoryQueryMap` si es `null` o ausente, las CFs usan `DEFAULT_CATEGORY_QUERY_MAP` hardcodeado con 14 categorias bilingues
+11. `simulation_config.debate.synthesisMaxTokens` floor 6000 (Math.max guard upstream — situation-sim + multi-universe)
+12. `simulation_config.debate.abTestSplitPercent` rango 0-100. NUNCA usar valores random — solo 0/25/50/75/100 para AB rollouts limpios.
+13. `simulation_config.debate.topKPerspectives` rango 1-5. `5` = full debate (default, max calidad). `3` = top-3 by stageStrength (-40% tokens).
+14. CACHE_SCHEMA_VERSION en `multi-universe-simulation.js` (actualmente **v19**). Bumpa cada vez que cambia el shape de `debateMetadata` o `approaches` (campos: `measuredSources`, `confidenceHistogram`, `attributionDiscrepancyCount`, `partial`, `phase1Ms`/`phase2Ms`).
