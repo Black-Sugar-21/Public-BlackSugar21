@@ -326,6 +326,24 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // --- COACH KNOWLEDGE (RAG corpus for Coach IA + multi-universe + intent classification) ---
+    // Read-only via Admin SDK (Cloud Functions bypass rules).
+    // Audit C 2026-04-25: previously implicitly locked by wildcard catch-all
+    // below, but explicit rule documents that this collection is CF-only and
+    // must NEVER accept client writes (would allow prompt-injection chunks
+    // into RAG findNearest results that LLM agents consume as few-shot).
+    match /coachKnowledge/{chunkId} {
+      allow read, write: if false;
+    }
+
+    // --- INTENT LEARNING QUEUE (auto-learning from probe regressions) ---
+    // CF-only. Probe writes high-priority candidates here when isAdviceRequest
+    // misses but LLM Layer 5 corrects. Consolidator reviews + promotes verified
+    // chunks to coachKnowledge. NEVER allow client writes.
+    match /intentLearningQueue/{itemId} {
+      allow read, write: if false;
+    }
+
     // --- DEFAULT ---
     match /{document=**} {
       allow read, write: if false;
