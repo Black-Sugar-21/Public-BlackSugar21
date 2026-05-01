@@ -1,6 +1,6 @@
 ---
 name: places-search
-description: Sistema de busqueda de lugares de BlackSugar21 — algoritmo de radio progresivo, loadMore exponencial, fuzzyMatchPlace 3 niveles, Google Places API. Usado por getDateSuggestions, searchPlaces y dateCoachChat (fetchCoachPlaces). Usar cuando se trabaje con busqueda de lugares, radio progresivo, Google Places API o paginacion de venues.
+description: Place search system for BlackSugar21 — progressive radius algorithm, exponential loadMore, 3-level fuzzyMatchPlace, Google Places API. Used by getDateSuggestions, searchPlaces, and dateCoachChat (fetchCoachPlaces). Use when working with place search, progressive radius, Google Places API, or venue pagination.
 globs:
   - "functions/lib/places.js"
   - "functions/lib/places-helpers.js"

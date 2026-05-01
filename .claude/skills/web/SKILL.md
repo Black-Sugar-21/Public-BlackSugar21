@@ -1,6 +1,6 @@
 ---
 name: web
-description: App web publica de BlackSugar21 — Angular 21 standalone, Firebase Hosting, paginas legales multi-idioma (es/en/pt), CSP headers, sistema de colores alineado con iOS. Usar cuando se trabaje con el sitio web, paginas legales, deployment a Firebase Hosting, estilos CSS o internacionalizacion.
+description: BlackSugar21 public web app — Angular 21 standalone, Firebase Hosting, multi-language legal pages (es/en/pt), CSP headers, color system aligned with iOS. Use when working with the website, legal pages, deployment to Firebase Hosting, CSS styles, or internationalization.
 globs:
   - "src/**/*.ts"
   - "src/**/*.html"

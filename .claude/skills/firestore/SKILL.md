@@ -1,6 +1,6 @@
 ---
 name: firestore
-description: Esquema completo de Firestore de BlackSugar21 — todas las colecciones, campos, tipos, Storage paths, Security Rules, Remote Config 21 claves y 58 reglas de alineación iOS↔Android. Fuente de verdad cross-platform. Usar cuando se trabaje con datos Firestore, esquemas, campos de usuario, matches, mensajes, o cuando se audite alineación iOS↔Android.
+description: Complete Firestore schema for BlackSugar21 — all collections, fields, types, Storage paths, Security Rules, Remote Config 21 keys, and 58 iOS↔Android alignment rules. Cross-platform source of truth. Use when working with Firestore data, schemas, user fields, matches, messages, or auditing iOS↔Android alignment.
 ---
 
 # BlackSugar21 — Firestore Schema Completo

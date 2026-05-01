@@ -1,5 +1,5 @@
 ---
-description: "Sistema completo de moderacion de BlackSugar21 — auto-moderacion de mensajes, moderacion de fotos de perfil/stories, AI Safety Shield en chat, RAG de conocimiento (73 chunks, 13 categorias, 10 idiomas), blacklist SHA-256. CFs: autoModerateMessage (trigger), moderateProfileImage, moderateMessage, validateProfileImage, calculateSafetyScore. Usar cuando se trabaje con moderacion de contenido, filtros de seguridad, Safety Shield, analisis de fotos, o reglas de moderacion."
+description: "Complete moderation system for BlackSugar21 — auto-moderation of messages, profile/story photo moderation, AI Safety Shield in chat, knowledge RAG (73 chunks, 13 categories, 10 languages), SHA-256 blacklist. CFs: autoModerateMessage (trigger), moderateProfileImage, moderateMessage, validateProfileImage, calculateSafetyScore. Use when working with content moderation, safety filters, Safety Shield, photo analysis, or moderation rules."
 ---
 
 # BlackSugar21 — Content Moderation System

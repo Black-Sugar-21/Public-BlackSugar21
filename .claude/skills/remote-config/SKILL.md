@@ -1,6 +1,6 @@
 ---
 name: remote-config
-description: Todas las 21 claves de Remote Config de BlackSugar21 organizadas por tipo — 12 via RemoteConfigManager, 2 UI-direct, 3 server-side JSON (coach_config 23 campos, places_search_config 21 campos, moderation_config 5 campos), 4 scheduled/referencia. Rangos, defaults y reglas de validacion. Usar cuando se trabaje con Remote Config, configuracion dinamica, o se necesite saber que campos controlan que comportamiento.
+description: All 21 Remote Config keys for BlackSugar21 organized by type — 12 via RemoteConfigManager, 2 UI-direct, 3 server-side JSON (coach_config 23 fields, places_search_config 21 fields, moderation_config 5 fields), 4 scheduled/reference. Ranges, defaults, and validation rules. Use when working with Remote Config, dynamic configuration, or when you need to know which fields control which behavior.
 globs:
   - "functions/lib/coach.js"
   - "functions/lib/places.js"

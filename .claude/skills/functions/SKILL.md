@@ -1,6 +1,6 @@
 ---
 name: functions
-description: Gestión de Firebase Cloud Functions de BlackSugar21. Deploy, logs, debug y monitoreo — 47 callable + 13 scheduled + 8 triggers + 1 alias en us-central1. Modelos Gemini duales, RC server-side, Moderation RAG, Coach RAG/Learning, Coach Auto-Improvement. Usar cuando se quiera desplegar, debuggear, monitorear o testear Cloud Functions.
+description: Firebase Cloud Functions management for BlackSugar21. Deploy, logs, debug, and monitoring — 47 callable + 13 scheduled + 8 triggers + 1 alias in us-central1. Dual Gemini models, server-side RC, Moderation RAG, Coach RAG/Learning, Coach Auto-Improvement. Use when deploying, debugging, monitoring, or testing Cloud Functions.
 disable-model-invocation: true
 argument-hint: "[nombre-funcion | all | logs | monitor]"
 ---
