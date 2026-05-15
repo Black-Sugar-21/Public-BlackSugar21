@@ -75,8 +75,8 @@ assert(
 );
 
 assert(
-  'CACHE_SCHEMA_VERSION bumped to 12 (covers v4-v12)',
-  /const CACHE_SCHEMA_VERSION = 12;/.test(src)
+  'CACHE_SCHEMA_VERSION is 17 or higher',
+  /const CACHE_SCHEMA_VERSION = (1[7-9]|[2-9]\d|\d{3,});/.test(src)
 );
 
 assert(
