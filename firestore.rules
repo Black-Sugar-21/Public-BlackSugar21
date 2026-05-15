@@ -95,6 +95,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // Crear: solo el propio usuario puede crear su doc (con validaciones de rango básicas)
+      // SECURITY R51: el CREATE debe impedir auto-promoción a isAdmin/isReviewer/isTest/
+      //   verified/premium en la PRIMERA escritura (antes el bloqueo solo existía en update).
+      //   isAdmin lo consume generateMissingThumbnails. Se usa value-check (permite el
+      //   campo ausente o =false, bloquea =true) para no romper payloads de signup legítimos.
       allow create: if request.auth != null &&
         request.auth.uid == userId &&
         (!request.resource.data.keys().hasAny(['latitude']) ||
@@ -102,7 +106,12 @@ service cloud.firestore {
         (!request.resource.data.keys().hasAny(['longitude']) ||
          (request.resource.data.longitude >= -180 && request.resource.data.longitude <= 180)) &&
         (!request.resource.data.keys().hasAny(['maxDistance']) ||
-         (request.resource.data.maxDistance >= 1 && request.resource.data.maxDistance <= 500));
+         (request.resource.data.maxDistance >= 1 && request.resource.data.maxDistance <= 500)) &&
+        (!request.resource.data.keys().hasAny(['isAdmin']) || request.resource.data.isAdmin == false) &&
+        (!request.resource.data.keys().hasAny(['isReviewer']) || request.resource.data.isReviewer == false) &&
+        (!request.resource.data.keys().hasAny(['isTest']) || request.resource.data.isTest == false) &&
+        (!request.resource.data.keys().hasAny(['verified']) || request.resource.data.verified == false) &&
+        (!request.resource.data.keys().hasAny(['premium']) || request.resource.data.premium == false);
 
       // UPDATE: solo el propio usuario y SOLO campos no privilegiados.
       // SECURITY: previamente un usuario podía auto-promoverse escribiendo
