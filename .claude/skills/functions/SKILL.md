@@ -145,7 +145,7 @@ calculateAIChemistry
 
 ### Cache
 - Key: `multiverse_{base}_{lang}_{sha256_8}` (clients + server produce identical hash)
-- TTL: 6 months. `CACHE_SCHEMA_VERSION = 9` — any bump invalidates all caches.
+- TTL: 6 months. `CACHE_SCHEMA_VERSION = 21` — any bump invalidates all caches.
 - `isSoloMode` persisted for re-localization on cache hit.
 
 ### Tests
@@ -1072,3 +1072,43 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 **Stale FCM Token Cleanup:**
 - `cleanupStaleTokens()` in scheduled.js removes tokens rejected by FCM
 - Called in resetDailyLikes, resetSuperLikes, resetCoachMessages (3 scheduled functions)
+
+### Session 2026-05-16 — R64/R65 Coach Bugs
+
+**R64 — Place chip en "Frases para conversar" (BUG):**
+- `📍 Lugares en [city]` aparecía en sugerencias de frases durante modo conflicto/disculpa
+- Causa: chip se agregaba en coach.js L4097 DESPUÉS del `locationPatterns` filter, sin guard contextual
+- Fix: `isUserPlaceSearch` agregado a la condición → chip solo aparece cuando usuario buscó lugares explícitamente
+- Invariante: cualquier ítem agregado a `suggestions[]` después del guard de filtrado necesita su propia condición contextual
+
+**R65 — 3 bugs cerrados por auditoría:**
+- `evalParsed || {}` (coach.js L4058): null-crash cuando Gemini retorna non-JSON en self-evaluation path
+- `isNonPlaceMode && !isUserPlaceSearch` (coach.js L4190): false-positive borraba activitySuggestions en queries mixtas lugar+emoción (ej. "recomienda un café donde pueda expresarle mis sentimientos")
+- iOS `loadMoreSuggestions` (CoachChatViewModel.swift): faltaba `userLanguage` → CF respondía en EN para todos usuarios no-EN; también count hardcodeado a 12
+
+**iOS loadMoreSuggestions invariante:**
+- SIEMPRE enviar `userLanguage: DeviceLanguage.getForBackend()` en cualquier call a dateCoachChat
+- count dinámico: `current.count + 12` (no hardcodeado)
+- Verificar paridad con Android al modificar cualquier payload CF
+
+### Session 2026-05-16 — R66 Cultural P3-P4 + Cross-Platform Audit
+
+**R66 — 22 gaps culturales cerrados (103→81):**
+- `anxRx` (situation-simulation.js): +vergüenza/achuncha/me trabo (ES-LATAM ansiedad slang)
+- `actionLatinRx`: +qué le hago/qué hacemos (ES-LATAM AR) + o que fazer (PT bare infinitive)
+- `neutralLatinRx`: +compañera(?:s)? de (?:trabajo|oficina) (ES femenino) + Arbeitskollegin/Arbeitskollegen (DE)
+- `placeTypePattern` (coach.js): +gastropub/boozer/chippy/bottle-o/bacaro/fraschetta/Bierkeller/Gaststätte/Kaffeehaus/Würstelstand/sidrería/cevichería/cervejaria
+- `placeTypeUnicodePattern`: +串カツ(?:屋)?/たこ焼き(?:屋)?/お好み焼き(?:屋)? (JA Osaka) + أهوة (AR) + рюмочн(?:ая|ую|ой|ые)/пышечн(?:ая|ую|ой|ые) (RU todas las declinaciones)
+- LECCIÓN RU: substantivos rusos declinan — agregar patrón con nominativo/acusativo/genitivo/plural
+- Android normalizeCategory: +14 categorías × CJK/KO/AR/DE/IT/PT (commit `7577489`)
+- iOS normalizeCategory: mismo — +12 tokens por categoría (commit `48af8fb`)
+- iOS loadChatHistoryFromFirestore: faltaba situationType — badge invisible en recarga desde Firestore
+
+**R67 — BCP-47 hotfix (Android `63b1241`, iOS `60e55a2`):**
+- 6 call sites Android ChatViewModel.kt usaban `DeviceLanguage.get()` (ISO 639-1) en vez de `getForBackend()` (BCP-47)
+- 2 call sites iOS ChatViewModel.swift usaban `Locale.current.language.languageCode?.identifier`
+- CFs afectados: `getRealtimeCoachTips`, `calculateSafetyScore`, `getDateSuggestions`, `searchPlaces`
+- CRÍTICO: usuarios zh-TW/pt-PT/zh-HK recibían respuestas sin variante regional
+- INVARIANTE: CUALQUIER call site con `"userLanguage"` → `DeviceLanguage.getForBackend()`
+- EXCEPCIÓN: `moderateMessage` usa key `"language"` (no "userLanguage") → `DeviceLanguage.get()` correcto ahí
+- AIWingmanService.generateSmartReply: guard let suggestionsData → if let con fallback SmartReplySuggestions vacío
