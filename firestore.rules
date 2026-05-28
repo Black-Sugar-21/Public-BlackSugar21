@@ -137,7 +137,7 @@ service cloud.firestore {
           'safetyScore', 'safetyScoreLastUpdate',
           'simulationsRemaining', 'multiverseRemaining',
           'reportCount', 'reportsAgainstCount',
-          'createdAt', 'moderationHistory',
+          'createdAt', 'moderationHistory', 'lastActive',
           'stripeCustomerId', 'stripeSubscriptionId'
         ]);
 
@@ -246,6 +246,11 @@ service cloud.firestore {
 
       // Solo CF admin SDK lee/actualiza/elimina
       allow read, update, delete: if false;
+    }
+
+    // --- DISCOVERY STATE (cursor pagination) — CF-only write ---
+    match /discoveryState/{userId} {
+      allow read, write: if false;
     }
 
     // --- USER INTERACTIONS (Analytics) ---
