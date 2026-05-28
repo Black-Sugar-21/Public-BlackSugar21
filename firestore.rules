@@ -138,7 +138,8 @@ service cloud.firestore {
           'simulationsRemaining', 'multiverseRemaining',
           'reportCount', 'reportsAgainstCount',
           'createdAt', 'moderationHistory', 'lastActive',
-          'stripeCustomerId', 'stripeSubscriptionId'
+          'stripeCustomerId', 'stripeSubscriptionId',
+          'blocked', 'blockedBy'
         ]);
 
       // Subcolección LIKED — READ solo propietario (previene enumeración del grafo de likes)
