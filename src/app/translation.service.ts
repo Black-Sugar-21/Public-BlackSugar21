@@ -785,16 +785,16 @@ export class TranslationService {
       zh: '安全签到', ru: 'Проверка безопасности', ar: 'فحص الأمان', id: 'Safety Check-In'
     },
     'features.safetyCheckInText': {
-      es: 'La primera app de citas que cuida tu seguridad durante la cita. Programa un check-in y te enviaremos una notificación para verificar que estés bien.',
-      en: 'The first dating app that keeps you safe during the date. Schedule a check-in and we\'ll send you a notification to verify you\'re okay.',
-      pt: 'O primeiro app de encontros que cuida da sua segurança durante o encontro. Programe um check-in e enviaremos uma notificação para verificar que você está bem.',
-      fr: 'La première appli de rencontres qui veille sur vous pendant le rendez-vous. Programmez un check-in et nous vous enverrons une notification pour vérifier que tout va bien.',
-      de: 'Die erste Dating-App, die während des Dates auf deine Sicherheit achtet. Plane einen Check-In und wir senden dir eine Benachrichtigung, um sicherzustellen, dass alles in Ordnung ist.',
-      ja: 'デート中の安全を守る、初めてのマッチングアプリ。チェックインを設定すると、安全確認の通知をお送りします。',
-      zh: '首个在约会期间守护你安全的交友应用。安排一次签到，我们会发送通知确认你是否平安。',
-      ru: 'Первое приложение для знакомств, которое заботится о вашей безопасности во время свидания. Запланируйте проверку, и мы отправим уведомление, чтобы убедиться, что с вами всё в порядке.',
-      ar: 'أول تطبيق مواعدة يحرص على سلامتك أثناء الموعد. حدد موعد تسجيل وسوف نرسل لك إشعاراً للتأكد من أنك بخير.',
-      id: 'Aplikasi kencan pertama yang menjaga keselamatanmu selama kencan. Jadwalkan check-in dan kami akan mengirim notifikasi untuk memastikan kamu baik-baik saja.'
+      es: 'El coach de IA que cuida tu seguridad cuando quedas en persona con alguien. Programa un check-in y te enviaremos una notificación para verificar que estés bien.',
+      en: 'The AI coach that keeps you safe when meeting someone in person. Schedule a check-in and we\'ll send you a notification to verify you\'re okay.',
+      pt: 'O coach de IA que cuida da sua segurança quando você encontra alguém pessoalmente. Programe um check-in e enviaremos uma notificação para verificar que você está bem.',
+      fr: 'Le coach IA qui veille sur vous quand vous rencontrez quelqu\'un en personne. Programmez un check-in et nous vous enverrons une notification pour vérifier que tout va bien.',
+      de: 'Der KI-Coach, der auf deine Sicherheit achtet, wenn du jemanden persönlich triffst. Plane einen Check-In und wir senden dir eine Benachrichtigung, um sicherzustellen, dass alles in Ordnung ist.',
+      ja: '実際に人と会うときに安全を守るAIコーチ。チェックインを設定すると、安全確認の通知をお送りします。',
+      zh: '在你与人见面时守护安全的AI教练。安排一次签到，我们会发送通知确认你是否平安。',
+      ru: 'ИИ-коуч, который заботится о вашей безопасности при личных встречах. Запланируйте проверку, и мы отправим уведомление, чтобы убедиться, что с вами всё в порядке.',
+      ar: 'المدرب الذكي الذي يحرص على سلامتك عند لقاء شخص ما. حدد موعد تسجيل وسوف نرسل لك إشعاراً للتأكد من أنك بخير.',
+      id: 'Coach AI yang menjaga keselamatanmu saat bertemu seseorang secara langsung. Jadwalkan check-in dan kami akan mengirim notifikasi untuk memastikan kamu baik-baik saja.'
     },
     'features.safety1': {
       es: 'Programa un check-in antes de tu cita', en: 'Schedule a check-in before your date', pt: 'Programe um check-in antes do seu encontro',
@@ -822,15 +822,15 @@ export class TranslationService {
       zh: 'AI约会教练', ru: 'ИИ-коуч свиданий', ar: 'مدرب المواعيد بالذكاء الاصطناعي', id: 'Coach Kencan AI'
     },
     'features.dateCoachText': {
-      es: 'Tu asistente personal de citas con inteligencia artificial. Consejos personalizados, sugerencias de lugares y coaching en tiempo real.',
-      en: 'Your personal AI dating assistant. Personalized advice, place suggestions, and real-time coaching.',
-      pt: 'Seu assistente pessoal de encontros com IA. Conselhos personalizados, sugestões de lugares e coaching em tempo real.',
-      fr: 'Votre assistant personnel de rendez-vous propulsé par l\'IA. Conseils personnalisés, suggestions de lieux et coaching en temps réel.',
-      de: 'Dein persönlicher KI-Dating-Assistent. Personalisierte Tipps, Ortsvorschläge und Echtzeit-Coaching.',
-      ja: 'AIによるパーソナルデートアシスタント。カスタマイズされたアドバイス、おすすめスポット、リアルタイムコーチング。',
-      zh: '你的AI约会私人助理。个性化建议、地点推荐和实时辅导。',
-      ru: 'Ваш персональный ИИ-ассистент для свиданий. Индивидуальные советы, рекомендации мест и коучинг в реальном времени.',
-      ar: 'مساعدك الشخصي للمواعيد بالذكاء الاصطناعي. نصائح مخصصة، اقتراحات أماكن وتدريب فوري.',
+      es: 'Tu coach personal de inteligencia emocional con IA. Consejos respaldados por psicología, sugerencias de lugares y coaching en tiempo real.',
+      en: 'Your personal AI emotional intelligence coach. Psychology-backed advice, place suggestions, and real-time coaching.',
+      pt: 'Seu coach pessoal de inteligência emocional com IA. Conselhos baseados em psicologia, sugestões de lugares e coaching em tempo real.',
+      fr: 'Votre coach personnel d\'intelligence émotionnelle propulsé par l\'IA. Conseils fondés sur la psychologie, suggestions de lieux et coaching en temps réel.',
+      de: 'Dein persönlicher KI-Coach für emotionale Intelligenz. Psychologisch fundierte Tipps, Ortsvorschläge und Echtzeit-Coaching.',
+      ja: 'AIによる感情知性コーチ。心理学に基づいたアドバイス、おすすめスポット、リアルタイムコーチング。',
+      zh: '你的AI情绪智能教练。基于心理学的建议、地点推荐和实时辅导。',
+      ru: 'Ваш персональный ИИ-коуч эмоционального интеллекта. Советы на основе психологии, рекомендации мест и коучинг в реальном времени.',
+      ar: 'مدربك الشخصي للذكاء العاطفي بالذكاء الاصطناعي. نصائح مستندة إلى علم النفس، اقتراحات أماكن وتدريب فوري.',
       id: 'Asisten kencan AI pribadimu. Saran personal, rekomendasi tempat, dan coaching real-time.'
     },
     'features.coach1': {
