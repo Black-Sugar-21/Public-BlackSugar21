@@ -253,6 +253,20 @@
             ]
         },
         {
+            "collectionGroup": "users",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "male",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "g",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "matches",
             "queryScope": "COLLECTION",
             "fields": [
@@ -418,6 +432,152 @@
                     "fieldPath": "order",
                     "order": "ASCENDING"
                 }
+            ]
+        },
+        {
+            "collectionGroup": "intentLearningQueue",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "priorityRank",
+                    "order": "DESCENDING"
+                },
+                {
+                    "fieldPath": "queuedAt",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "intentLearningQueue",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "language",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "queuedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "dateCheckIns",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "status", "order": "ASCENDING"},
+                {"fieldPath": "scheduledTime", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R40 D3: dateCheckIns Pass 2 reminder (safety.js:274-277) and Pass 3 emergency (319-322)",
+            "collectionGroup": "dateCheckIns",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "status", "order": "ASCENDING"},
+                {"fieldPath": "checkInSentAt", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R40 D3: dateCheckIns Pass 4 follow-up cleanup (safety.js:379-382)",
+            "collectionGroup": "dateCheckIns",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "status", "order": "ASCENDING"},
+                {"fieldPath": "followUpScheduledAt", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R40 D3: dateCheckIns user query (safety.js:39-41) — user+match+status IN",
+            "collectionGroup": "dateCheckIns",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "userId", "order": "ASCENDING"},
+                {"fieldPath": "matchId", "order": "ASCENDING"},
+                {"fieldPath": "status", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R98: no-geo fallback query in discovery.js (accountStatus+paused, orientation=both)",
+            "collectionGroup": "users",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "accountStatus", "order": "ASCENDING"},
+                {"fieldPath": "paused", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R98: no-geo fallback query in discovery.js (accountStatus+paused+male, orientation=men/women)",
+            "collectionGroup": "users",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "accountStatus", "order": "ASCENDING"},
+                {"fieldPath": "paused", "order": "ASCENDING"},
+                {"fieldPath": "male", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: requestDateDebrief (coach.js) matches/{id}/messages where type==date_blueprint orderBy timestamp desc — was missing in prod (unguarded user-facing query)",
+            "collectionGroup": "messages",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "type", "order": "ASCENDING"},
+                {"fieldPath": "timestamp", "order": "DESCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: monitorCoachQuality + evaluateCoachResponses collectionGroup(messages) where sender==coach where timestamp> — prod only had senderId/COLLECTION-sender, not COLLECTION_GROUP sender",
+            "collectionGroup": "messages",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                {"fieldPath": "sender", "order": "ASCENDING"},
+                {"fieldPath": "timestamp", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: resolveDisputesDaily (moderation.js) moderationDisputes where status in [...] orderBy createdAt desc",
+            "collectionGroup": "moderationDisputes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "status", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: resolveDisputesDaily (moderation.js) reports where autoGenerated==false orderBy createdAt desc",
+            "collectionGroup": "reports",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "autoGenerated", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: disputeModeration pattern check (moderation.js) moderationDisputes 3-equality originalCategory+disputeType+status",
+            "collectionGroup": "moderationDisputes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "originalCategory", "order": "ASCENDING"},
+                {"fieldPath": "disputeType", "order": "ASCENDING"},
+                {"fieldPath": "status", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R130: updateCoachKnowledge moderation cross-learning (coach.js) moderationDisputes where disputeType==false_positive orderBy createdAt desc",
+            "collectionGroup": "moderationDisputes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "disputeType", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
             ]
         }
     ],
