@@ -48,7 +48,20 @@ service cloud.firestore {
             request.auth.uid in resource.data.usersMatched &&
             !request.resource.data.diff(resource.data).affectedKeys().hasAny(
               ['usersMatched', 'userTypesAtMatch', 'createdAt']
-            );
+            ) &&
+            // R141: messageCount is the trust signal for the first-message gate
+            // (hasExistingMessages → messageCount>0). It was unfrozen, so a SUGAR_BABY
+            // could standalone-set it >0 and bypass the role-based first-message rule.
+            // Constrain it: only +1 per update (matches the client's FieldValue.increment(1));
+            // the unlocking 0→1 transition is allowed ONLY for a SUGAR_DADDY/MOMMY (the only
+            // role that may legitimately send — and thus increment past — the first message),
+            // mirroring getSenderTypeAtMatch. 1→N is open (conversation already started).
+            (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['messageCount'])
+              || (request.resource.data.messageCount == resource.data.get('messageCount', 0) + 1
+                  && (resource.data.get('messageCount', 0) > 0
+                      || (resource.data.keys().hasAny(['userTypesAtMatch'])
+                            ? resource.data.userTypesAtMatch[request.auth.uid] in ['SUGAR_DADDY', 'SUGAR_MOMMY']
+                            : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType in ['SUGAR_DADDY', 'SUGAR_MOMMY']))));
 
       // No permitir eliminar
       allow delete: if false;
