@@ -154,8 +154,13 @@ service cloud.firestore {
         // through the blockUser CF (Admin SDK, bypasses rules); a direct client write to
         // `blocked` is permitted ONLY when it is removal-only (see condition below).
         // 'blockedBy' stays fully CF-only (a user must never edit who blocked them).
+        // R135b: 'userType' removed from the blocklist — it is a SELF-SELECTED role
+        // (the CREATE rule does NOT gate it; users freely pick SUGAR_DADDY/MOMMY/BABY at
+        // signup), so editing it via the profile screen is legitimate and must not fail
+        // the whole edit-profile update. It is constrained to the valid enum below.
+        // 'userTypeAtSignup' STAYS blocked — immutable audit trail of the original role.
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'isReviewer', 'isAdmin', 'isTest', 'userType', 'userTypeAtSignup',
+          'isReviewer', 'isAdmin', 'isTest', 'userTypeAtSignup',
           'verified', 'premium', 'accountStatus',
           'coachMessagesRemaining', 'coachMessagesLastReset',
           'superLikesRemaining', 'superLikesLastReset',
@@ -170,7 +175,12 @@ service cloud.firestore {
         // R135: a direct client `blocked` write is allowed ONLY if removal-only
         // (new ⊆ old) — i.e. unblock. Adding entries must go through blockUser CF.
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['blocked'])
-          || request.resource.data.blocked.hasOnly(resource.data.get('blocked', [])));
+          || request.resource.data.blocked.hasOnly(resource.data.get('blocked', []))) &&
+        // R135b: a userType change is allowed but only to a valid role enum (parity with
+        // signup, which is also ungated value-wise). first-message privilege follows the
+        // chosen role — consistent with a user signing up directly as SUGAR_DADDY/MOMMY.
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userType'])
+          || request.resource.data.userType in ['SUGAR_DADDY', 'SUGAR_MOMMY', 'SUGAR_BABY']);
 
       // Subcolección LIKED — READ solo propietario (previene enumeración del grafo de likes)
       match /liked/{likedUserId} {
