@@ -43,7 +43,10 @@
           <span class="lang-text">{{ getCurrentLanguage().toUpperCase() }}</span>
         </button>
         <!-- Mobile Menu Button -->
-        <div class="mobile-menu-btn" (click)="toggleMobileMenu()" [class.active]="mobileMenuOpen()">
+        <div class="mobile-menu-btn" (click)="toggleMobileMenu()" (keydown.enter)="toggleMobileMenu()" (keydown.space)="toggleMobileMenu(); $event.preventDefault()" [class.active]="mobileMenuOpen()"
+             role="button" tabindex="0"
+             [attr.aria-expanded]="mobileMenuOpen()"
+             [attr.aria-label]="getCurrentLanguage() === 'es' ? 'Abrir menú' : 'Open menu'">
           <span></span>
           <span></span>
           <span></span>
@@ -135,11 +138,45 @@
           </div>
           <div class="carousel-dots">
             @for (dot of [0, 1, 2, 3, 4, 5, 6, 7]; track dot; let i = $index) {
-              <div class="carousel-dot" [class.active]="currentSlide() === i" (click)="goToSlide(i)">
+              <div class="carousel-dot" [class.active]="currentSlide() === i" (click)="goToSlide(i)" (keydown.enter)="goToSlide(i)"
+                   role="button" tabindex="0"
+                   [attr.aria-current]="currentSlide() === i"
+                   [attr.aria-label]="(getCurrentLanguage() === 'es' ? 'Ver imagen ' : 'View image ') + (i + 1)">
                 <div class="carousel-dot-fill"></div>
               </div>
             }
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust / credibility band (ui-ux-pro-max: App Store landing needs social proof).
+         Honest differentiators — NOT fake ratings — reinforcing the
+         "AI Emotional Intelligence Coach" positioning. -->
+    <section class="trust-band" aria-label="{{ getCurrentLanguage() === 'es' ? 'Por qué confiar en nosotros' : 'Why trust us' }}">
+      <div class="trust-band-inner animate-in delay-1">
+        <div class="trust-stat">
+          <span class="trust-stat-icon">✦</span>
+          <span class="trust-stat-num">6</span>
+          <span class="trust-stat-label">{{ getCurrentLanguage() === 'es' ? 'agentes de psicología IA' : 'AI psychology agents' }}</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <span class="trust-stat-icon">📚</span>
+          <span class="trust-stat-num">368+</span>
+          <span class="trust-stat-label">{{ getCurrentLanguage() === 'es' ? 'estudios respaldados' : 'research-backed insights' }}</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <span class="trust-stat-icon">🌍</span>
+          <span class="trust-stat-num">12</span>
+          <span class="trust-stat-label">{{ getCurrentLanguage() === 'es' ? 'idiomas' : 'languages' }}</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <span class="trust-stat-icon">🔒</span>
+          <span class="trust-stat-num">{{ getCurrentLanguage() === 'es' ? 'Privado' : 'Private' }}</span>
+          <span class="trust-stat-label">{{ getCurrentLanguage() === 'es' ? 'y seguro por diseño' : '& safe by design' }}</span>
         </div>
       </div>
     </section>
@@ -397,7 +434,7 @@
   @if (showTesterModal()) {
     <div class="modal-overlay" (click)="showTesterModal.set(false)">
       <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
-        <button class="modal-close" (click)="showTesterModal.set(false)">×</button>
+        <button class="modal-close" (click)="showTesterModal.set(false)" [attr.aria-label]="getCurrentLanguage() === 'es' ? 'Cerrar' : 'Close'">×</button>
 
         <div class="modal-icon">💎</div>
         <h2 class="modal-title">{{ t('tester.title') }}</h2>

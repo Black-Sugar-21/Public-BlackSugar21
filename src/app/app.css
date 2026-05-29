@@ -2103,3 +2103,112 @@ a:hover {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY (ui-ux-pro-max review) — keyboard focus + reduced motion
+   Added 2026-05-29. Pure-additive: no change to default mouse/touch UX.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Keyboard focus ring (gold, brand-consistent). :focus-visible only shows on
+   keyboard nav, never on mouse click — so no visual noise for pointer users. */
+a:focus-visible,
+button:focus-visible,
+.btn-primary:focus-visible,
+.store-badge:focus-visible,
+.nav-item:focus-visible,
+.carousel-dot:focus-visible,
+.language-switcher:focus-visible,
+.language-switcher-toolbar:focus-visible,
+.mobile-menu-btn:focus-visible,
+.modal-close:focus-visible,
+.modal-button:focus-visible,
+.modal-input:focus-visible {
+  outline: 3px solid var(--gold, #D4AF37);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Respect the OS "reduce motion" preference (vestibular-disorder accessibility).
+   Neutralizes the shimmer, animate-in entrances, carousel slide transform,
+   GSAP-driven transitions and any decorative animation while keeping content
+   fully visible (opacity:1, no transform offset). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-in,
+  .animate-in.delay-1,
+  .animate-in.delay-2,
+  .animate-in.delay-3,
+  .animate-in.delay-4 {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .img-shimmer { display: none !important; }
+  .carousel-track { transition: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TRUST BAND (ui-ux-pro-max: social-proof gap on App Store landing)
+   Honest differentiators, on-brand gold/dark glass. Added 2026-05-29.
+   ═══════════════════════════════════════════════════════════════════════ */
+.trust-band {
+  padding: 28px 20px;
+  display: flex;
+  justify-content: center;
+}
+.trust-band-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 4vw, 48px);
+  flex-wrap: wrap;
+  max-width: 1000px;
+  width: 100%;
+  padding: 22px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.06), rgba(74, 0, 79, 0.06));
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+.trust-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  min-width: 96px;
+}
+.trust-stat-icon { font-size: 1.1rem; opacity: 0.85; line-height: 1; }
+.trust-stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 700;
+  background: var(--gradient-gold, linear-gradient(135deg, #B8860B, #D4AF37));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+}
+.trust-stat-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #B0B0B0);
+  max-width: 110px;
+}
+.trust-divider {
+  width: 1px;
+  height: 38px;
+  background: linear-gradient(180deg, transparent, rgba(212, 175, 55, 0.35), transparent);
+}
+@media (max-width: 560px) {
+  .trust-divider { display: none; }
+  .trust-band-inner { gap: 18px 24px; padding: 18px 16px; }
+  .trust-stat { min-width: 38%; }
+}
