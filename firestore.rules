@@ -15,9 +15,29 @@ service cloud.firestore {
       allow read: if request.auth != null &&
    		 request.auth.uid in resource.data.usersMatched;
 
-      // Permitir crear match si el usuario autenticado está en usersMatched
+      // Crear match: requiere MEMBRESÍA + RECIPROCIDAD de like.
+      // SECURITY 2026-05-29 (R129 R5): el rule anterior solo exigía
+      // `request.auth.uid in usersMatched`, así que un atacante podía fabricar
+      // matches/X con [attackerUid, victimUid], pasar el check de participante en
+      // getMatchUsersLocations + todos los CFs match-scoped, y filtrar la
+      // ubicación (lat/lng) + perfil de la víctima. Ahora exige: exactamente 2
+      // participantes, el creador entre ellos, y que AMBOS se tengan mutuamente
+      // en su array `liked` (like recíproco real). Esto replica el check
+      // hasUserLikedBack que iOS+Android ya hacen ANTES de crear el match, así que
+      // todo match legítimo lo pasa por construcción; el atacante no puede falsificar
+      // `liked` de la víctima (solo la víctima escribe su propio `liked`, rules
+      // users/{uid}/liked). Super-likes también pueblan `liked` en ambos clientes.
+      // El cron checkMutualLikesAndCreateMatch usa Admin SDK → bypassa rules.
+      // Trade-off: 2 get() extra por create (≤10 permitidos); .get('liked', [])
+      // evita error si el campo falta.
   		allow create: if request.auth != null &&
-            request.auth.uid in request.resource.data.usersMatched;
+            request.resource.data.usersMatched is list &&
+            request.resource.data.usersMatched.size() == 2 &&
+            request.auth.uid in request.resource.data.usersMatched &&
+            (request.resource.data.usersMatched[1] in
+              get(/databases/$(database)/documents/users/$(request.resource.data.usersMatched[0])).data.get('liked', [])) &&
+            (request.resource.data.usersMatched[0] in
+              get(/databases/$(database)/documents/users/$(request.resource.data.usersMatched[1])).data.get('liked', []));
 
       // Permitir actualizar match (para lastMessageTime, etc.)
       // SECURITY: freeze immutable match identity fields (usersMatched,
