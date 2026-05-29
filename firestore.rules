@@ -148,6 +148,12 @@ service cloud.firestore {
         (!request.resource.data.keys().hasAny(['maxDistance']) ||
          (request.resource.data.maxDistance >= 1 && request.resource.data.maxDistance <= 500)) &&
         // Bloquear escritura de campos privilegiados / de-servidor
+        // R135: 'blocked' removed from the unconditional blocklist — the unblock flow
+        // (both clients do a standalone `update("blocked", arrayRemove(x))`) was being
+        // denied, so a user could never unblock anyone. Additions to `blocked` still go
+        // through the blockUser CF (Admin SDK, bypasses rules); a direct client write to
+        // `blocked` is permitted ONLY when it is removal-only (see condition below).
+        // 'blockedBy' stays fully CF-only (a user must never edit who blocked them).
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'isReviewer', 'isAdmin', 'isTest', 'userType', 'userTypeAtSignup',
           'verified', 'premium', 'accountStatus',
@@ -159,8 +165,12 @@ service cloud.firestore {
           'reportCount', 'reportsAgainstCount',
           'createdAt', 'moderationHistory', 'lastActive',
           'stripeCustomerId', 'stripeSubscriptionId',
-          'blocked', 'blockedBy'
-        ]);
+          'blockedBy'
+        ]) &&
+        // R135: a direct client `blocked` write is allowed ONLY if removal-only
+        // (new ⊆ old) — i.e. unblock. Adding entries must go through blockUser CF.
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['blocked'])
+          || request.resource.data.blocked.hasOnly(resource.data.get('blocked', [])));
 
       // Subcolección LIKED — READ solo propietario (previene enumeración del grafo de likes)
       match /liked/{likedUserId} {
