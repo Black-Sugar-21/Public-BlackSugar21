@@ -196,6 +196,12 @@ service cloud.firestore {
           'safetyScore', 'safetyScoreLastUpdate',
           'simulationsRemaining', 'multiverseRemaining',
           'reportCount', 'reportsAgainstCount',
+          // R151: 'receivedLikeCount' is the server-only social-proof counter the
+          // discovery popularity signal scores on. It MUST be unwritable by clients —
+          // otherwise a user inflates their own popularity (+8 in everyone's ranking).
+          // The old signal scored candidate.liked.length (OUTGOING likes, freely
+          // client-writable) which was both the wrong field and self-spoofable.
+          'receivedLikeCount',
           'createdAt', 'moderationHistory', 'lastActive',
           'stripeCustomerId', 'stripeSubscriptionId',
           'blockedBy'
