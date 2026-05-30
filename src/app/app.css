@@ -2166,7 +2166,11 @@ button:focus-visible,
 }
 .trust-band-inner {
   display: flex;
-  align-items: center;
+  /* Top-align the columns so icons / numbers / labels line up row-by-row.
+     With align-items:center each stat was centered by its OWN height, so the
+     1-line-label stat ("12 IDIOMAS") floated lower than the 2-line ones,
+     breaking the alignment the user reported. Dividers re-centered below. */
+  align-items: flex-start;
   justify-content: center;
   gap: clamp(16px, 4vw, 48px);
   flex-wrap: wrap;
@@ -2192,11 +2196,16 @@ button:focus-visible,
   font-family: 'Playfair Display', serif;
   font-size: clamp(1.5rem, 3.5vw, 2rem);
   font-weight: 700;
+  /* Lining figures: Playfair can render old-style/proportional digits where "1"
+     and "2" are shorter than "6"/"3"/"8" — that made "12" look smaller. Force
+     uniform cap-height digits so every number reads the same size. */
+  font-variant-numeric: lining-nums;
+  font-feature-settings: "lnum" 1;
   background: var(--gradient-gold, linear-gradient(135deg, #B8860B, #D4AF37));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 .trust-stat-label {
   font-size: 0.72rem;
@@ -2208,6 +2217,8 @@ button:focus-visible,
 .trust-divider {
   width: 1px;
   height: 38px;
+  /* Re-center the divider now that the inner row is top-aligned. */
+  align-self: center;
   background: linear-gradient(180deg, transparent, rgba(212, 175, 55, 0.35), transparent);
 }
 @media (max-width: 560px) {
