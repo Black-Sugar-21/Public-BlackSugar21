@@ -61,7 +61,10 @@ service cloud.firestore {
                   && (resource.data.get('messageCount', 0) > 0
                       || (resource.data.keys().hasAny(['userTypesAtMatch'])
                             ? resource.data.userTypesAtMatch[request.auth.uid] in ['SUGAR_DADDY', 'SUGAR_MOMMY']
-                            : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType in ['SUGAR_DADDY', 'SUGAR_MOMMY']))));
+                            // R148: snapshot-less → immutable signed-up role (else live userType for
+                            // un-backfilled users), mirroring getSenderTypeAtMatch. Closes the
+                            // userType-flip bypass on the messageCount 0→1 unlock too.
+                            : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('userTypeAtSignup', get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('userType', '')) in ['SUGAR_DADDY', 'SUGAR_MOMMY']))));
 
       // No permitir eliminar
       allow delete: if false;
@@ -77,7 +80,18 @@ service cloud.firestore {
           let matchData = get(/databases/$(database)/documents/matches/$(matchId)).data;
           return matchData.keys().hasAny(['userTypesAtMatch'])
             ? matchData.userTypesAtMatch[request.auth.uid]
-            : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+            : getCallerSignupRole();
+        }
+        // R148: for SNAPSHOT-LESS matches (no userTypesAtMatch) the first-message gate must
+        // key on the IMMUTABLE signed-up role, not the now-editable live `userType` (R135
+        // made userType client-editable) — otherwise a SUGAR_BABY could flip
+        // userType→SUGAR_DADDY, send the first message, then flip back, bypassing the
+        // role gate. Prefer userTypeAtSignup; fall back to live userType ONLY when it is
+        // absent (un-backfilled users) so NO legitimate first-message breaks while the
+        // hourlyUserResets backfill propagates userTypeAtSignup to all users.
+        function getCallerSignupRole() {
+          let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+          return u.get('userTypeAtSignup', u.get('userType', ''));
         }
 
         // Helper function: verificar si el match tiene messageCount > 0
@@ -98,14 +112,15 @@ service cloud.firestore {
               (!request.resource.data.keys().hasAny(['message']) ||
                request.resource.data.message is string &&
                request.resource.data.message.size() <= 4000) &&
-              // VALIDACIÓN PRIMER MENSAJE: Solo usuarios que eran SUGAR_DADDY/MOMMY al hacer match pueden iniciar
+              // VALIDACIÓN PRIMER MENSAJE: Solo usuarios que eran SUGAR_DADDY/MOMMY al hacer match pueden iniciar.
+              // R148: removed the inline `live userType` snapshot-less fallback — it duplicated
+              // getSenderTypeAtMatch() (which now resolves snapshot-less via the immutable
+              // signed-up role) AND read the editable live userType directly, which was the
+              // exact bypass (a SUGAR_BABY flips userType→SUGAR_DADDY to pass it).
               (
                 hasExistingMessages() ||
                 getSenderTypeAtMatch() == 'SUGAR_DADDY' ||
-                getSenderTypeAtMatch() == 'SUGAR_MOMMY' ||
-                (!get(/databases/$(database)/documents/matches/$(matchId)).data.keys().hasAny(['userTypesAtMatch']) &&
-                 (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_DADDY' ||
-                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'SUGAR_MOMMY'))
+                getSenderTypeAtMatch() == 'SUGAR_MOMMY'
               );
 
         // Update: el remitente actualiza carga de fotos efímeras; cualquier participante marca viewedBy
