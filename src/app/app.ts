@@ -157,12 +157,17 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           trigger: '.features-grid',
           start: 'top 80%',
         },
-        y: 50,
+        // Tight, cohesive entrance (Emil: stagger 30–80ms, small offset). A 200ms
+        // stagger + 50px offset read as a "staircase / misaligned" mid-scroll. clearProps
+        // strips GSAP's inline transform on finish so the rest state is perfectly aligned
+        // and the CSS :hover lift works (inline transform would otherwise beat the rule).
+        y: 24,
         opacity: 0,
-        scale: 0.95,
-        duration: 0.7,
-        stagger: 0.2,
+        scale: 0.97,
+        duration: 0.5,
+        stagger: 0.08,
         ease: 'power2.out',
+        clearProps: 'transform',
       });
 
       // 3b. ScrollTrigger — What's New section reveal
@@ -181,12 +186,13 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           trigger: '.whatsnew-grid',
           start: 'top 85%',
         },
-        y: 40,
+        y: 24,
         opacity: 0,
-        scale: 0.96,
-        duration: 0.6,
-        stagger: 0.12,
+        scale: 0.97,
+        duration: 0.5,
+        stagger: 0.08,
         ease: 'power2.out',
+        clearProps: 'transform',
       });
 
       // 4. Parallax — Hero section subtle
