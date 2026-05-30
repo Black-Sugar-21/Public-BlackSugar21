@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+/* Fonts moved to index.html <link> (R: perf — avoids render-blocking @import chain). */
 
 :root {
   /* Motion tokens — Emil Kowalski design-engineering easing (2026-05-29).

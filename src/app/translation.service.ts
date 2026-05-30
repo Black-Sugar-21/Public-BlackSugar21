@@ -1466,13 +1466,16 @@ export class TranslationService {
       const savedLang = localStorage.getItem('preferredLanguage') as Language;
       if (savedLang) {
         this.currentLanguage.set(savedLang);
+        document.documentElement.lang = savedLang; // a11y: sync <html lang> at startup
         return;
       }
 
       // Detect browser language
       const browserLang = navigator.language?.substring(0, 2) || 'en';
       const supported: Language[] = ['es', 'en', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
-      this.currentLanguage.set(supported.includes(browserLang as Language) ? browserLang as Language : 'en');
+      const detected = supported.includes(browserLang as Language) ? browserLang as Language : 'en';
+      this.currentLanguage.set(detected);
+      document.documentElement.lang = detected; // a11y: sync <html lang> at startup
     }
   }
 
@@ -1503,6 +1506,11 @@ export class TranslationService {
     this.currentLanguage.set(lang);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('preferredLanguage', lang);
+    }
+    // a11y/SEO (WCAG 3.1.1/3.1.2): keep <html lang> in sync so screen readers use the
+    // correct speech synthesizer and crawlers read the right language.
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
     }
   }
 

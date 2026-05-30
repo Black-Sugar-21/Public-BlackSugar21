@@ -18,7 +18,9 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   private gsapCtx: gsap.Context | null = null;
   protected readonly title = signal('Black Sugar 21');
   protected readonly ageVerified = signal(false);
-  protected readonly storeLinks = signal({ ios: '#', android: '#' });
+  // R: seed iOS with the real App Store URL so the badge is never a dead '#' on first
+  // paint / Firebase-slow (the app-id is already known in index.html). Firebase may override.
+  protected readonly storeLinks = signal({ ios: 'https://apps.apple.com/app/id6470783901', android: '#' });
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
 
@@ -48,6 +50,14 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     if (this.gsapCtx) return; // Already initialized
     // Check if hero section exists in DOM
     if (!document.querySelector('.hero-section')) return;
+
+    // a11y (WCAG 2.3.3): respect prefers-reduced-motion. gsap.from() sets opacity:0 then
+    // animates in; returning before any tween runs leaves the natural CSS (fully visible),
+    // so no clearProps is needed. The CSS reduced-motion block can't reach GSAP's inline
+    // styles, so this guard is the only thing that keeps reduced-motion users from the
+    // full hero timeline + scroll reveals + chat-bubble cascade.
+    if (typeof window !== 'undefined' && window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     this.gsapCtx = gsap.context(() => {
       // 1. Hero Timeline — coordinated entrance
@@ -261,6 +271,10 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
   private animateDot() {
     this.pauseCarousel();
+    // a11y: no auto-advancing/animated carousel under prefers-reduced-motion. Manual dot
+    // navigation (goToSlide) still works; we just don't run the 5s auto-rotate tween.
+    if (typeof window !== 'undefined' && window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const fills = document.querySelectorAll('.carousel-dot-fill');
     gsap.set(fills, { width: '0%' });
     const currentFill = fills[this.currentSlide()];

@@ -85,7 +85,7 @@
     <section id="inicio" class="hero-section">
       <div class="hero-content">
         <div class="logo-container animate-in delay-1">
-          <img src="logo-21.png" alt="Black Sugar 21" width="200" height="200" />
+          <img src="logo-21.png" alt="Black Sugar 21" width="200" height="200" fetchpriority="high" />
         </div>
 
         <h1 class="animate-in delay-2">{{ t('hero.title') }}</h1>
@@ -105,7 +105,7 @@
           <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide() * 100 + '%)'">
             <div class="carousel-slide" [class.active]="currentSlide() === 0">
               <div class="img-shimmer"></div>
-              <img [src]="getCurrentLanguage() === 'es' ? 'coachIA-es.png' : 'coachIA-en.png'" alt="Coach IA" class="hero-screenshot-img" loading="lazy" />
+              <img [src]="getCurrentLanguage() === 'es' ? 'coachIA-es.png' : 'coachIA-en.png'" alt="Coach IA" class="hero-screenshot-img" fetchpriority="high" />
             </div>
             <div class="carousel-slide" [class.active]="currentSlide() === 1">
               <div class="img-shimmer"></div>
