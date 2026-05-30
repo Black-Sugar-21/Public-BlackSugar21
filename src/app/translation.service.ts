@@ -23,37 +23,45 @@ export class TranslationService {
     // Age Gate
     'age.title': {
       es: 'Black Sugar 21',
+      pt: 'Black Sugar 21',
       en: 'Black Sugar 21'
     },
     'age.exclusive': {
       es: 'Contenido Exclusivo +{age}',
+      pt: 'Conteúdo Exclusivo +{age}',
       en: 'Exclusive Content +{age}'
     },
     'age.restricted': {
       es: 'Debes tener {age} años o más para acceder.',
+      pt: 'Você precisa ter {age} anos ou mais para acessar.',
       en: 'You must be {age} or older to access.'
     },
     'age.button': {
       es: 'Tengo {age} años o más',
+      pt: 'Tenho {age} anos ou mais',
       en: "I'm {age} or older"
     },
     'age.terms': {
       es: 'Al entrar, aceptas nuestros términos.',
+      pt: 'Ao entrar, você aceita nossos termos.',
       en: 'By entering, you accept our terms.'
     },
 
     // Toolbar
     'nav.date': {
       es: 'Inicio',
+      pt: 'Início',
       en: 'Home'
     },
     'nav.terms': {
       es: 'Términos de Uso', en: 'Terms of Use',
+      pt: 'Termos de Uso',
       fr: 'Conditions d\'utilisation', de: 'Nutzungsbedingungen', ja: '利用規約',
       zh: '使用条款', ru: 'Условия использования', ar: 'شروط الاستخدام', id: 'Ketentuan Penggunaan'
     },
     'nav.privacy': {
       es: 'Políticas de Privacidad', en: 'Privacy Policy',
+      pt: 'Política de Privacidade',
       fr: 'Politique de confidentialité', de: 'Datenschutzrichtlinie', ja: 'プライバシーポリシー',
       zh: '隐私政策', ru: 'Политика конфиденциальности', ar: 'سياسة الخصوصية', id: 'Kebijakan Privasi'
     },
@@ -61,10 +69,12 @@ export class TranslationService {
     // Hero Section
     'hero.title': {
       es: 'Tu coach personal con IA.',
+      pt: 'Seu coach pessoal com IA.',
       en: 'Your Personal AI Coach.'
     },
     'hero.tagline': {
       es: 'Descubre lugares, recibe consejos personalizados y mejora tu vida social con guía inteligente.',
+      pt: 'Descubra lugares, receba conselhos personalizados e melhore sua vida social com orientação inteligente.',
       en: 'Discover places, get personalized advice, and enhance your social life with intelligent guidance.'
     },
     'hero.subtitle': {
@@ -74,10 +84,12 @@ export class TranslationService {
     },
     'hero.ios': {
       es: 'Descargar en iOS',
+      pt: 'Baixar no iOS',
       en: 'Download on iOS'
     },
     'hero.android': {
       es: 'Obtener en Android',
+      pt: 'Obter no Android',
       en: 'Get it on Android'
     },
 
@@ -132,60 +144,74 @@ export class TranslationService {
     },
     'features.coach.title': {
       es: 'Coach IA',
+      pt: 'Coach IA',
       en: 'AI Coach'
     },
     'features.coach.desc': {
       es: 'Un coach de IA que te guía con consejos personalizados y sugerencias de lugares reales cerca de ti.',
+      pt: 'Um coach de IA que te orienta com conselhos personalizados e sugestões de lugares reais perto de você.',
       en: 'An AI coach that guides you with personalized advice and real place suggestions near you.'
     },
 
     // AI Coach Section
     'coach.section.label': {
       es: 'COACH IA',
+      pt: 'COACH IA',
       en: 'AI COACH'
     },
     'coach.section.title': {
       es: 'Tu guía personal con inteligencia artificial.',
+      pt: 'Seu guia pessoal com inteligência artificial.',
       en: 'Your personal guide powered by AI.'
     },
     'coach.section.subtitle': {
       es: 'Accede instantáneamente desde tu perfil',
+      pt: 'Acesse instantaneamente pelo seu perfil',
       en: 'Access instantly from your Profile'
     },
     'coach.feature1.title': {
       es: 'Consejos personalizados',
+      pt: 'Conselhos personalizados',
       en: 'Personalized Advice'
     },
     'coach.feature1.desc': {
       es: 'El coach analiza tu contexto y te da consejos específicos para cada situación.',
+      pt: 'O coach analisa seu contexto e te dá conselhos específicos para cada situação.',
       en: 'The coach analyzes your context and gives you specific advice for each situation.'
     },
     'coach.feature2.title': {
       es: 'Descubre lugares reales',
+      pt: 'Descubra lugares reais',
       en: 'Discover real places'
     },
     'coach.feature2.desc': {
       es: 'Sugiere cafeterías, restaurantes, bares y más cerca de tu ubicación — con fotos y reseñas reales.',
+      pt: 'Sugere cafés, restaurantes, bares e mais perto da sua localização — com fotos e avaliações reais.',
       en: 'Suggests cafés, restaurants, bars and more near your location — with real photos and reviews.'
     },
     'coach.feature3.title': {
       es: 'Coaching en tiempo real',
+      pt: 'Coaching em tempo real',
       en: 'Real-time Coaching'
     },
     'coach.feature3.desc': {
       es: 'Un banner inteligente analiza tus conversaciones en vivo, mostrando compatibilidad, tips contextuales y respuestas sugeridas.',
+      pt: 'Um banner inteligente analisa suas conversas ao vivo, mostrando compatibilidade, dicas contextuais e respostas sugeridas.',
       en: 'A smart banner analyzes your conversations live, showing compatibility, contextual tips, and suggested responses.'
     },
     'coach.feature4.title': {
       es: 'Mejora tu confianza',
+      pt: 'Aumente sua confiança',
       en: 'Build your confidence'
     },
     'coach.feature4.desc': {
       es: 'Te ayuda a comunicarte mejor y ganar seguridad en tus interacciones sociales.',
+      pt: 'Ajuda você a se comunicar melhor e ganhar segurança nas suas interações sociais.',
       en: 'Helps you communicate better and gain confidence in your social interactions.'
     },
     'coach.cta': {
       es: 'Descarga la app y conoce tu coach',
+      pt: 'Baixe o app e conheça seu coach',
       en: 'Download the app and meet your coach'
     },
 
@@ -423,292 +449,363 @@ export class TranslationService {
     // Terms Section
     'terms.title': {
       es: 'Términos de Uso',
+      pt: 'Termos de Uso',
       en: 'Terms of Use'
     },
     'terms.welcome': {
       es: 'Al usar Black Sugar 21 aceptas estos términos. La app es solo para adultos mayores de 18 años.',
+      pt: 'Ao usar o Black Sugar 21 você aceita estes termos. O app é apenas para adultos maiores de 18 anos.',
       en: 'By using Black Sugar 21 you agree to these terms. The app is for adults 18 years or older only.'
     },
     'terms.age': {
       es: 'Debes tener al menos 18 años. Nos reservamos el derecho de verificar y suspender cuentas que no cumplan este requisito.',
+      pt: 'Você deve ter pelo menos 18 anos. Reservamo-nos o direito de verificar e suspender contas que não cumpram este requisito.',
       en: 'You must be at least 18 years old. We reserve the right to verify and suspend accounts that do not meet this requirement.'
     },
     'terms.content': {
       es: 'El contenido es para uso personal. Queda prohibido compartir, reproducir o usar el contenido de otros usuarios sin su consentimiento.',
+      pt: 'O conteúdo é para uso pessoal. É proibido compartilhar, reproduzir ou usar o conteúdo de outros usuários sem o consentimento deles.',
       en: 'Content is for personal use only. Sharing, reproducing or using other users\' content without their consent is prohibited.'
     },
     'terms.respect': {
       es: 'Está prohibido el acoso, el engaño, los perfiles falsos y cualquier conducta que afecte la seguridad o bienestar de otros usuarios.',
+      pt: 'São proibidos o assédio, o engano, os perfis falsos e qualquer conduta que afete a segurança ou o bem-estar de outros usuários.',
       en: 'Harassment, deception, fake profiles, and any conduct affecting the safety or well-being of other users are prohibited.'
     },
     'terms.redistribution': {
       es: 'El Coach IA y las funciones de simulación son herramientas de orientación. Sus sugerencias no reemplazan el juicio personal ni constituyen asesoramiento profesional.',
+      pt: 'O Coach IA e os recursos de simulação são ferramentas de orientação. Suas sugestões não substituem o julgamento pessoal nem constituem aconselhamento profissional.',
       en: 'The AI Coach and simulation features are guidance tools. Their suggestions do not replace personal judgment or constitute professional advice.'
     },
     'terms.violation': {
       es: 'Los mensajes y fotos son revisados automáticamente por IA para garantizar un entorno seguro. El incumplimiento de estas normas puede resultar en la suspensión permanente de la cuenta.',
+      pt: 'As mensagens e fotos são revisadas automaticamente por IA para garantir um ambiente seguro. O descumprimento destas normas pode resultar na suspensão permanente da conta.',
       en: 'Messages and photos are automatically reviewed by AI to ensure a safe environment. Violations of these rules may result in permanent account suspension.'
     },
 
     // Privacy Section
     'privacy.title': {
       es: 'Políticas de Privacidad',
+      pt: 'Política de Privacidade',
       en: 'Privacy Policy'
     },
     'privacy.intro': {
       es: 'Tu privacidad es nuestra prioridad. Esta política describe qué datos recopilamos, cómo los usamos y tus derechos sobre ellos.',
+      pt: 'Sua privacidade é nossa prioridade. Esta política descreve quais dados coletamos, como os usamos e seus direitos sobre eles.',
       en: 'Your privacy is our priority. This policy describes what data we collect, how we use it, and your rights over it.'
     },
     'privacy.collection': {
       es: 'Datos que recopilamos',
+      pt: 'Dados que coletamos',
       en: 'Data we collect'
     },
     'privacy.collectionText': {
       es: 'Recopilamos: número de teléfono (autenticación), edad verificada 18+, fotos de perfil, ubicación aproximada, preferencias de búsqueda y mensajes de chat. El Coach IA procesa el contexto que ingresas voluntariamente para personalizar sus respuestas.',
+      pt: 'Coletamos: número de telefone (autenticação), idade verificada 18+, fotos de perfil, localização aproximada, preferências de busca e mensagens de chat. O Coach IA processa o contexto que você insere voluntariamente para personalizar suas respostas.',
       en: 'We collect: phone number (authentication), verified age 18+, profile photos, approximate location, search preferences, and chat messages. The AI Coach processes context you voluntarily enter to personalize its responses.'
     },
     'privacy.usage': {
       es: 'Cómo usamos tus datos',
+      pt: 'Como usamos seus dados',
       en: 'How we use your data'
     },
     'privacy.usageText': {
       es: 'Tus datos se usan para conectarte con otras personas, personalizar el Coach IA y moderar contenido automáticamente. Usamos Google Gemini para procesar mensajes y fotos con fines de moderación y coaching. Tus datos nunca se venden a terceros.',
+      pt: 'Seus dados são usados para conectar você com outras pessoas, personalizar o Coach IA e moderar conteúdo automaticamente. Usamos o Google Gemini para processar mensagens e fotos com fins de moderação e coaching. Seus dados nunca são vendidos a terceiros.',
       en: 'Your data is used to connect you with others, personalize the AI Coach, and automatically moderate content. We use Google Gemini to process messages and photos for moderation and coaching purposes. Your data is never sold to third parties.'
     },
     'privacy.security': {
       es: 'Seguridad y tus derechos',
+      pt: 'Segurança e seus direitos',
       en: 'Security and your rights'
     },
     'privacy.securityText': {
       es: 'Tus datos se almacenan de forma segura en Firebase (Google). Puedes eliminar tu cuenta y todos tus datos permanentemente desde la app en cualquier momento. Los tokens de notificación y datos sensibles se encriptan y nunca se exponen en registros del sistema.',
+      pt: 'Seus dados são armazenados com segurança no Firebase (Google). Você pode excluir sua conta e todos os seus dados permanentemente pelo app a qualquer momento. Os tokens de notificação e dados sensíveis são criptografados e nunca expostos em registros do sistema.',
       en: 'Your data is securely stored in Firebase (Google). You can permanently delete your account and all your data from the app at any time. Notification tokens and sensitive data are encrypted and never exposed in system logs.'
     },
 
     // Data Deletion
     'dataDeletion.title': {
       es: 'Eliminación de Datos',
+      pt: 'Exclusão de Dados',
       en: 'Data Deletion'
     },
     'dataDeletion.intro': {
       es: 'En Black Sugar 21, respetamos tu derecho a controlar tus datos personales. Puedes eliminar tu cuenta y todos tus datos de forma permanente directamente desde la aplicación.',
+      pt: 'No Black Sugar 21, respeitamos seu direito de controlar seus dados pessoais. Você pode excluir sua conta e todos os seus dados de forma permanente diretamente pelo aplicativo.',
       en: 'At Black Sugar 21, we respect your right to control your personal data. You can permanently delete your account and all your data directly from the app.'
     },
     'dataDeletion.inApp': {
       es: 'Cómo Eliminar tu Cuenta y Datos',
+      pt: 'Como Excluir sua Conta e Dados',
       en: 'How to Delete Your Account and Data'
     },
     'dataDeletion.inAppText': {
       es: 'La eliminación de tu cuenta es un proceso inmediato y permanente que se realiza desde la aplicación Black Sugar 21:',
+      pt: 'A exclusão da sua conta é um processo imediato e permanente realizado pelo aplicativo Black Sugar 21:',
       en: 'Deleting your account is an immediate and permanent process done from the Black Sugar 21 app:'
     },
     'dataDeletion.step1': {
       es: 'Abre la aplicación Black Sugar 21 en tu dispositivo',
+      pt: 'Abra o aplicativo Black Sugar 21 no seu dispositivo',
       en: 'Open the Black Sugar 21 app on your device'
     },
     'dataDeletion.step2': {
       es: 'Ve a tu perfil y accede a "Configuración"',
+      pt: 'Vá ao seu perfil e acesse "Configurações"',
       en: 'Go to your profile and access "Settings"'
     },
     'dataDeletion.step3': {
       es: 'Selecciona "Eliminar Cuenta" al final de la página',
+      pt: 'Selecione "Excluir Conta" no final da página',
       en: 'Select "Delete Account" at the bottom of the page'
     },
     'dataDeletion.step4': {
       es: 'Confirma la eliminación. Tu cuenta y todos tus datos se eliminarán inmediatamente',
+      pt: 'Confirme a exclusão. Sua conta e todos os seus dados serão excluídos imediatamente',
       en: 'Confirm deletion. Your account and all your data will be deleted immediately'
     },
     'dataDeletion.whatDeleted': {
       es: 'Datos que se Eliminan',
+      pt: 'Dados que são Excluídos',
       en: 'Data that Gets Deleted'
     },
     'dataDeletion.whatDeletedText': {
       es: 'Cuando eliminas tu cuenta, se borran de forma permanente los siguientes datos:',
+      pt: 'Quando você exclui sua conta, os seguintes dados são apagados de forma permanente:',
       en: 'When you delete your account, the following data is permanently erased:'
     },
     'dataDeletion.data1': {
       es: 'Información de perfil (nombre, fecha de nacimiento, biografía, preferencias)',
+      pt: 'Informações de perfil (nome, data de nascimento, biografia, preferências)',
       en: 'Profile information (name, date of birth, bio, preferences)'
     },
     'dataDeletion.data2': {
       es: 'Todas tus fotos y contenido multimedia',
+      pt: 'Todas as suas fotos e conteúdo multimídia',
       en: 'All your photos and media content'
     },
     'dataDeletion.data3': {
       es: 'Historial de conversaciones y mensajes',
+      pt: 'Histórico de conversas e mensagens',
       en: 'Conversation history and messages'
     },
     'dataDeletion.data4': {
       es: 'Historial de interacciones y conversaciones con el coach',
+      pt: 'Histórico de interações e conversas com o coach',
       en: 'Coach interaction and conversation history'
     },
     'dataDeletion.data5': {
       es: 'Datos de ubicación y preferencias de búsqueda',
+      pt: 'Dados de localização e preferências de busca',
       en: 'Location data and search preferences'
     },
     'dataDeletion.data6': {
       es: 'Historial de actividad en la aplicación',
+      pt: 'Histórico de atividade no aplicativo',
       en: 'Activity history in the app'
     },
     'dataDeletion.retention': {
       es: 'Periodo de Retención',
+      pt: 'Período de Retenção',
       en: 'Retention Period'
     },
     'dataDeletion.retentionText': {
       es: 'Nuestro compromiso con tu privacidad incluye los siguientes plazos de eliminación:',
+      pt: 'Nosso compromisso com sua privacidade inclui os seguintes prazos de exclusão:',
       en: 'Our commitment to your privacy includes the following deletion timelines:'
     },
     'dataDeletion.immediate': {
       es: 'Inmediato:',
+      pt: 'Imediato:',
       en: 'Immediate:'
     },
     'dataDeletion.immediateText': {
       es: 'Tu cuenta se desactiva al instante y tus datos dejan de ser accesibles para otros usuarios.',
+      pt: 'Sua conta é desativada na hora e seus dados deixam de ser acessíveis a outros usuários.',
       en: 'Your account is deactivated instantly and your data is no longer accessible to other users.'
     },
     'dataDeletion.backup': {
       es: '30 días:',
+      pt: '30 dias:',
       en: '30 days:'
     },
     'dataDeletion.backupText': {
       es: 'Los datos se eliminan completamente de nuestras copias de seguridad activas.',
+      pt: 'Os dados são totalmente excluídos das nossas cópias de segurança ativas.',
       en: 'Data is completely removed from our active backup systems.'
     },
     'dataDeletion.legal': {
       es: 'Excepciones legales:',
+      pt: 'Exceções legais:',
       en: 'Legal exceptions:'
     },
     'dataDeletion.legalText': {
       es: 'Solo conservamos datos mínimos si es requerido por ley (registros de auditoría, prevención de fraude) por un máximo de 90 días.',
+      pt: 'Conservamos apenas dados mínimos se exigido por lei (registros de auditoria, prevenção de fraude) por no máximo 90 dias.',
       en: 'We only retain minimal data if required by law (audit logs, fraud prevention) for a maximum of 90 days.'
     },
     'dataDeletion.important': {
       es: 'Importante',
+      pt: 'Importante',
       en: 'Important'
     },
     'dataDeletion.importantText': {
       es: 'La eliminación de tu cuenta es irreversible. Una vez confirmada, no podrás recuperar tu cuenta ni tus datos. Si deseas volver a usar Black Sugar 21 en el futuro, tendrás que crear una cuenta nueva.',
+      pt: 'A exclusão da sua conta é irreversível. Uma vez confirmada, você não poderá recuperar sua conta nem seus dados. Se quiser voltar a usar o Black Sugar 21 no futuro, terá que criar uma nova conta.',
       en: 'Account deletion is irreversible. Once confirmed, you cannot recover your account or data. If you wish to use Black Sugar 21 in the future, you will need to create a new account.'
     },
 
     // Safety Standards
     'safety.title': {
       es: 'Estándares de Seguridad Infantil',
+      pt: 'Padrões de Segurança Infantil',
       en: 'Child Safety Standards'
     },
     'safety.intro': {
       es: 'En Black Sugar 21, la protección de menores y la prevención del abuso sexual infantil son nuestra máxima prioridad. Hemos implementado sistemas de seguridad avanzados con inteligencia artificial para garantizar un entorno seguro y protegido.',
+      pt: 'No Black Sugar 21, a proteção de menores e a prevenção do abuso sexual infantil são nossa máxima prioridade. Implementamos sistemas de segurança avançados com inteligência artificial para garantir um ambiente seguro e protegido.',
       en: 'At Black Sugar 21, protecting minors and preventing child sexual abuse are our highest priority. We have implemented advanced AI-powered security systems to ensure a safe and protected environment.'
     },
     'safety.ageVerification': {
       es: 'Verificación Rigurosa de Edad',
+      pt: 'Verificação Rigorosa de Idade',
       en: 'Strict Age Verification'
     },
     'safety.ageVerificationText': {
       es: 'Implementamos múltiples capas de verificación para garantizar que todos los usuarios sean mayores de 18 años:',
+      pt: 'Implementamos várias camadas de verificação para garantir que todos os usuários sejam maiores de 18 anos:',
       en: 'We implement multiple verification layers to ensure all users are over 18 years old:'
     },
     'safety.age1': {
       es: 'Verificación obligatoria de fecha de nacimiento durante el registro',
+      pt: 'Verificação obrigatória da data de nascimento durante o cadastro',
       en: 'Mandatory date of birth verification during registration'
     },
     'safety.age2': {
       es: 'Validación automática de edad por país según normativas locales',
+      pt: 'Validação automática de idade por país conforme as normas locais',
       en: 'Automatic age validation by country according to local regulations'
     },
     'safety.age3': {
       es: 'Restricción absoluta: Solo usuarios mayores de 18 años pueden acceder a la plataforma',
+      pt: 'Restrição absoluta: Apenas usuários maiores de 18 anos podem acessar a plataforma',
       en: 'Absolute restriction: Only users over 18 years old can access the platform'
     },
     'safety.childProtection': {
       es: 'Protección Contra Explotación y Abuso Sexual Infantil (EASI)',
+      pt: 'Proteção Contra Exploração e Abuso Sexual Infantil',
       en: 'Protection Against Child Sexual Exploitation and Abuse (CSEA)'
     },
     'safety.childProtectionText': {
       es: 'Nuestra plataforma cuenta con sistemas de detección proactiva para prevenir cualquier forma de explotación o abuso:',
+      pt: 'Nossa plataforma conta com sistemas de detecção proativa para prevenir qualquer forma de exploração ou abuso:',
       en: 'Our platform features proactive detection systems to prevent any form of exploitation or abuse:'
     },
     'safety.child1': {
       es: 'Cero tolerancia: Prohibición absoluta de contenido relacionado con menores de edad',
+      pt: 'Tolerância zero: Proibição absoluta de conteúdo relacionado a menores de idade',
       en: 'Zero tolerance: Absolute prohibition of content related to minors'
     },
     'safety.child2': {
       es: 'Bloqueo inmediato y permanente de cuentas que intenten acceder siendo menores',
+      pt: 'Bloqueio imediato e permanente de contas que tentem acessar sendo menores',
       en: 'Immediate and permanent blocking of accounts attempting to access as minors'
     },
     'safety.child3': {
       es: 'Colaboración activa con autoridades competentes ante cualquier sospecha',
+      pt: 'Colaboração ativa com as autoridades competentes diante de qualquer suspeita',
       en: 'Active collaboration with competent authorities in case of any suspicion'
     },
     'safety.child4': {
       es: 'Reportes automáticos al NCMEC (National Center for Missing & Exploited Children) cuando corresponda',
+      pt: 'Denúncias automáticas ao NCMEC (National Center for Missing & Exploited Children) quando aplicável',
       en: 'Automatic reports to NCMEC (National Center for Missing & Exploited Children) when applicable'
     },
     'safety.aiModeration': {
       es: 'Moderación Inteligente con IA 24/7',
+      pt: 'Moderação Inteligente com IA 24/7',
       en: 'Intelligent AI Moderation 24/7'
     },
     'safety.aiModerationText': {
       es: 'Utilizamos tecnología de inteligencia artificial de última generación para proteger nuestra comunidad:',
+      pt: 'Usamos tecnologia de inteligência artificial de última geração para proteger nossa comunidade:',
       en: 'We use state-of-the-art artificial intelligence technology to protect our community:'
     },
     'safety.ai1': {
       es: 'Análisis automático de todas las fotos de perfil con Google Cloud Vision AI para detectar contenido inapropiado',
+      pt: 'Análise automática de todas as fotos de perfil com o Google Cloud Vision AI para detectar conteúdo inadequado',
       en: 'Automatic analysis of all profile photos with Google Cloud Vision AI to detect inappropriate content'
     },
     'safety.ai2': {
       es: 'Escaneo en tiempo real de mensajes con Google Gemini AI para identificar lenguaje ofensivo, acoso o contenido ilegal',
+      pt: 'Verificação em tempo real das mensagens com o Google Gemini AI para identificar linguagem ofensiva, assédio ou conteúdo ilegal',
       en: 'Real-time message scanning with Google Gemini AI to identify offensive language, harassment, or illegal content'
     },
     'safety.ai3': {
       es: 'Detección proactiva de comportamientos sospechosos y patrones de abuso',
+      pt: 'Detecção proativa de comportamentos suspeitos e padrões de abuso',
       en: 'Proactive detection of suspicious behaviors and abuse patterns'
     },
     'safety.ai4': {
       es: 'Eliminación automática de contenido que viole nuestras políticas de seguridad',
+      pt: 'Remoção automática de conteúdo que viole nossas políticas de segurança',
       en: 'Automatic removal of content that violates our security policies'
     },
     'safety.reporting': {
       es: 'Sistema de Reportes y Respuesta Rápida',
+      pt: 'Sistema de Denúncias e Resposta Rápida',
       en: 'Reporting System and Rapid Response'
     },
     'safety.reportingText': {
       es: 'Facilitamos a nuestros usuarios herramientas para mantener la comunidad segura:',
+      pt: 'Disponibilizamos aos nossos usuários ferramentas para manter a comunidade segura:',
       en: 'We provide our users with tools to keep the community safe:'
     },
     'safety.report1': {
       es: 'Botón de reporte accesible en todos los perfiles y conversaciones',
+      pt: 'Botão de denúncia acessível em todos os perfis e conversas',
       en: 'Accessible report button on all profiles and conversations'
     },
     'safety.report2': {
       es: 'Revisión inmediata de reportes por parte de nuestro equipo de seguridad',
+      pt: 'Revisão imediata das denúncias pela nossa equipe de segurança',
       en: 'Immediate review of reports by our security team'
     },
     'safety.report3': {
       es: 'Bloqueo preventivo de usuarios reportados mientras se investiga el caso',
+      pt: 'Bloqueio preventivo de usuários denunciados enquanto o caso é investigado',
       en: 'Preventive blocking of reported users while the case is investigated'
     },
     'safety.contact': {
       es: 'Información de Contacto para Seguridad',
+      pt: 'Informações de Contato para Segurança',
       en: 'Safety Contact Information'
     },
     'safety.contactText': {
       es: 'Para reportar cualquier problema de seguridad, contenido inapropiado o sospecha de actividad ilegal, contáctanos de inmediato:',
+      pt: 'Para denunciar qualquer problema de segurança, conteúdo inadequado ou suspeita de atividade ilegal, entre em contato conosco imediatamente:',
       en: 'To report any security issues, inappropriate content, or suspicion of illegal activity, contact us immediately:'
     },
     'safety.email': {
       es: 'Email de Seguridad',
+      pt: 'E-mail de Segurança',
       en: 'Safety Email'
     },
     'safety.support': {
       es: 'Soporte General',
+      pt: 'Suporte Geral',
       en: 'General Support'
     },
     'safety.compliance': {
       es: 'Cumplimiento Legal y Normativo',
+      pt: 'Conformidade Legal e Regulatória',
       en: 'Legal and Regulatory Compliance'
     },
     'safety.complianceText': {
       es: 'Black Sugar 21 cumple estrictamente con todas las leyes y regulaciones aplicables, incluyendo COPPA (Children\'s Online Privacy Protection Act), GDPR, y normativas locales de cada país. Cooperamos plenamente con las autoridades en la investigación y persecución de cualquier actividad ilegal relacionada con menores.',
+      pt: 'O Black Sugar 21 cumpre rigorosamente todas as leis e regulamentações aplicáveis, incluindo COPPA (Children\'s Online Privacy Protection Act), GDPR e as normas locais de cada país. Cooperamos plenamente com as autoridades na investigação e persecução de qualquer atividade ilegal relacionada a menores.',
       en: 'Black Sugar 21 strictly complies with all applicable laws and regulations, including COPPA (Children\'s Online Privacy Protection Act), GDPR, and local regulations of each country. We fully cooperate with authorities in investigating and prosecuting any illegal activity related to minors.'
     },
 
@@ -947,31 +1044,37 @@ export class TranslationService {
     },
     'footer.home': {
       es: 'Inicio', en: 'Home',
+      pt: 'Início',
       fr: 'Accueil', de: 'Startseite', ja: 'ホーム',
       zh: '首页', ru: 'Главная', ar: 'الرئيسية', id: 'Beranda'
     },
     'footer.terms': {
       es: 'Términos', en: 'Terms',
+      pt: 'Termos',
       fr: 'Conditions', de: 'Nutzungsbedingungen', ja: '利用規約',
       zh: '条款', ru: 'Условия', ar: 'الشروط', id: 'Ketentuan'
     },
     'footer.privacy': {
       es: 'Privacidad', en: 'Privacy',
+      pt: 'Privacidade',
       fr: 'Confidentialité', de: 'Datenschutz', ja: 'プライバシー',
       zh: '隐私', ru: 'Конфиденциальность', ar: 'الخصوصية', id: 'Privasi'
     },
     'footer.support': {
       es: 'Soporte', en: 'Support',
+      pt: 'Suporte',
       fr: 'Assistance', de: 'Support', ja: 'サポート',
       zh: '支持', ru: 'Поддержка', ar: 'الدعم', id: 'Dukungan'
     },
     'footer.contact': {
       es: 'Contacto', en: 'Contact',
+      pt: 'Contato',
       fr: 'Contact', de: 'Kontakt', ja: 'お問い合わせ',
       zh: '联系我们', ru: 'Контакты', ar: 'اتصل بنا', id: 'Kontak'
     },
     'footer.copyright': {
       es: `© ${this.currentYear} Black Sugar 21. Todos los derechos reservados.`,
+      pt: `© ${this.currentYear} Black Sugar 21. Todos os direitos reservados.`,
       en: `© ${this.currentYear} Black Sugar 21. All rights reserved.`,
       fr: `© ${this.currentYear} Black Sugar 21. Tous droits réservés.`,
       de: `© ${this.currentYear} Black Sugar 21. Alle Rechte vorbehalten.`,
@@ -983,6 +1086,7 @@ export class TranslationService {
     },
     'footer.moderation': {
       es: 'Moderación', en: 'Moderation',
+      pt: 'Moderação',
       fr: 'Modération', de: 'Moderation', ja: 'モデレーション',
       zh: '内容审核', ru: 'Модерация', ar: 'الإشراف', id: 'Moderasi'
     },
@@ -990,238 +1094,297 @@ export class TranslationService {
     // Moderation Policy
     'moderation.title': {
       es: 'Políticas de Moderación y Comunidad',
+      pt: 'Políticas de Moderação e Comunidade',
       en: 'Moderation and Community Policies'
     },
     'moderation.subtitle': {
       es: 'Garantizando un ambiente seguro y respetuoso para todos',
+      pt: 'Garantindo um ambiente seguro e respeitoso para todos',
       en: 'Ensuring a safe and respectful environment for everyone'
     },
     'moderation.intro.title': {
       es: 'Nuestro Compromiso con la Seguridad',
+      pt: 'Nosso Compromisso com a Segurança',
       en: 'Our Commitment to Safety'
     },
     'moderation.intro.text': {
       es: 'En Black Sugar 21, la seguridad y el respeto son fundamentales. Hemos implementado un sistema avanzado de moderación con inteligencia artificial que funciona 24/7 para mantener nuestra comunidad segura, respetuosa y acogedora para todos los usuarios.',
+      pt: 'No Black Sugar 21, a segurança e o respeito são fundamentais. Implementamos um sistema avançado de moderação com inteligência artificial que funciona 24/7 para manter nossa comunidade segura, respeitosa e acolhedora para todos os usuários.',
       en: 'At Black Sugar 21, safety and respect are fundamental. We have implemented an advanced AI-powered moderation system that works 24/7 to keep our community safe, respectful, and welcoming for all users.'
     },
     'moderation.ai.title': {
       es: 'Detección Automática con Inteligencia Artificial',
+      pt: 'Detecção Automática com Inteligência Artificial',
       en: 'Automatic Detection with Artificial Intelligence'
     },
     'moderation.ai.text1': {
       es: 'Nuestro sistema utiliza Google Gemini AI para analizar todos los mensajes en tiempo real, detectando automáticamente:',
+      pt: 'Nosso sistema usa o Google Gemini AI para analisar todas as mensagens em tempo real, detectando automaticamente:',
       en: 'Our system uses Google Gemini AI to analyze all messages in real-time, automatically detecting:'
     },
     'moderation.ai.detection1': {
       es: '🚫 Contenido ofensivo, insultos o lenguaje vulgar',
+      pt: '🚫 Conteúdo ofensivo, insultos ou linguagem vulgar',
       en: '🚫 Offensive content, insults, or vulgar language'
     },
     'moderation.ai.detection2': {
       es: '🚨 Acoso, intimidación o amenazas',
+      pt: '🚨 Assédio, intimidação ou ameaças',
       en: '🚨 Harassment, bullying, or threats'
     },
     'moderation.ai.detection3': {
       es: '💬 Spam o mensajes repetitivos',
+      pt: '💬 Spam ou mensagens repetitivas',
       en: '💬 Spam or repetitive messages'
     },
     'moderation.ai.detection4': {
       es: '⚠️ Comportamiento inadecuado o solicitudes inapropiadas',
+      pt: '⚠️ Comportamento inadequado ou solicitações impróprias',
       en: '⚠️ Inappropriate behavior or requests'
     },
     'moderation.ai.detection5': {
       es: '🔞 Contenido sexual explícito no consensuado',
+      pt: '🔞 Conteúdo sexual explícito não consensual',
       en: '🔞 Non-consensual explicit sexual content'
     },
     'moderation.ai.privacy': {
       es: '🔒 Tu privacidad está protegida: El análisis es automático, privado y no es revisado por humanos a menos que se reporte un incidente.',
+      pt: '🔒 Sua privacidade está protegida: A análise é automática, privada e não é revisada por humanos a menos que um incidente seja denunciado.',
       en: '🔒 Your privacy is protected: Analysis is automatic, private, and not reviewed by humans unless an incident is reported.'
     },
     'moderation.penalty.title': {
       es: 'Sistema de Penalización Progresiva',
+      pt: 'Sistema de Penalização Progressiva',
       en: 'Progressive Penalty System'
     },
     'moderation.penalty.text': {
       es: 'Cada vez que se detecta contenido ofensivo, se asigna una puntuación al usuario basada en la gravedad:',
+      pt: 'Cada vez que conteúdo ofensivo é detectado, uma pontuação é atribuída ao usuário com base na gravidade:',
       en: 'Each time offensive content is detected, a score is assigned to the user based on severity:'
     },
     'moderation.penalty.level1.title': {
       es: 'Nivel Bajo (+1 punto)',
+      pt: 'Nível Baixo (+1 ponto)',
       en: 'Low Level (+1 point)'
     },
     'moderation.penalty.level1.desc': {
       es: 'Lenguaje levemente inapropiado o comentarios desconsiderados',
+      pt: 'Linguagem levemente inadequada ou comentários sem consideração',
       en: 'Slightly inappropriate language or inconsiderate comments'
     },
     'moderation.penalty.level1.impact': {
       es: 'Impacto: Advertencia automática, mínima reducción de visibilidad',
+      pt: 'Impacto: Advertência automática, redução mínima de visibilidade',
       en: 'Impact: Automatic warning, minimal visibility reduction'
     },
     'moderation.penalty.level2.title': {
       es: 'Nivel Medio (+3 puntos)',
+      pt: 'Nível Médio (+3 pontos)',
       en: 'Medium Level (+3 points)'
     },
     'moderation.penalty.level2.desc': {
       es: 'Insultos directos, acoso verbal o spam persistente',
+      pt: 'Insultos diretos, assédio verbal ou spam persistente',
       en: 'Direct insults, verbal harassment, or persistent spam'
     },
     'moderation.penalty.level2.impact': {
       es: 'Impacto: Reducción notable de visibilidad en la plataforma',
+      pt: 'Impacto: Redução notável de visibilidade na plataforma',
       en: 'Impact: Noticeable visibility reduction on the platform'
     },
     'moderation.penalty.level3.title': {
       es: 'Nivel Alto (+5 puntos)',
+      pt: 'Nível Alto (+5 pontos)',
       en: 'High Level (+5 points)'
     },
     'moderation.penalty.level3.desc': {
       es: 'Amenazas, acoso grave, contenido extremadamente ofensivo',
+      pt: 'Ameaças, assédio grave, conteúdo extremamente ofensivo',
       en: 'Threats, severe harassment, extremely offensive content'
     },
     'moderation.penalty.level3.impact': {
       es: 'Impacto: Reducción severa de visibilidad, posible suspensión temporal',
+      pt: 'Impacto: Redução severa de visibilidade, possível suspensão temporária',
       en: 'Impact: Severe visibility reduction, possible temporary suspension'
     },
     'moderation.penalty.recovery': {
       es: '💡 Consejo: Tu puntuación se reduce automáticamente un 20% cada 30 días de buen comportamiento.',
+      pt: '💡 Dica: Sua pontuação é reduzida automaticamente em 20% a cada 30 dias de bom comportamento.',
       en: '💡 Tip: Your score automatically decreases by 20% every 30 days of good behavior.'
     },
     'moderation.visibility.title': {
       es: 'Cómo Afecta la Visibilidad',
+      pt: 'Como Afeta a Visibilidade',
       en: 'How Visibility is Affected'
     },
     'moderation.visibility.text': {
       es: 'Los usuarios con historial de comportamiento ofensivo experimentan una reducción probabilística en su visibilidad:',
+      pt: 'Usuários com histórico de comportamento ofensivo sofrem uma redução probabilística na sua visibilidade:',
       en: 'Users with a history of offensive behavior experience a probabilistic reduction in their visibility:'
     },
     'moderation.visibility.effect1': {
       es: '📉 Aparecen con menor frecuencia en las recomendaciones de otros usuarios',
+      pt: '📉 Aparecem com menos frequência nas recomendações de outros usuários',
       en: '📉 Appear less frequently in other users\' recommendations'
     },
     'moderation.visibility.effect2': {
       es: '🎯 El sistema prioriza perfiles con buen comportamiento',
+      pt: '🎯 O sistema prioriza perfis com bom comportamento',
       en: '🎯 The system prioritizes profiles with good behavior'
     },
     'moderation.visibility.effect3': {
       es: '⏳ La penalización puede alcanzar hasta 95% de reducción en casos graves',
+      pt: '⏳ A penalização pode chegar a até 95% de redução em casos graves',
       en: '⏳ The penalty can reach up to 95% visibility reduction in severe cases'
     },
     'moderation.visibility.fairness': {
       es: '✨ Sistema justo: Las penalizaciones son temporales y se recuperan con buen comportamiento.',
+      pt: '✨ Sistema justo: As penalizações são temporárias e se recuperam com bom comportamento.',
       en: '✨ Fair system: Penalties are temporary and recover with good behavior.'
     },
     'moderation.decay.title': {
       es: 'Sistema de Recuperación Automática',
+      pt: 'Sistema de Recuperação Automática',
       en: 'Automatic Recovery System'
     },
     'moderation.decay.text': {
       es: 'Creemos en las segundas oportunidades. Nuestro sistema automáticamente reduce las penalizaciones:',
+      pt: 'Acreditamos em segundas chances. Nosso sistema reduz automaticamente as penalizações:',
       en: 'We believe in second chances. Our system automatically reduces penalties:'
     },
     'moderation.decay.rate': {
       es: '📅 Cada 30 días, tu puntuación de ofensas se reduce en un 20%',
+      pt: '📅 A cada 30 dias, sua pontuação de ofensas é reduzida em 20%',
       en: '📅 Every 30 days, your offense score is reduced by 20%'
     },
     'moderation.decay.automatic': {
       es: '🔄 El proceso es completamente automático, no requiere solicitud',
+      pt: '🔄 O processo é totalmente automático, não requer solicitação',
       en: '🔄 The process is completely automatic, no request needed'
     },
     'moderation.decay.encourage': {
       es: '🌟 Fomentamos el cambio positivo y el comportamiento respetuoso',
+      pt: '🌟 Incentivamos a mudança positiva e o comportamento respeitoso',
       en: '🌟 We encourage positive change and respectful behavior'
     },
     'moderation.community.title': {
       es: 'Normas de la Comunidad',
+      pt: 'Normas da Comunidade',
       en: 'Community Guidelines'
     },
     'moderation.community.rule1': {
       es: '✅ Trata a todos con respeto y cortesía, como te gustaría ser tratado',
+      pt: '✅ Trate todos com respeito e cortesia, como você gostaria de ser tratado',
       en: '✅ Treat everyone with respect and courtesy, as you would like to be treated'
     },
     'moderation.community.rule2': {
       es: '✅ Mantén conversaciones apropiadas y consensuadas',
+      pt: '✅ Mantenha conversas apropriadas e consensuais',
       en: '✅ Keep conversations appropriate and consensual'
     },
     'moderation.community.rule3': {
       es: '✅ Respeta los límites y preferencias de otros usuarios',
+      pt: '✅ Respeite os limites e preferências de outros usuários',
       en: '✅ Respect the boundaries and preferences of other users'
     },
     'moderation.community.rule4': {
       es: '✅ Reporta cualquier comportamiento inapropiado que observes',
+      pt: '✅ Denuncie qualquer comportamento inadequado que observar',
       en: '✅ Report any inappropriate behavior you observe'
     },
     'moderation.community.rule5': {
       es: '✅ Sé auténtico y honesto en tu perfil e interacciones',
+      pt: '✅ Seja autêntico e honesto no seu perfil e nas suas interações',
       en: '✅ Be authentic and honest in your profile and interactions'
     },
     'moderation.report.title': {
       es: 'Sistema de Reportes',
+      pt: 'Sistema de Denúncias',
       en: 'Report System'
     },
     'moderation.report.text': {
       es: 'Si experimentas o presencias comportamiento inapropiado, puedes reportarlo fácilmente:',
+      pt: 'Se você sofrer ou presenciar comportamento inadequado, pode denunciar facilmente:',
       en: 'If you experience or witness inappropriate behavior, you can easily report it:'
     },
     'moderation.report.option1': {
       es: '📱 Desde cualquier conversación, toca el menú (⋮) y selecciona "Reportar Usuario"',
+      pt: '📱 Em qualquer conversa, toque no menu (⋮) e selecione "Denunciar Usuário"',
       en: '📱 From any conversation, tap the menu (⋮) and select "Report User"'
     },
     'moderation.report.option2': {
       es: '🎯 Selecciona la razón específica: Contenido inapropiado, spam, acoso, perfil falso u ofensivo',
+      pt: '🎯 Selecione o motivo específico: Conteúdo inadequado, spam, assédio, perfil falso ou ofensivo',
       en: '🎯 Select the specific reason: Inappropriate content, spam, harassment, fake profile, or offensive'
     },
     'moderation.report.option3': {
       es: '⚡ El reporte se procesa inmediatamente y de forma confidencial',
+      pt: '⚡ A denúncia é processada imediatamente e de forma confidencial',
       en: '⚡ The report is processed immediately and confidentially'
     },
     'moderation.report.option4': {
       es: '🛡️ Puedes bloquear al usuario para evitar futuras interacciones',
+      pt: '🛡️ Você pode bloquear o usuário para evitar futuras interações',
       en: '🛡️ You can block the user to prevent future interactions'
     },
     'moderation.report.option5': {
       es: '👥 Nuestro equipo revisa todos los reportes y toma acciones apropiadas',
+      pt: '👥 Nossa equipe revisa todas as denúncias e toma as ações apropriadas',
       en: '👥 Our team reviews all reports and takes appropriate action'
     },
     'moderation.report.confidential': {
       es: '🔐 Todos los reportes son confidenciales y el usuario reportado no sabrá quién lo reportó.',
+      pt: '🔐 Todas as denúncias são confidenciais e o usuário denunciado não saberá quem o denunciou.',
       en: '🔐 All reports are confidential and the reported user will not know who reported them.'
     },
     'moderation.privacy.title': {
       es: 'Privacidad y Protección de Datos',
+      pt: 'Privacidade e Proteção de Dados',
       en: 'Privacy and Data Protection'
     },
     'moderation.privacy.text1': {
       es: 'Tu privacidad es fundamental en nuestro sistema de moderación:',
+      pt: 'Sua privacidade é fundamental no nosso sistema de moderação:',
       en: 'Your privacy is fundamental in our moderation system:'
     },
     'moderation.privacy.point1': {
       es: '🔒 Los mensajes se analizan de forma automática y privada por IA',
+      pt: '🔒 As mensagens são analisadas de forma automática e privada por IA',
       en: '🔒 Messages are analyzed automatically and privately by AI'
     },
     'moderation.privacy.point2': {
       es: '👤 No hay revisión humana a menos que se reporte un incidente',
+      pt: '👤 Não há revisão humana a menos que um incidente seja denunciado',
       en: '👤 No human review unless an incident is reported'
     },
     'moderation.privacy.point3': {
       es: '🗑️ Los datos de moderación se eliminan según nuestra política de retención',
+      pt: '🗑️ Os dados de moderação são excluídos conforme nossa política de retenção',
       en: '🗑️ Moderation data is deleted according to our retention policy'
     },
     'moderation.privacy.point4': {
       es: '🛡️ Cumplimos con todas las regulaciones de privacidad y protección de datos',
+      pt: '🛡️ Cumprimos todas as regulamentações de privacidade e proteção de dados',
       en: '🛡️ We comply with all privacy and data protection regulations'
     },
     'moderation.commitment.title': {
       es: 'Nuestro Compromiso Contigo',
+      pt: 'Nosso Compromisso com Você',
       en: 'Our Commitment to You'
     },
     'moderation.commitment.text': {
       es: 'En Black Sugar 21, estamos comprometidos a proporcionar una plataforma segura, respetuosa y acogedora donde todos puedan conectar con confianza. Nuestro sistema de moderación trabaja continuamente para proteger a nuestra comunidad mientras respeta tu privacidad.',
+      pt: 'No Black Sugar 21, temos o compromisso de oferecer uma plataforma segura, respeitosa e acolhedora onde todos possam se conectar com confiança. Nosso sistema de moderação trabalha continuamente para proteger nossa comunidade enquanto respeita sua privacidade.',
       en: 'At Black Sugar 21, we are committed to providing a safe, respectful, and welcoming platform where everyone can connect with confidence. Our moderation system works continuously to protect our community while respecting your privacy.'
     },
     'moderation.commitment.button': {
       es: 'Volver al Inicio',
+      pt: 'Voltar ao Início',
       en: 'Back to Home'
     },
     'moderation.footer.updated': {
       es: `Última actualización: ${this.currentMonth}`,
+      pt: `Última atualização: ${this.currentMonth}`,
       en: `Last updated: ${this.currentMonthEn}`
     },
 
