@@ -23,6 +23,10 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   protected readonly storeLinks = signal({ ios: 'https://apps.apple.com/app/id6470783901', android: '#' });
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
+  // R(SEO): track the current route so the homepage <main> renders by ROUTE (always in the
+  // DOM on '/', crawlable), not gated behind ageVerified() which removed it from the DOM
+  // → crawlers/prerender only saw the age wall. The age-gate stays as an opaque overlay.
+  protected readonly currentUrl = signal('/');
 
   // Hero carousel (signals for reliable change detection)
   currentSlide = signal(0);
@@ -456,6 +460,14 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // R(SEO): the homepage <main> renders only on the home route (so legal/feature routes
+  // show their routed component, not the homepage stacked under them). Reads the reactive
+  // currentUrl signal so it updates on navigation.
+  isHomeRoute(): boolean {
+    const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
+    return u === '/' || u === '';
+  }
+
   toggleMobileMenu(): void {
     this.mobileMenuOpen.set(!this.mobileMenuOpen());
   }
@@ -467,6 +479,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   private trackPageViews(): void {
     // Log initial page view (landing page)
     const initialPage = this.router.url || '/';
+    this.currentUrl.set(initialPage); // R(SEO): keep <main> route-gating reactive
     this.firebase.logEvent('screen_view', {
       page_path: initialPage,
       page_title: this.getPageName(initialPage)
@@ -476,6 +489,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
+        this.currentUrl.set(event.urlAfterRedirects); // R(SEO): update route-gating
         this.firebase.logEvent('screen_view', {
           page_path: event.urlAfterRedirects,
           page_title: this.getPageName(event.urlAfterRedirects)

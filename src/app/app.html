@@ -22,8 +22,10 @@
     </div>
   </div>
 
-  <!-- Main Content -->
-  <main class="main-content" *ngIf="ageVerified()">
+  <!-- Main Content — rendered by ROUTE (always in the DOM on '/', so crawlers/prerender
+       see the marketing copy). The age-gate above is an opaque overlay (z-index 1000) that
+       covers it until the visitor verifies; it no longer removes content from the DOM. -->
+  <main class="main-content" *ngIf="isHomeRoute()">
 
     <header class="bumble-toolbar">
       <div class="toolbar-content">
