@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
 :root {
+  /* Motion tokens — Emil Kowalski design-engineering easing (2026-05-29).
+     One ease-out across the whole experience = cohesion. Never ease-in on UI. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --press-scale: 0.97;
+
   /* Palette — aligned with iOS ColorTheme.swift + AppColor.swift */
   --bg-dark: #0A0A0A;           /* iOS: primaryDark */
   --bg-card: #1A1A1A;           /* iOS: surfaceDark */

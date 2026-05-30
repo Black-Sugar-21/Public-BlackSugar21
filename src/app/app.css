@@ -420,7 +420,7 @@ a:hover {
     display: none;
     position: fixed;
     top: 70px;
-    right: -100%;
+    right: 0;
     width: 280px;
     max-width: 85vw;
     height: calc(100vh - 70px);
@@ -429,13 +429,16 @@ a:hover {
     border-left: 1px solid rgba(212, 175, 55, 0.2);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
-    transition: right 0.3s ease;
+    /* R(2026-05-29): slide via transform (GPU) instead of `right` (layout prop).
+       translateX(100%) parks it just off the right edge by its own width. */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
     z-index: 101;
     padding: var(--spacing-md) 0;
 }
 
 .mobile-menu.open {
-    right: 0;
+    transform: translateX(0);
 }
 
 .mobile-nav-item {
@@ -1914,7 +1917,7 @@ a:hover {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s var(--ease-out);
 }
 
 .modal-content {
@@ -1926,7 +1929,7 @@ a:hover {
   width: 90%;
   text-align: center;
   position: relative;
-  animation: slideUp 0.4s ease;
+  animation: slideUp 0.34s var(--ease-out);
 }
 
 .modal-close {
@@ -2211,4 +2214,43 @@ button:focus-visible,
   .trust-divider { display: none; }
   .trust-band-inner { gap: 18px 24px; padding: 18px 16px; }
   .trust-stat { min-width: 38%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN-ENGINEERING POLISH — Emil Kowalski principles (2026-05-29)
+   • Cohesive easing tokens (one ease-out across the whole experience).
+   • Button press feedback: scale on :active confirms the tap (the interface
+     "heard" the user). UI motion kept fast (<200ms) and ease-out (never ease-in).
+   • Only transform/opacity are animated (GPU; skip layout/paint).
+   • Hover effects gated away from coarse pointers — touch fires :hover on tap,
+     leaving stuck/false hover states (ux-pro-max HIGH-severity anti-pattern).
+   • prefers-reduced-motion (above) already collapses these to instant.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);     /* entering/exiting — feels responsive */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* on-screen morph */
+  --press-scale: 0.97;
+}
+
+/* Press feedback on every interactive control. Transform-only transition so the
+   scale is GPU-cheap; 0.16s ease-out is snappier than the old 0.2–0.3s eases. */
+.btn-primary, .modal-button, .chat-btn-copy, .chat-btn-use, .mobile-menu-btn,
+.coach-chip, .carousel-dot, .nav-back, .nav-item, .download-buttons a {
+  transition: transform 0.16s var(--ease-out), box-shadow 0.2s var(--ease-out),
+              background 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
+}
+.btn-primary:active, .modal-button:active, .chat-btn-copy:active, .chat-btn-use:active,
+.mobile-menu-btn:active, .coach-chip:active, .carousel-dot:active,
+.nav-back:active, .nav-item:active, .download-buttons a:active {
+  transform: scale(var(--press-scale));
+}
+
+/* Touch / coarse-pointer devices: neutralize decorative hover transforms so a tap
+   doesn't leave a card lifted or a button translated. (Real hover still animates
+   on fine pointers — desktop is unaffected.) */
+@media (hover: none), (pointer: coarse) {
+  .feature-card:hover, .whatsnew-card:hover, .btn-primary:hover,
+  .coach-chip:hover, .nav-item:hover, .modal-button:hover {
+    transform: none;
+  }
 }
