@@ -1,6 +1,6 @@
 ---
 name: functions
-description: Firebase Cloud Functions management for BlackSugar21. Deploy, logs, debug, and monitoring — 47 callable + 13 scheduled + 8 triggers + 1 alias in us-central1. Dual Gemini models, server-side RC, Moderation RAG, Coach RAG/Learning, Coach Auto-Improvement. Use when deploying, debugging, monitoring, or testing Cloud Functions.
+description: Firebase Cloud Functions management for BlackSugar21. Deploy, logs, debug, and monitoring — 47 callable + 15 scheduled + 8 triggers + 1 alias in us-central1. Dual Gemini models, server-side RC, Moderation RAG, Coach RAG/Learning, Coach Auto-Improvement. Use when deploying, debugging, monitoring, or testing Cloud Functions.
 disable-model-invocation: true
 argument-hint: "[nombre-funcion | all | logs | monitor]"
 ---
@@ -21,6 +21,16 @@ Eres el **Firebase Functions Manager de Black Sugar 21**. Gestionas las Cloud Fu
 
 ### Cambios pendientes en functions/
 !`cd /Users/daniel/IdeaProjects/Public-BlackSugar21 && git diff --stat HEAD -- functions/`
+
+## Cambios recientes (sesión 2026-05-30, R150–R168)
+
+- **Scheduled CFs nuevas**: `pruneEphemeralRecords` (R152, diario — poda pendingDebriefs/dateCheckIns/wingPersonNotifications terminales + moderatedMessages 180d/moderationDisputes 180d/coachEvaluations 90d/aiAnalytics 90d), `reconcileReceivedLikeCounts` (R157, diario — puebla el `receivedLikeCount` server-only que rankea popularity en discovery; NUNCA escribe el reviewer). Total scheduled ahora ~15.
+- **Banned-user gate** (R163/R165/R167): cuentas banned/suspended NO pueden gastar en IA paga. Gate GRATIS dentro de `checkAndDecrementCoachCredit` (dateCoachChat + 3 sims) + helper `assertActiveAccount(uid,lang)` (shared.js) en las callables Vision/grounding + pure-Places. Tira `permission-denied` (localizado, manejado por ambos clientes).
+- **RC clamps** (R164/R166): `getCoachConfig` clampa numéricos top-level (maxMessageLength etc.); `getModerationConfig` clampa reportEscalation (ban/suspend/aiReview thresholds, mín 1 → nunca ban a 0) + safeLengthThreshold. Evita que un valor RC malo rompa coach/moderación.
+- **purgeMatch (users.js)**: helper compartido por unmatchUser + blockUser → drena TODOS los mensajes (loop, no single-500) + borra blobs ephemeral_photos/{matchId}/ + stories/{matchId}/ + el doc. blockUser ahora con guard path-injection (R153 parity). (audit 2026-05-30)
+- **GDPR deletion** (R150 + audit): deleteUserData + processScheduledDeletions drenan matches/{id}/simulation+situationSimulations, coachChats/{uid}/outfitAnalyses, users/{uid}/{aiPreferences,multiverseAnalytics,situationSimulations,simulationUsage,situationSimulationUsage,coachEvaluations}; cron ahora purga personal_stories blobs (R160).
+- **FCM/i18n**: timezoneOffsetMinutes resolver (R159), story body_loc_key mixed-mode (R154), coach_nudge handler (R149), sim-cap local-midnight (R158), getRegionalString en 4+ mapas (R160). pendingEmergencyAlerts doc ID determinístico (R160, anti-duplicado SOS).
+- **Audit completo 2026-05-30**: backend PASS, 0 CRIT/HIGH, contrato cliente↔CF 0-rotas, batería 100%. Backlog agotado salvo decisión-usuario (App Check enforce, pendingEmergencyAlerts proveedor SMS). Ver memoria `project_backend_audit_2026_05_30`.
 
 ## Grupos de CFs por feature
 

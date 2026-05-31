@@ -24,6 +24,8 @@ Principios de diseno:
 
 Todas en `us-central1`. Definidas en `functions/lib/moderation.js` (excepto `calculateSafetyScore` en `functions/lib/ai-services.js`).
 
+> **Hardening 2026-05-30 (R161/R166)**: `getModerationConfig` ahora CLAMPEA `reportEscalation` (ban/suspend/aiReview thresholds, mín 1 reporter → nunca ban a 0; NaN→default = no desactivar moderación) + `safeLengthThreshold [0,50]` (un valor RC enorme bypasearía moderación). `disputeModeration` tiene cap horario atómico `enforceAiRateLimit(20/hr)` (cierra la race del throttle de 10s) y rechaza cuentas no-activas. `moderateProfileImage` tiene `assertActiveAccount` (banned/suspended no gastan en Vision). `autoModerateMessage` fail-CLOSED (persiste needs-review en safety-block/parse-fail).
+
 ### 1. `moderateProfileImage` (Callable)
 
 Modera imagenes de perfil y stories con Gemini AI.
