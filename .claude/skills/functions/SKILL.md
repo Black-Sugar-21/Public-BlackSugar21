@@ -50,10 +50,11 @@ requestDateDebrief, getPhotoCoachAnalysis
 scheduleDateCheckIn, cancelDateCheckIn, respondToDateCheckIn
 ```
 
-### Core / Moderación (8 CFs)
+### Core / Moderación (9 CFs)
 ```
 blockUser, reportUser, unmatchUser, deleteUserData,
-moderateMessage, moderateProfileImage, validateProfileImage, searchPlaces
+moderateMessage, moderateProfileImage, validateProfileImage, searchPlaces,
+reactivateUser  // admin-only callable (R130-R131): limpia accountStatus=active + campos moderación; force:true requerido para 'banned'
 ```
 
 ### Stories / Matches / Misc (5+ CFs)
@@ -145,7 +146,7 @@ calculateAIChemistry
 
 ### Cache
 - Key: `multiverse_{base}_{lang}_{sha256_8}` (clients + server produce identical hash)
-- TTL: 6 months. `CACHE_SCHEMA_VERSION = 21` — any bump invalidates all caches.
+- TTL: 6 months. `CACHE_SCHEMA_VERSION = 23` — any bump invalidates all caches.
 - `isSoloMode` persisted for re-localization on cache hit.
 
 ### Tests
@@ -370,7 +371,7 @@ node scripts/coach-health-monitor.js --dry-run
 
 ## CF Count Total
 
-- **47 callable** (producción) + **6 admin/test** (no prod)
+- **48 callable** (producción: +`reactivateUser` R130) + **6 admin/test** (no prod)
 - **13 scheduled** (timezone-aware via `timezoneOffset`)
 - **8 triggers** (Firestore + Storage events)
 - **1 alias**
@@ -414,6 +415,7 @@ triggerDateDebriefs     → every 6h, processes pending debriefs 24-48h after bl
 processDateCheckIns    → every 5min, 512MiB, 120s. Processes safety check-in lifecycle: send FCM, reminders, emergency alerts. Configurable via appConfig/safetyCheckIn
 analyzeCoachQuality    → daily 2 AM UTC. Aggregates coach feedback metrics → coachInsights/daily/{date}
 updateCoachKnowledge   → weekly Sunday 3 AM UTC. Auto-generates RAG chunks from negative feedback → coachKnowledge
+refreshDebatePrinciples→ weekly Monday 3 AM UTC. Searches Gemini (Search Grounding) for peer-reviewed papers 2023-CURRENT_YEAR (incl. preprints PsyArXiv/SSRN) for all 5 stages × 5 debate agents (30 combinations). Writes to debatePrinciples collection. Quality gate: source URL required. 1GiB, 540s, maxInstances:1. R81: year range widened, preprints accepted.
 ```
 
 ### Modules
@@ -462,13 +464,17 @@ updateCoachKnowledge   → weekly Sunday 3 AM UTC. Auto-generates RAG chunks fro
 | `gemini-2.0-flash` deprecated | Modelo obsoleto (Jun 1 2026) | Migrar a `gemini-2.5-flash-lite` |
 | Stories no aparecen | Falta `isPersonal == true` en query | Agregar filtro obligatorio |
 | Coach loadMore sin resultado | `lastRadiusUsed` no en caché | Fallback a `loadMoreDefaultBaseRadius` (60km) |
+| Category switch muestra vacío tras GPS search | loadMore leía solo `overrideLat/overrideLng`, sin fallback a `centerLat/centerLng` | R82: loadMore cae a `centerLat/centerLng` cuando no hay override — GPS sessions always keep location context |
+| `forwardGeocode` devuelve `null` en producción (sin logs) | Ciudad no reconocida por API (slang, typo, pueblo pequeño). Sin log → invisible en prod | R83: `logger.warn` añadido en la rama null — buscar `"forwardGeocode returned null"` en Cloud Logging |
+| Falso positivo: `"parejas"` capturado como ciudad | `/i` flag en `travelPatterns` hacía que `cityCapture` `[A-Z...]` matcheara minúsculas | R83: guard `rawFirst === rawFirst.toLowerCase()` en loop — rechaza capturas de primer char minúsculo |
+| `İstanbul` / ciudades turcas no detectadas | `cityCapture` no incluía `İ` (U+0130) ni `Ş` | R83: `cityCapture` extendido con `İŞĞĄĘŃĚŘŤŮŐŰ` |
 | `ReferenceError: lmLastRadius is not defined` | `let lmLastRadius` declarado dentro de bloque `try` pero referenciado fuera | Mover declaración al scope padre (antes del `if (placesKey)`) — `coach.js` |
 | `Unexpected end of JSON input` en intent extraction | `maxOutputTokens: 256` muy bajo → Gemini trunca JSON de extracción de intent | Aumentar a `maxOutputTokens: 512` y simplificar prompt de intent — `coach.js` |
 | `forwardGeocode` nunca se llama al mencionar otra ciudad | Intent extraction fallaba (JSON truncado) → no detectaba ciudad mencionada | Fix de maxOutputTokens + regex fallback multilingüe (ES/EN/PT/FR/DE) — `coach.js` |
 
 ## Detección de ciudad por regex (fallback)
 
-Cuando Gemini intent extraction falla, regex detecta patrones de viaje en **55 patrones en 12 idiomas** (ES/EN/PT/FR/DE/IT/JA/ZH/RU/AR/ID/KO/TR) cubriendo 9 casos de uso:
+Cuando Gemini intent extraction falla, regex detecta patrones de viaje en **63+ patrones en 12 idiomas** (ES/EN/PT/FR/DE/IT/JA/ZH/RU/AR/ID/KO/TR) cubriendo 11 casos de uso:
 - **Viaje:** `"voy a Buenos Aires"`, `"going to Paris"`, `"vou para SP"`
 - **Preguntas:** `"qué hacer en Madrid"`, `"things to do in London"`
 - **Recomendaciones:** `"bares en Medellín"`, `"restaurants in Tokyo"`
@@ -478,8 +484,20 @@ Cuando Gemini intent extraction falla, regex detecta patrones de viaje en **55 p
 - **Curiosidad:** `"cómo es Roma"`, `"tell me about Barcelona"`
 - **Solo travel:** `"mochilero en Perú"`, `"digital nomad in Bali"`
 - **Contexto de vida:** `"I live in Prague"`, `"trabajo en Miami"`
+- **Dating/cita (R82):** `"ruta para salir en X"`, `"primera cita en X"`, `"first date in X"`, `"date night in X"`, `"sair em X"`, `"sortir à X"`, `"ausgehen in X"`
+- **Planes románticos (R83):** `"ideas románticas en X"`, `"donde llevar mi cita en X"`, `"where to take a date in X"`, `"rolê romântico em X"`, `"erste Verabredung in X"`
 
-Filtro anti-falsos-positivos con `skipWords` set. Si detecta ciudad → llama a `forwardGeocode` en `geo.js` → override de coordenadas para Places search.
+Filtro anti-falsos-positivos:
+- **`skipWords` set**: descarta capturas que son palabras comunes (the/que/una/das/etc.)
+- **R83 uppercase guard**: descarta capturas cuyo primer carácter es minúscula definitiva — evita falsos positivos del flag `/i` (ej: `"actividades para parejas en Buenos Aires"` capturaba `"parejas"` via ES-3)
+- **`cleanCity()` helper**: recorta captura greedy al nombre válido — `"Concepcion para salir"` → `"Concepcion"`. Soporta multi-palabra con conectores: `"Santiago de Chile"`, `"Rio de Janeiro"`.
+
+Si detecta ciudad → llama a `forwardGeocode` en `geo.js` → override de coordenadas para Places search. Si `forwardGeocode` devuelve `null` (nombre no reconocido — slang, typo, pueblo pequeño) → warning log + fallback a GPS silencioso.
+
+**R83 — Bug fixes en patrones**:
+- PT-2 `(?:^|[^A-Za-z])` antes de `onde` — evitaba que `"donde"` en español activara PT-2
+- `cityCapture` extendido con `İŞĞĄĘŃĚŘŤŮŐŰ` (Latin Extended-A) para ciudades turcas/polacas/checas (İstanbul, Łódź)
+- KO pattern: `에서` extendido con `데이트|갈|볼|할|놀` para contexto de citas en coreano
 
 ### Suggestion chip — ciudad correcta
 
@@ -492,9 +510,13 @@ Cuando el usuario menciona otra ciudad (ej. "Buenos Aires") y Places search se e
 - Indica que los REAL PLACES provienen de la ciudad mencionada, NO del GPS del usuario
 - Evita que Gemini diga "mis recomendaciones son para tu ciudad local" cuando muestra resultados de otra ciudad
 
-### Cache propagation (overrideLat/overrideLng)
+### Cache propagation (overrideLat/overrideLng vs centerLat/centerLng)
 
-Cuando `forwardGeocode` resuelve una ciudad, las coordenadas override (`overrideLat`/`overrideLng`) se almacenan en `placesCache` junto con los resultados. El path de `loadMore` lee estas coordenadas del caché para mantener la búsqueda en la ciudad mencionada sin necesidad de re-geocodificar.
+`placesCache` almacena dos tipos de coordenadas:
+- **`overrideLat`/`overrideLng`**: se establecen cuando `forwardGeocode` resuelve una ciudad mencionada por el usuario. Solo existen si el usuario mencionó explícitamente otra ciudad.
+- **`centerLat`/`centerLng`**: las coordenadas GPS del usuario, siempre presentes cuando el usuario tiene GPS activo.
+
+`loadMore` (R82): lee primero `overrideLat/overrideLng` (ciudad mencionada), luego cae a `centerLat/centerLng` (GPS). Antes de R82 solo leía override — category switches perdían ubicación en sesiones GPS sin mención de ciudad.
 
 ## Coach RAG — 509+ chunks, 80+ categorías (actualizado)
 
@@ -1111,4 +1133,84 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - CRÍTICO: usuarios zh-TW/pt-PT/zh-HK recibían respuestas sin variante regional
 - INVARIANTE: CUALQUIER call site con `"userLanguage"` → `DeviceLanguage.getForBackend()`
 - EXCEPCIÓN: `moderateMessage` usa key `"language"` (no "userLanguage") → `DeviceLanguage.get()` correcto ahí
+
+---
+
+## Invariantes de Seguridad y Correctness — Post-Audit R105–R132b (2026-05-29)
+
+Resultado del audit marathon: R105–R129 (seguridad/inyección/auth · concurrencia/integridad/límites-Firestore · crash/recursos/lógica) + R130–R132b (timezone/lógica-negocio · i18n/regex · scheduled-starvation · validación-inputs · contrato-CF↔cliente · deploy/config): **0 CRITICAL, 0 HIGH** en los 37 archivos de `lib/` + firestore.rules. 25 suites 0 failures. 130/130 live probes. Estas reglas son no negociables — cualquier violación es un CRITICAL.
+
+### CRITICAL — Nunca violar
+
+| # | Regla | Patrón correcto | Anti-patrón |
+|---|-------|-----------------|-------------|
+| 1 | **sanitizeForPrompt en TODO input externo** | `sanitizeForPrompt(field, maxLen)` antes de `${field}` en prompt | `\`${userData.bio}\`` directo |
+| 2 | **Triple optional chain en texto Gemini/Claude** | `result?.response?.text?.() \|\| ''` — el `.text` puede ser non-callable en safety blocks, no solo undefined | `result.response.text()` o `result?.response?.text()` |
+| 3 | **JSON.parse en try/catch** | `try { JSON.parse(aiText) } catch { fallback }` | `const p = JSON.parse(text)` bare |
+| 4 | **AbortSignal en TODO AI call (Gemini)** | `generateContent(prompt, {signal: AbortSignal.timeout(N)})` | `generateContent(prompt)` sin signal |
+| 5 | **geminiApiKey.value() en CF v2** | `const apiKey = geminiApiKey.value()` | `process.env.GEMINI_API_KEY` |
+| 6 | **Membership check antes de cache read** | Verificar `usersMatched.includes(userId)` ANTES de leer `matches/{matchId}/...` | Cache read → auth check |
+| 7 | **isFinite + clamp en numerics AI → Firestore** | `Number.isFinite(v) ? Math.max(0, Math.min(10, v)) : default` | `parsed.score \|\| 5` |
+| 8 | **Allowlists en module scope** | `const VALID_CATS = new Set([...])` al top del archivo | `const VALID_CATS = new Set(...)` dentro de función |
+| 9 | **JSON.stringify para strings en templates JSON** | `{"key": ${JSON.stringify(userStr)}}` | `{"key": "${userStr.replace(/\"/g,'\\\"')}"` |
+| 10 | **HttpsError con string fijo en catch** | `throw new HttpsError('internal', 'internal_error')` | `throw new Error(err.message)` |
+| 11 | **Anthropic SDK siempre con timeout: 30000** | `new Anthropic({apiKey, timeout: 30000})` | `new Anthropic({apiKey})` — default 600s supera el timeout de cualquier CF |
+| 12 | **División por cero cuando array puede quedar vacío** | `total / (arr.length \|\| 1)` en cualquier agregación donde elementos pueden fallar individualmente | `total / arr.length` cuando items se procesan en try/catch |
+| 13 | **Array.isArray() antes de .filter()/.map() en JSON.parse** | `Array.isArray(parsed) ? parsed.filter(...) : []` — Claude/Gemini pueden devolver objeto en vez de array | `parsed.filter(...)` directo sin verificar tipo |
+| 14 | **coachChats es user-writable: sanitizar al re-leer** | `sanitizeForPrompt(m.message, maxLen)` al leer `coachChats/{uid}/messages` para embedir en prompt | Asumir que el historial propio del usuario es confiable — second-order injection vía mensajes propios |
+| 15 | **Cache key incluye TODOS los inputs determinantes** | Key debe incluir userId + dirección + idioma + todos los parámetros que afectan el valor. Post-procesamiento personalizado DESPUÉS del cache read, nunca antes del write | `coachTipsCache/{matchId}` sin userId — el mismo key servía tips con roles invertidos para los dos participantes |
+| 16 | **Array client-writable → .doc()/Storage: Array.isArray + guard per-elemento + try/catch** | Verificar Array.isArray, validar cada elemento (typeof string, no `../`, length ≤128), procesar en try/catch que no aborte el batch/cron completo | Iterar `liked`/`usersMatched`/`pictureNames` directamente en `.doc()` o Storage path — un elemento malformado aborta todo el cron |
+| 17 | **Field-path key de variable user/AI: sanitizar `[./[\]*~]`** | `topic.replace(/[./[\]\\*~]/g, '_')` antes de `update({ [\`field.${topic}\`]: val })` | `topicFrequency.${geminiOutput}` raw — `.` causa traversal a nested map, `*~[]` lanzan FieldPath error |
+| 18 | **batch.commit() chunk ≤450 cuando query limit ≥250** | `if (batch._ops >= 450) { await batch.commit(); batch = db.batch(); }` | Commit único con 2 writes/item × 250 items = 500 ops → throw silenciosamente swallowed, contadores nunca persistidos |
+| 19 | **arrayUnion sin cap → muerte 1MB** | Reemplazar write-only arrays por scalar (`lastExample` en vez de `examples: arrayUnion(x)`) — verificar que ningún array crece indefinidamente | `arrayUnion()` en campo que nunca se trim — cuando el doc supera 1MB, TODAS las escrituras al doc fallan permanentemente |
+| 20 | **firestore.rules: espejo de invariante cliente** | Si el cliente ya verifica una condición de negocio antes de escribir (ej. reciprocidad de like), la rule exige esa misma condición. Validar sintaxis con `firebase_validate_security_rules` (MCP) antes de deploy | `matches` create solo exigía `uid in usersMatched` — atacante podía fabricar doc con [attacker, victim], bypass todos los CFs match-scoped, leer lat/lng de la víctima |
+| 21 | **NUNCA `new Date().getHours()` para hora local del usuario** | `new Date(Date.now() + timezoneOffset*3600000).getUTCHours()`. Default offset ausente = 0 (consistente en TODOS los CFs) | `new Date().getHours()` — GCP corre UTC, LatAm (UTC-3…-6) recibe hora equivocada |
+| 22 | **Season map: invertir para hemisferio sur (latitude<0)** | `const season = latitude < 0 ? SOUTH_SEASONS[month] : NORTH_SEASONS[month]` | Usar siempre NORTH_SEASONS — mercado es mayormente LatAm |
+| 23 | **Scheduled CFs O(usuarios): cursor persistente — nunca `.limit(N)` sin cursor** | Cursor persistente en `systemState/{cfName}Cursor`, o cursor por transición de estado; flush mid-page si batch puede OOM | `hourlyUserResets` + `wingPersonAnalysis` + `updategeohashesscheduled` solo procesaban primeros N usuarios — starvation permanente para el resto |
+| 24 | **Buffers en memoria en scan paginado: cap obligatorio** | `const MAX_NOTIF_TOKENS = 50000; if (tokens.length < MAX_NOTIF_TOKENS) tokens.push(t)` | Array sin cap en loop `while(lastDoc)` → OOM proyectado a ~400k usuarios |
+| 25 | **request.data string → Firestore: cap + type-coerce** | `(typeof raw==='string' ? raw : String(raw\|\|'')).substring(0, MAX_LEN)` | `rateCoachResponse reason` sin cap → doc 1MB, todas las escrituras futuras fallan |
+| 26 | **firestore.indexes.json debe ser superset de prod antes de deploy** | Correr `firebase firestore:indexes`, confirmar todos los índices existentes están en el archivo, luego agregar y deploy | Deploy sin verificar → borra índices en prod (rompería requestDateDebrief, coach monitoring, queries moderación) |
+| 27 | **Estados moderación terminales requieren path `reactivateUser` admin-gated** | `reactivateUser` CF limpia suspended/visibilityReduced. Estado `banned` requiere `force:true` explícito | Sin `reactivateUser`: suspensión por error de moderación es terminal; sin guard force:true: baneos permanentes revertibles accidentalmente |
+
+### HIGH — Patrones estructurales
+
+```js
+// enforceAiRateLimit: siempre chequear .allowed
+const _rl = await enforceAiRateLimit(db, uid, 'fnName', 30);
+if (!_rl.allowed) throw new HttpsError('resource-exhausted', ...);
+
+// Arrays de IDs de cliente: filtrar antes de usar como doc paths
+const safeIds = rawIds.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 128 && !id.includes('/'));
+
+// Strings de cliente como keys de Firestore: allowlist primero
+const safeCategory = VALID_CATS.has(rawCategory) ? rawCategory : null;
+
+// Números de cliente: parseInt + bounds antes de .limit() / .slice()
+const limit = Math.min(Math.max(parseInt(raw, 10) || 50, 1), 200);
+
+// getLocalizedLangName() en lugar de tablas inline — maneja variantes regionales (zh-hk, pt-pt, etc.)
+const langName = getLocalizedLangName(userLang); // no inline { 'zh': 'Chinese', 'zh-hk': ... }
+
+// Cache key con ALL determining dimensions — nunca omitir userId/dirección/idioma
+const cacheKey = `tipCache/${matchId}_${userId}`;
+
+// Storage path de array client-writable: validar ANTES de Admin SDK (bypassa Storage rules)
+if (!picName || picName.includes('..') || picName.includes('/')) continue;
+```
+
+### Archivos con mayor densidad de cambios (R105–R132b)
+
+`coach.js` (15+ fixes) · `ai-services.js` (12+ fixes; +generateDateBlueprint UTC/season R132, +wingPerson cursor R132b, +rateCoachResponse cap R132) · `shared.js` · `multi-universe-simulation.js` · `simulation.js` · `situation-simulation.js` · `moderation.js` · `debate-agents.js` · `events.js` · `places.js` (+city Unicode boundary R130) · `stories.js` · `safety.js` · `batch.js` · `scheduled.js` (R128; +hourlyUserResets full-page cursor R131) · `coach-nudge-agent.js` (R128; +timezone offset R132) · `geo.js` (R128) · `firestore.rules` (R129) · `index.js` (+reactivateUser R130) · `firestore.indexes.json` (+6 índices R130)
+
+### Deuda conocida (flagged, sin fix — requieren decisión producto/infra)
+
+- **SMS emergencia**: `pendingEmergencyAlerts` escribe `{phone}` pero no hay procesador — SMS al contacto de emergencia nunca dispara. Requiere Twilio u otro proveedor SMS.
+- **GCS signed-URL cache**: discovery/batch hace ~1000 ops GCS por feed load — sin cache de signed URLs.
+- **Quota likes display-only**: rules R51 bloquean decremento desde cliente; enforcearlo en CF requiere des-bloquear (re-vuln) o migrar a CF recordLike + cambio cliente.
+- **Timezone sub-hora**: offset en horas enteras → ~30-45min desfase para zonas como India (UTC+5:30), Venezuela (UTC-4:30). Fix = campo en minutos + cambio cliente.
+
+### Metodología de auditoría dimensional (R128–R132b)
+
+Lanzar 3 agentes paralelos en background divididos por **dimensión de riesgo** (no por archivo). R128–R129: (1) seguridad/inyección/auth, (2) concurrencia/integridad/límites-Firestore, (3) crash/recursos/lógica. R130–R132b: ángulos nuevos por ronda (timezone/lógica-negocio, i18n/regex, scheduled-starvation, validación-inputs, contrato-CF↔cliente, deploy/config). Cada agente barre los 37 archivos completos desde su ángulo y verifica adversarialmente cada hallazgo. El agente principal aplica fixes en foreground (serializado: edit → node --check → npm test → deploy → live probe 130/130 → commit). Esta metodología encuentra clases sistémicas que el barrido archivo-por-archivo pierde.
+
 - AIWingmanService.generateSmartReply: guard let suggestionsData → if let con fallback SmartReplySuggestions vacío
