@@ -73,14 +73,14 @@ export class TranslationService {
       en: 'Your Personal AI Coach.'
     },
     'hero.tagline': {
-      es: 'Descubre lugares, recibe consejos personalizados y mejora tu vida social con guía inteligente.',
-      pt: 'Descubra lugares, receba conselhos personalizados e melhore sua vida social com orientação inteligente.',
-      en: 'Discover places, get personalized advice, and enhance your social life with intelligent guidance.'
+      es: 'Menos swipe sin sentido. Más conexión real.',
+      pt: 'Menos swipe sem sentido. Mais conexão real.',
+      en: 'Less mindless swiping. More real connection.'
     },
     'hero.subtitle': {
-      es: 'Tu coach personal con IA. Descubre lugares, recibe consejos personalizados y mejora tu vida social con guía inteligente.',
-      en: 'Your personal AI coach. Discover places, get personalized advice, and enhance your social life with intelligent guidance.',
-      pt: 'Seu coach pessoal com IA. Descubra lugares, receba conselhos personalizados e melhore sua vida social com orientação inteligente.'
+      es: 'Un coach de IA con psicología real que te guía para conectar de verdad — y disfrutar el mundo fuera de la pantalla.',
+      en: 'An AI coach grounded in real psychology that guides you to connect for real — and enjoy the world beyond the screen.',
+      pt: 'Um coach de IA com psicologia real que te orienta a conectar de verdade — e aproveitar o mundo fora da tela.'
     },
     'hero.ios': {
       es: 'Descargar en iOS',
@@ -444,6 +444,77 @@ export class TranslationService {
       ru: 'Когда разговор затихает, Wing-Person предлагает сообщение, чтобы его оживить — в вашем тоне, а не своём.',
       ar: 'عندما يبرد الحديث، يقترح Wing-Person رسالة لاستئنافه — بأسلوبك أنت، لا أسلوبه.',
       id: 'Ketika obrolan mulai dingin, Wing-Person menyarankan pesan untuk melanjutkannya — dengan gayamu, bukan gayanya.'
+    },
+
+    // Why we're different (anti-swipe-fatigue manifesto, 2026-05-31)
+    'why.badge': {
+      es: 'POR QUÉ SOMOS DISTINTOS', en: 'WHY WE\'RE DIFFERENT', pt: 'POR QUE SOMOS DIFERENTES'
+    },
+    'why.title': {
+      es: 'No somos una app de swipe.',
+      en: 'We\'re not a swipe app.',
+      pt: 'Não somos um app de swipe.'
+    },
+    'why.subtitle': {
+      es: 'Las apps de citas agotan: scroll infinito, conversaciones que no llevan a nada y la sensación de que siempre hay "algo mejor". Nosotros lo hacemos al revés.',
+      en: 'Dating apps burn you out: endless scrolling, conversations that go nowhere, and the feeling there\'s always "something better." We do the opposite.',
+      pt: 'Apps de namoro cansam: scroll infinito, conversas que não levam a nada e a sensação de que sempre há "algo melhor". Nós fazemos o contrário.'
+    },
+    'why.pillar1.title': {
+      es: 'Sin el juego del swipe infinito',
+      en: 'No infinite-swipe game',
+      pt: 'Sem o jogo do swipe infinito'
+    },
+    'why.pillar1.desc': {
+      es: 'Nada de feed sin fin ni dopamina de descartar caras. Inviertes en pocas conexiones que importan, no en cientos que se diluyen.',
+      en: 'No endless feed, no dopamine hit from discarding faces. You invest in a few connections that matter, not hundreds that blur together.',
+      pt: 'Nada de feed sem fim nem dopamina de descartar rostos. Você investe em poucas conexões que importam, não em centenas que se diluem.'
+    },
+    'why.pillar2.title': {
+      es: 'Profundidad, no descartes',
+      en: 'Depth, not disposal',
+      pt: 'Profundidade, não descarte'
+    },
+    'why.pillar2.desc': {
+      es: 'En vez de buscar siempre "a la siguiente", tu coach te ayuda a construir lo que ya tienes enfrente — con psicología de relaciones de verdad.',
+      en: 'Instead of always chasing "the next one," your coach helps you build on what\'s already in front of you — with real relationship psychology.',
+      pt: 'Em vez de buscar sempre "a próxima", seu coach te ajuda a construir o que já está na sua frente — com psicologia de relacionamentos de verdade.'
+    },
+    'why.pillar3.title': {
+      es: 'Ganamos cuando tú lo logras',
+      en: 'We win when you do',
+      pt: 'Ganhamos quando você consegue'
+    },
+    'why.pillar3.desc': {
+      es: 'No vivimos de tu tiempo en pantalla. Nuestro éxito es que conectes de verdad, salgas a una cita real… y dejes de necesitar la app.',
+      en: 'We don\'t profit from your screen time. Our success is you connecting for real, going on an actual date… and not needing the app anymore.',
+      pt: 'Não vivemos do seu tempo de tela. Nosso sucesso é você conectar de verdade, sair para um encontro real… e deixar de precisar do app.'
+    },
+
+    // What's New — Date Blueprint (offline / real-connection bridge, 2026-05-31)
+    'whatsnew.blueprint.title': {
+      es: 'Plan de cita, listo',
+      en: 'A date plan, ready to go',
+      pt: 'Plano de encontro, pronto',
+      fr: 'Un plan de rendez-vous, prêt',
+      de: 'Ein fertiger Date-Plan',
+      ja: 'デートプラン、完成',
+      zh: '约会计划，一键就绪',
+      ru: 'Готовый план свидания',
+      ar: 'خطة موعد جاهزة',
+      id: 'Rencana kencan, siap pakai'
+    },
+    'whatsnew.blueprint.desc': {
+      es: 'El coach arma un itinerario completo: lugar, horario, presupuesto, qué vestir y hasta el primer tema de conversación. Solo tienes que aparecer.',
+      en: 'The coach builds a full itinerary: place, timing, budget, what to wear, and even the first conversation topic. All you have to do is show up.',
+      pt: 'O coach monta um roteiro completo: lugar, horário, orçamento, o que vestir e até o primeiro assunto de conversa. Você só precisa aparecer.',
+      fr: 'Le coach crée un itinéraire complet : lieu, horaire, budget, tenue et même le premier sujet de conversation. Vous n\'avez plus qu\'à venir.',
+      de: 'Der Coach erstellt ein komplettes Programm: Ort, Zeit, Budget, Outfit und sogar das erste Gesprächsthema. Du musst nur auftauchen.',
+      ja: 'コーチが完全なプランを作成：場所、時間、予算、服装、最初の会話の話題まで。あなたは現れるだけ。',
+      zh: '教练为你规划完整行程：地点、时间、预算、穿什么，甚至第一个聊天话题。你只需准时出现。',
+      ru: 'Коуч составляет полный план: место, время, бюджет, что надеть и даже первую тему для разговора. Вам остаётся только прийти.',
+      ar: 'يُعدّ المدرب برنامجًا كاملًا: المكان، والتوقيت، والميزانية، وماذا ترتدي، وحتى أول موضوع للحديث. كل ما عليك هو الحضور.',
+      id: 'Coach menyusun itinerari lengkap: tempat, waktu, anggaran, pakaian, bahkan topik obrolan pertama. Kamu tinggal datang.'
     },
 
     // Terms Section

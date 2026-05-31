@@ -209,6 +209,34 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
         clearProps: 'transform',
       });
 
+      // 3c. ScrollTrigger — "Why we're different" manifesto reveal. Own trigger
+      // (.philosophy-grid) so it animates independently of the What's New grid that
+      // lives further down the page — sharing the .whatsnew-* selector would pin these
+      // cards at opacity:0 until the lower section scrolled in.
+      gsap.from('.philosophy-header', {
+        scrollTrigger: {
+          trigger: '.philosophy-section',
+          start: 'top 85%',
+        },
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power2.out',
+      });
+      gsap.from('.philosophy-card', {
+        scrollTrigger: {
+          trigger: '.philosophy-grid',
+          start: 'top 85%',
+        },
+        y: 24,
+        opacity: 0,
+        scale: 0.97,
+        duration: 0.5,
+        stagger: 0.08,
+        ease: 'power2.out',
+        clearProps: 'transform',
+      });
+
       // 4. Parallax — Hero section subtle
       gsap.to('.hero-section', {
         scrollTrigger: {
