@@ -19,11 +19,13 @@ email, phoneNumber, photoURL, pictureNames [String], pictureCount
 latitude, longitude, g (geohash — SIEMPRE "g", NUNCA "geohash"), city, country, countryCode
 orientation ("men"|"women"|"both" — SIEMPRE lowercase)
 fcmToken (camelCase exacto), apnsToken (solo iOS), fcmBuildType (solo Android: "debug"|"release")
-timezoneOffset (número), timezone (string), deviceLanguage
+timezoneOffset (número, horas enteras — legacy), timezoneOffsetMinutes (número, R159 — offset PRECISO en minutos; el server prefiere este vía resolveTimezoneOffsetHours y cae a timezoneOffset si falta; arregla zonas media/¾ hora), timezone (string), deviceLanguage
 dailyLikesRemaining (100), dailyLikesLimit (100), dailyLikesUsedToday
 superLikesRemaining (5), superLikesUsedToday, lastLikeResetDate, lastSuperLikeResetDate
 coachMessagesRemaining (3 — decremented SERVER-SIDE by CF dateCoachChat via FieldValue.increment(-1), reset daily by resetCoachMessages CF), lastCoachResetDate
 liked [String], superLiked [String], passed [String], blocked [String], blockedBy [String]
+receivedLikeCount (número — SERVER-ONLY, R151/R157: bloqueado en rules-update; señal de popularity del discovery; poblado por el cron reconcileReceivedLikeCounts, NO por clientes. NO usar liked.length para popularity — era spoofable)
+userTypeAtSignup (rol inmutable de signup — fallback del gate de primer-mensaje, R148; client-inmutable)
 isOnline, lastSeen, activeChat, activeChatTimestamp, activeMatchId
 paused (Boolean — account temporarily hidden), visible, pausedAt — pauseAccount: {paused:true, visible:false, pausedAt:serverTimestamp()}
 accountStatus ("active"|"suspended"|"banned"|"blocked"), reportSummary {uniqueReporters, totalReports, reasonCounts}
@@ -42,6 +44,9 @@ wingPersonOptOut (bool), wingPersonLastNotifiedAt, wingPersonNotifCountToday, wi
 - `swipes/{userId}` — `{timestamp, isLike, isSuperLike:false}`
 - `superLiked/{userId}` — `{timestamp}`
 - `compatibility_scores/{userId}` — scores cacheados
+- `simulationUsage/{date}`, `situationSimulationUsage/{date}` — contadores de cap diario de sim (R155/R158, keyed por fecha LOCAL). Drenados en borrado (audit 2026-05-30)
+- `coachEvaluations/{messageId}` — subcol per-user de quality-monitor (campo `evaluatedAt`); distinta de la colección top-level `coachEvaluations`. Drenada en borrado
+- `aiPreferences`, `multiverseAnalytics`, `situationSimulations`, `aiRateLimits`, `rateLimits` — todas drenadas por deleteUserData + processScheduledDeletions (GDPR, R150)
 
 ### `matches/{matchId}`
 
