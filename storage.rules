@@ -89,6 +89,25 @@ service firebase.storage {
     }
 
     // ──────────────────────────────────────────────────────────────────
+    // Voice notes (chat) — 2026-05-31, anti-fatigue Fase 2.
+    //    • Lectura/Escritura/Eliminación: SOLO miembros del match.
+    //    • Solo audio (audio/.*), < 10 MB. Mismo gate que ephemeral_photos.
+    // ──────────────────────────────────────────────────────────────────
+    match /voice_notes/{matchId}/{audioId} {
+      allow read: if request.auth != null
+                  && firestore.get(/databases/(default)/documents/matches/$(matchId))
+                       .data.usersMatched.hasAny([request.auth.uid]);
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('audio/.*')
+                   && firestore.get(/databases/(default)/documents/matches/$(matchId))
+                        .data.usersMatched.hasAny([request.auth.uid]);
+      allow delete: if request.auth != null
+                    && firestore.get(/databases/(default)/documents/matches/$(matchId))
+                         .data.usersMatched.hasAny([request.auth.uid]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
     // 5. Temporales de validación: temp_validations/{uuid}.jpg
     //    Usadas por ImageValidationService antes de llamar validateProfileImage.
     //    SECURITY: previamente dos reglas solapadas — la primera con size/type

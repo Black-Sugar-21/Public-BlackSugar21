@@ -128,7 +128,10 @@ service cloud.firestore {
               request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.usersMatched &&
               (
                 (request.auth.uid == resource.data.senderId &&
-                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading'])) ||
+                 // R(2026-05-31): + audioUrl/audioDuration so the sender can complete a voice-note
+                 // upload (type:"audio") the same way as an ephemeral photo. Purely additive — only
+                 // widens what a sender may patch on their OWN message; the photo flow is unchanged.
+                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadProgress', 'photoUrl', 'isUploading', 'audioUrl', 'audioDuration'])) ||
                 (resource.data.get('isEphemeral', false) == true &&
                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']))
               );
