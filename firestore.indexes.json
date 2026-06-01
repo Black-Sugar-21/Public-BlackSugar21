@@ -579,6 +579,50 @@
                 {"fieldPath": "disputeType", "order": "ASCENDING"},
                 {"fieldPath": "createdAt", "order": "DESCENDING"}
             ]
+        },
+        {
+            "_comment": "R143 HIGH: reportUser (users.js) reports where reportedUserId== + status in [pending,reviewed] — was missing, threw FAILED_PRECONDITION on the report-escalation read",
+            "collectionGroup": "reports",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "reportedUserId", "order": "ASCENDING"},
+                {"fieldPath": "status", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R143 HIGH: disputeModeration (moderation.js) rate-limit moderationDisputes where userId== + orderBy createdAt desc — was missing",
+            "collectionGroup": "moderationDisputes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "userId", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
+            ]
+        },
+        {
+            "_comment": "R143 HIGH: onTesterSignup (testers.js) dedup testerSignups where email== + status in [received,added] — was missing",
+            "collectionGroup": "testerSignups",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "email", "order": "ASCENDING"},
+                {"fieldPath": "status", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "_comment": "R143 MEDIUM: wingPersonAnalysis (wingperson.js) dedup wingPersonNotifications where userId== + sentAt> — was missing (silent empty dedup → duplicate nudges)",
+            "collectionGroup": "wingPersonNotifications",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "userId", "order": "ASCENDING"},
+                {"fieldPath": "sentAt", "order": "ASCENDING"}
+            ]
+        },
+        {
+            "collectionGroup": "messages",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                {"fieldPath": "sender", "order": "ASCENDING"},
+                {"fieldPath": "timestamp", "order": "DESCENDING"}
+            ]
         }
     ],
     "fieldOverrides": [
@@ -589,6 +633,16 @@
                 {
                     "queryScope": "COLLECTION_GROUP",
                     "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "coachChat",
+            "fieldPath": "expiresAt",
+            "indexes": [
+                {
+                    "queryScope": "COLLECTION_GROUP",
+                    "order": "ASCENDING"
                 }
             ]
         }
