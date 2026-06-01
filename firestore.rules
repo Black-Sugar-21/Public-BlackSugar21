@@ -194,6 +194,10 @@ service cloud.firestore {
           'isReviewer', 'isAdmin', 'isTest', 'userTypeAtSignup',
           'verified', 'premium', 'accountStatus',
           'coachMessagesRemaining', 'coachMessagesLastReset',
+          // F3/F1: server-only free-reply pool + proactive-nudge cooldown — parity with
+          // coachMessagesRemaining (CF/admin-SDK only; no client writes them). Blocking the
+          // free pool prevents a client inflating it to get extra free coach replies.
+          'coachFreeRepliesRemaining', 'discoveryNudgeLastSentAt',
           'superLikesRemaining', 'superLikesLastReset',
           'dailyLikesRemaining', 'lastLikeResetDate',
           'safetyScore', 'safetyScoreLastUpdate',
