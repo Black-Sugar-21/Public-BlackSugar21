@@ -623,6 +623,13 @@
                 {"fieldPath": "sender", "order": "ASCENDING"},
                 {"fieldPath": "timestamp", "order": "DESCENDING"}
             ]
+        },
+        {
+            "collectionGroup": "coachKnowledge",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+            ]
         }
     ],
     "fieldOverrides": [
