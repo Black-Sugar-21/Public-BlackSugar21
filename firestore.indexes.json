@@ -630,6 +630,21 @@
             "fields": [
                 {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
             ]
+        },
+        {
+            "collectionGroup": "moderationKnowledge",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+            ]
+        },
+        {
+            "collectionGroup": "coachKnowledge",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "category", "order": "ASCENDING"},
+                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+            ]
         }
     ],
     "fieldOverrides": [
