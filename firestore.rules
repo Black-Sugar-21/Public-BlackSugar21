@@ -162,7 +162,22 @@ service cloud.firestore {
         (!request.resource.data.keys().hasAny(['isReviewer']) || request.resource.data.isReviewer == false) &&
         (!request.resource.data.keys().hasAny(['isTest']) || request.resource.data.isTest == false) &&
         (!request.resource.data.keys().hasAny(['verified']) || request.resource.data.verified == false) &&
-        (!request.resource.data.keys().hasAny(['premium']) || request.resource.data.premium == false);
+        (!request.resource.data.keys().hasAny(['premium']) || request.resource.data.premium == false) &&
+        // R17 (2026-06-01): server-side 18+ floor at signup. birthDate was otherwise FULLY
+        // client-trusted — no server age check existed, a legal gap for an 18+ sugar-dating app.
+        // When present it MUST be a timestamp at least ~18 years before now. Threshold = 18*365 days
+        // (567648000000 ms): deliberately conservative so it NEVER rejects a legitimate 18-year-old
+        // (who is ~6574 days old; 18*365=6570) — it only blocks clear minors + future-dated births.
+        // Absent birthDate is allowed at create (the user may fill it in onboarding step 2); discovery
+        // now EXCLUDES unverifiable-age profiles until a valid 18+ birthDate is set. The fully-robust
+        // fix is product/legal ID verification — this is the deploy-only server floor.
+        // LAUNCH-SAFETY: a NON-timestamp birthDate is also allowed (never break a signup if a client
+        // variant encodes birthDate differently) — discovery still excludes its unverifiable age, so
+        // a string-birthDate minor cannot enter the dating pool. Only a timestamp birthDate under
+        // ~18yr (or future) is rejected at signup.
+        (!request.resource.data.keys().hasAny(['birthDate'])
+          || !(request.resource.data.birthDate is timestamp)
+          || request.time.toMillis() - request.resource.data.birthDate.toMillis() >= 567648000000);
 
       // UPDATE: solo el propio usuario y SOLO campos no privilegiados.
       // SECURITY: previamente un usuario podía auto-promoverse escribiendo
@@ -198,8 +213,12 @@ service cloud.firestore {
           // coachMessagesRemaining (CF/admin-SDK only; no client writes them). Blocking the
           // free pool prevents a client inflating it to get extra free coach replies.
           'coachFreeRepliesRemaining', 'discoveryNudgeLastSentAt',
-          'superLikesRemaining', 'superLikesLastReset',
-          'dailyLikesRemaining', 'lastLikeResetDate',
+          // R15 (2026-06-01): superLikesRemaining / dailyLikesRemaining / lastLikeResetDate
+          // were REMOVED from this unconditional blocklist — they DENIED the core like action
+          // (see the like-counter clause added after this blocklist for the full rationale).
+          // superLikesLastReset STAYS blocklisted: no client writes it (the super-reset uses
+          // lastSuperLikeResetDate, which was never blocklisted).
+          'superLikesLastReset',
           'safetyScore', 'safetyScoreLastUpdate',
           'simulationsRemaining', 'multiverseRemaining',
           'reportCount', 'reportsAgainstCount',
@@ -211,6 +230,10 @@ service cloud.firestore {
           'receivedLikeCount',
           'createdAt', 'moderationHistory', 'lastActive',
           'stripeCustomerId', 'stripeSubscriptionId',
+          // R24.1: referral fields are CF-managed (redeemReferralCode grants credits + sets
+          // referredBy via Admin SDK). No client writes them (verified iOS+Android signup payload).
+          // Blocking keeps attribution/grant integrity (a client can't self-set referredBy/code).
+          'referralCode', 'referredBy', 'referralRedeemedAt',
           'blockedBy'
         ]) &&
         // R135: a direct client `blocked` write is allowed ONLY if removal-only
@@ -221,7 +244,37 @@ service cloud.firestore {
         // signup, which is also ungated value-wise). first-message privilege follows the
         // chosen role — consistent with a user signing up directly as SUGAR_DADDY/MOMMY.
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userType'])
-          || request.resource.data.userType in ['SUGAR_DADDY', 'SUGAR_MOMMY', 'SUGAR_BABY']);
+          || request.resource.data.userType in ['SUGAR_DADDY', 'SUGAR_MOMMY', 'SUGAR_BABY']) &&
+        // R15 (2026-06-01): the like / super-like COUNTERS were over-blocked above and DENIED the
+        // entire atomic like-batch — the core like action was BROKEN for ALL users. Both clients
+        // batch the `liked`/`superLiked` arrayUnion + the counter decrement into ONE write to
+        // users/{uid}; blocklisting the counter rejected the whole batch. Evidence: every user
+        // stuck at dailyLikesRemaining:100, zero real likes since 2026-04-10. This is the
+        // 2026-04-25 incident class (a too-strict rule silently breaking a real flow).
+        // SAFE to allow: these are CLIENT-UX counters, NOT a server-trusted boundary — NO Cloud
+        // Function reads them to gate anything (likes are 100% direct client writes; the
+        // authoritative match lever is the reciprocal `liked` array, already owner-writable and
+        // gated by the matches-create reciprocity rule; hourlyUserResets cron is the backstop).
+        // Editing one's OWN counter only changes one's own client gate — already bypassable by
+        // writing `liked` directly — so there is no cross-user / billing effect. Constrained to
+        // non-negative numbers (anti-garbage): the daily/super RESET (set to cap) and the per-like
+        // decrement (FieldValue.increment(-1), client-guarded to remaining>0) both satisfy >= 0.
+        // lastLikeResetDate (a reset timestamp) is allowed unconstrained.
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['dailyLikesRemaining'])
+          || (request.resource.data.dailyLikesRemaining is number && request.resource.data.dailyLikesRemaining >= 0)) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['superLikesRemaining'])
+          || (request.resource.data.superLikesRemaining is number && request.resource.data.superLikesRemaining >= 0)) &&
+        // R17 (2026-06-01): server-side 18+ floor on update (parity with create). A present
+        // birthDate that IS a timestamp must be ≥~18yr (18*365 days; conservative — never rejects a
+        // real 18-year-old). EXEMPTIONS so no legitimate edit is ever blocked (2026-04-25 lesson):
+        // reviewer/test docs (App Review must never break), absent birthDate (bio-only edits don't
+        // resend it), and a legacy NON-timestamp birthDate (older docs — discovery excludes their
+        // unverifiable age anyway). Only a NEW/edited timestamp birthDate under ~18 (or future) is denied.
+        (resource.data.get('isReviewer', false) == true
+          || resource.data.get('isTest', false) == true
+          || !request.resource.data.keys().hasAny(['birthDate'])
+          || !(request.resource.data.birthDate is timestamp)
+          || request.time.toMillis() - request.resource.data.birthDate.toMillis() >= 567648000000);
 
       // Subcolección LIKED — READ solo propietario (previene enumeración del grafo de likes)
       match /liked/{likedUserId} {
@@ -319,12 +372,31 @@ service cloud.firestore {
     // un atacante podía crear payloads arbitrarios y el scheduled processor
     // los entregaba como push trusted.
     match /pendingNotifications/{notificationId} {
+      // R15 (2026-06-01): the allowlist + anti-spoof were STALE — written for an OLD schema
+      // (top-level senderId/title/body) but BOTH clients AND the consumer CF migrated to
+      //   {token, notification:{title|*_loc_key, body|*_loc_key}, data:{type,senderId,...},
+      //    processed, createdAt}   (R149/R152/R154 evolved handlePendingNotification to this).
+      // The old hasOnly([...]) rejected `token`/`notification` and the top-level senderId check
+      // failed (senderId now lives inside `data`), so EVERY client write was DENIED. chat_message
+      // and new_match pushes are sent independently by the onMessageCreated/onMatchCreated triggers
+      // (Admin SDK), so their denial was masked — BUT story-share pushes have NO trigger; they
+      // depend solely on this client write → handlePendingNotification, so they were silently never
+      // delivered. This is the 2026-04-25 incident class (a too-strict/stale rule breaking a flow).
+      // New rule mirrors the REAL schema. Anti-spoof: where `data.senderId` is present it MUST be
+      // the caller — every writer sets data.senderId = its own uid (chat + story); the new_match
+      // writer omits it (defaults to caller → allowed, then the CF dedup-deletes it). `token` is
+      // the RECIPIENT's FCM token (a caller legitimately pushes to a match), so it cannot be
+      // constrained to the caller. The consumer CF validates the token + truncates title/body.
+      // FLAGGED (separate, pre-existing): fcmToken is world-readable via the users read rule, so a
+      // determined caller could target a known token with custom title/body — bounded, attributable
+      // (data.senderId), CF-truncated; fixing it means projecting fcmToken out of discovery reads.
       allow create: if request.auth != null &&
-        request.resource.data.get('senderId', '') == request.auth.uid &&
         request.resource.data.keys().hasOnly([
-          'senderId', 'receiverId', 'type', 'title', 'body', 'data',
-          'createdAt', 'processed', 'priority', 'collapseKey'
-        ]);
+          'token', 'notification', 'data', 'processed', 'createdAt'
+        ]) &&
+        (!('data' in request.resource.data)
+          || (request.resource.data.data is map
+              && request.resource.data.data.get('senderId', request.auth.uid) == request.auth.uid));
 
       // Solo CF admin SDK lee/actualiza/elimina
       allow read, update, delete: if false;
@@ -413,7 +485,14 @@ service cloud.firestore {
     // TODO: añadir App Check enforcement en producción.
     match /testerSignups/{signupId} {
       allow create: if request.resource.data.keys().hasAll(['email', 'platform', 'status']) &&
-        request.resource.data.keys().hasOnly(['email', 'platform', 'status', 'createdAt', 'locale', 'source']) &&
+        // R18 (2026-06-01): + 'language' — the web beta-signup form (Public app.ts:565) writes
+        // `language: currentLanguage()`, which was NOT in this allowlist → hasOnly() rejected EVERY
+        // legit web signup (a silent broken flow, 2026-04-25 class). The onTesterSignup CF doesn't
+        // read locale/language, so widening the allowlist is safe. (locale/source kept for compat.)
+        // NOTE (FLAGGED, not fixed here): this create is UNAUTHENTICATED public + has NO App Check,
+        // and onTesterSignup auto-enrolls the supplied email into the Workspace group + App
+        // Distribution — abusable. App Check enforcement is a user/console decision.
+        request.resource.data.keys().hasOnly(['email', 'platform', 'status', 'createdAt', 'locale', 'source', 'language']) &&
         request.resource.data.email is string &&
         request.resource.data.email.size() > 5 &&
         request.resource.data.email.size() < 100 &&

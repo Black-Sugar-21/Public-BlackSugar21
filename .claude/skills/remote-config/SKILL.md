@@ -186,6 +186,21 @@ Leido por `assertAiFeatureEnabled(flag, lang)` via `getAiFeatureFlags()` en `sha
 | `multiUniverse` | `true` | Deshabilita simulateMultiUniverse (Universos Posibles) |
 | `realtimeCoachTips` | `true` | Deshabilita getRealtimeCoachTips |
 | `wingPerson` | `true` | Deshabilita wingPersonAnalysis (scheduled push) |
+| `dateCoachChat` / `simulateRelationship` | `true` | Kill-switch del chat / sim de relación (R15: nombres antes ausentes del map → inertes) |
+| `bioCoach` (R23) | `true` (kill-switch) | Deshabilita `getBioCoaching`; el botón de bio cae a sugerencias estáticas |
+
+**Flags de rollout gradual (R23/R24, owner `/coach-engagement`)** — patrón `{enabled,rollout}` (hash-per-uid FNV-1a), leídos por `isFeatureEnabled(flag, uid, false)` (**default OFF**, no kill-switch). Ship dark + suelta gradual sin release:
+
+| Campo | Patrón | Feature |
+|---|---|---|
+| `coachMemory` | `{enabled,rollout}` | Memoria de largo plazo inyectada en dateCoachChat (coach-memory.js) |
+| `dailyBriefing` | `{enabled,rollout}` | Card "Tu enfoque de hoy" (getDailyCoachBriefing) |
+| `weeklyReport` | `{enabled,rollout}` | Reporte semanal (getWeeklyCoachReport) |
+| `coachReferral` | `{enabled,rollout}` | Referral coach-value (getReferralInfo/redeemReferralCode) |
+| `coachShareCards` | `{enabled,rollout}` | Share-cards (generateCoachShareCard; UI cliente removida) |
+| `datingArchetype` | `{enabled,rollout}` | Arquetipo de cita viral (getDatingArchetype + sendArchetypeInvite) |
+
+Flip vía Admin SDK: getTemplate → editar `ai_feature_flags`.defaultValue.value (JSON) → validateTemplate → publishTemplate (merge-safe, preservar otros flags). Mirror en cliente: apps hashean `${uid}:${flag}` igual → server+cliente coinciden.
 
 **Uso**: cuando Gemini cae, hay prompt injection detectado, o spike de costos. Un toggle en Firebase Console desactiva el feature en 5min (cache TTL) sin redeploy. El cliente recibe `failed-precondition` HttpsError con mensaje `feature_unavailable` localizado en los 10 idiomas.
 
