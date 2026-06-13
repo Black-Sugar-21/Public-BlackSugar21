@@ -4,12 +4,13 @@ import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
+import { CoachWidgetComponent } from './coach-widget.component';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CoachWidgetComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
