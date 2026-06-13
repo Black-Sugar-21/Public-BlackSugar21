@@ -89,3 +89,24 @@ O usar el script de lanzamiento:
 ```bash
 ./start-workspace.sh
 ```
+
+## Coach IA demo widget (2026-06)
+
+Public, anonymous "taste" of the AI Emotional Intelligence Coach — the public-site embodiment of the Apple 4.3(b) positioning (NOT a dating app; intentionally marked as a DEMO).
+
+**Commits**: este repo (Public-BlackSugar21) @ `6fdce7e` (session R28); backend CoachFish @ `f01d73f`.
+
+### Frontend
+- **NEW component**: `src/app/coach-widget.component.ts` (standalone). Imported in `src/app/app.ts`, rendered in `src/app/app.html` después de `ageVerified()`.
+- FAB dorado flotante **"Coach IA"** → panel de chat.
+- Features: typewriter estilo ChatGPT; badge "**Versión de prueba**" + footer "Generado por IA · versión de prueba"; chips sugeridos; **PLACE cards reales** cercanas (pide geolocalización vía `navigator.geolocation` O input de ciudad → backend geocodifica); listas de **frases de apertura copiables**; **CTA viral tras 2 respuestas** ("Descargar app" detecta iOS/Android + "Compartir" vía `navigator.share`/clipboard con el último consejo). i18n **es/en**, lee idioma de `TranslationService.currentLanguage()` (signal).
+- Geolocalización requiere HTTPS + permiso; el input de ciudad cubre la denegación.
+
+### Backend endpoint — `coachDemoChat`
+- **PÚBLICO** `onRequest` HTTP (sin auth): `https://us-central1-black-sugar21.cloudfunctions.net/coachDemoChat`. Source: `lib/coach-demo.js` en CoachFish.
+- **CORS** restringido a `blacksugar21.com` / `www` / `black-sugar21.web.app` / `firebaseapp.com` / `localhost`.
+- **Rate limit por IP**: 12/h (colección `demoRateLimits`).
+- Sin perfil, sin créditos, anónimo. Grounded en RAG `coachKnowledge` + persona del coach, **Gemini-lite**.
+- Gated por RC flag **`coachDemo`** (default ON, v98).
+- **Intent**: PLACE (→ pide ubicación, luego Google Places real vía `placesTextSearch` + `forwardGeocode`), PHRASE (→ lista JSON de openers de Gemini), else texto general.
+- **Retorna**: `{reply, demo:true, places?, phrases?, needLocation?, limited?}`.
