@@ -7,13 +7,17 @@ import { FirebaseService } from './firebase.service';
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
+interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
+interface MvResult { compatibilityScore: number | null; compatibilityStars: number | null; compatibilityLabel: string; stages: MvStage[]; keyInsights: string[]; }
+type SimMode = '' | 'situation' | 'multiverse';
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
-  places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean; sim?: SimResult;
+  places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
 }
 
 const ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoChat';
 const SIM_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoSimulate';
+const MV_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoMultiverse';
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
@@ -31,6 +35,11 @@ const I18N: Record<string, any> = {
     useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa',
     simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
     simAnalyzing: 'Analizando enfoques…', simThinking: '5 perspectivas pensando…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona', simBest: 'Recomendada',
+    // two simulations + simple explanation of the difference
+    simTitle: '🔮 Simular una situación', simDesc: 'Qué decir AHORA en un momento puntual · 5 perspectivas te dan frases listas.',
+    mvTitle: '🌌 Simular la relación', mvDesc: 'Cómo evolucionaría la relación en 5 etapas + tu compatibilidad.',
+    mvHint: 'Descríbeme a la persona o conexión y simulo las 5 etapas de la relación',
+    mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidad', mvInsights: 'Claves de esta conexión',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -44,6 +53,10 @@ const I18N: Record<string, any> = {
     useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map',
     simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
     simAnalyzing: 'Analyzing approaches…', simThinking: '5 perspectives thinking…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works', simBest: 'Recommended',
+    simTitle: '🔮 Simulate a situation', simDesc: 'What to say RIGHT NOW in a specific moment · 5 perspectives give you ready phrases.',
+    mvTitle: '🌌 Simulate the relationship', mvDesc: 'How the relationship would unfold across 5 stages + your compatibility.',
+    mvHint: 'Describe the person or connection and I simulate the 5 relationship stages',
+    mvAnalyzing: 'Simulating 5 universes…', mvCompat: 'Compatibility', mvInsights: 'Keys to this connection',
   },
 };
 
@@ -151,29 +164,77 @@ const I18N: Record<string, any> = {
                     }
                   </div>
                 }
+
+                @if (m.mv) {
+                  <div class="cw-mv">
+                    <div class="cw-mv-head">
+                      <div class="cw-stars">
+                        @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= mvStars(m.mv!.compatibilityStars)">★</span> }
+                        @if (m.mv.compatibilityScore != null) { <span class="cw-conf">{{ m.mv.compatibilityScore }}%</span> }
+                      </div>
+                      <div class="cw-mv-label">{{ m.mv.compatibilityLabel }}</div>
+                      <small class="cw-mv-cap">{{ t().mvCompat }}</small>
+                    </div>
+                    <div class="cw-car-wrap">
+                      <div class="cw-carousel" [id]="'cwcar-' + mi" (scroll)="onCarouselScroll($event, mi)">
+                        @for (st of m.mv.stages; track si; let si = $index) {
+                          <div class="cw-stage">
+                            <div class="cw-stage-h"><span class="cw-stage-emoji">{{ st.emoji }}</span><b>{{ st.label }}</b>
+                              @if (st.score != null) { <span class="cw-conf">{{ st.score }}/10</span> }</div>
+                            <p class="cw-stage-narr">{{ st.narrative }}</p>
+                            @if (st.bestPhrase) {
+                              <div class="cw-stage-phrase"><span>"{{ st.bestPhrase }}"</span>
+                                <button class="cw-copy" (click)="copyPhrase(st.bestPhrase, msgKey(mi) + si)">{{ copiedIdx() === msgKey(mi) + si ? t().copied : t().copy }}</button></div>
+                            }
+                            @if (st.tip) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ st.tip }}</p> }
+                          </div>
+                        }
+                      </div>
+                      @if (m.mv.stages.length > 1) {
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.mv.stages.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
+                      }
+                    </div>
+                    @if (m.mv.stages.length > 1) {
+                      <div class="cw-dots">
+                        @for (st of m.mv.stages; track di; let di = $index) {
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a etapa"></button>
+                        }
+                      </div>
+                    }
+                    @if (m.mv.keyInsights.length) {
+                      <div class="cw-mv-insights"><small>{{ t().mvInsights }}</small>
+                        <ul>@for (k of m.mv.keyInsights; track k) { <li>{{ k }}</li> }</ul></div>
+                    }
+                  </div>
+                }
               </div>
             </div>
           }
-          @if (messages().length <= 1) {
+          @if (messages().length <= 1 && !simMode()) {
+            <div class="cw-modes">
+              <button class="cw-mode" (click)="startSim('situation')"><b>{{ t().simTitle }}</b><small>{{ t().simDesc }}</small></button>
+              <button class="cw-mode" (click)="startSim('multiverse')"><b>{{ t().mvTitle }}</b><small>{{ t().mvDesc }}</small></button>
+            </div>
             <div class="cw-chips">
-              <button class="cw-chip cw-chip-sim" (click)="startSim()">{{ t().simChip }}</button>
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
             </div>
           }
-          @if (simMode() && !busy()) { <div class="cw-simhint">{{ t().simHint }}</div> }
+          @if (simMode() === 'situation' && !busy()) { <div class="cw-simhint">{{ t().simHint }}</div> }
+          @if (simMode() === 'multiverse' && !busy()) { <div class="cw-simhint">{{ t().mvHint }}</div> }
 
           @if (simLoading()) {
             <div class="cw-simload">
               <div class="cw-simload-cards">
-                @for (e of ['💬','😏','💕','🌱']; track $index) {
-                  <div class="cw-simload-card" [style.animation-delay.ms]="$index * 450">
+                @for (e of loadEmojis(); track $index) {
+                  <div class="cw-simload-card" [style.animation-delay.ms]="$index * 380">
                     <span class="cw-simload-emoji">{{ e }}</span>
                     <div class="cw-simload-bar"></div><div class="cw-simload-bar short"></div>
                   </div>
                 }
               </div>
-              <b class="cw-simload-title">{{ t().simAnalyzing }}</b>
-              <small class="cw-simload-sub">{{ t().simThinking }}</small>
+              <b class="cw-simload-title">{{ loadingMode() === 'multiverse' ? t().mvAnalyzing : t().simAnalyzing }}</b>
+              @if (loadingMode() !== 'multiverse') { <small class="cw-simload-sub">{{ t().simThinking }}</small> }
             </div>
           }
           @if (showCta()) {
@@ -243,7 +304,32 @@ const I18N: Record<string, any> = {
     .cw-copy { background:none; border:1px solid var(--cw-border); color:var(--cw-gold); border-radius:8px; padding:4px 9px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:center; }
     .cw-copy:hover { border-color:var(--cw-gold-d); }
     .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
+    .cw-modes { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+    .cw-mode { text-align:left; background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(131,27,252,.10)); border:1px solid rgba(212,175,55,.35);
+      border-radius:13px; padding:11px 13px; cursor:pointer; transition:border-color .15s, transform .15s; }
+    .cw-mode:hover { border-color:var(--cw-gold); transform:translateY(-1px); }
+    .cw-mode b { display:block; color:var(--cw-text); font-size:14px; margin-bottom:2px; }
+    .cw-mode small { color:var(--cw-muted); font-size:11.5px; line-height:1.35; }
     .cw-simhint { margin-top:8px; font-size:12px; color:var(--cw-muted); font-style:italic; }
+    /* multiverse result */
+    .cw-mv { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+    .cw-mv-head { text-align:center; background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(131,27,252,.12)); border:1px solid rgba(212,175,55,.3); border-radius:14px; padding:13px; }
+    .cw-mv-head .cw-stars { justify-content:center; }
+    .cw-mv-head .cw-stars span { font-size:17px; }
+    .cw-mv-label { font-size:15px; font-weight:700; color:var(--cw-text); margin-top:4px; }
+    .cw-mv-cap { display:block; color:var(--cw-muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+    .cw-stage { flex:0 0 100%; scroll-snap-align:center; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid rgba(131,27,252,.30); border-radius:14px; padding:13px; margin-right:8px; }
+    .cw-stage:last-child { margin-right:0; }
+    .cw-stage-h { display:flex; align-items:center; gap:8px; }
+    .cw-stage-emoji { font-size:18px; }
+    .cw-stage-h b { flex:1; font-size:14px; color:var(--cw-text); }
+    .cw-stage-narr { margin:9px 0 8px; font-size:13.5px; color:var(--cw-text); line-height:1.5; }
+    .cw-stage-phrase { display:flex; gap:8px; align-items:flex-start; background:#0c0c10; border:1px solid var(--cw-border); border-radius:10px; padding:9px 11px; }
+    .cw-stage-phrase span { flex:1; font-size:13px; color:var(--cw-text); font-style:italic; line-height:1.45; }
+    .cw-mv-insights { background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:11px 13px; }
+    .cw-mv-insights small { color:var(--cw-gold); font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+    .cw-mv-insights ul { margin:7px 0 0; padding-left:17px; }
+    .cw-mv-insights li { font-size:13px; color:var(--cw-text); line-height:1.5; margin-bottom:4px; }
     .cw-sim { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
     .cw-sim-meta { background:#0c0c10; border:1px solid var(--cw-border); border-radius:11px; padding:10px 12px; }
     .cw-sim-stage { font-size:11px; color:var(--cw-gold); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
@@ -316,8 +402,9 @@ export class CoachWidgetComponent {
   readonly busy = signal(false);
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
-  readonly simMode = signal(false);
+  readonly simMode = signal<SimMode>('');
   readonly simLoading = signal(false);
+  readonly loadingMode = signal<SimMode>('');
   readonly carouselPage = signal<Record<number, number>>({});
   draft = '';
   cityDraft = '';
@@ -361,10 +448,12 @@ export class CoachWidgetComponent {
     }
   }
 
-  startSim() {
-    this.simMode.set(true);
-    this.ga('coach_demo_sim_open');
-    this.messages.update((m) => [...m, { role: 'coach', text: this.t().simHint }]);
+  loadEmojis() { return this.loadingMode() === 'multiverse' ? ['🌟', '💬', '💕', '⚡', '🚀'] : ['💬', '😏', '💕', '🌱']; }
+
+  startSim(mode: SimMode) {
+    this.simMode.set(mode);
+    this.ga(mode === 'multiverse' ? 'coach_demo_mv_open' : 'coach_demo_sim_open');
+    this.messages.update((m) => [...m, { role: 'coach', text: mode === 'multiverse' ? this.t().mvHint : this.t().simHint }]);
     this.scroll();
   }
 
@@ -374,13 +463,14 @@ export class CoachWidgetComponent {
     this.draft = '';
     this.lastUserMsg = msg;
     this.messages.update((m) => [...m, { role: 'user', text: msg }]);
-    if (this.simMode()) { await this.runSim(msg); return; }
+    if (this.simMode() === 'situation') { await this.runSim(msg); return; }
+    if (this.simMode() === 'multiverse') { await this.runMultiverse(msg); return; }
     await this.ask({ message: msg });
   }
 
   /** Multi-agent simulation: 5 perspectives analyze the visitor's situation. */
   private async runSim(situation: string) {
-    this.busy.set(true); this.simLoading.set(true); this.scroll();
+    this.busy.set(true); this.loadingMode.set('situation'); this.simLoading.set(true); this.scroll();
     this.ga('coach_demo_simulate', { lang: this.lang() });
     try {
       const res = await fetch(SIM_ENDPOINT, {
@@ -398,7 +488,33 @@ export class CoachWidgetComponent {
       }
     } catch {
       this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
-    } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(false); this.scroll(); }
+    } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(''); this.scroll(); }
+  }
+
+  /** Multi-universe simulation: the 5-stage relationship trajectory + compatibility. */
+  private async runMultiverse(context: string) {
+    this.busy.set(true); this.loadingMode.set('multiverse'); this.simLoading.set(true); this.scroll();
+    this.ga('coach_demo_multiverse', { lang: this.lang() });
+    try {
+      const res = await fetch(MV_ENDPOINT, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context, userLanguage: this.lang(), sessionId: this.sessionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.limited) this.ga('coach_demo_limited');
+      this.coachReplies++;
+      if (Array.isArray(data?.stages) && data.stages.length) {
+        this.messages.update((m) => [...m, { role: 'coach', text: '', mv: {
+          compatibilityScore: data.compatibilityScore ?? null, compatibilityStars: data.compatibilityStars ?? null,
+          compatibilityLabel: data.compatibilityLabel || '', stages: data.stages, keyInsights: data.keyInsights || [],
+        } }]);
+        this.lastCoachText = data.compatibilityLabel || (data.stages[0]?.bestPhrase || '');
+      } else {
+        this.messages.update((m) => [...m, { role: 'coach', text: data?.reply || this.t().greeting }]);
+      }
+    } catch {
+      this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
+    } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(''); this.scroll(); }
   }
 
   // ── carousel + sim card helpers ──
@@ -408,6 +524,7 @@ export class CoachWidgetComponent {
     return (toneKey && m[toneKey]) || '✨';
   }
   stars(confidence: number | null) { return confidence == null ? 4 : Math.max(1, Math.min(5, Math.round(confidence / 20))); }
+  mvStars(s: number | null) { return s == null ? 3 : Math.max(0, Math.min(5, Math.round(s))); }
   bestIdx(sim: SimResult) {
     let bi = 0; let bc = -1;
     sim.approaches.forEach((a, i) => { const c = a.confidence ?? 0; if (c > bc) { bc = c; bi = i; } });
