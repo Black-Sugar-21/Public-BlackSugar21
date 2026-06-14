@@ -13,11 +13,15 @@ type SimMode = '' | 'situation' | 'multiverse';
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
   places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
+  ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
 }
 
 const ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoChat';
 const SIM_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoSimulate';
 const MV_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoMultiverse';
+const FB_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoFeedback';
+// Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
+const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
@@ -40,6 +44,8 @@ const I18N: Record<string, any> = {
     mvTitle: '🌌 Simular la relación', mvDesc: 'Cómo evolucionaría la relación en 5 etapas + tu compatibilidad.',
     mvHint: 'Descríbeme a la persona o conexión y simulo las 5 etapas de la relación',
     mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidad', mvInsights: 'Claves de esta conexión',
+    fbAsk: '¿Te sirvió?', fbThanks: '¡Gracias por tu feedback! 💛',
+    placeChip: '📍 Lugares para una cita', placeQuery: '¿Dónde puedo tener una buena primera cita cerca de mí?',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -57,6 +63,8 @@ const I18N: Record<string, any> = {
     mvTitle: '🌌 Simulate the relationship', mvDesc: 'How the relationship would unfold across 5 stages + your compatibility.',
     mvHint: 'Describe the person or connection and I simulate the 5 relationship stages',
     mvAnalyzing: 'Simulating 5 universes…', mvCompat: 'Compatibility', mvInsights: 'Keys to this connection',
+    fbAsk: 'Was this helpful?', fbThanks: 'Thanks for your feedback! 💛',
+    placeChip: '📍 Date spots near me', placeQuery: 'Where can I have a great first date near me?',
   },
 };
 
@@ -208,6 +216,18 @@ const I18N: Record<string, any> = {
                     }
                   </div>
                 }
+
+                @if (m.role === 'coach' && m.ask && !m.typing) {
+                  <div class="cw-fb">
+                    @if (m.fb) {
+                      <span class="cw-fb-thx">{{ t().fbThanks }}</span>
+                    } @else {
+                      <span class="cw-fb-q">{{ t().fbAsk }}</span>
+                      <button class="cw-fb-btn" (click)="feedback(mi, 'up')" aria-label="Sí">👍</button>
+                      <button class="cw-fb-btn" (click)="feedback(mi, 'down')" aria-label="No">👎</button>
+                    }
+                  </div>
+                }
               </div>
             </div>
           }
@@ -218,6 +238,7 @@ const I18N: Record<string, any> = {
             </div>
             <div class="cw-chips">
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
+              <button class="cw-chip cw-chip-place" (click)="askPlaces()">{{ t().placeChip }}</button>
             </div>
           }
           @if (simLoading()) {
@@ -279,7 +300,10 @@ const I18N: Record<string, any> = {
     @keyframes cwPulse { 0%,100%{box-shadow:0 10px 30px rgba(212,175,55,0.30)} 50%{box-shadow:0 10px 42px rgba(212,175,55,0.55)} }
     .cw-panel { position:fixed; right:22px; bottom:22px; z-index:9999; width:380px; max-width:calc(100vw - 28px); height:560px; max-height:calc(100dvh - 40px);
       display:flex; flex-direction:column; background:var(--cw-bg); border:1px solid var(--cw-border); border-radius:20px; overflow:hidden;
-      box-shadow:0 24px 70px rgba(0,0,0,0.55); animation:cwIn .28s cubic-bezier(.22,1,.36,1); }
+      box-shadow:0 24px 70px rgba(0,0,0,0.55); animation:cwIn .28s cubic-bezier(.22,1,.36,1);
+      -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
+    .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
     @keyframes cwIn { from{opacity:0; transform:translateY(20px) scale(.97)} to{opacity:1; transform:none} }
     .cw-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--cw-border);
       background:linear-gradient(180deg,rgba(212,175,55,0.08),transparent); }
@@ -313,6 +337,8 @@ const I18N: Record<string, any> = {
     .cw-copy { background:none; border:1px solid var(--cw-border); color:var(--cw-gold); border-radius:8px; padding:4px 9px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:center; }
     .cw-copy:hover { border-color:var(--cw-gold-d); }
     .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
+    .cw-chip-place { border-color:rgba(156,89,234,.5); color:var(--cw-purple-l,#9c59ea); font-weight:600; background:rgba(156,89,234,.08); }
+    .cw-chip-place:hover { border-color:var(--cw-purple-l,#9c59ea); background:rgba(156,89,234,.16); }
     .cw-modes { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
     .cw-mode { text-align:left; background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(131,27,252,.10)); border:1px solid rgba(212,175,55,.35);
       border-radius:13px; padding:11px 13px; cursor:pointer; transition:border-color .15s, transform .15s; }
@@ -405,6 +431,11 @@ const I18N: Record<string, any> = {
     .cw-input input:focus { border-color:var(--cw-gold-d); }
     .cw-snd { width:42px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; font-size:17px; font-weight:700; cursor:pointer; }
     .cw-snd:disabled { opacity:.5; cursor:not-allowed; }
+    .cw-fb { display:flex; align-items:center; gap:8px; margin-top:9px; padding-top:9px; border-top:1px solid rgba(255,255,255,.06); }
+    .cw-fb-q { font-size:12px; color:var(--cw-muted); }
+    .cw-fb-btn { background:none; border:1px solid var(--cw-border); border-radius:8px; width:30px; height:28px; font-size:14px; cursor:pointer; transition:border-color .15s, transform .15s; }
+    .cw-fb-btn:hover { border-color:var(--cw-gold-d); transform:translateY(-1px); }
+    .cw-fb-thx { font-size:12px; color:var(--cw-gold); }
     .cw-foot { text-align:center; font-size:10.5px; color:var(--cw-muted); padding:0 0 9px; }
     .cw-spin { display:inline-block; width:15px; height:15px; border:2px solid rgba(26,18,6,.4); border-top-color:#1A1206; border-radius:50%; animation:cwSpin .7s linear infinite; }
     @keyframes cwSpin { to{transform:rotate(360deg)} }
@@ -428,9 +459,21 @@ export class CoachWidgetComponent {
   private lastCoachText = '';
   private lastUserMsg = '';
 
+  // Chrome language — follows the marketing site toggle (es/en/pt) for the widget labels.
   readonly lang = computed(() => {
-    const l = String(this.translation.currentLanguage() || 'es').toLowerCase();
-    return I18N[l] ? l : (l.startsWith('es') ? 'es' : 'en');
+    const l = String(this.translation.currentLanguage() || 'es').toLowerCase().split('-')[0];
+    return I18N[l] ? l : (l === 'es' ? 'es' : 'en');
+  });
+  // Coach language — auto-detected from the visitor's device. CoachFish responds in any of its
+  // 13 supported languages, so a visitor from any country gets the coach in their own language.
+  readonly coachLang = computed(() => {
+    if (this.isBrowser) {
+      const navs = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
+        .map((x) => String(x || '').toLowerCase().split('-')[0]);
+      const hit = navs.find((b) => COACH_LANGS.includes(b));
+      if (hit) return hit;
+    }
+    return this.lang();
   });
   t() { return I18N[this.lang()] || I18N['es']; }
   readonly showCta = computed(() => this.coachReplies >= 2);
@@ -474,6 +517,22 @@ export class CoachWidgetComponent {
     this.scroll();
   }
   exitSim() { this.simMode.set(''); }
+
+  /** Elegant per-response feedback (👍/👎) → backend, to keep improving the coach. */
+  feedback(msgIdx: number, rating: 'up' | 'down') {
+    const m = this.messages()[msgIdx];
+    if (!m || m.fb) return;
+    this.messages.update((arr) => arr.map((x, i) => i === msgIdx ? { ...x, fb: rating } : x));
+    const intent = m.mv ? 'multiverse' : m.sim ? 'simulate' : m.places ? 'place' : m.phrases ? 'phrase' : 'general';
+    const answer = m.mv ? (m.mv.compatibilityLabel || 'multiverse') : m.sim ? (m.sim.approaches?.[0]?.phrase || 'simulation') : (m.text || '');
+    this.ga('coach_demo_feedback', { rating, intent, lang: this.lang() });
+    if (this.isBrowser) {
+      fetch(FB_ENDPOINT, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, intent, userLanguage: this.coachLang(), sessionId: this.sessionId, question: m.q || '', answer }),
+      }).catch(() => { /* fail-open — UI already shows thanks */ });
+    }
+  }
   inputPlaceholder() {
     if (this.simMode() === 'multiverse') return this.t().mvHint;
     if (this.simMode() === 'situation') return this.t().simHint;
@@ -498,13 +557,13 @@ export class CoachWidgetComponent {
     try {
       const res = await fetch(SIM_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ situation, userLanguage: this.lang(), sessionId: this.sessionId }),
+        body: JSON.stringify({ situation, userLanguage: this.coachLang(), sessionId: this.sessionId }),
       });
       const data = await res.json().catch(() => ({}));
       if (data?.limited) this.ga('coach_demo_limited');
       this.coachReplies++;
       if (Array.isArray(data?.approaches) && data.approaches.length) {
-        this.messages.update((m) => [...m, { role: 'coach', text: '', sim: { stage: data.stage || '', approaches: data.approaches, perspectiveNames: data.perspectiveNames || [], perspectivesUsed: data.perspectivesUsed || 0 } }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: '', ask: true, q: this.lastUserMsg, sim: { stage: data.stage || '', approaches: data.approaches, perspectiveNames: data.perspectiveNames || [], perspectivesUsed: data.perspectivesUsed || 0 } }]);
         this.lastCoachText = data.approaches[0]?.phrase || '';
       } else {
         this.messages.update((m) => [...m, { role: 'coach', text: data?.reply || this.t().greeting }]);
@@ -521,13 +580,13 @@ export class CoachWidgetComponent {
     try {
       const res = await fetch(MV_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context, userLanguage: this.lang(), sessionId: this.sessionId }),
+        body: JSON.stringify({ context, userLanguage: this.coachLang(), sessionId: this.sessionId }),
       });
       const data = await res.json().catch(() => ({}));
       if (data?.limited) this.ga('coach_demo_limited');
       this.coachReplies++;
       if (Array.isArray(data?.stages) && data.stages.length) {
-        this.messages.update((m) => [...m, { role: 'coach', text: '', mv: {
+        this.messages.update((m) => [...m, { role: 'coach', text: '', ask: true, q: this.lastUserMsg, mv: {
           compatibilityScore: data.compatibilityScore ?? null, compatibilityStars: data.compatibilityStars ?? null,
           compatibilityLabel: data.compatibilityLabel || '', stages: data.stages, keyInsights: data.keyInsights || [],
         } }]);
@@ -585,7 +644,7 @@ export class CoachWidgetComponent {
       const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch(ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, userLanguage: this.lang(), history, sessionId: this.sessionId }),
+        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId }),
       });
       const data = await res.json().catch(() => ({}));
       const reply = (data && data.reply) || this.t().greeting;
@@ -597,14 +656,34 @@ export class CoachWidgetComponent {
       if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation) {
         // structured result — show immediately with attachments (no typewriter)
-        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, needLocation: data.needLocation }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, needLocation: data.needLocation, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
         this.scroll();
       } else {
         await this.typewrite(reply);
+        this.messages.update((m) => m.map((x, i) => i === m.length - 1 ? { ...x, ask: true, q: this.lastUserMsg } : x));
       }
     } catch {
       this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Connection hiccup — try again.' : 'Hubo un problema de conexión, inténtalo de nuevo.' }]);
     } finally { this.busy.set(false); this.scroll(); }
+  }
+
+  /** Place-suggestion chip: only NOW (on press) do we ask for location; otherwise let them type a city. */
+  askPlaces() {
+    if (this.busy()) return;
+    const q = this.t().placeQuery;
+    this.lastUserMsg = q;
+    this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
+    this.ga('coach_demo_place_chip', { lang: this.coachLang() });
+    if (this.isBrowser && navigator.geolocation) {
+      this.busy.set(true); this.scroll();
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+        () => { this.busy.set(false); this.ask({ message: q }); }, // denied → backend asks for a city
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
+      );
+    } else {
+      this.ask({ message: q }); // no geolocation API → backend asks for a city
+    }
   }
 
   useLocation() {
