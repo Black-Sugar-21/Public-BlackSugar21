@@ -66,7 +66,7 @@ const I18N: Record<string, any> = {
         </header>
 
         <div class="cw-body" #body>
-          @for (m of messages(); track $index) {
+          @for (m of messages(); track mi; let mi = $index) {
             <div class="cw-msg" [class.user]="m.role==='user'">
               <div class="cw-bubble">
                 <span>{{ m.text }}{{ m.typing ? ' ▌' : '' }}</span>
@@ -116,30 +116,36 @@ const I18N: Record<string, any> = {
                     </div>
 
                     <!-- horizontal carousel — one approach per page (matches iOS/Android pager) -->
-                    <div class="cw-carousel" (scroll)="onCarouselScroll($event, $index)" #carousel>
-                      @for (a of m.sim.approaches; track ai; let ai = $index) {
-                        <div class="cw-appr" [class.best]="ai === bestIdx(m.sim!)">
-                          <div class="cw-appr-top">
-                            <span class="cw-tone">{{ toneEmoji(a.toneKey) }} {{ a.tone }}</span>
-                            @if (ai === bestIdx(m.sim!)) { <span class="cw-best">★ {{ t().simBest }}</span> }
-                            <button class="cw-copy" (click)="copyPhrase(a.phrase, msgKey($index) + ai)">{{ copiedIdx() === msgKey($index) + ai ? t().copied : t().copy }}</button>
+                    <div class="cw-car-wrap">
+                      <div class="cw-carousel" [id]="'cwcar-' + mi" (scroll)="onCarouselScroll($event, mi)">
+                        @for (a of m.sim.approaches; track ai; let ai = $index) {
+                          <div class="cw-appr" [class.best]="ai === bestIdx(m.sim!)">
+                            <div class="cw-appr-top">
+                              <span class="cw-tone">{{ toneEmoji(a.toneKey) }} {{ a.tone }}</span>
+                              @if (ai === bestIdx(m.sim!)) { <span class="cw-best">★ {{ t().simBest }}</span> }
+                              <button class="cw-copy" (click)="copyPhrase(a.phrase, msgKey(mi) + ai)">{{ copiedIdx() === msgKey(mi) + ai ? t().copied : t().copy }}</button>
+                            </div>
+                            <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
+                            <div class="cw-stars">
+                              @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= stars(a.confidence)">★</span> }
+                              @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
+                            </div>
+                            @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
+                            @if (a.perspectives.length) {
+                              <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                            }
                           </div>
-                          <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
-                          <div class="cw-stars">
-                            @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= stars(a.confidence)">★</span> }
-                            @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
-                          </div>
-                          @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
-                          @if (a.perspectives.length) {
-                            <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
-                          }
-                        </div>
+                        }
+                      </div>
+                      @if (m.sim.approaches.length > 1) {
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.sim.approaches.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
                       }
                     </div>
                     @if (m.sim.approaches.length > 1) {
                       <div class="cw-dots">
                         @for (a of m.sim.approaches; track di; let di = $index) {
-                          <span class="cw-dot" [class.on]="(carouselPage()[$index] || 0) === di"></span>
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a enfoque"></button>
                         }
                       </div>
                     }
@@ -245,8 +251,15 @@ const I18N: Record<string, any> = {
     .cw-sim-persp small { color:var(--cw-muted); font-size:11px; }
     .cw-pill-p { font-size:10.5px; color:var(--cw-purple-l,#9c59ea); border:1px solid rgba(156,89,234,.4); border-radius:999px; padding:1px 8px; }
     /* carousel: one approach per page, swipeable (matches iOS/Android pager) */
-    .cw-carousel { display:flex; gap:0; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; margin:0 -2px; padding:0 2px; }
+    .cw-car-wrap { position:relative; }
+    .cw-carousel { display:flex; gap:0; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
     .cw-carousel::-webkit-scrollbar { display:none; }
+    .cw-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:30px; height:30px; border-radius:50%;
+      border:1px solid rgba(212,175,55,.4); background:rgba(12,12,16,.85); color:var(--cw-gold); font-size:20px; line-height:1; cursor:pointer;
+      display:grid; place-items:center; transition:opacity .2s, transform .2s; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+    .cw-arrow:hover { transform:translateY(-50%) scale(1.08); }
+    .cw-arrow.left { left:-6px; } .cw-arrow.right { right:-6px; }
+    .cw-arrow.hidden { opacity:0; pointer-events:none; }
     .cw-appr { flex:0 0 100%; scroll-snap-align:center; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid rgba(131,27,252,.30);
       border-radius:14px; padding:13px; margin-right:8px; }
     .cw-appr:last-child { margin-right:0; }
@@ -267,8 +280,9 @@ const I18N: Record<string, any> = {
     .cw-appr-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
     .cw-tag { font-size:10px; color:#9c59ea; border:1px solid rgba(156,89,234,.35); border-radius:6px; padding:1px 7px; }
     .cw-dots { display:flex; justify-content:center; gap:6px; margin-top:9px; }
-    .cw-dot { width:6px; height:6px; border-radius:50%; background:rgba(156,89,234,.35); transition:all .2s; }
-    .cw-dot.on { width:18px; border-radius:3px; background:#9c59ea; }
+    .cw-dot { width:7px; height:7px; border-radius:50%; background:rgba(156,89,234,.35); border:none; padding:0; cursor:pointer; transition:all .2s; }
+    .cw-dot:hover { background:rgba(156,89,234,.6); }
+    .cw-dot.on { width:18px; border-radius:4px; background:#9c59ea; }
     /* "simulating" loading — 4 emoji cards glowing in sequence (matches app SimulationSkeletonView) */
     .cw-simload { margin-top:8px; background:rgba(131,27,252,.12); border:1px solid rgba(131,27,252,.25); border-radius:16px; padding:16px; text-align:center; }
     .cw-simload-cards { display:flex; gap:8px; justify-content:center; margin-bottom:12px; }
@@ -404,6 +418,19 @@ export class CoachWidgetComponent {
     const page = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
     const cur = this.carouselPage();
     if (cur[msgIdx] !== page) this.carouselPage.set({ ...cur, [msgIdx]: page });
+  }
+  goToPage(msgIdx: number, page: number) {
+    if (!this.isBrowser) return;
+    const el = document.getElementById('cwcar-' + msgIdx) as HTMLElement | null;
+    if (!el) return;
+    const w = Math.max(1, el.clientWidth);
+    const pages = Math.max(1, Math.round(el.scrollWidth / w));
+    const p = Math.max(0, Math.min(page, pages - 1));
+    el.scrollTo({ left: p * w, behavior: 'smooth' });
+    this.carouselPage.set({ ...this.carouselPage(), [msgIdx]: p });
+  }
+  navCarousel(msgIdx: number, dir: number) {
+    this.goToPage(msgIdx, (this.carouselPage()[msgIdx] || 0) + dir);
   }
 
   /** Re-ask the last question once we have a location (geo or city). */
