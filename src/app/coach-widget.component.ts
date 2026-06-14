@@ -5,12 +5,15 @@ import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; }
+interface SimApproach { tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
+interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
-  places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean;
+  places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean; sim?: SimResult;
 }
 
 const ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoChat';
+const SIM_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoSimulate';
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
@@ -26,6 +29,8 @@ const I18N: Record<string, any> = {
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
     footer: 'Generado por IA · versión de prueba',
     useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa',
+    simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
+    simAnalyzing: 'Analizando con 5 perspectivas…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -37,6 +42,8 @@ const I18N: Record<string, any> = {
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
     footer: 'AI-generated · demo version',
     useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map',
+    simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
+    simAnalyzing: 'Analyzing with 5 perspectives…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works',
   },
 };
 
@@ -97,14 +104,42 @@ const I18N: Record<string, any> = {
                     }
                   </div>
                 }
+
+                @if (m.sim) {
+                  <div class="cw-sim">
+                    <div class="cw-sim-meta">
+                      <span class="cw-sim-stage">{{ t().simStage }}: {{ m.sim.stage }}</span>
+                      <div class="cw-sim-persp">
+                        <small>{{ t().simBy }}:</small>
+                        @for (p of m.sim.perspectiveNames; track p) { <span class="cw-pill-p">{{ p }}</span> }
+                      </div>
+                    </div>
+                    @for (a of m.sim.approaches; track $index) {
+                      <div class="cw-appr">
+                        <div class="cw-appr-top">
+                          <span class="cw-tone">{{ a.tone }}</span>
+                          @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
+                          <button class="cw-copy" (click)="copyPhrase(a.phrase, 1000 + $index)">{{ copiedIdx() === 1000 + $index ? t().copied : t().copy }}</button>
+                        </div>
+                        <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
+                        @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
+                        @if (a.perspectives.length) {
+                          <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
           }
           @if (messages().length <= 1) {
             <div class="cw-chips">
+              <button class="cw-chip cw-chip-sim" (click)="startSim()">{{ t().simChip }}</button>
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
             </div>
           }
+          @if (simMode() && !busy()) { <div class="cw-simhint">{{ t().simHint }}</div> }
           @if (showCta()) {
             <div class="cw-cta">
               <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
@@ -171,6 +206,24 @@ const I18N: Record<string, any> = {
     .cw-phrase span { flex:1; font-size:13px; color:var(--cw-text); line-height:1.45; }
     .cw-copy { background:none; border:1px solid var(--cw-border); color:var(--cw-gold); border-radius:8px; padding:4px 9px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:center; }
     .cw-copy:hover { border-color:var(--cw-gold-d); }
+    .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
+    .cw-simhint { margin-top:8px; font-size:12px; color:var(--cw-muted); font-style:italic; }
+    .cw-sim { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+    .cw-sim-meta { background:#0c0c10; border:1px solid var(--cw-border); border-radius:11px; padding:10px 12px; }
+    .cw-sim-stage { font-size:11px; color:var(--cw-gold); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+    .cw-sim-persp { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:7px; }
+    .cw-sim-persp small { color:var(--cw-muted); font-size:11px; }
+    .cw-pill-p { font-size:10.5px; color:var(--cw-purple-l,#9c59ea); border:1px solid rgba(156,89,234,.4); border-radius:999px; padding:1px 8px; }
+    .cw-appr { background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:12px; }
+    .cw-appr-top { display:flex; align-items:center; gap:8px; }
+    .cw-tone { font-size:11px; font-weight:700; color:#1A1206; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); border-radius:999px; padding:2px 10px; }
+    .cw-conf { font-size:11px; color:var(--cw-gold); font-weight:600; }
+    .cw-appr-top .cw-copy { margin-left:auto; }
+    .cw-appr-phrase { margin:8px 0 6px; font-size:14px; color:var(--cw-text); line-height:1.5; }
+    .cw-appr-why { margin:0; font-size:12px; color:var(--cw-muted); line-height:1.45; }
+    .cw-appr-why b { color:var(--cw-text); }
+    .cw-appr-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+    .cw-tag { font-size:10px; color:var(--cw-muted); border:1px solid var(--cw-border); border-radius:6px; padding:1px 7px; }
     .cw-cta { margin-top:6px; background:linear-gradient(180deg,rgba(212,175,55,0.10),var(--cw-card)); border:1px solid rgba(212,175,55,0.3); border-radius:14px; padding:14px; }
     .cw-cta b { font-size:14px; color:var(--cw-text); } .cw-cta p { margin:5px 0 11px; font-size:12.5px; color:var(--cw-muted); }
     .cw-cta-actions { display:flex; gap:8px; }
@@ -194,6 +247,7 @@ export class CoachWidgetComponent {
   readonly busy = signal(false);
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
+  readonly simMode = signal(false);
   draft = '';
   cityDraft = '';
   private coachReplies = 0;
@@ -236,13 +290,44 @@ export class CoachWidgetComponent {
     }
   }
 
+  startSim() {
+    this.simMode.set(true);
+    this.ga('coach_demo_sim_open');
+    this.messages.update((m) => [...m, { role: 'coach', text: this.t().simHint }]);
+    this.scroll();
+  }
+
   async send(text: string) {
     const msg = (text || '').trim();
     if (!msg || this.busy()) return;
     this.draft = '';
     this.lastUserMsg = msg;
     this.messages.update((m) => [...m, { role: 'user', text: msg }]);
+    if (this.simMode()) { await this.runSim(msg); return; }
     await this.ask({ message: msg });
+  }
+
+  /** Multi-agent simulation: 5 perspectives analyze the visitor's situation. */
+  private async runSim(situation: string) {
+    this.busy.set(true);
+    this.ga('coach_demo_simulate', { lang: this.lang() });
+    try {
+      const res = await fetch(SIM_ENDPOINT, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ situation, userLanguage: this.lang(), sessionId: this.sessionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.limited) this.ga('coach_demo_limited');
+      this.coachReplies++;
+      if (Array.isArray(data?.approaches) && data.approaches.length) {
+        this.messages.update((m) => [...m, { role: 'coach', text: '', sim: { stage: data.stage || '', approaches: data.approaches, perspectiveNames: data.perspectiveNames || [], perspectivesUsed: data.perspectivesUsed || 0 } }]);
+        this.lastCoachText = data.approaches[0]?.phrase || '';
+      } else {
+        this.messages.update((m) => [...m, { role: 'coach', text: data?.reply || this.t().greeting }]);
+      }
+    } catch {
+      this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
+    } finally { this.busy.set(false); this.simMode.set(false); this.scroll(); }
   }
 
   /** Re-ask the last question once we have a location (geo or city). */
