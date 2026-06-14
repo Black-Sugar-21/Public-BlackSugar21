@@ -45,7 +45,7 @@ const I18N: Record<string, any> = {
     mvHint: 'Descríbeme a la persona o conexión y simulo las 5 etapas de la relación',
     mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidad', mvInsights: 'Claves de esta conexión',
     fbAsk: '¿Te sirvió?', fbThanks: '¡Gracias por tu feedback! 💛',
-    placeChip: '📍 Lugares para una cita', placeQuery: '¿Dónde puedo tener una buena primera cita cerca de mí?',
+    placeChip: '📍 Lugares para una cita', placeQuery: '¿Qué lugares me recomiendas para una primera cita cerca de mí?',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -64,7 +64,7 @@ const I18N: Record<string, any> = {
     mvHint: 'Describe the person or connection and I simulate the 5 relationship stages',
     mvAnalyzing: 'Simulating 5 universes…', mvCompat: 'Compatibility', mvInsights: 'Keys to this connection',
     fbAsk: 'Was this helpful?', fbThanks: 'Thanks for your feedback! 💛',
-    placeChip: '📍 Date spots near me', placeQuery: 'Where can I have a great first date near me?',
+    placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
   },
 };
 
