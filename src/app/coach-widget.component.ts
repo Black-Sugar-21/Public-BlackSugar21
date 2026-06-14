@@ -5,7 +5,7 @@ import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; }
-interface SimApproach { tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
+interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
@@ -30,7 +30,7 @@ const I18N: Record<string, any> = {
     footer: 'Generado por IA · versión de prueba',
     useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa',
     simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
-    simAnalyzing: 'Analizando con 5 perspectivas…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona',
+    simAnalyzing: 'Analizando enfoques…', simThinking: '5 perspectivas pensando…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona', simBest: 'Recomendada',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -43,7 +43,7 @@ const I18N: Record<string, any> = {
     footer: 'AI-generated · demo version',
     useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map',
     simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
-    simAnalyzing: 'Analyzing with 5 perspectives…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works',
+    simAnalyzing: 'Analyzing approaches…', simThinking: '5 perspectives thinking…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works', simBest: 'Recommended',
   },
 };
 
@@ -114,17 +114,32 @@ const I18N: Record<string, any> = {
                         @for (p of m.sim.perspectiveNames; track p) { <span class="cw-pill-p">{{ p }}</span> }
                       </div>
                     </div>
-                    @for (a of m.sim.approaches; track $index) {
-                      <div class="cw-appr">
-                        <div class="cw-appr-top">
-                          <span class="cw-tone">{{ a.tone }}</span>
-                          @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
-                          <button class="cw-copy" (click)="copyPhrase(a.phrase, 1000 + $index)">{{ copiedIdx() === 1000 + $index ? t().copied : t().copy }}</button>
+
+                    <!-- horizontal carousel — one approach per page (matches iOS/Android pager) -->
+                    <div class="cw-carousel" (scroll)="onCarouselScroll($event, $index)" #carousel>
+                      @for (a of m.sim.approaches; track ai; let ai = $index) {
+                        <div class="cw-appr" [class.best]="ai === bestIdx(m.sim!)">
+                          <div class="cw-appr-top">
+                            <span class="cw-tone">{{ toneEmoji(a.toneKey) }} {{ a.tone }}</span>
+                            @if (ai === bestIdx(m.sim!)) { <span class="cw-best">★ {{ t().simBest }}</span> }
+                            <button class="cw-copy" (click)="copyPhrase(a.phrase, msgKey($index) + ai)">{{ copiedIdx() === msgKey($index) + ai ? t().copied : t().copy }}</button>
+                          </div>
+                          <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
+                          <div class="cw-stars">
+                            @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= stars(a.confidence)">★</span> }
+                            @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
+                          </div>
+                          @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
+                          @if (a.perspectives.length) {
+                            <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                          }
                         </div>
-                        <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
-                        @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
-                        @if (a.perspectives.length) {
-                          <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                      }
+                    </div>
+                    @if (m.sim.approaches.length > 1) {
+                      <div class="cw-dots">
+                        @for (a of m.sim.approaches; track di; let di = $index) {
+                          <span class="cw-dot" [class.on]="(carouselPage()[$index] || 0) === di"></span>
                         }
                       </div>
                     }
@@ -140,6 +155,21 @@ const I18N: Record<string, any> = {
             </div>
           }
           @if (simMode() && !busy()) { <div class="cw-simhint">{{ t().simHint }}</div> }
+
+          @if (simLoading()) {
+            <div class="cw-simload">
+              <div class="cw-simload-cards">
+                @for (e of ['💬','😏','💕','🌱']; track $index) {
+                  <div class="cw-simload-card" [style.animation-delay.ms]="$index * 450">
+                    <span class="cw-simload-emoji">{{ e }}</span>
+                    <div class="cw-simload-bar"></div><div class="cw-simload-bar short"></div>
+                  </div>
+                }
+              </div>
+              <b class="cw-simload-title">{{ t().simAnalyzing }}</b>
+              <small class="cw-simload-sub">{{ t().simThinking }}</small>
+            </div>
+          }
           @if (showCta()) {
             <div class="cw-cta">
               <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
@@ -214,16 +244,41 @@ const I18N: Record<string, any> = {
     .cw-sim-persp { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:7px; }
     .cw-sim-persp small { color:var(--cw-muted); font-size:11px; }
     .cw-pill-p { font-size:10.5px; color:var(--cw-purple-l,#9c59ea); border:1px solid rgba(156,89,234,.4); border-radius:999px; padding:1px 8px; }
-    .cw-appr { background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:12px; }
+    /* carousel: one approach per page, swipeable (matches iOS/Android pager) */
+    .cw-carousel { display:flex; gap:0; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; margin:0 -2px; padding:0 2px; }
+    .cw-carousel::-webkit-scrollbar { display:none; }
+    .cw-appr { flex:0 0 100%; scroll-snap-align:center; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid rgba(131,27,252,.30);
+      border-radius:14px; padding:13px; margin-right:8px; }
+    .cw-appr:last-child { margin-right:0; }
+    .cw-appr.best { border:1.5px solid transparent; background:
+      linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)) padding-box,
+      linear-gradient(135deg,var(--cw-gold),var(--cw-purple-v,#831bfc)) border-box; }
     .cw-appr-top { display:flex; align-items:center; gap:8px; }
-    .cw-tone { font-size:11px; font-weight:700; color:#1A1206; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); border-radius:999px; padding:2px 10px; }
-    .cw-conf { font-size:11px; color:var(--cw-gold); font-weight:600; }
+    .cw-tone { font-size:11px; font-weight:700; color:#1A1206; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); border-radius:999px; padding:3px 11px; white-space:nowrap; }
+    .cw-best { font-size:10.5px; font-weight:700; color:var(--cw-gold); white-space:nowrap; }
     .cw-appr-top .cw-copy { margin-left:auto; }
-    .cw-appr-phrase { margin:8px 0 6px; font-size:14px; color:var(--cw-text); line-height:1.5; }
+    .cw-appr-phrase { margin:9px 0 7px; font-size:14px; color:var(--cw-text); line-height:1.5; font-style:italic; }
+    .cw-stars { display:flex; align-items:center; gap:2px; margin-bottom:7px; }
+    .cw-stars span { color:rgba(131,27,252,.35); font-size:13px; }
+    .cw-stars span.on { color:var(--cw-gold); }
+    .cw-conf { font-size:11px; color:var(--cw-gold); font-weight:600; margin-left:6px; }
     .cw-appr-why { margin:0; font-size:12px; color:var(--cw-muted); line-height:1.45; }
     .cw-appr-why b { color:var(--cw-text); }
     .cw-appr-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
-    .cw-tag { font-size:10px; color:var(--cw-muted); border:1px solid var(--cw-border); border-radius:6px; padding:1px 7px; }
+    .cw-tag { font-size:10px; color:#9c59ea; border:1px solid rgba(156,89,234,.35); border-radius:6px; padding:1px 7px; }
+    .cw-dots { display:flex; justify-content:center; gap:6px; margin-top:9px; }
+    .cw-dot { width:6px; height:6px; border-radius:50%; background:rgba(156,89,234,.35); transition:all .2s; }
+    .cw-dot.on { width:18px; border-radius:3px; background:#9c59ea; }
+    /* "simulating" loading — 4 emoji cards glowing in sequence (matches app SimulationSkeletonView) */
+    .cw-simload { margin-top:8px; background:rgba(131,27,252,.12); border:1px solid rgba(131,27,252,.25); border-radius:16px; padding:16px; text-align:center; }
+    .cw-simload-cards { display:flex; gap:8px; justify-content:center; margin-bottom:12px; }
+    .cw-simload-card { flex:1; max-width:64px; background:rgba(131,27,252,.10); border:1px solid rgba(131,27,252,.25); border-radius:11px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:5px; animation:cwGlow 1.8s ease-in-out infinite; }
+    .cw-simload-emoji { font-size:18px; }
+    .cw-simload-bar { width:80%; height:4px; border-radius:3px; background:rgba(255,255,255,.18); }
+    .cw-simload-bar.short { width:55%; }
+    .cw-simload-title { display:block; color:var(--cw-text); font-size:14px; }
+    .cw-simload-sub { color:#9c59ea; font-size:12px; }
+    @keyframes cwGlow { 0%,100%{ transform:scale(1); border-color:rgba(131,27,252,.2); box-shadow:none; } 50%{ transform:scale(1.06); border-color:rgba(156,89,234,.7); box-shadow:0 0 14px rgba(131,27,252,.4); } }
     .cw-cta { margin-top:6px; background:linear-gradient(180deg,rgba(212,175,55,0.10),var(--cw-card)); border:1px solid rgba(212,175,55,0.3); border-radius:14px; padding:14px; }
     .cw-cta b { font-size:14px; color:var(--cw-text); } .cw-cta p { margin:5px 0 11px; font-size:12.5px; color:var(--cw-muted); }
     .cw-cta-actions { display:flex; gap:8px; }
@@ -248,6 +303,8 @@ export class CoachWidgetComponent {
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
   readonly simMode = signal(false);
+  readonly simLoading = signal(false);
+  readonly carouselPage = signal<Record<number, number>>({});
   draft = '';
   cityDraft = '';
   private coachReplies = 0;
@@ -309,7 +366,7 @@ export class CoachWidgetComponent {
 
   /** Multi-agent simulation: 5 perspectives analyze the visitor's situation. */
   private async runSim(situation: string) {
-    this.busy.set(true);
+    this.busy.set(true); this.simLoading.set(true); this.scroll();
     this.ga('coach_demo_simulate', { lang: this.lang() });
     try {
       const res = await fetch(SIM_ENDPOINT, {
@@ -327,7 +384,26 @@ export class CoachWidgetComponent {
       }
     } catch {
       this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
-    } finally { this.busy.set(false); this.simMode.set(false); this.scroll(); }
+    } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(false); this.scroll(); }
+  }
+
+  // ── carousel + sim card helpers ──
+  msgKey(i: number) { return (i + 1) * 100; }
+  toneEmoji(toneKey?: string) {
+    const m: Record<string, string> = { direct: '💬', playful: '😏', romantic_vulnerable: '💕', vulnerable: '🫧', grounded_honest: '🌱', warm: '🌷' };
+    return (toneKey && m[toneKey]) || '✨';
+  }
+  stars(confidence: number | null) { return confidence == null ? 4 : Math.max(1, Math.min(5, Math.round(confidence / 20))); }
+  bestIdx(sim: SimResult) {
+    let bi = 0; let bc = -1;
+    sim.approaches.forEach((a, i) => { const c = a.confidence ?? 0; if (c > bc) { bc = c; bi = i; } });
+    return bi;
+  }
+  onCarouselScroll(ev: Event, msgIdx: number) {
+    const el = ev.target as HTMLElement;
+    const page = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    const cur = this.carouselPage();
+    if (cur[msgIdx] !== page) this.carouselPage.set({ ...cur, [msgIdx]: page });
   }
 
   /** Re-ask the last question once we have a location (geo or city). */
