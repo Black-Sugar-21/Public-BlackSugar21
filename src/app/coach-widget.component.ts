@@ -2,6 +2,7 @@ import { Component, Inject, PLATFORM_ID, signal, computed } from '@angular/core'
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from './translation.service';
+import { FirebaseService } from './firebase.service';
 
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; }
 interface Msg {
@@ -108,7 +109,7 @@ const I18N: Record<string, any> = {
             <div class="cw-cta">
               <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
               <div class="cw-cta-actions">
-                <a class="cw-btn gold" [href]="storeLink" target="_blank" rel="noopener">{{ t().download }}</a>
+                <a class="cw-btn gold" [href]="storeLink" target="_blank" rel="noopener" (click)="trackDownload()">{{ t().download }}</a>
                 <button class="cw-btn" (click)="share()">{{ justShared() ? t().shared : t().share }}</button>
               </div>
             </div>
@@ -210,14 +211,28 @@ export class CoachWidgetComponent {
     return /android/i.test(navigator.userAgent) ? STORE_ANDROID : STORE_IOS;
   }
 
-  constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService) {
+  private sessionId = '';
+
+  constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService, private firebase: FirebaseService) {
     this.isBrowser = isPlatformBrowser(platformId);
+    if (this.isBrowser) {
+      try {
+        this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
+        if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
+      } catch { this.sessionId = 's_' + Date.now().toString(36); }
+    }
+  }
+
+  /** Google Analytics (GA4) event — country + user counts come automatically from GA. */
+  private ga(event: string, params: Record<string, unknown> = {}) {
+    try { this.firebase.logEvent(event, { ...params, source: 'coach_demo' }); } catch { /* noop */ }
   }
 
   toggle() {
     this.open.update((v) => !v);
-    if (this.open() && this.messages().length === 0) {
-      this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+    if (this.open()) {
+      this.ga('coach_demo_open');
+      if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
     }
   }
 
@@ -242,12 +257,16 @@ export class CoachWidgetComponent {
       const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch(ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, userLanguage: this.lang(), history }),
+        body: JSON.stringify({ ...payload, userLanguage: this.lang(), history, sessionId: this.sessionId }),
       });
       const data = await res.json().catch(() => ({}));
       const reply = (data && data.reply) || this.t().greeting;
       this.coachReplies++;
       this.lastCoachText = reply;
+      // GA: one event per query (count = cantidad de consultas; geo/country auto from GA4).
+      const intent = data?.places?.length ? 'place' : data?.phrases?.length ? 'phrase' : data?.needLocation ? 'place_need_loc' : 'general';
+      this.ga('coach_demo_message', { intent, lang: this.lang() });
+      if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation) {
         // structured result — show immediately with attachments (no typewriter)
         this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, needLocation: data.needLocation }]);
@@ -298,12 +317,14 @@ export class CoachWidgetComponent {
 
   async share() {
     if (!this.isBrowser) return;
+    this.ga('coach_demo_share');
     const text = `${this.t().shareText}\n\n"${this.lastCoachText || ''}"\n\n${SITE}`;
     try {
       if ((navigator as any).share) { await (navigator as any).share({ title: 'Black Sugar 21', text, url: SITE }); }
       else { await navigator.clipboard.writeText(text); this.justShared.set(true); setTimeout(() => this.justShared.set(false), 2200); }
     } catch { /* user cancelled */ }
   }
+  trackDownload() { this.ga('coach_demo_download', { store: this.isBrowser && /android/i.test(navigator.userAgent) ? 'android' : 'ios' }); }
 
   private scroll() {
     if (!this.isBrowser) return;
