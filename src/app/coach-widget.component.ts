@@ -220,9 +220,6 @@ const I18N: Record<string, any> = {
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
             </div>
           }
-          @if (simMode() === 'situation' && !busy()) { <div class="cw-simhint">{{ t().simHint }}</div> }
-          @if (simMode() === 'multiverse' && !busy()) { <div class="cw-simhint">{{ t().mvHint }}</div> }
-
           @if (simLoading()) {
             <div class="cw-simload">
               <div class="cw-simload-cards">
@@ -248,8 +245,20 @@ const I18N: Record<string, any> = {
           }
         </div>
 
+        <!-- persistent mode bar — start/switch a simulation at any point (not only on first screen) -->
+        @if (!busy()) {
+          <div class="cw-modebar">
+            @if (simMode()) {
+              <span class="cw-modeon">{{ simMode() === 'multiverse' ? t().mvTitle : t().simTitle }}</span>
+              <button class="cw-modex" (click)="exitSim()" aria-label="Salir del modo">✕</button>
+            } @else {
+              <button class="cw-modetab" (click)="startSim('situation')">{{ t().simTitle }}</button>
+              <button class="cw-modetab" (click)="startSim('multiverse')">{{ t().mvTitle }}</button>
+            }
+          </div>
+        }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
-          <input [(ngModel)]="draft" name="d" [placeholder]="t().placeholder" [disabled]="busy()" autocomplete="off" maxlength="400" />
+          <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />
           <button type="submit" class="cw-snd" [disabled]="busy() || !draft.trim()">
             @if (busy()) { <span class="cw-spin"></span> } @else { ↑ }
           </button>
@@ -384,6 +393,13 @@ const I18N: Record<string, any> = {
     .cw-cta-actions { display:flex; gap:8px; }
     .cw-btn { flex:1; text-align:center; padding:9px; border-radius:10px; border:1px solid var(--cw-border); background:var(--cw-bg); color:var(--cw-text); font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; }
     .cw-btn.gold { background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; border:none; }
+    .cw-modebar { display:flex; gap:7px; align-items:center; padding:9px 12px 0; }
+    .cw-modetab { flex:1; background:rgba(212,175,55,.08); border:1px solid rgba(212,175,55,.3); color:var(--cw-text);
+      border-radius:9px; padding:7px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:border-color .15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cw-modetab:hover { border-color:var(--cw-gold); }
+    .cw-modeon { flex:1; font-size:12px; font-weight:600; color:var(--cw-gold); background:rgba(212,175,55,.1); border:1px solid rgba(212,175,55,.35); border-radius:9px; padding:7px 10px; }
+    .cw-modex { width:30px; height:30px; border-radius:9px; border:1px solid var(--cw-border); background:var(--cw-card); color:var(--cw-muted); font-size:13px; cursor:pointer; }
+    .cw-modex:hover { color:var(--cw-text); border-color:var(--cw-gold-d); }
     .cw-input { display:flex; gap:8px; padding:12px; border-top:1px solid var(--cw-border); }
     .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:11px 14px; color:var(--cw-text); font-size:14px; outline:none; font-family:inherit; }
     .cw-input input:focus { border-color:var(--cw-gold-d); }
@@ -451,10 +467,17 @@ export class CoachWidgetComponent {
   loadEmojis() { return this.loadingMode() === 'multiverse' ? ['🌟', '💬', '💕', '⚡', '🚀'] : ['💬', '😏', '💕', '🌱']; }
 
   startSim(mode: SimMode) {
+    if (this.simMode() === mode) return;
     this.simMode.set(mode);
     this.ga(mode === 'multiverse' ? 'coach_demo_mv_open' : 'coach_demo_sim_open');
     this.messages.update((m) => [...m, { role: 'coach', text: mode === 'multiverse' ? this.t().mvHint : this.t().simHint }]);
     this.scroll();
+  }
+  exitSim() { this.simMode.set(''); }
+  inputPlaceholder() {
+    if (this.simMode() === 'multiverse') return this.t().mvHint;
+    if (this.simMode() === 'situation') return this.t().simHint;
+    return this.t().placeholder;
   }
 
   async send(text: string) {
