@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
-interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; }
+interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
@@ -106,11 +106,17 @@ const I18N: Record<string, any> = {
 
                 @if (m.places?.length) {
                   <div class="cw-places">
-                    @for (p of m.places!; track p.name) {
-                      <a class="cw-place" [href]="p.mapsUrl" target="_blank" rel="noopener">
+                    @for (p of m.places!; track p.name; let pi = $index) {
+                      <a class="cw-place" [class.best]="pi === 0 && p.score != null" [href]="p.mapsUrl" target="_blank" rel="noopener">
                         <div class="cw-place-i"><b>{{ p.name }}</b>
-                          @if (p.rating) { <span class="cw-rate">★ {{ p.rating }}</span> }</div>
+                          @if (p.score != null) { <span class="cw-fit">{{ p.score }}% ✦</span> }
+                          @else if (p.rating) { <span class="cw-rate">★ {{ p.rating }}</span> }</div>
                         <small>{{ p.address }}</small>
+                        @if (p.why) { <p class="cw-place-why">{{ p.why }}</p> }
+                        @if (p.perspectives?.length) {
+                          <div class="cw-place-persp">@for (pp of p.perspectives!; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                        }
+                        @if (p.tip) { <p class="cw-place-tip">💡 {{ p.tip }}</p> }
                         <span class="cw-map">{{ t().viewMap }} →</span>
                       </a>
                     }
@@ -343,6 +349,12 @@ const I18N: Record<string, any> = {
     .cw-rate { color:var(--cw-gold); font-size:12px; white-space:nowrap; }
     .cw-place small { display:block; color:var(--cw-muted); font-size:11.5px; margin-top:3px; }
     .cw-map { display:inline-block; margin-top:7px; color:var(--cw-gold); font-size:11.5px; font-weight:600; }
+    /* R36 — venue card enriched by the 4-agent psychology panel */
+    .cw-place.best { border-color:rgba(212,175,55,.55); background:linear-gradient(180deg,rgba(212,175,55,.06),#0c0c10); }
+    .cw-fit { color:var(--cw-gold); font-size:11.5px; font-weight:700; white-space:nowrap; }
+    .cw-place-why { margin:6px 0 0; color:var(--cw-text); font-size:12px; line-height:1.45; opacity:.92; }
+    .cw-place-persp { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .cw-place-tip { margin:6px 0 0; color:#6CEAC5; font-size:11.5px; line-height:1.4; }
     .cw-phrases { margin-top:10px; display:flex; flex-direction:column; gap:7px; }
     .cw-phrase { display:flex; gap:8px; align-items:flex-start; background:#0c0c10; border:1px solid var(--cw-border); border-radius:11px; padding:9px 11px; }
     .cw-phrase span { flex:1; font-size:13px; color:var(--cw-text); line-height:1.45; }
