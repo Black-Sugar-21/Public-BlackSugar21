@@ -180,14 +180,14 @@ export class TranslationService {
       en: 'The coach analyzes your context and gives you specific advice for each situation.'
     },
     'coach.feature2.title': {
-      es: 'Descubre lugares reales',
-      pt: 'Descubra lugares reais',
-      en: 'Discover real places'
+      es: 'Lugares elegidos por un panel de psicólogos IA',
+      pt: 'Lugares escolhidos por um painel de psicólogos IA',
+      en: 'Venues chosen by an AI psychologist panel'
     },
     'coach.feature2.desc': {
-      es: 'Sugiere cafeterías, restaurantes, bares y más cerca de tu ubicación — con fotos y reseñas reales.',
-      pt: 'Sugere cafés, restaurantes, bares e mais perto da sua localização — com fotos e avaliações reais.',
-      en: 'Suggests cafés, restaurants, bars and more near your location — with real photos and reviews.'
+      es: 'Cuatro agentes de IA con criterios psicológicos debaten y eligen los mejores lugares reales cerca de ti para tu cita — cada uno con por qué funciona y un tip.',
+      pt: 'Quatro agentes de IA com critérios psicológicos debatem e escolhem os melhores lugares reais perto de você para o seu encontro — cada um com o porquê funciona e uma dica.',
+      en: 'Four AI agents with psychological criteria debate and pick the best real venues near you for your date — each with why it works and a tip.'
     },
     'coach.feature3.title': {
       es: 'Coaching en tiempo real',
@@ -294,6 +294,26 @@ export class TranslationService {
       ru: 'ИИ-коуч теперь координирует специализированных агентов для более точных советов. Улучшен защитой от сбоев ИИ, ответами всегда на вашем языке и kill-переключателями для гарантии доступности.',
       ar: 'يُنسّق Coach الذكاء الاصطناعي الآن وكلاء متخصصين لتقديم نصائح أكثر دقة. محسّن بحماية من أعطال الذكاء الاصطناعي، وردود دائمًا بلغتك، ومفاتيح إيقاف لضمان توفر الخدمة.',
       id: 'AI Coach kini mengkoordinasikan agen-agen spesialis untuk memberi saran yang lebih tepat. Ditingkatkan dengan perlindungan kegagalan AI, respons selalu dalam bahasamu, dan kill switch untuk menjamin ketersediaan layanan.'
+    },
+    'whatsnew.venuepanel.title': {
+      es: 'Lugares elegidos por un panel de psicólogos IA',
+      en: 'Venues chosen by an AI psychologist panel',
+      pt: 'Lugares escolhidos por um painel de psicólogos IA'
+    },
+    'whatsnew.venuepanel.desc': {
+      es: 'Cuando preguntas dónde tener una cita, 4 agentes de IA con criterios psicológicos —apego y seguridad, dinámica social, comunicación e inteligencia emocional— debaten y eligen los mejores lugares cerca de ti. Cada uno con por qué funciona y un tip práctico.',
+      en: 'When you ask where to go on a date, 4 AI agents with psychological criteria —attachment & safety, social dynamics, communication and emotional intelligence— debate and pick the best spots near you. Each with why it works and a practical tip.',
+      pt: 'Quando você pergunta onde ter um encontro, 4 agentes de IA com critérios psicológicos —apego e segurança, dinâmica social, comunicação e inteligência emocional— debatem e escolhem os melhores lugares perto de você. Cada um com o porquê funciona e uma dica prática.'
+    },
+    'whatsnew.language.title': {
+      es: 'El coach habla tu idioma',
+      en: 'The coach speaks your language',
+      pt: 'O coach fala o seu idioma'
+    },
+    'whatsnew.language.desc': {
+      es: 'Respuestas humanas y naturales en 13 idiomas. El coach detecta tu idioma y te responde como una persona real y cálida — nunca robótico ni de manual.',
+      en: 'Human, natural responses in 13 languages. The coach detects your language and replies like a real, warm person — never robotic or templated.',
+      pt: 'Respostas humanas e naturais em 13 idiomas. O coach detecta o seu idioma e responde como uma pessoa real e calorosa — nunca robótico nem de manual.'
     },
 
     'whatsnew.rehearse.title': {
