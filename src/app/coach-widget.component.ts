@@ -735,7 +735,9 @@ export class CoachWidgetComponent {
       this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
       if (data?.exhausted) this.shownPlaces.clear(); // saw everything nearby → recycle next time
       if (data?.places?.length) { for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); } }
-      const reply = (data && data.reply) || this.t().greeting;
+      // Never leave the user with a blank/echoed greeting — if the reply is empty, ask them to retry.
+      const retry = this.lang() === 'en' ? "I didn't quite catch that — tell me a bit more and I'll help." : 'No te entendí del todo — cuéntame un poco más y te ayudo.';
+      const reply = (data && typeof data.reply === 'string' && data.reply.trim()) ? data.reply : retry;
       this.coachReplies++;
       this.lastCoachText = reply;
       // GA: one event per query (count = cantidad de consultas; geo/country auto from GA4).
