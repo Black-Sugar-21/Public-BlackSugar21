@@ -69,6 +69,26 @@ const I18N: Record<string, any> = {
     placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
   },
+  pt: {
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão de teste',
+    greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
+    chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
+    placeholder: 'Escreva sua situação…', send: 'Enviar',
+    ctaTitle: 'Curtiu? Isso é só uma amostra.', ctaText: 'No app, o Coach lembra de você, conhece seus matches e te acompanha de verdade.',
+    download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
+    shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
+    footer: 'Gerado por IA · versão de teste',
+    useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver no mapa',
+    simChip: '🔮 Simular uma situação', simHint: 'Descreva sua situação e minhas 5 perspectivas a analisam',
+    simAnalyzing: 'Analisando abordagens…', simThinking: '5 perspectivas pensando…', simBy: 'Analisado por', simStage: 'Etapa', simWhy: 'Por que funciona', simBest: 'Recomendada',
+    simTitle: '🔮 Simular uma situação', simDesc: 'O que dizer AGORA num momento específico · 5 perspectivas te dão frases prontas.',
+    mvTitle: '🌌 Simular a relação', mvDesc: 'Como a relação evoluiria em 5 etapas + sua compatibilidade.',
+    mvHint: 'Me descreva a pessoa ou conexão e eu simulo as 5 etapas da relação',
+    mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidade', mvInsights: 'Chaves desta conexão',
+    fbAsk: 'Foi útil?', fbThanks: 'Obrigado pelo seu feedback! 💛',
+    placeChip: '📍 Lugares para um encontro', placeQuery: 'Que lugares você recomenda para um primeiro encontro perto de mim?',
+    thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
+  },
 };
 
 @Component({
@@ -372,7 +392,9 @@ const I18N: Record<string, any> = {
     .cw-thinking-t { font-size:12.5px; color:var(--cw-muted); }
     @keyframes cwBounce { 0%,80%,100%{ transform:translateY(0); opacity:.45; } 40%{ transform:translateY(-4px); opacity:1; } }
     @keyframes cwFade { from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
-    @media (prefers-reduced-motion: reduce) { .cw-dots i, .cw-thinking { animation:none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .cw-dots i, .cw-thinking, .cw-fab, .cw-panel, .cw-simload-card, .cw-spin, .cw-bubble { animation:none !important; transition:none !important; }
+    }
     .cw-modes { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
     .cw-mode { text-align:left; background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(131,27,252,.10)); border:1px solid rgba(212,175,55,.35);
       border-radius:13px; padding:11px 13px; cursor:pointer; transition:border-color .15s, transform .15s; }
@@ -781,13 +803,14 @@ export class CoachWidgetComponent {
     const words = full.split(' ');
     let acc = '';
     for (let i = 0; i < words.length; i++) {
+      if (!this.open()) { acc = full; break; } // panel closed → stop animating, show full text
       acc += (i ? ' ' : '') + words[i];
       const cur = acc;
       this.messages.update((m) => m.map((x, j) => j === idx ? { ...x, text: cur, typing: true } : x));
       this.scroll();
       await new Promise((r) => setTimeout(r, 38));
     }
-    this.messages.update((m) => m.map((x, j) => j === idx ? { ...x, typing: false } : x));
+    this.messages.update((m) => m.map((x, j) => j === idx ? { ...x, text: acc, typing: false } : x));
   }
 
   async share() {
