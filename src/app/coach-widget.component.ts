@@ -20,6 +20,7 @@ const ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemo
 const SIM_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoSimulate';
 const MV_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoMultiverse';
 const FB_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoFeedback';
+const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoPlaceClick';
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -107,7 +108,7 @@ const I18N: Record<string, any> = {
                 @if (m.places?.length) {
                   <div class="cw-places">
                     @for (p of m.places!; track p.name; let pi = $index) {
-                      <a class="cw-place" [class.best]="pi === 0 && p.score != null" [href]="p.mapsUrl" target="_blank" rel="noopener">
+                      <a class="cw-place" [class.best]="pi === 0 && p.score != null" [href]="p.mapsUrl" target="_blank" rel="noopener" (click)="placeClick(p, pi)">
                         <div class="cw-place-i"><b>{{ p.name }}</b>
                           @if (p.score != null) { <span class="cw-fit">{{ p.score }}% ✦</span> }
                           @else if (p.rating) { <span class="cw-rate">★ {{ p.rating }}</span> }</div>
@@ -495,6 +496,7 @@ export class CoachWidgetComponent {
   private coachReplies = 0;
   private lastCoachText = '';
   private lastUserMsg = '';
+  private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
 
   // Chrome language — follows the marketing site toggle (es/en/pt) for the widget labels.
   readonly lang = computed(() => {
@@ -577,6 +579,18 @@ export class CoachWidgetComponent {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating, intent, userLanguage: this.coachLang(), sessionId: this.sessionId, question: m.q || '', answer }),
       }).catch(() => { /* fail-open — UI already shows thanks */ });
+    }
+  }
+  /** R37: log which venue (and which psychology perspectives) the visitor taps — analytics to improve selection. Never blocks the link. */
+  placeClick(p: PlaceCard, rank: number) {
+    this.ga('coach_demo_place_click', { lang: this.coachLang(), fit: p.score ?? null, rank });
+    if (this.isBrowser) {
+      try {
+        fetch(PLACE_CLICK_ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+          body: JSON.stringify({ name: p.name, fit: p.score ?? null, perspectives: p.perspectives || [], rank, userLanguage: this.coachLang(), sessionId: this.sessionId }),
+        }).catch(() => { /* fail-open */ });
+      } catch { /* noop */ }
     }
   }
   inputPlaceholder() {
@@ -692,10 +706,13 @@ export class CoachWidgetComponent {
       const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch(ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId }),
+        // R37: send the venues already shown so the panel returns OTHERS on re-press (no repeats).
+        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId, exclude: [...this.shownPlaces] }),
       });
       const data = await res.json().catch(() => ({}));
       this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
+      if (data?.exhausted) this.shownPlaces.clear(); // saw everything nearby → recycle next time
+      if (data?.places?.length) { for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); } }
       const reply = (data && data.reply) || this.t().greeting;
       this.coachReplies++;
       this.lastCoachText = reply;
