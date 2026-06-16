@@ -46,6 +46,7 @@ const I18N: Record<string, any> = {
     mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidad', mvInsights: 'Claves de esta conexión',
     fbAsk: '¿Te sirvió?', fbThanks: '¡Gracias por tu feedback! 💛',
     placeChip: '📍 Lugares para una cita', placeQuery: '¿Qué lugares me recomiendas para una primera cita cerca de mí?',
+    thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -65,6 +66,7 @@ const I18N: Record<string, any> = {
     mvAnalyzing: 'Simulating 5 universes…', mvCompat: 'Compatibility', mvInsights: 'Keys to this connection',
     fbAsk: 'Was this helpful?', fbThanks: 'Thanks for your feedback! 💛',
     placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
+    thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
   },
 };
 
@@ -231,11 +233,21 @@ const I18N: Record<string, any> = {
               </div>
             </div>
           }
+          @if (thinking()) {
+            <div class="cw-msg">
+              <div class="cw-bubble cw-thinking">
+                <span class="cw-dots"><i></i><i></i><i></i></span>
+                <span class="cw-thinking-t">{{ thinkingLabel() || t().thinking }}</span>
+              </div>
+            </div>
+          }
           @if (messages().length <= 1 && !simMode()) {
             <div class="cw-modes">
               <button class="cw-mode" (click)="startSim('situation')"><b>{{ t().simTitle }}</b><small>{{ t().simDesc }}</small></button>
               <button class="cw-mode" (click)="startSim('multiverse')"><b>{{ t().mvTitle }}</b><small>{{ t().mvDesc }}</small></button>
             </div>
+          }
+          @if (showChips()) {
             <div class="cw-chips">
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
               <button class="cw-chip cw-chip-place" (click)="askPlaces()">{{ t().placeChip }}</button>
@@ -339,6 +351,15 @@ const I18N: Record<string, any> = {
     .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
     .cw-chip-place { border-color:rgba(156,89,234,.5); color:var(--cw-purple-l,#9c59ea); font-weight:600; background:rgba(156,89,234,.08); }
     .cw-chip-place:hover { border-color:var(--cw-purple-l,#9c59ea); background:rgba(156,89,234,.16); }
+    /* elegant "coach is thinking" loader (chat + places) */
+    .cw-thinking { display:inline-flex; align-items:center; gap:10px; background:var(--cw-card); border:1px solid var(--cw-border); animation:cwFade .25s ease; }
+    .cw-dots { display:inline-flex; gap:4px; align-items:center; }
+    .cw-dots i { width:6px; height:6px; border-radius:50%; background:var(--cw-gold); display:inline-block; animation:cwBounce 1.2s ease-in-out infinite; }
+    .cw-dots i:nth-child(2){ animation-delay:.18s; } .cw-dots i:nth-child(3){ animation-delay:.36s; }
+    .cw-thinking-t { font-size:12.5px; color:var(--cw-muted); }
+    @keyframes cwBounce { 0%,80%,100%{ transform:translateY(0); opacity:.45; } 40%{ transform:translateY(-4px); opacity:1; } }
+    @keyframes cwFade { from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
+    @media (prefers-reduced-motion: reduce) { .cw-dots i, .cw-thinking { animation:none; } }
     .cw-modes { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
     .cw-mode { text-align:left; background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(131,27,252,.10)); border:1px solid rgba(212,175,55,.35);
       border-radius:13px; padding:11px 13px; cursor:pointer; transition:border-color .15s, transform .15s; }
@@ -452,6 +473,10 @@ export class CoachWidgetComponent {
   readonly simMode = signal<SimMode>('');
   readonly simLoading = signal(false);
   readonly loadingMode = signal<SimMode>('');
+  // Elegant "coach is thinking" state for chat/places (sims use simLoading) — shown from the moment
+  // the user acts until the AI response arrives.
+  readonly thinking = signal(false);
+  readonly thinkingLabel = signal('');
   readonly carouselPage = signal<Record<number, number>>({});
   draft = '';
   cityDraft = '';
@@ -477,6 +502,15 @@ export class CoachWidgetComponent {
   });
   t() { return I18N[this.lang()] || I18N['es']; }
   readonly showCta = computed(() => this.coachReplies >= 2);
+  // Re-show the suggestion chips (starters + place chip) on the first screen AND after every coach
+  // answer, so the visitor always has all options again. Hidden while waiting or in a simulation.
+  readonly showChips = computed(() => {
+    if (this.simMode() || this.simLoading() || this.thinking()) return false;
+    const m = this.messages();
+    if (m.length <= 1) return true;
+    const last = m[m.length - 1];
+    return !!last && last.role === 'coach' && !last.typing;
+  });
   get storeLink() {
     if (!this.isBrowser) return STORE_IOS;
     return /android/i.test(navigator.userAgent) ? STORE_ANDROID : STORE_IOS;
@@ -640,6 +674,8 @@ export class CoachWidgetComponent {
 
   private async ask(payload: { message: string; lat?: number; lng?: number; city?: string }) {
     this.busy.set(true);
+    if (!this.thinking()) { this.thinkingLabel.set(this.t().thinking); }
+    this.thinking.set(true); this.scroll();
     try {
       const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch(ENDPOINT, {
@@ -647,6 +683,7 @@ export class CoachWidgetComponent {
         body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId }),
       });
       const data = await res.json().catch(() => ({}));
+      this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
       const reply = (data && data.reply) || this.t().greeting;
       this.coachReplies++;
       this.lastCoachText = reply;
@@ -664,7 +701,7 @@ export class CoachWidgetComponent {
       }
     } catch {
       this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Connection hiccup — try again.' : 'Hubo un problema de conexión, inténtalo de nuevo.' }]);
-    } finally { this.busy.set(false); this.scroll(); }
+    } finally { this.busy.set(false); this.thinking.set(false); this.scroll(); }
   }
 
   /** Place-suggestion chip: only NOW (on press) do we ask for location; otherwise let them type a city. */
@@ -674,8 +711,10 @@ export class CoachWidgetComponent {
     this.lastUserMsg = q;
     this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang() });
+    // Elegant loading state from the instant the chip is pressed (covers geolocation + the AI call).
+    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
     if (this.isBrowser && navigator.geolocation) {
-      this.busy.set(true); this.scroll();
+      this.busy.set(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
         () => { this.busy.set(false); this.ask({ message: q }); }, // denied → backend asks for a city
