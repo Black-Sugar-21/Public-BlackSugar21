@@ -554,16 +554,19 @@ export class CoachWidgetComponent {
     const l = String(this.translation.currentLanguage() || 'es').toLowerCase().split('-')[0];
     return I18N[l] ? l : (l === 'es' ? 'es' : 'en');
   });
-  // Coach language — auto-detected from the visitor's device. CoachFish responds in any of its
-  // 13 supported languages, so a visitor from any country gets the coach in their own language.
+  // Coach language — follows the SELECTED site language (auto-detected on entry from the device,
+  // and changeable via the header selector). Whatever language the visitor picks is the language the
+  // coach transcribes/responds in. Falls back to device language, then English. CoachFish supports 13.
   readonly coachLang = computed(() => {
+    const sel = String(this.translation.currentLanguage() || '').toLowerCase().split('-')[0];
+    if (COACH_LANGS.includes(sel)) return sel;
     if (this.isBrowser) {
       const navs = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
         .map((x) => String(x || '').toLowerCase().split('-')[0]);
       const hit = navs.find((b) => COACH_LANGS.includes(b));
       if (hit) return hit;
     }
-    return this.lang();
+    return 'en';
   });
   t() { return I18N[this.lang()] || I18N['es']; }
   readonly showCta = computed(() => this.coachReplies >= 2);

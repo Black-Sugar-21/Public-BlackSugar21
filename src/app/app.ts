@@ -1,8 +1,8 @@
-import { Component, signal, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, signal, computed, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { TranslationService } from './translation.service';
+import { TranslationService, LANGUAGES, LanguageOption, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
 import { CoachWidgetComponent } from './coach-widget.component';
 import { gsap } from 'gsap';
@@ -38,6 +38,31 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   testerEmail = signal('');
   testerStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   testerJoinedGroup = signal(false);
+
+  // ── Language selector (13 idiomas, auto-detectado al entrar, cambiable) ──
+  readonly languages: LanguageOption[] = LANGUAGES;
+  langMenuOpen = signal(false);       // toolbar selector
+  gateLangMenuOpen = signal(false);   // age-gate selector (separate so they don't both render)
+  /** Current language metadata (flag + native name) for the selector button. */
+  currentLangOption = computed<LanguageOption>(() =>
+    this.languages.find((l) => l.code === this.translate.currentLanguage()) || this.languages[1]);
+
+  toggleLangMenu(): void { this.langMenuOpen.update((v) => !v); }
+  closeLangMenu(): void { this.langMenuOpen.set(false); }
+  toggleGateLangMenu(): void { this.gateLangMenuOpen.update((v) => !v); }
+  closeGateLangMenu(): void { this.gateLangMenuOpen.set(false); }
+
+  /** Pick a language → updates UI + Coach IA demo + persists + syncs to Firebase if logged in. */
+  async selectLanguage(lang: Language): Promise<void> {
+    this.translate.setLanguage(lang);
+    this.langMenuOpen.set(false);
+    this.gateLangMenuOpen.set(false);
+    const user = this.firebase.currentUser();
+    if (user) {
+      try { await this.firebase.updateLanguagePreference(user.uid, lang); }
+      catch (error) { console.error('Error syncing language to Firebase:', error); }
+    }
+  }
 
   /** Open the live AI-Coach demo widget (the site's centerpiece). The widget listens for this event. */
   openCoach() {

@@ -1,6 +1,24 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Language = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'ja' | 'zh' | 'ru' | 'ar' | 'id';
+export type Language = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'it' | 'ja' | 'zh' | 'ru' | 'ar' | 'id' | 'ko' | 'tr';
+
+/** The 13 languages the site + Coach IA support, with native name + flag for the selector. */
+export interface LanguageOption { code: Language; name: string; flag: string; }
+export const LANGUAGES: LanguageOption[] = [
+  { code: 'es', name: 'Español',    flag: '🇪🇸' },
+  { code: 'en', name: 'English',    flag: '🇺🇸' },
+  { code: 'pt', name: 'Português',  flag: '🇧🇷' },
+  { code: 'fr', name: 'Français',   flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch',    flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano',   flag: '🇮🇹' },
+  { code: 'zh', name: '中文',        flag: '🇨🇳' },
+  { code: 'ja', name: '日本語',       flag: '🇯🇵' },
+  { code: 'ko', name: '한국어',       flag: '🇰🇷' },
+  { code: 'ru', name: 'Русский',    flag: '🇷🇺' },
+  { code: 'ar', name: 'العربية',     flag: '🇸🇦' },
+  { code: 'id', name: 'Bahasa',     flag: '🇮🇩' },
+  { code: 'tr', name: 'Türkçe',     flag: '🇹🇷' },
+];
 
 interface Translations {
   [key: string]: {
@@ -1561,22 +1579,32 @@ export class TranslationService {
     this.detectBrowserLanguage();
   }
 
+  private readonly supportedLangs: Language[] = LANGUAGES.map((l) => l.code);
+
   private detectBrowserLanguage(): void {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      // Check if user has previously selected a language
+      // 1) Respect a previously chosen language (only if still valid).
       const savedLang = localStorage.getItem('preferredLanguage') as Language;
-      if (savedLang) {
-        this.currentLanguage.set(savedLang);
-        document.documentElement.lang = savedLang; // a11y: sync <html lang> at startup
+      if (savedLang && this.supportedLangs.includes(savedLang)) {
+        this.applyLanguage(savedLang);
         return;
       }
 
-      // Detect browser language
-      const browserLang = navigator.language?.substring(0, 2) || 'en';
-      const supported: Language[] = ['es', 'en', 'pt', 'fr', 'de', 'ja', 'zh', 'ru', 'ar', 'id'];
-      const detected = supported.includes(browserLang as Language) ? browserLang as Language : 'en';
-      this.currentLanguage.set(detected);
-      document.documentElement.lang = detected; // a11y: sync <html lang> at startup
+      // 2) Auto-detect from the device. Scan ALL preferred languages (navigator.languages),
+      //    not just the first, and fold regional variants (pt-BR→pt, zh-TW→zh) to the base code.
+      const prefs = (navigator.languages?.length ? navigator.languages : [navigator.language || 'en'])
+        .map((x) => String(x || '').toLowerCase().split('-')[0]);
+      const detected = (prefs.find((b) => this.supportedLangs.includes(b as Language)) as Language) || 'en';
+      this.applyLanguage(detected);
+    }
+  }
+
+  /** Apply a language to the signal + <html lang> + text direction (RTL for Arabic). */
+  private applyLanguage(lang: Language): void {
+    this.currentLanguage.set(lang);
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     }
   }
 
@@ -1603,15 +1631,16 @@ export class TranslationService {
     return this.translate(key);
   }
 
+  /** All 13 selectable languages (code + native name + flag) for the UI selector. */
+  readonly languages: LanguageOption[] = LANGUAGES;
+
   setLanguage(lang: Language): void {
-    this.currentLanguage.set(lang);
+    if (!this.supportedLangs.includes(lang)) return;
+    // a11y/SEO (WCAG 3.1.1/3.1.2): applyLanguage keeps <html lang> + dir (RTL for ar) in sync so
+    // screen readers use the right voice and crawlers read the right language.
+    this.applyLanguage(lang);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('preferredLanguage', lang);
-    }
-    // a11y/SEO (WCAG 3.1.1/3.1.2): keep <html lang> in sync so screen readers use the
-    // correct speech synthesizer and crawlers read the right language.
-    if (typeof document !== 'undefined') {
-      document.documentElement.lang = lang;
     }
   }
 

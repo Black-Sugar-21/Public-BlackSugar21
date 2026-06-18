@@ -14,11 +14,26 @@
       <button class="btn-primary" (click)="verifyAge()">{{ translateWithParams('age.button', { age: legalAge() }) }}</button>
       <p class="subtext-xs">{{ t('age.terms') }}</p>
 
-      <!-- Language Switcher -->
-      <button class="language-switcher" (click)="toggleLanguage()">
-        <span class="flag">{{ getCurrentLanguage() === 'es' ? '🇪🇸' : '🇺🇸' }}</span>
-        {{ getCurrentLanguage() === 'es' ? 'English' : 'Español' }}
-      </button>
+      <!-- Language selector (also available before age verification) -->
+      <div class="lang-dropdown" [class.open]="gateLangMenuOpen()">
+        <button class="lang-trigger" (click)="toggleGateLangMenu()" [attr.aria-expanded]="gateLangMenuOpen()" aria-haspopup="listbox" aria-label="Language">
+          <span class="flag">{{ currentLangOption().flag }}</span>
+          <span class="lang-text">{{ currentLangOption().name }}</span>
+          <span class="lang-caret">▾</span>
+        </button>
+        @if (gateLangMenuOpen()) {
+          <div class="lang-backdrop" (click)="closeGateLangMenu()"></div>
+          <ul class="lang-menu" role="listbox">
+            @for (l of languages; track l.code) {
+              <li role="option" [attr.aria-selected]="l.code === getCurrentLanguage()">
+                <button class="lang-option" [class.active]="l.code === getCurrentLanguage()" (click)="selectLanguage(l.code)">
+                  <span class="flag">{{ l.flag }}</span><span class="lang-name">{{ l.name }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
     </div>
   </div>
 
@@ -39,11 +54,26 @@
           <a routerLink="/terms" class="nav-item">{{ t('nav.terms') }}</a>
           <a routerLink="/privacy" class="nav-item">{{ t('nav.privacy') }}</a>
         </nav>
-        <!-- Language Switcher -->
-        <button class="language-switcher-toolbar" (click)="toggleLanguage()" title="{{ getCurrentLanguage() === 'es' ? 'Switch to English' : 'Cambiar a Español' }}">
-          <span class="flag">{{ getCurrentLanguage() === 'es' ? '🇪🇸' : '🇺🇸' }}</span>
-          <span class="lang-text">{{ getCurrentLanguage().toUpperCase() }}</span>
-        </button>
+        <!-- Language selector — auto-detected on entry, elegant dropdown to change (13 idiomas). -->
+        <div class="lang-dropdown" [class.open]="langMenuOpen()">
+          <button class="lang-trigger" (click)="toggleLangMenu()" [attr.aria-expanded]="langMenuOpen()" aria-haspopup="listbox" aria-label="Language">
+            <span class="flag">{{ currentLangOption().flag }}</span>
+            <span class="lang-text">{{ currentLangOption().name }}</span>
+            <span class="lang-caret">▾</span>
+          </button>
+          @if (langMenuOpen()) {
+            <div class="lang-backdrop" (click)="closeLangMenu()"></div>
+            <ul class="lang-menu" role="listbox">
+              @for (l of languages; track l.code) {
+                <li role="option" [attr.aria-selected]="l.code === getCurrentLanguage()">
+                  <button class="lang-option" [class.active]="l.code === getCurrentLanguage()" (click)="selectLanguage(l.code)">
+                    <span class="flag">{{ l.flag }}</span><span class="lang-name">{{ l.name }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
         <!-- Mobile Menu Button -->
         <div class="mobile-menu-btn" (click)="toggleMobileMenu()" (keydown.enter)="toggleMobileMenu()" (keydown.space)="toggleMobileMenu(); $event.preventDefault()" [class.active]="mobileMenuOpen()"
              role="button" tabindex="0"
@@ -77,10 +107,13 @@
           {{ t('nav.privacy') }}
         </a>
         <div class="mobile-menu-divider"></div>
-        <button class="mobile-nav-item mobile-lang-switcher" (click)="toggleLanguage()">
-          <span class="mobile-nav-icon">{{ getCurrentLanguage() === 'es' ? '🇪🇸' : '🇺🇸' }}</span>
-          {{ getCurrentLanguage() === 'es' ? 'English' : 'Español' }}
-        </button>
+        <div class="mobile-lang-grid">
+          @for (l of languages; track l.code) {
+            <button class="mobile-lang-chip" [class.active]="l.code === getCurrentLanguage()" (click)="selectLanguage(l.code); closeMobileMenu()">
+              <span class="flag">{{ l.flag }}</span><span>{{ l.name }}</span>
+            </button>
+          }
+        </div>
       </nav>
     </header>
 
