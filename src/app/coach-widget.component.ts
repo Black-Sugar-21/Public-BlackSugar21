@@ -358,6 +358,16 @@ const I18N: Record<string, any> = {
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
     @keyframes cwIn { from{opacity:0; transform:translateY(20px) scale(.97)} to{opacity:1; transform:none} }
+    /* Mobile: center the bot as a near-fullscreen sheet (focus the experience, not a corner). */
+    @media (max-width: 600px) {
+      .cw-panel { left:8px; right:8px; top:8px; bottom:8px; width:auto; max-width:none; height:auto; max-height:none;
+        border-radius:18px; padding-bottom:env(safe-area-inset-bottom); }
+      .cw-fab { right:16px; bottom:16px; padding:12px 16px; font-size:14px; }
+    }
+    @media (max-width: 380px) {
+      .cw-fab .cw-fab-label { display:none; } /* tiny screens: icon-only FAB to avoid overflow */
+      .cw-fab { padding:13px; }
+    }
     .cw-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--cw-border);
       background:linear-gradient(180deg,rgba(212,175,55,0.08),transparent); }
     .cw-id { display:flex; align-items:center; gap:10px; } .cw-id .cw-spark { color:var(--cw-gold); font-size:20px; filter:drop-shadow(0 0 8px rgba(212,175,55,.5)); }
@@ -580,6 +590,14 @@ export class CoachWidgetComponent {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
+      // Open from the hero CTA (or any "Talk to the Coach" button on the page).
+      window.addEventListener('open-coach', () => {
+        if (!this.open()) {
+          this.open.set(true);
+          this.ga('coach_demo_open', { source: 'hero_cta' });
+          if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+        }
+      });
     }
   }
 

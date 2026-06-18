@@ -39,6 +39,12 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   testerStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   testerJoinedGroup = signal(false);
 
+  /** Open the live AI-Coach demo widget (the site's centerpiece). The widget listens for this event. */
+  openCoach() {
+    this.firebase.logEvent('click_try_coach', { section: 'hero' });
+    if (this.isBrowser) window.dispatchEvent(new CustomEvent('open-coach'));
+  }
+
   constructor(
     public translate: TranslationService,
     public firebase: FirebaseService,

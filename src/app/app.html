@@ -94,13 +94,22 @@
         <p class="tagline animate-in delay-3">{{ t('hero.tagline') }}</p>
         <p class="sub-tagline animate-in delay-3">{{ t('hero.subtitle') }}</p>
 
-        <div class="download-buttons animate-in delay-4">
-          <a [href]="storeLinks().ios" class="store-badge app-store" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'hero'})">
-            <img src="app-store-badge.webp" alt="Descárgalo en el App Store">
-          </a>
-          <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'hero'}); $event.preventDefault()" href="#" class="store-badge google-play">
-            <img src="google-play-badge.webp" alt="Disponible en Google Play">
-          </a>
+        <!-- Primary CTA: the AI Coach itself is the hero — try it right here, free. -->
+        <button type="button" class="hero-cta-coach animate-in delay-3" (click)="openCoach()">
+          <span class="hero-cta-spark">✦</span> {{ t('hero.tryCoach') }}
+        </button>
+
+        <!-- Secondary: the app stores, demoted (the bot, not the platforms, is the focus). -->
+        <div class="download-buttons secondary animate-in delay-4">
+          <span class="also-on-label">{{ t('hero.alsoOn') }}</span>
+          <div class="store-badges-row">
+            <a [href]="storeLinks().ios" class="store-badge app-store" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'hero'})">
+              <img src="app-store-badge.webp" alt="Descárgalo en el App Store">
+            </a>
+            <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'hero'}); $event.preventDefault()" href="#" class="store-badge google-play">
+              <img src="google-play-badge.webp" alt="Disponible en Google Play">
+            </a>
+          </div>
         </div>
 
         <div class="hero-carousel animate-in delay-4">
@@ -250,13 +259,19 @@
             </div>
           </div>
 
-          <div class="coach-cta-buttons">
-            <a [href]="storeLinks().ios" class="store-badge app-store coach-store-badge" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'coach'})">
-              <img src="app-store-badge.webp" alt="Download on App Store">
-            </a>
-            <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'coach'}); $event.preventDefault()" href="#" class="store-badge google-play coach-store-badge">
-              <img src="google-play-badge.webp" alt="Get it on Google Play">
-            </a>
+          <button type="button" class="hero-cta-coach" (click)="openCoach()">
+            <span class="hero-cta-spark">✦</span> {{ t('hero.tryCoach') }}
+          </button>
+          <div class="coach-cta-buttons secondary">
+            <span class="also-on-label">{{ t('hero.alsoOn') }}</span>
+            <div class="store-badges-row">
+              <a [href]="storeLinks().ios" class="store-badge app-store coach-store-badge" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'coach'})">
+                <img src="app-store-badge.webp" alt="Download on App Store">
+              </a>
+              <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'coach'}); $event.preventDefault()" href="#" class="store-badge google-play coach-store-badge">
+                <img src="google-play-badge.webp" alt="Get it on Google Play">
+              </a>
+            </div>
           </div>
         </div>
 
