@@ -48,6 +48,8 @@ const I18N: Record<string, any> = {
     fbAsk: '¿Te sirvió?', fbThanks: '¡Gracias por tu feedback! 💛',
     placeChip: '📍 Lugares para una cita', placeQuery: '¿Qué lugares me recomiendas para una primera cita cerca de mí?',
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
+    locRequesting: 'Pidiendo permiso de ubicación 📍…',
+    locBlocked: 'Tu navegador tiene la ubicación bloqueada 🔒 Habilítala en el candado de la barra de direcciones, o escribe tu ciudad y te recomiendo lugares 👇',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -68,6 +70,8 @@ const I18N: Record<string, any> = {
     fbAsk: 'Was this helpful?', fbThanks: 'Thanks for your feedback! 💛',
     placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
+    locRequesting: 'Requesting location permission 📍…',
+    locBlocked: "Your browser has location blocked 🔒 Enable it from the lock icon in the address bar, or type your city and I'll suggest spots 👇",
   },
   pt: {
     fab: 'Coach IA', title: 'Coach IA', demo: 'Versão de teste',
@@ -88,6 +92,8 @@ const I18N: Record<string, any> = {
     fbAsk: 'Foi útil?', fbThanks: 'Obrigado pelo seu feedback! 💛',
     placeChip: '📍 Lugares para um encontro', placeQuery: 'Que lugares você recomenda para um primeiro encontro perto de mim?',
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
+    locRequesting: 'Pedindo permissão de localização 📍…',
+    locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade e te recomendo lugares 👇',
   },
 };
 
@@ -757,34 +763,89 @@ export class CoachWidgetComponent {
     } finally { this.busy.set(false); this.thinking.set(false); this.scroll(); }
   }
 
-  /** Place-suggestion chip: only NOW (on press) do we ask for location; otherwise let them type a city. */
-  askPlaces() {
+  /**
+   * Resolve the geolocation permission state up-front (Permissions API where
+   * available — Chrome/Edge/Firefox, Safari 16+). Lets us distinguish the three
+   * cases the same way on desktop and mobile: already granted, needs a prompt,
+   * or blocked. Returns 'unknown' on older Safari so we still attempt a prompt.
+   */
+  private async geoPermissionState(): Promise<'granted' | 'prompt' | 'denied' | 'unknown'> {
+    try {
+      const perms = (navigator as any).permissions;
+      if (this.isBrowser && perms?.query) {
+        const status = await perms.query({ name: 'geolocation' as PermissionName });
+        return (status?.state as 'granted' | 'prompt' | 'denied') || 'unknown';
+      }
+    } catch { /* Safari < 16 / unsupported → fall through to a prompt attempt */ }
+    return 'unknown';
+  }
+
+  /** Shared geolocation read with the three-case handling (granted / prompt / denied). */
+  private requestGeolocation(q: string) {
+    this.busy.set(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+      (err) => {
+        this.busy.set(false);
+        // PERMISSION_DENIED (code 1) → guide them; otherwise (timeout/unavailable) let backend ask for a city.
+        if (err && err.code === err.PERMISSION_DENIED) {
+          this.thinking.set(false);
+          this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
+          this.scroll();
+        } else {
+          this.ask({ message: q });
+        }
+      },
+      // Give the user generous time to act on the permission dialog on desktop.
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
+    );
+  }
+
+  /**
+   * Place-suggestion chip. Same UX on desktop (PC/Mac) and mobile:
+   *  1. Permission already GRANTED → use the location straight away (no dialog).
+   *  2. Permission in PROMPT/unknown → trigger the browser permission dialog.
+   *  3. Permission DENIED → don't fire a silent error; tell them it's blocked and let them type a city.
+   */
+  async askPlaces() {
     if (this.busy()) return;
     const q = this.t().placeQuery;
     this.lastUserMsg = q;
     this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang() });
-    // Elegant loading state from the instant the chip is pressed (covers geolocation + the AI call).
-    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
-    if (this.isBrowser && navigator.geolocation) {
-      this.busy.set(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-        () => { this.busy.set(false); this.ask({ message: q }); }, // denied → backend asks for a city
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
-      );
-    } else {
-      this.ask({ message: q }); // no geolocation API → backend asks for a city
+
+    if (!this.isBrowser || !navigator.geolocation) {
+      // No geolocation API at all → backend asks for a city.
+      this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
+      this.ask({ message: q });
+      return;
     }
+
+    const state = await this.geoPermissionState();
+    if (state === 'denied') {
+      // Blocked at the browser level — a prompt will never appear; route to type-a-city.
+      this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
+      this.scroll();
+      return;
+    }
+    // 'granted' resolves instantly; 'prompt'/'unknown' shows the OS/browser permission dialog.
+    this.thinkingLabel.set(state === 'granted' ? this.t().placesLoading : this.t().locRequesting);
+    this.thinking.set(true); this.scroll();
+    this.requestGeolocation(q);
   }
 
-  useLocation() {
+  /** "Use my location" button shown in the needLocation block — same three-case handling. */
+  async useLocation() {
     if (!this.isBrowser || !navigator.geolocation) { return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => { /* denied → user can type a city */ },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
-    );
+    const state = await this.geoPermissionState();
+    if (state === 'denied') {
+      this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
+      this.scroll();
+      return;
+    }
+    this.thinkingLabel.set(state === 'granted' ? this.t().placesLoading : this.t().locRequesting);
+    this.thinking.set(true); this.scroll();
+    this.requestGeolocation(this.t().placeQuery);
   }
   sendCity() {
     const c = (this.cityDraft || '').trim();
