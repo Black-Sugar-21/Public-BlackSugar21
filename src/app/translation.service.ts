@@ -93,9 +93,9 @@ export class TranslationService {
       en: 'Get it on Android'
     },
     'hero.tryCoach': {
-      es: 'Habla gratis con el Coach IA',
-      pt: 'Fale grátis com o Coach IA',
-      en: 'Talk to the AI Coach — free'
+      es: 'Conversa con tu Coach IA',
+      pt: 'Converse com seu Coach IA',
+      en: 'Talk with your AI Coach'
     },
     'hero.alsoOn': {
       es: 'También en la app',
