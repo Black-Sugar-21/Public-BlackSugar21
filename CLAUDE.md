@@ -6,6 +6,18 @@
 - **Android**: `/Users/daniel/AndroidStudioProjects/BlackSugar212` (Kotlin + Firebase)
 - **iOS**: `/Users/daniel/AndroidStudioProjects/iOS` (Swift + Firebase)
 
+## ⚠️ Git push — cuenta `dan085` (todos los repos BlackSugar21)
+
+Todos los repos viven bajo la cuenta/org **`dan085`** en GitHub. La cuenta gh por defecto es `deverdugog_FTC`. **Antes de cualquier push, `gh auth switch --user dan085`; al terminar, revertir a `deverdugog_FTC`.** El push a GitHub es manual (no auto-deploy); el deploy a Firebase se hace aparte desde aquí.
+
+| Repo | Path | Remote |
+|---|---|---|
+| Android | `/Users/daniel/AndroidStudioProjects/BlackSugar212` | `github.com/Black-Sugar-21/Android` |
+| iOS | `/Users/daniel/AndroidStudioProjects/iOS` | `github.com/Black-Sugar-21/ios` |
+| Backend (CoachFish) | `/Users/daniel/IdeaProjects/CoachFish` | `github.com/Black-Sugar-21/CoachFish` |
+| Web público | `/Users/daniel/IdeaProjects/Public-BlackSugar21` | `github.com/dan085/Public-BlackSugar21` |
+| Admin | `/Users/daniel/IdeaProjects/admin-BlackSugar21` | `github.com/Black-Sugar-21/admin-BlackSugar21` |
+
 ## Backend canónico: CoachFish
 Functions vive en `/Users/daniel/IdeaProjects/CoachFish/` (no en `Public-BlackSugar21/functions/`). Deploy: `firebase deploy --only functions --project black-sugar21` desde **CoachFish**.
 
