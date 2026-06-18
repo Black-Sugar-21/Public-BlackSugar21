@@ -12,7 +12,7 @@ interface MvResult { compatibilityScore: number | null; compatibilityStars: numb
 type SimMode = '' | 'situation' | 'multiverse';
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
-  places?: PlaceCard[]; phrases?: string[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
+  places?: PlaceCard[]; phrases?: string[]; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
   ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
 }
 
@@ -154,7 +154,15 @@ const I18N: Record<string, any> = {
                   <div class="cw-phrases">
                     @for (ph of m.phrases!; track ph; let i = $index) {
                       <div class="cw-phrase">
-                        <span>{{ ph }}</span>
+                        <div class="cw-phrase-body">
+                          <span>{{ ph }}</span>
+                          @if (m.phraseMeta?.[i]; as pm) {
+                            <div class="cw-phrase-meta">
+                              <span class="cw-phrase-lens">{{ pm.perspective }}</span>
+                              @if (pm.why) { <span class="cw-phrase-why">· {{ pm.why }}</span> }
+                            </div>
+                          }
+                        </div>
                         <button class="cw-copy" (click)="copyPhrase(ph, i)">{{ copiedIdx() === i ? t().copied : t().copy }}</button>
                       </div>
                     }
@@ -384,7 +392,11 @@ const I18N: Record<string, any> = {
     .cw-place-tip { margin:6px 0 0; color:#6CEAC5; font-size:11.5px; line-height:1.4; }
     .cw-phrases { margin-top:10px; display:flex; flex-direction:column; gap:7px; }
     .cw-phrase { display:flex; gap:8px; align-items:flex-start; background:#0c0c10; border:1px solid var(--cw-border); border-radius:11px; padding:9px 11px; }
-    .cw-phrase span { flex:1; font-size:13px; color:var(--cw-text); line-height:1.45; }
+    .cw-phrase-body { flex:1; display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .cw-phrase-body > span { font-size:13px; color:var(--cw-text); line-height:1.45; }
+    .cw-phrase-meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; }
+    .cw-phrase-lens { font-size:10px; font-weight:700; letter-spacing:.2px; color:#c9a9ff; background:rgba(131,27,252,.14); border:1px solid rgba(131,27,252,.32); border-radius:7px; padding:1.5px 7px; white-space:nowrap; }
+    .cw-phrase-why { font-size:11px; color:var(--cw-muted); line-height:1.35; }
     .cw-copy { background:none; border:1px solid var(--cw-border); color:var(--cw-gold); border-radius:8px; padding:4px 9px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:center; }
     .cw-copy:hover { border-color:var(--cw-gold-d); }
     .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
@@ -525,6 +537,7 @@ export class CoachWidgetComponent {
   private lastCoachText = '';
   private lastUserMsg = '';
   private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
+  private shownPhrases = new Set<string>(); // phrases already shown this session (so re-ask shows OTHERS)
 
   // Chrome language — follows the marketing site toggle (es/en/pt) for the widget labels.
   readonly lang = computed(() => {
@@ -734,13 +747,19 @@ export class CoachWidgetComponent {
       const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch(ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        // R37: send the venues already shown so the panel returns OTHERS on re-press (no repeats).
-        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId, exclude: [...this.shownPlaces] }),
+        // R37/R45: send venues + phrases already shown so the panel returns OTHERS on re-press (no repeats).
+        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId, exclude: [...this.shownPlaces], excludePhrases: [...this.shownPhrases] }),
       });
       const data = await res.json().catch(() => ({}));
       this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
-      if (data?.exhausted) this.shownPlaces.clear(); // saw everything nearby → recycle next time
-      if (data?.places?.length) { for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); } }
+      if (data?.places?.length) {
+        if (data?.exhausted) this.shownPlaces.clear(); // saw everything nearby → recycle next time
+        for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); }
+      }
+      if (data?.phrases?.length) {
+        if (data?.exhausted) this.shownPhrases.clear(); // saw all fresh phrases → recycle next time
+        for (const p of data.phrases) { if (typeof p === 'string') this.shownPhrases.add(p); }
+      }
       // Never leave the user with a blank/echoed greeting — if the reply is empty, ask them to retry.
       const retry = this.lang() === 'en' ? "I didn't quite catch that — tell me a bit more and I'll help." : 'No te entendí del todo — cuéntame un poco más y te ayudo.';
       const reply = (data && typeof data.reply === 'string' && data.reply.trim()) ? data.reply : retry;
@@ -752,7 +771,7 @@ export class CoachWidgetComponent {
       if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation) {
         // structured result — show immediately with attachments (no typewriter)
-        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, needLocation: data.needLocation, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
         this.scroll();
       } else {
         await this.typewrite(reply);
