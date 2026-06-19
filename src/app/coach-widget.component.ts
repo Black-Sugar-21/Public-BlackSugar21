@@ -23,6 +23,7 @@ const FB_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachD
 const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoPlaceClick';
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
+const FREE_TASTE = 2; // free coach replies shown as a "taste" before the (non-blocking) app CTA
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
@@ -33,7 +34,8 @@ const I18N: Record<string, any> = {
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
-    ctaTitle: '¿Te sirvió? Esto es solo una probada.', ctaText: 'En la app, el Coach te recuerda, conoce tus matches y te acompaña de verdad.',
+    ctaTitle: '✦ Probaste el Coach IA', ctaText: 'En la app son 4 preguntas al día: te recuerda, conoce tus matches y simula tu relación.',
+    taste2: '✦ 2 preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
     footer: 'Generado por IA · versión de prueba',
@@ -56,7 +58,8 @@ const I18N: Record<string, any> = {
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
-    ctaTitle: 'Liked it? This is just a taste.', ctaText: 'In the app, the Coach remembers you, knows your matches, and truly has your back.',
+    ctaTitle: '✦ You tried the AI Coach', ctaText: 'In the app it\'s 4 questions a day: it remembers you, knows your matches, and simulates your relationship.',
+    taste2: '✦ 2 free questions to try', taste1: '✦ 1 free question left',
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
     footer: 'AI-generated · demo version',
@@ -78,7 +81,8 @@ const I18N: Record<string, any> = {
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
-    ctaTitle: 'Curtiu? Isso é só uma amostra.', ctaText: 'No app, o Coach lembra de você, conhece seus matches e te acompanha de verdade.',
+    ctaTitle: '✦ Você testou o Coach IA', ctaText: 'No app são 4 perguntas por dia: ele lembra de você, conhece seus matches e simula sua relação.',
+    taste2: '✦ 2 perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
     footer: 'Gerado por IA · versão de teste',
@@ -331,6 +335,9 @@ const I18N: Record<string, any> = {
             }
           </div>
         }
+        @if (!showCta()) {
+          <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : t().taste2 }}</div>
+        }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
           <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />
           <button type="submit" class="cw-snd" [disabled]="busy() || !draft.trim()">
@@ -510,6 +517,7 @@ const I18N: Record<string, any> = {
     .cw-modeon { flex:1; font-size:12px; font-weight:600; color:var(--cw-gold); background:rgba(212,175,55,.1); border:1px solid rgba(212,175,55,.35); border-radius:9px; padding:7px 10px; }
     .cw-modex { width:30px; height:30px; border-radius:9px; border:1px solid var(--cw-border); background:var(--cw-card); color:var(--cw-muted); font-size:13px; cursor:pointer; }
     .cw-modex:hover { color:var(--cw-text); border-color:var(--cw-gold-d); }
+    .cw-taste { text-align:center; font-size:11px; font-weight:600; color:var(--cw-gold); letter-spacing:.2px; padding:7px 12px 0; }
     .cw-input { display:flex; gap:8px; padding:12px; border-top:1px solid var(--cw-border); }
     .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:11px 14px; color:var(--cw-text); font-size:14px; outline:none; font-family:inherit; }
     .cw-input input:focus { border-color:var(--cw-gold-d); }
@@ -543,7 +551,7 @@ export class CoachWidgetComponent {
   readonly carouselPage = signal<Record<number, number>>({});
   draft = '';
   cityDraft = '';
-  private coachReplies = 0;
+  private readonly coachReplies = signal(0); // reactive so the free-taste counter + CTA update live
   private lastCoachText = '';
   private lastUserMsg = '';
   private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
@@ -569,7 +577,11 @@ export class CoachWidgetComponent {
     return 'en';
   });
   t() { return I18N[this.lang()] || I18N['es']; }
-  readonly showCta = computed(() => this.coachReplies >= 2);
+  // Free "taste" of the coach before nudging to the app. Generous: we never block — after FREE_TASTE
+  // replies we show the download CTA, but the visitor can keep asking (the per-IP/hour backstop only
+  // guards against abuse). The counter is a soft, attractive nudge.
+  readonly showCta = computed(() => this.coachReplies() >= FREE_TASTE);
+  readonly freeLeft = computed(() => Math.max(0, FREE_TASTE - this.coachReplies()));
   // Re-show the suggestion chips (starters + place chip) on the first screen AND after every coach
   // answer, so the visitor always has all options again. Hidden while waiting or in a simulation.
   readonly showChips = computed(() => {
@@ -683,7 +695,7 @@ export class CoachWidgetComponent {
       });
       const data = await res.json().catch(() => ({}));
       if (data?.limited) this.ga('coach_demo_limited');
-      this.coachReplies++;
+      this.coachReplies.update((v) => v + 1);
       if (Array.isArray(data?.approaches) && data.approaches.length) {
         this.messages.update((m) => [...m, { role: 'coach', text: '', ask: true, q: this.lastUserMsg, sim: { stage: data.stage || '', approaches: data.approaches, perspectiveNames: data.perspectiveNames || [], perspectivesUsed: data.perspectivesUsed || 0 } }]);
         this.lastCoachText = data.approaches[0]?.phrase || '';
@@ -706,7 +718,7 @@ export class CoachWidgetComponent {
       });
       const data = await res.json().catch(() => ({}));
       if (data?.limited) this.ga('coach_demo_limited');
-      this.coachReplies++;
+      this.coachReplies.update((v) => v + 1);
       if (Array.isArray(data?.stages) && data.stages.length) {
         this.messages.update((m) => [...m, { role: 'coach', text: '', ask: true, q: this.lastUserMsg, mv: {
           compatibilityScore: data.compatibilityScore ?? null, compatibilityStars: data.compatibilityStars ?? null,
@@ -784,7 +796,7 @@ export class CoachWidgetComponent {
       // Never leave the user with a blank/echoed greeting — if the reply is empty, ask them to retry.
       const retry = this.lang() === 'en' ? "I didn't quite catch that — tell me a bit more and I'll help." : 'No te entendí del todo — cuéntame un poco más y te ayudo.';
       const reply = (data && typeof data.reply === 'string' && data.reply.trim()) ? data.reply : retry;
-      this.coachReplies++;
+      this.coachReplies.update((v) => v + 1);
       this.lastCoachText = reply;
       // GA: one event per query (count = cantidad de consultas; geo/country auto from GA4).
       const intent = data?.places?.length ? 'place' : data?.phrases?.length ? 'phrase' : data?.needLocation ? 'place_need_loc' : 'general';
