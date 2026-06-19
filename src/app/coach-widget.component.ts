@@ -832,23 +832,21 @@ export class CoachWidgetComponent {
     return 'unknown';
   }
 
-  /** Shared geolocation read with the three-case handling (granted / prompt / denied). */
+  /** Shared geolocation read. ANY failure (denied/blocked/timeout/unavailable) falls back to the
+   *  backend city flow (which shows the "type your city" input) so the user can ALWAYS get places —
+   *  never a dead-end. Denied just adds a short hint first. */
   private requestGeolocation(q: string) {
     this.busy.set(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
       (err) => {
         this.busy.set(false);
-        // PERMISSION_DENIED (code 1) → guide them; otherwise (timeout/unavailable) let backend ask for a city.
         if (err && err.code === err.PERMISSION_DENIED) {
-          this.thinking.set(false);
           this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
           this.scroll();
-        } else {
-          this.ask({ message: q });
         }
+        this.ask({ message: q }); // backend → needLocation → shows the city input (always a way forward)
       },
-      // Give the user generous time to act on the permission dialog on desktop.
       { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
     );
   }
@@ -866,23 +864,14 @@ export class CoachWidgetComponent {
     this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang() });
 
+    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
     if (!this.isBrowser || !navigator.geolocation) {
-      // No geolocation API at all → backend asks for a city.
-      this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
+      // No geolocation API → backend asks for a city (shows the city input).
       this.ask({ message: q });
       return;
     }
-
-    const state = await this.geoPermissionState();
-    if (state === 'denied') {
-      // Blocked at the browser level — a prompt will never appear; route to type-a-city.
-      this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
-      this.scroll();
-      return;
-    }
-    // 'granted' resolves instantly; 'prompt'/'unknown' shows the OS/browser permission dialog.
-    this.thinkingLabel.set(state === 'granted' ? this.t().placesLoading : this.t().locRequesting);
-    this.thinking.set(true); this.scroll();
+    // getCurrentPosition shows the native permission prompt when needed (granted resolves instantly).
+    // Any error routes to the backend city flow inside requestGeolocation — never a dead-end.
     this.requestGeolocation(q);
   }
 
