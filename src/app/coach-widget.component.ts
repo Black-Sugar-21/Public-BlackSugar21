@@ -115,6 +115,7 @@ const I18N: Record<string, any> = {
         <span class="cw-spark">✦</span><span class="cw-fab-label">{{ t().fab }}</span>
       </button>
     } @else {
+      <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div>
       <section class="cw-panel" role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
@@ -361,16 +362,19 @@ const I18N: Record<string, any> = {
     .cw-fab:hover { filter:brightness(1.06); transform:translateY(-2px); transition:.2s; }
     .cw-spark { font-size:17px; }
     @keyframes cwPulse { 0%,100%{box-shadow:0 10px 30px rgba(212,175,55,0.30)} 50%{box-shadow:0 10px 42px rgba(212,175,55,0.55)} }
-    .cw-panel { position:fixed; right:22px; bottom:22px; z-index:9999; width:380px; max-width:calc(100vw - 28px); height:560px; max-height:calc(100dvh - 40px);
+    /* Centered, ChatGPT/Claude-style chat: discreet FAB → spacious centered overlay (the bot is the focus). */
+    .cw-overlay { position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.62); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); animation:cwFadeBg .2s ease; }
+    @keyframes cwFadeBg { from{opacity:0} to{opacity:1} }
+    .cw-panel { position:fixed; inset:0; margin:auto; z-index:9999; width:min(680px, 94vw); height:min(82vh, 780px);
       display:flex; flex-direction:column; background:var(--cw-bg); border:1px solid var(--cw-border); border-radius:20px; overflow:hidden;
-      box-shadow:0 24px 70px rgba(0,0,0,0.55); animation:cwIn .28s cubic-bezier(.22,1,.36,1);
+      box-shadow:0 32px 90px rgba(0,0,0,0.6); animation:cwIn .26s cubic-bezier(.22,1,.36,1);
       -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
-    @keyframes cwIn { from{opacity:0; transform:translateY(20px) scale(.97)} to{opacity:1; transform:none} }
-    /* Mobile: center the bot as a near-fullscreen sheet (focus the experience, not a corner). */
+    @keyframes cwIn { from{opacity:0; transform:scale(.965) translateY(8px)} to{opacity:1; transform:none} }
+    /* Mobile: near-fullscreen sheet, safe-area aware. */
     @media (max-width: 600px) {
-      .cw-panel { left:8px; right:8px; top:8px; bottom:8px; width:auto; max-width:none; height:auto; max-height:none;
+      .cw-panel { inset:6px; margin:0; width:auto; height:auto; max-width:none; max-height:none;
         border-radius:18px; padding-bottom:env(safe-area-inset-bottom); }
       .cw-fab { right:16px; bottom:16px; padding:12px 16px; font-size:14px; }
     }
@@ -384,9 +388,9 @@ const I18N: Record<string, any> = {
     .cw-id b { display:block; font-size:15px; color:var(--cw-text); }
     .cw-demo { font-size:10.5px; color:var(--cw-gold); border:1px solid rgba(212,175,55,.4); border-radius:999px; padding:1px 7px; display:inline-block; margin-top:2px; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
-    .cw-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
-    .cw-bubble { max-width:84%; padding:11px 14px; border-radius:14px; font-size:14px; line-height:1.5; color:var(--cw-text);
+    .cw-bubble { max-width:80%; padding:12px 16px; border-radius:15px; font-size:14.5px; line-height:1.55; color:var(--cw-text);
       background:var(--cw-card); border:1px solid var(--cw-border); }
     .cw-msg.user .cw-bubble { background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; border:none; }
     .cw-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:4px; }
@@ -521,8 +525,8 @@ const I18N: Record<string, any> = {
     .cw-modex { width:30px; height:30px; border-radius:9px; border:1px solid var(--cw-border); background:var(--cw-card); color:var(--cw-muted); font-size:13px; cursor:pointer; }
     .cw-modex:hover { color:var(--cw-text); border-color:var(--cw-gold-d); }
     .cw-taste { text-align:center; font-size:11px; font-weight:600; color:var(--cw-gold); letter-spacing:.2px; padding:7px 12px 0; }
-    .cw-input { display:flex; gap:8px; padding:12px; border-top:1px solid var(--cw-border); }
-    .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:12px; padding:11px 14px; color:var(--cw-text); font-size:14px; outline:none; font-family:inherit; }
+    .cw-input { display:flex; gap:8px; padding:14px 16px; border-top:1px solid var(--cw-border); }
+    .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:13px; padding:13px 16px; color:var(--cw-text); font-size:15px; outline:none; font-family:inherit; }
     .cw-input input:focus { border-color:var(--cw-gold-d); }
     .cw-snd { width:42px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; font-size:17px; font-weight:700; cursor:pointer; }
     .cw-snd:disabled { opacity:.5; cursor:not-allowed; }
