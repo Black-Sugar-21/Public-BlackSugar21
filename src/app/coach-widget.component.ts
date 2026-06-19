@@ -51,7 +51,8 @@ const I18N: Record<string, any> = {
     placeChip: '📍 Lugares para una cita', placeQuery: '¿Qué lugares me recomiendas para una primera cita cerca de mí?',
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
     locRequesting: 'Pidiendo permiso de ubicación 📍…',
-    locBlocked: 'Tu navegador tiene la ubicación bloqueada 🔒 Habilítala en el candado de la barra de direcciones, o escribe tu ciudad y te recomiendo lugares 👇',
+    locBlocked: 'Tu navegador tiene la ubicación bloqueada 🔒 Habilítala en el candado de la barra de direcciones, o escribe tu ciudad aquí abajo y te recomiendo lugares 👇',
+    needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
     fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
@@ -74,7 +75,8 @@ const I18N: Record<string, any> = {
     placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
     locRequesting: 'Requesting location permission 📍…',
-    locBlocked: "Your browser has location blocked 🔒 Enable it from the lock icon in the address bar, or type your city and I'll suggest spots 👇",
+    locBlocked: "Your browser has location blocked 🔒 Enable it from the lock icon in the address bar, or type your city below and I'll suggest spots 👇",
+    needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
     fab: 'Coach IA', title: 'Coach IA', demo: 'Versão de teste',
@@ -97,7 +99,8 @@ const I18N: Record<string, any> = {
     placeChip: '📍 Lugares para um encontro', placeQuery: 'Que lugares você recomenda para um primeiro encontro perto de mim?',
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
     locRequesting: 'Pedindo permissão de localização 📍…',
-    locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade e te recomendo lugares 👇',
+    locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade aqui embaixo e te recomendo lugares 👇',
+    needCity: 'Me diga em que cidade você está e te recomendo lugares 👇',
   },
 };
 
@@ -832,20 +835,19 @@ export class CoachWidgetComponent {
     return 'unknown';
   }
 
-  /** Shared geolocation read. ANY failure (denied/blocked/timeout/unavailable) falls back to the
-   *  backend city flow (which shows the "type your city" input) so the user can ALWAYS get places —
-   *  never a dead-end. Denied just adds a short hint first. */
+  /** Shared geolocation read. On success → fetch places. On ANY failure (denied/blocked/timeout/
+   *  unavailable) → show the city input RIGHT HERE (needLocation block) so the user can always get
+   *  places by typing a city — instant, no round-trip, never a dead-end. */
   private requestGeolocation(q: string) {
     this.busy.set(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
       (err) => {
         this.busy.set(false);
-        if (err && err.code === err.PERMISSION_DENIED) {
-          this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
-          this.scroll();
-        }
-        this.ask({ message: q }); // backend → needLocation → shows the city input (always a way forward)
+        this.thinking.set(false);
+        const blocked = !!(err && err.code === err.PERMISSION_DENIED);
+        this.messages.update((m) => [...m, { role: 'coach', text: blocked ? this.t().locBlocked : this.t().needCity, needLocation: true }]);
+        this.scroll();
       },
       { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
     );
@@ -864,14 +866,15 @@ export class CoachWidgetComponent {
     this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang() });
 
-    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
     if (!this.isBrowser || !navigator.geolocation) {
-      // No geolocation API → backend asks for a city (shows the city input).
-      this.ask({ message: q });
+      // No geolocation API → show the city input right away.
+      this.messages.update((m) => [...m, { role: 'coach', text: this.t().needCity, needLocation: true }]);
+      this.scroll();
       return;
     }
     // getCurrentPosition shows the native permission prompt when needed (granted resolves instantly).
-    // Any error routes to the backend city flow inside requestGeolocation — never a dead-end.
+    // Any error → city input appears in-place (requestGeolocation) — never a dead-end.
+    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
     this.requestGeolocation(q);
   }
 
