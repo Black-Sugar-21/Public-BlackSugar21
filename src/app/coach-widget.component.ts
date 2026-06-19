@@ -854,10 +854,10 @@ export class CoachWidgetComponent {
   }
 
   /**
-   * Place-suggestion chip. Same UX on desktop (PC/Mac) and mobile:
-   *  1. Permission already GRANTED → use the location straight away (no dialog).
-   *  2. Permission in PROMPT/unknown → trigger the browser permission dialog.
-   *  3. Permission DENIED → don't fire a silent error; tell them it's blocked and let them type a city.
+   * Place-suggestion chip. Reliable on every browser — NEVER auto-hangs on getCurrentPosition:
+   *  - Permission ALREADY granted → use GPS directly (instant places, zero friction).
+   *  - Otherwise (prompt / denied / unknown / no-API) → instantly show the city input + a
+   *    "use my location" button. The user types a city (always works) or taps to allow.
    */
   async askPlaces() {
     if (this.busy()) return;
@@ -866,16 +866,17 @@ export class CoachWidgetComponent {
     this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang() });
 
-    if (!this.isBrowser || !navigator.geolocation) {
-      // No geolocation API → show the city input right away.
-      this.messages.update((m) => [...m, { role: 'coach', text: this.t().needCity, needLocation: true }]);
-      this.scroll();
+    const state = this.isBrowser && navigator.geolocation ? await this.geoPermissionState() : 'unknown';
+    if (state === 'granted') {
+      // Already allowed → use it directly. requestGeolocation still falls back to the city input on any error.
+      this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
+      this.requestGeolocation(q);
       return;
     }
-    // getCurrentPosition shows the native permission prompt when needed (granted resolves instantly).
-    // Any error → city input appears in-place (requestGeolocation) — never a dead-end.
-    this.thinkingLabel.set(this.t().placesLoading); this.thinking.set(true); this.scroll();
-    this.requestGeolocation(q);
+    // Not granted → show actionable UI immediately (no auto-prompt that could hang or dead-end).
+    const hint = state === 'denied' ? this.t().locBlocked : this.t().needCity;
+    this.messages.update((m) => [...m, { role: 'coach', text: hint, needLocation: true }]);
+    this.scroll();
   }
 
   /** "Use my location" button shown in the needLocation block — same three-case handling. */
