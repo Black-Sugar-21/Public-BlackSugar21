@@ -48,3 +48,4 @@ scripts/*-adminsdk-*.json
 scripts/cleanup-log-*.txt
 .claude/worktrees/
 workspace-sa-key.json
+graphify-out/cache/

@@ -1,0 +1,1132 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1774294927.9203954,
+    "ast_hash": "1dedf49875c1b92088e2a17619ba834a",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-web/examples/firebase-service-example.ts": {
+    "mtime": 1768004640.6683805,
+    "ast_hash": "b504878f7ceedb2639f800c35ae616cc",
+    "semantic_hash": ""
+  },
+  ".vscode/extensions.json": {
+    "mtime": 1764017841.5208743,
+    "ast_hash": "d3b118b41884c371c18cbd55e392eb07",
+    "semantic_hash": ""
+  },
+  ".vscode/launch.json": {
+    "mtime": 1764017841.520951,
+    "ast_hash": "c6799d2f7ae6f5d7a740d1023654bb8d",
+    "semantic_hash": ""
+  },
+  ".vscode/tasks.json": {
+    "mtime": 1764017841.5210254,
+    "ast_hash": "5a70b3d3763f6628c8083d7b033b98b8",
+    "semantic_hash": ""
+  },
+  "angular.json": {
+    "mtime": 1781978897.7070348,
+    "ast_hash": "b4bd22be1f655af6f1218971426974b3",
+    "semantic_hash": ""
+  },
+  "current-remote-config.json": {
+    "mtime": 1776221974.1004112,
+    "ast_hash": "74b854346f3d81489ba416a8df3ee610",
+    "semantic_hash": ""
+  },
+  "deploy.sh": {
+    "mtime": 1765765557.0001037,
+    "ast_hash": "0d0721423bcd0cefdfe78ce05f7718dc",
+    "semantic_hash": ""
+  },
+  "firebase.json": {
+    "mtime": 1781923974.1136482,
+    "ast_hash": "3fa593c8f43ef42d77443e78c1075843",
+    "semantic_hash": ""
+  },
+  "firestore.indexes.json": {
+    "mtime": 1780354492.8191476,
+    "ast_hash": "be2cd334f6835812fc828a198c4cfb84",
+    "semantic_hash": ""
+  },
+  "functions/index-psychology.js": {
+    "mtime": 1776211587.5507352,
+    "ast_hash": "d76fa1a0ccc71f780649fdd5f45afb00",
+    "semantic_hash": ""
+  },
+  "functions/index.js": {
+    "mtime": 1776311701.8582933,
+    "ast_hash": "7897d9db27cffb576c2d1cf4d2d41c96",
+    "semantic_hash": ""
+  },
+  "functions/index.original.js": {
+    "mtime": 1774294927.9275568,
+    "ast_hash": "6f3084d761b688d5365662ea43c7a7ad",
+    "semantic_hash": ""
+  },
+  "functions/lib/ai-services.js": {
+    "mtime": 1776658023.918708,
+    "ast_hash": "5dd3304b55ea61e476ea3e5f047d9d1d",
+    "semantic_hash": ""
+  },
+  "functions/lib/analytics.js": {
+    "mtime": 1776540991.477059,
+    "ast_hash": "d684c7abd70d44fdea93cf78e0229d3a",
+    "semantic_hash": ""
+  },
+  "functions/lib/batch.js": {
+    "mtime": 1776658023.9190726,
+    "ast_hash": "21b54728edd065f9bcae6f07a4c9eb92",
+    "semantic_hash": ""
+  },
+  "functions/lib/coach-nudge-agent.js": {
+    "mtime": 1776658023.9192955,
+    "ast_hash": "49447091602f133a4d5971a0fdf1f87b",
+    "semantic_hash": ""
+  },
+  "functions/lib/coach-quality-monitor.js": {
+    "mtime": 1776658023.9195673,
+    "ast_hash": "ff473a01d897acb0618403b3fca32e11",
+    "semantic_hash": ""
+  },
+  "functions/lib/coach.js": {
+    "mtime": 1776658023.920504,
+    "ast_hash": "e59b55fedbc6416c00fca2fd547305f1",
+    "semantic_hash": ""
+  },
+  "functions/lib/debate-agents.js": {
+    "mtime": 1776658045.405387,
+    "ast_hash": "fa0a2bc9fbf2f8466e2937037d7ca6b0",
+    "semantic_hash": ""
+  },
+  "functions/lib/debate-orchestrator.js": {
+    "mtime": 1776658010.4478972,
+    "ast_hash": "94abda08c6b566cc1fa27996144327de",
+    "semantic_hash": ""
+  },
+  "functions/lib/debate-psychology.js": {
+    "mtime": 1776813563.7642496,
+    "ast_hash": "517a6a1449e11e46b8f0e640e3a3c9d0",
+    "semantic_hash": ""
+  },
+  "functions/lib/debate-synthesizer.js": {
+    "mtime": 1776658045.4058006,
+    "ast_hash": "37931ff34d52a9b03f0ca02fbaa4e145",
+    "semantic_hash": ""
+  },
+  "functions/lib/discovery-feed.js": {
+    "mtime": 1776534310.9866514,
+    "ast_hash": "e5cf80855f02ff19221273451b6df858",
+    "semantic_hash": ""
+  },
+  "functions/lib/discovery.js": {
+    "mtime": 1776538725.8248453,
+    "ast_hash": "cdf8bf6ad8ae121ef21d6bee19b07ffe",
+    "semantic_hash": ""
+  },
+  "functions/lib/events.js": {
+    "mtime": 1776658023.9212797,
+    "ast_hash": "4ab47f9b92721dc695128c2d64c11795",
+    "semantic_hash": ""
+  },
+  "functions/lib/geo.js": {
+    "mtime": 1774294927.92978,
+    "ast_hash": "f9580eee90ffb209be486d5c33a94a3f",
+    "semantic_hash": ""
+  },
+  "functions/lib/geohash.js": {
+    "mtime": 1776658023.921468,
+    "ast_hash": "b2774e05dfb31da1e3e1a27bad6b7f5b",
+    "semantic_hash": ""
+  },
+  "functions/lib/matches.js": {
+    "mtime": 1776658023.9216826,
+    "ast_hash": "809b188bab6828a9e9179685cd06ace6",
+    "semantic_hash": ""
+  },
+  "functions/lib/moderation.js": {
+    "mtime": 1776658023.9219706,
+    "ast_hash": "f62afa33ed5ac46b5b5d582f6b69c6e0",
+    "semantic_hash": ""
+  },
+  "functions/lib/multi-universe-simulation.js": {
+    "mtime": 1776813569.8984847,
+    "ast_hash": "47c83776f8edf63072c0edb249052936",
+    "semantic_hash": ""
+  },
+  "functions/lib/multiverse-places.js": {
+    "mtime": 1776540533.412515,
+    "ast_hash": "84ab4d2ae1d2a1205be365d0fad25b7e",
+    "semantic_hash": ""
+  },
+  "functions/lib/notifications.js": {
+    "mtime": 1776658023.9226935,
+    "ast_hash": "2995c353f277e48460f552db93256658",
+    "semantic_hash": ""
+  },
+  "functions/lib/places-helpers.js": {
+    "mtime": 1776658023.9230123,
+    "ast_hash": "072ebc73f9cde5474ef8bff72e4e604c",
+    "semantic_hash": ""
+  },
+  "functions/lib/places.js": {
+    "mtime": 1776658023.9232087,
+    "ast_hash": "e90ee199ac4e9eb7cefbc7984bbbb51c",
+    "semantic_hash": ""
+  },
+  "functions/lib/safety.js": {
+    "mtime": 1776658023.9234087,
+    "ast_hash": "acf20aef87672a0e1a33ab5c854a6e26",
+    "semantic_hash": ""
+  },
+  "functions/lib/scheduled.js": {
+    "mtime": 1776658023.9236019,
+    "ast_hash": "50f6075e747bec1095c779135551827c",
+    "semantic_hash": ""
+  },
+  "functions/lib/shared.js": {
+    "mtime": 1776658045.406374,
+    "ast_hash": "19742a528c7cc6ce46b97c659144c275",
+    "semantic_hash": ""
+  },
+  "functions/lib/simulation.js": {
+    "mtime": 1776658045.4071999,
+    "ast_hash": "4bcfdbb14d943a75d48656fc5dc534cf",
+    "semantic_hash": ""
+  },
+  "functions/lib/situation-simulation.js": {
+    "mtime": 1776658045.4078863,
+    "ast_hash": "9d844ded3276df671d1d27334b29edd5",
+    "semantic_hash": ""
+  },
+  "functions/lib/storage.js": {
+    "mtime": 1776658023.9249103,
+    "ast_hash": "80594a8ffcc8158a19ea1b7fb0f3870e",
+    "semantic_hash": ""
+  },
+  "functions/lib/stories.js": {
+    "mtime": 1776658023.9251719,
+    "ast_hash": "3c1faca0807b4e910493a9e77244e500",
+    "semantic_hash": ""
+  },
+  "functions/lib/testers.js": {
+    "mtime": 1776436206.2297146,
+    "ast_hash": "a937efcf36d3fd9687fd1f075fce7bf1",
+    "semantic_hash": ""
+  },
+  "functions/lib/users.js": {
+    "mtime": 1776658023.9253979,
+    "ast_hash": "0d1294e133f36c809a30cace75786f97",
+    "semantic_hash": ""
+  },
+  "functions/lib/wingperson.js": {
+    "mtime": 1776541463.6642206,
+    "ast_hash": "e6dc54966b1853dfd4a5a35aa1c9e0f1",
+    "semantic_hash": ""
+  },
+  "functions/package.json": {
+    "mtime": 1776658789.8533328,
+    "ast_hash": "297c8274b234844da3a36bbc4e83e140",
+    "semantic_hash": ""
+  },
+  "functions/scripts/comprehensive-test.js": {
+    "mtime": 1775318319.3570871,
+    "ast_hash": "bceccfc81769e725f66703aa1fd11910",
+    "semantic_hash": ""
+  },
+  "functions/scripts/final-comprehensive-test.js": {
+    "mtime": 1775321099.4418573,
+    "ast_hash": "0b866b92ce37da88410c42d95d520193",
+    "semantic_hash": ""
+  },
+  "functions/scripts/modularize.js": {
+    "mtime": 1774294927.9338925,
+    "ast_hash": "6afaa3cdf48b9cda8c2f024e447d2f71",
+    "semantic_hash": ""
+  },
+  "functions/scripts/today-fixes-test.js": {
+    "mtime": 1775320132.8808439,
+    "ast_hash": "731cd529879e19b778598e73cb289f90",
+    "semantic_hash": ""
+  },
+  "functions/test-comprehensive-300.js": {
+    "mtime": 1776540584.1073835,
+    "ast_hash": "b6eb20637379be6c601ac6366cbb80ac",
+    "semantic_hash": ""
+  },
+  "functions/test-debate.js": {
+    "mtime": 1776712886.1694868,
+    "ast_hash": "dac24802ac7a19b5ca79185b2ebfbc5b",
+    "semantic_hash": ""
+  },
+  "functions/test-discovery-v2-parity.js": {
+    "mtime": 1776296182.045747,
+    "ast_hash": "33011d67b5260c2baf68a1d00604c1b0",
+    "semantic_hash": ""
+  },
+  "functions/test-e2e-smoke.js": {
+    "mtime": 1776542750.0425067,
+    "ast_hash": "0832b0eb164d4ec7b9ab6719c362c46a",
+    "semantic_hash": ""
+  },
+  "functions/test-internal-comprehensive.js": {
+    "mtime": 1776212208.808468,
+    "ast_hash": "05c26e02dcc747b1d7912607eda83d19",
+    "semantic_hash": ""
+  },
+  "functions/test-live-lang-probe.js": {
+    "mtime": 1776544273.401876,
+    "ast_hash": "1645292a37a8f8c4e73e21d463aaf59e",
+    "semantic_hash": ""
+  },
+  "functions/test-moderation-homoglyph.js": {
+    "mtime": 1776537673.6349783,
+    "ast_hash": "585f4788e2f2e4fe9a9ea4412ce07698",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-places-cf-validation.js": {
+    "mtime": 1776343867.0832005,
+    "ast_hash": "e5c0c5c12f1c205c6e97537a93a163e2",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-places-exhaustive.js": {
+    "mtime": 1776657999.163554,
+    "ast_hash": "85bef730537e9c71a08f81fa2e5ad394",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-places-local.js": {
+    "mtime": 1776313381.2259204,
+    "ast_hash": "307706128656bf4fcf133dd688e22287",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-places-robust.js": {
+    "mtime": 1776343536.995147,
+    "ast_hash": "4d57a180e6e51d4e3b9099db37d20fdb",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-scenarios.js": {
+    "mtime": 1778851622.389858,
+    "ast_hash": "03d829892698f4b9e0a40133dfd3c10c",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse-usercontext.js": {
+    "mtime": 1778819493.8344731,
+    "ast_hash": "35fcd0e37c4d36e37ee57ed2d5f00fe5",
+    "semantic_hash": ""
+  },
+  "functions/test-multiverse.js": {
+    "mtime": 1776303143.8677754,
+    "ast_hash": "12b71c5999ed20374adacf72b54e4e11",
+    "semantic_hash": ""
+  },
+  "functions/test-post-deploy-350.js": {
+    "mtime": 1776540367.986975,
+    "ast_hash": "eb270e7ef2222535606e714e6942d08a",
+    "semantic_hash": ""
+  },
+  "functions/test-situation-sim.js": {
+    "mtime": 1776209996.1119754,
+    "ast_hash": "342db25598d50ae4c51d9c40c886db47",
+    "semantic_hash": ""
+  },
+  "mcp-blacksugar/index.js": {
+    "mtime": 1772056393.2389383,
+    "ast_hash": "6f0eaf04cae92e2aebc044cbb110e301",
+    "semantic_hash": ""
+  },
+  "mcp-blacksugar/package.json": {
+    "mtime": 1772056393.2396166,
+    "ast_hash": "22cd8d8d76212a46c65db6e7ae455806",
+    "semantic_hash": ""
+  },
+  "mcp-image-gen/index.js": {
+    "mtime": 1774294927.935136,
+    "ast_hash": "4572e8abda14383960fcdcd6505d1ab0",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1774901905.284934,
+    "ast_hash": "061d22103445c45f136e894deed7c3f1",
+    "semantic_hash": ""
+  },
+  "rc_current.json": {
+    "mtime": 1776610683.5890398,
+    "ast_hash": "36efcf3633cf04f65c8449d1680cb316",
+    "semantic_hash": ""
+  },
+  "rc_verify.json": {
+    "mtime": 1776610665.7967992,
+    "ast_hash": "724edb1e78d11c584268b2505be86088",
+    "semantic_hash": ""
+  },
+  "scripts/_check-disc.js": {
+    "mtime": 1773970108.932729,
+    "ast_hash": "6afcd555756eb4335013373922fd120b",
+    "semantic_hash": ""
+  },
+  "scripts/_check-stories.js": {
+    "mtime": 1774294927.9354336,
+    "ast_hash": "d8dcef26034912648cebfaaab1bf1143",
+    "semantic_hash": ""
+  },
+  "scripts/_diag-discovery.js": {
+    "mtime": 1773967497.20873,
+    "ast_hash": "64f339e4820408ac464cac8539c6ee45",
+    "semantic_hash": ""
+  },
+  "scripts/_diag-reviewer.js": {
+    "mtime": 1774294927.9357123,
+    "ast_hash": "1fc2c3a97c79e2a00304adb0e07c76a4",
+    "semantic_hash": ""
+  },
+  "scripts/_diag2.js": {
+    "mtime": 1773967643.2817454,
+    "ast_hash": "cb37051e2c09f0ffe453c690ebe48172",
+    "semantic_hash": ""
+  },
+  "scripts/_diag3.js": {
+    "mtime": 1773970108.9330194,
+    "ast_hash": "1e32010504c08aefeb70a029b674ce3a",
+    "semantic_hash": ""
+  },
+  "scripts/_diag4.js": {
+    "mtime": 1773970108.9330144,
+    "ast_hash": "54d072fa6ea9a8987845d48a5b64c35f",
+    "semantic_hash": ""
+  },
+  "scripts/add-psychology-rag.js": {
+    "mtime": 1776132018.9446626,
+    "ast_hash": "04370ebc9cc55a016398a020203c3161",
+    "semantic_hash": ""
+  },
+  "scripts/add-rag-chunks-2026.js": {
+    "mtime": 1774925488.1518724,
+    "ast_hash": "40ab43b7dc1f93ccf31afcbebef1c380",
+    "semantic_hash": ""
+  },
+  "scripts/add-situation-rag.js": {
+    "mtime": 1776137434.8089995,
+    "ast_hash": "dfbc29d251a11dade347dab758dca7a1",
+    "semantic_hash": ""
+  },
+  "scripts/analyze-instagram-metrics.js": {
+    "mtime": 1776354053.537409,
+    "ast_hash": "42fb5de91af51b38ab27ae9864f3a495",
+    "semantic_hash": ""
+  },
+  "scripts/clean-reviewer-excluded.js": {
+    "mtime": 1774294927.9359431,
+    "ast_hash": "e2fac536bc73d445a7dc17582c58fcf4",
+    "semantic_hash": ""
+  },
+  "scripts/clean-reviewer-swipes.js": {
+    "mtime": 1774294927.9361703,
+    "ast_hash": "5eb791fcdfc6296da21ba28714073b10",
+    "semantic_hash": ""
+  },
+  "scripts/coach-health-monitor.js": {
+    "mtime": 1774294927.9366887,
+    "ast_hash": "e570009e43335d594cfbc846e5296471",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/approach-suggestions.json": {
+    "mtime": 1775162320.4296205,
+    "ast_hash": "81e3df6ffe9dc006d7a7d686e70d635d",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/dating-advice.json": {
+    "mtime": 1776218208.6866112,
+    "ast_hash": "ac8fe336293df2166fe963419ab665fb",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/psychology-research-es.json": {
+    "mtime": 1776210982.2073245,
+    "ast_hash": "b1220874286734d9506b19a9fc987797",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/psychology-research-multilang.json": {
+    "mtime": 1776211032.0848382,
+    "ast_hash": "48be87e6891ee45e114363973d2eae29",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/psychology-research.json": {
+    "mtime": 1776210962.8378143,
+    "ast_hash": "e52d04d8a1fe82e44f68a908f5bb6b47",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/psychology-stages.json": {
+    "mtime": 1776578630.951751,
+    "ast_hash": "12cca62edc10472e5aa799b271ee830f",
+    "semantic_hash": ""
+  },
+  "scripts/coach-knowledge/sugar-dating-advanced.json": {
+    "mtime": 1774294927.9382505,
+    "ast_hash": "6bb116ae680e765b2f1686c5349e3a9c",
+    "semantic_hash": ""
+  },
+  "scripts/diagnose-rosita.js": {
+    "mtime": 1772398668.471078,
+    "ast_hash": "53665a536627f674b3ae4ca522c7a293",
+    "semantic_hash": ""
+  },
+  "scripts/export-testers.js": {
+    "mtime": 1774578990.74594,
+    "ast_hash": "ae8153ea9711d3f60ec8d9c99099241d",
+    "semantic_hash": ""
+  },
+  "scripts/generate-rag-chunks.js": {
+    "mtime": 1776124566.185755,
+    "ast_hash": "6436c56b9c63e94cf1f1e2ee5c929eb9",
+    "semantic_hash": ""
+  },
+  "scripts/index-coach-knowledge.js": {
+    "mtime": 1774294927.9389057,
+    "ast_hash": "0b5d8fd4512104a5e5d95854b5e4cf1f",
+    "semantic_hash": ""
+  },
+  "scripts/index-moderation-knowledge.js": {
+    "mtime": 1774294927.939318,
+    "ast_hash": "caff401bbf5d5896c93e660c5ff1126d",
+    "semantic_hash": ""
+  },
+  "scripts/index-psychology-knowledge.js": {
+    "mtime": 1776577509.8731518,
+    "ast_hash": "79c25920010ad66db6088473f1fb1a95",
+    "semantic_hash": ""
+  },
+  "scripts/moderation-knowledge/moderation-rules.json": {
+    "mtime": 1774526129.9965582,
+    "ast_hash": "d0d7a711f5e83470f7664357c2c01236",
+    "semantic_hash": ""
+  },
+  "scripts/moderation-knowledge/sugar-moderation-context.json": {
+    "mtime": 1774294927.940256,
+    "ast_hash": "432ef6a0af8441c6004d80851d81e1c2",
+    "semantic_hash": ""
+  },
+  "scripts/monitor-instagram-collection-enhanced.js": {
+    "mtime": 1776354769.1869621,
+    "ast_hash": "99534065d9b023fa5542a1e90213f29c",
+    "semantic_hash": ""
+  },
+  "scripts/monitor-instagram-collection.js": {
+    "mtime": 1776353583.878935,
+    "ast_hash": "a34ae9df7eb5cc15bed1076bf34e2e53",
+    "semantic_hash": ""
+  },
+  "scripts/publish-places-config.js": {
+    "mtime": 1774294927.9405034,
+    "ast_hash": "e0389ed0938e2bce1ae0174514a45cce",
+    "semantic_hash": ""
+  },
+  "scripts/reset-coach-credits.js": {
+    "mtime": 1774294927.9408014,
+    "ast_hash": "64e8323570c3a2c55d670aa361eb352f",
+    "semantic_hash": ""
+  },
+  "scripts/reset-quick.js": {
+    "mtime": 1774294927.9410312,
+    "ast_hash": "54a58022c75b52c18fcf97a43b376b74",
+    "semantic_hash": ""
+  },
+  "scripts/seed-coach-rag-cuisine-shopping.js": {
+    "mtime": 1774196919.8135736,
+    "ast_hash": "e457049bc3709f6b278269d78a7f9043",
+    "semantic_hash": ""
+  },
+  "scripts/seed-coach-rag-missing-categories.js": {
+    "mtime": 1774197900.8219497,
+    "ast_hash": "9aade9bf0bec4e8aa17a3094f4f7fe01",
+    "semantic_hash": ""
+  },
+  "scripts/seed-coach-rag-travel-v2.js": {
+    "mtime": 1774294927.9414828,
+    "ast_hash": "20d71ce40c706f4651e40cae90986332",
+    "semantic_hash": ""
+  },
+  "scripts/seed-coach-rag-travel-v3.js": {
+    "mtime": 1774294927.9419534,
+    "ast_hash": "c1848d6f7532e1f5b0745ac05a531284",
+    "semantic_hash": ""
+  },
+  "scripts/seed-coach-rag-travel.js": {
+    "mtime": 1774294927.9424036,
+    "ast_hash": "760e6ab75c3f488f442438eecab33346",
+    "semantic_hash": ""
+  },
+  "scripts/seed-listener-test.js": {
+    "mtime": 1772410015.213502,
+    "ast_hash": "eeee28c42459cd99fc3224b059b98dab",
+    "semantic_hash": ""
+  },
+  "scripts/seed-profiles.js": {
+    "mtime": 1772026563.0356011,
+    "ast_hash": "d8e6ebf67a1a4e5721a75da7f33e0b0e",
+    "semantic_hash": ""
+  },
+  "scripts/seed-reviewer-stories.js": {
+    "mtime": 1774294927.9430625,
+    "ast_hash": "1421b478ed3a7bef133bce5eb8f21684",
+    "semantic_hash": ""
+  },
+  "scripts/seed-reviewer.js": {
+    "mtime": 1774462195.4536219,
+    "ast_hash": "407869a7a2c97861d28e2689967ee60d",
+    "semantic_hash": ""
+  },
+  "scripts/seed-run.js": {
+    "mtime": 1772026928.5391235,
+    "ast_hash": "203397e9b2ac75b73cf3473e35825a07",
+    "semantic_hash": ""
+  },
+  "scripts/serviceAccountKey.example.json": {
+    "mtime": 1767915823.5832782,
+    "ast_hash": "56c17796e93e24d6c45a1b6fde51b2cc",
+    "semantic_hash": ""
+  },
+  "scripts/simulate-testers.js": {
+    "mtime": 1775000505.3300238,
+    "ast_hash": "4ee9849055de71c0f3a05664c69e0b7d",
+    "semantic_hash": ""
+  },
+  "scripts/test-coach-multilang.js": {
+    "mtime": 1776211882.600619,
+    "ast_hash": "71dc0fc903cee5bf399d8057f0e9d16d",
+    "semantic_hash": ""
+  },
+  "scripts/test-master.js": {
+    "mtime": 1768791337.2280838,
+    "ast_hash": "770c6b330ad7c5d87c6192333cf57fac",
+    "semantic_hash": ""
+  },
+  "scripts/test-multiverse-places-simple.js": {
+    "mtime": 1776313374.3940797,
+    "ast_hash": "734f4d14263eb6a08cf49e1fe02f6e06",
+    "semantic_hash": ""
+  },
+  "scripts/test-multiverse-places.js": {
+    "mtime": 1776313371.7691553,
+    "ast_hash": "7dc7c43d08d8d1c84fd453f3041562d6",
+    "semantic_hash": ""
+  },
+  "scripts/test-notif-rosita.js": {
+    "mtime": 1772398492.2164319,
+    "ast_hash": "3773af2002321b880dd5d3d8db0fc5cc",
+    "semantic_hash": ""
+  },
+  "scripts/test-reset-notif.js": {
+    "mtime": 1772234444.7789218,
+    "ast_hash": "64b958d9006f6c2d220a747edd225f1a",
+    "semantic_hash": ""
+  },
+  "scripts/test-simulation.js": {
+    "mtime": 1776128754.8296337,
+    "ast_hash": "e65da0a13e38bf022813f1eddba7b736",
+    "semantic_hash": ""
+  },
+  "scripts/update-coach-places-rc.js": {
+    "mtime": 1774294927.943406,
+    "ast_hash": "f2e9fc261e63aa1ea0903d8e5032de27",
+    "semantic_hash": ""
+  },
+  "scripts/update-coach-rc.js": {
+    "mtime": 1774294927.943677,
+    "ast_hash": "2598f4982fbb36290cef366c1b0ac75a",
+    "semantic_hash": ""
+  },
+  "scripts/update-simulation-rc.js": {
+    "mtime": 1776221969.124729,
+    "ast_hash": "15d7548dc272cd7b0b35af28fe039b61",
+    "semantic_hash": ""
+  },
+  "scripts/verify-cleanup.js": {
+    "mtime": 1774294927.943946,
+    "ast_hash": "442215efa90093654ff6258662b5c629",
+    "semantic_hash": ""
+  },
+  "scripts/verify-reviewer-profiles.js": {
+    "mtime": 1774294927.9442298,
+    "ast_hash": "5c7f76b299cd266e54c8e4a5734df7a8",
+    "semantic_hash": ""
+  },
+  "src/app/app.config.ts": {
+    "mtime": 1764017841.5217206,
+    "ast_hash": "da471005d16ef07ff7f99a0cfcc8ea64",
+    "semantic_hash": ""
+  },
+  "src/app/app.routes.ts": {
+    "mtime": 1774719867.491356,
+    "ast_hash": "f816785f2b9b0d809a79132f8fe4d914",
+    "semantic_hash": ""
+  },
+  "src/app/app.spec.ts": {
+    "mtime": 1764017841.5214193,
+    "ast_hash": "1a7bc444f7848590012b15b32b257f4b",
+    "semantic_hash": ""
+  },
+  "src/app/app.ts": {
+    "mtime": 1781966678.8722684,
+    "ast_hash": "b2934878f6ae33390e8704c14463f659",
+    "semantic_hash": ""
+  },
+  "src/app/coach-widget.component.ts": {
+    "mtime": 1781927172.5050519,
+    "ast_hash": "c249c13a9192abcd0c4f6fa91a6ce53d",
+    "semantic_hash": ""
+  },
+  "src/app/components/moderation-policy/moderation-policy.component.ts": {
+    "mtime": 1775826637.093382,
+    "ast_hash": "04bf6e5acfb32ac71da901c319037fab",
+    "semantic_hash": ""
+  },
+  "src/app/firebase.config.ts": {
+    "mtime": 1772246432.9124174,
+    "ast_hash": "5213097611d25599d057ff956cbd91da",
+    "semantic_hash": ""
+  },
+  "src/app/firebase.service.ts": {
+    "mtime": 1781966663.4889731,
+    "ast_hash": "d4af8e0bba931613d823c16b933701d5",
+    "semantic_hash": ""
+  },
+  "src/app/pages/analytics/analytics.ts": {
+    "mtime": 1774743803.272674,
+    "ast_hash": "bca3838db434433bed88fadbc87e82bf",
+    "semantic_hash": ""
+  },
+  "src/app/pages/data-deletion/data-deletion.component.ts": {
+    "mtime": 1775826631.8254743,
+    "ast_hash": "35c96e5dbcb3fdac51441f87d7b78964",
+    "semantic_hash": ""
+  },
+  "src/app/pages/features/features.component.ts": {
+    "mtime": 1775826562.3628592,
+    "ast_hash": "43314e969cb018c7bdd680afaf370ee1",
+    "semantic_hash": ""
+  },
+  "src/app/pages/privacy/privacy.component.ts": {
+    "mtime": 1775826622.4122212,
+    "ast_hash": "65dda35439e6c533ae6eddb762d3a546",
+    "semantic_hash": ""
+  },
+  "src/app/pages/safety-standards/safety-standards.component.ts": {
+    "mtime": 1775826627.3259206,
+    "ast_hash": "686e0faddb97d6aa210f50a1f0dac978",
+    "semantic_hash": ""
+  },
+  "src/app/pages/terms/terms.component.ts": {
+    "mtime": 1775826618.3586884,
+    "ast_hash": "57639bf5c8638decb8b0e1f28755851e",
+    "semantic_hash": ""
+  },
+  "src/app/services/seo.service.ts": {
+    "mtime": 1775826513.4770517,
+    "ast_hash": "084180773e2b37c7245b73edae90dba5",
+    "semantic_hash": ""
+  },
+  "src/app/translation.service.ts": {
+    "mtime": 1781978856.516621,
+    "ast_hash": "b21d7a8b7a76b98bdf87567425c175cf",
+    "semantic_hash": ""
+  },
+  "src/main.ts": {
+    "mtime": 1764017841.5211384,
+    "ast_hash": "ac0b277dca1867b341af9e2d25224ae9",
+    "semantic_hash": ""
+  },
+  "start-workspace.sh": {
+    "mtime": 1774294927.9473662,
+    "ast_hash": "7c7f76c2305f2d3bf56d1cf605fa4793",
+    "semantic_hash": ""
+  },
+  "tsconfig.app.json": {
+    "mtime": 1764017841.520684,
+    "ast_hash": "67a3f20f3c9369570c8dc70e3d5bb7ce",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1764017841.5206127,
+    "ast_hash": "d4886a8a9be1c35a2d17ab5e0f4439c2",
+    "semantic_hash": ""
+  },
+  "tsconfig.spec.json": {
+    "mtime": 1764017841.5207546,
+    "ast_hash": "9261a8f9db3b2c991df0e6f9d51828b1",
+    "semantic_hash": ""
+  },
+  ".claude/commands/marketing-seo.md": {
+    "mtime": 1777645906.0234919,
+    "ast_hash": "f7c8520b760b5a6053039a44a1661c0e",
+    "semantic_hash": ""
+  },
+  ".claude/rules/angular.md": {
+    "mtime": 1774294927.920715,
+    "ast_hash": "54ea4648e6b46cbf5326e7e9e66c6358",
+    "semantic_hash": ""
+  },
+  ".claude/rules/functions.md": {
+    "mtime": 1774294927.9209793,
+    "ast_hash": "a129f8db479bc7af7dd6fec7e915ec00",
+    "semantic_hash": ""
+  },
+  ".claude/rules/mobile.md": {
+    "mtime": 1775876415.2892406,
+    "ast_hash": "8207fcc11d52120bb4a9aa06f35a31ab",
+    "semantic_hash": ""
+  },
+  ".claude/skills/firestore/SKILL.md": {
+    "mtime": 1781983489.6165535,
+    "ast_hash": "63985dc80d4ba4d673061d4d89ec44b4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/functions/SKILL.md": {
+    "mtime": 1781983489.6062045,
+    "ast_hash": "dd9f494b1fa40d6190447305bfaff871",
+    "semantic_hash": ""
+  },
+  ".claude/skills/moderation/SKILL.md": {
+    "mtime": 1781983489.6307318,
+    "ast_hash": "4aa1681f5728ecd40811f148e45193cd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/places-search/SKILL.md": {
+    "mtime": 1777604386.4320874,
+    "ast_hash": "8b96ff207b3ccd7c44f963333dab71a8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/remote-config/SKILL.md": {
+    "mtime": 1780636319.9067554,
+    "ast_hash": "723135b09fb84ab8895770062bd9361d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/web/SKILL.md": {
+    "mtime": 1777604412.0565474,
+    "ast_hash": "37aeda0ef71587e320c7320d2b957901",
+    "semantic_hash": ""
+  },
+  ".github/copilot-instructions.md": {
+    "mtime": 1775876415.5299957,
+    "ast_hash": "2db12564a6df9afb46daf7fab06ca072",
+    "semantic_hash": ""
+  },
+  ".github/skills/CROSS_PLATFORM_ALIGNMENT.md": {
+    "mtime": 1776310095.7074916,
+    "ast_hash": "b78aceab49757824b5c1b8e7e70a94b7",
+    "semantic_hash": ""
+  },
+  ".github/skills/MODERN_FEATURES_GUIDE.md": {
+    "mtime": 1776310060.5871816,
+    "ast_hash": "82c56285df7e7cdb5b82db468c8691f4",
+    "semantic_hash": ""
+  },
+  ".github/skills/QUICKSTART_BY_PLATFORM.md": {
+    "mtime": 1776310126.9239762,
+    "ast_hash": "32801410699810ecf1f3a8040dcd5d9a",
+    "semantic_hash": ""
+  },
+  ".github/skills/README.md": {
+    "mtime": 1776310208.924556,
+    "ast_hash": "e8aad474265c3c73cfd9d056aa73e551",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-android/SKILL.md": {
+    "mtime": 1776309999.74584,
+    "ast_hash": "7318abf3d8440f4e705725a135b5eb27",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-ios/SKILL.md": {
+    "mtime": 1776310006.1393263,
+    "ast_hash": "24b3480791e85a54c1efd25d571cce84",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-public/SKILL.md": {
+    "mtime": 1776310028.210221,
+    "ast_hash": "76cc61c70574d65c47febbe1cecee308",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-testing/SKILL.md": {
+    "mtime": 1776531855.0144982,
+    "ast_hash": "640349d2c23b64047da4bc5d9c06cc3d",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-web/SKILL.md": {
+    "mtime": 1776310023.3408444,
+    "ast_hash": "47dbc50912ae06b5fbff01d575a1fa7d",
+    "semantic_hash": ""
+  },
+  ".github/skills/blacksugar-web/incident-runbook.md": {
+    "mtime": 1768004695.497934,
+    "ast_hash": "fa4eb30dadf72b4b10f189422c148520",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1776534386.4634826,
+    "ast_hash": "26d18ac7846a00c706fbb3fd2ddaddf3",
+    "semantic_hash": ""
+  },
+  ".github/workflows/deploy.yml": {
+    "mtime": 1767398804.1735144,
+    "ast_hash": "e59e221603d2d3826b30eb2b130eafb4",
+    "semantic_hash": ""
+  },
+  ".github/workflows/e2e-smoke.yml": {
+    "mtime": 1776523324.1520824,
+    "ast_hash": "cf4d98f3cef40810be1c69ebc8c35927",
+    "semantic_hash": ""
+  },
+  "BACKEND_TESTING_PLAN.md": {
+    "mtime": 1776185458.4361024,
+    "ast_hash": "8b08e360bc050be41fcc1b24f81715d8",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1781803363.6358879,
+    "ast_hash": "df4c04db08a1f002f7acaf2c9989e4e9",
+    "semantic_hash": ""
+  },
+  "DEPLOYMENT_REPORT_20260415.md": {
+    "mtime": 1776212754.172346,
+    "ast_hash": "cca3acb0ab3ee45a0214af3809ba255e",
+    "semantic_hash": ""
+  },
+  "PRODUCTION_MONITORING_ROADMAP.md": {
+    "mtime": 1776354083.8229787,
+    "ast_hash": "bfc9403bacbdca2661a3cd6ad33719df",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1768616746.2794704,
+    "ast_hash": "fc0ad74f8faeee7caf791b9b56daabb2",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Analytics & Consent.md": {
+    "mtime": 1781988917.9904113,
+    "ast_hash": "7382e67e68779a8219c55fb6beba1bd7",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Architecture.md": {
+    "mtime": 1781988808.3904283,
+    "ast_hash": "0664cb45dbe52a509ae566a7dd4d0205",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Coach Demo Widget.md": {
+    "mtime": 1781988851.0992882,
+    "ast_hash": "658fa7c974b84d0867c746229776a814",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Demo Backend Integration.md": {
+    "mtime": 1781988873.0261495,
+    "ast_hash": "2e7f350fa2ef41e5577c3156decd9f5f",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Landing & Hero.md": {
+    "mtime": 1781988825.2608159,
+    "ast_hash": "341d6499e7c0524b545753e996c3922f",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/Legal Pages.md": {
+    "mtime": 1781988902.9102793,
+    "ast_hash": "d3f00eb04643f340b0eaa42146df7599",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/_Index.md": {
+    "mtime": 1781988788.5712068,
+    "ast_hash": "da5120d39ae425ccc826cf4c4969b5d5",
+    "semantic_hash": ""
+  },
+  "docs/obsidian/i18n (13 languages).md": {
+    "mtime": 1781988888.0462174,
+    "ast_hash": "b7c4b45b000108496ef484e4cfdc7077",
+    "semantic_hash": ""
+  },
+  "functions/ARCHITECTURE.md": {
+    "mtime": 1776713022.058664,
+    "ast_hash": "58e600572a0db85bb695deaacc4e2dc2",
+    "semantic_hash": ""
+  },
+  "scripts/INSTAGRAM_MONITORING_GUIDE.md": {
+    "mtime": 1776353988.151491,
+    "ast_hash": "dbfe7abe187e1e7256c7230625cdd70b",
+    "semantic_hash": ""
+  },
+  "scripts/UAT_TESTING_PLAN.md": {
+    "mtime": 1776354019.6652741,
+    "ast_hash": "4ba7baf787ffcf1845dcd737c7fcca8e",
+    "semantic_hash": ""
+  },
+  "src/app/app.html": {
+    "mtime": 1781966590.2501614,
+    "ast_hash": "9f01e28b68eea383ea389ee94c55066e",
+    "semantic_hash": ""
+  },
+  "src/app/components/moderation-policy/moderation-policy.component.html": {
+    "mtime": 1767273544.0991824,
+    "ast_hash": "4f2d47cb873bb8ec97ec328c52094992",
+    "semantic_hash": ""
+  },
+  "src/app/pages/analytics/analytics.html": {
+    "mtime": 1774743848.703901,
+    "ast_hash": "05a6a7f3467f54a28e7e07aba2558d12",
+    "semantic_hash": ""
+  },
+  "src/app/pages/data-deletion/data-deletion.component.html": {
+    "mtime": 1767409746.2895763,
+    "ast_hash": "5baa437e785ccf2f514f771a525db9c0",
+    "semantic_hash": ""
+  },
+  "src/app/pages/features/features.component.html": {
+    "mtime": 1774488405.7372942,
+    "ast_hash": "72af1bb57142c991dcb2977ff6fba71d",
+    "semantic_hash": ""
+  },
+  "src/app/pages/privacy/privacy.component.html": {
+    "mtime": 1781965974.52461,
+    "ast_hash": "b078d98aa5d9bf55cfe020dd4b5a4845",
+    "semantic_hash": ""
+  },
+  "src/app/pages/safety-standards/safety-standards.component.html": {
+    "mtime": 1767447258.531357,
+    "ast_hash": "34a4fbc27058223bb70ec2fb5d7029c3",
+    "semantic_hash": ""
+  },
+  "src/app/pages/terms/terms.component.html": {
+    "mtime": 1781965620.3335693,
+    "ast_hash": "1b0e6251b0bb6567b0207a2c3fba23e0",
+    "semantic_hash": ""
+  },
+  "src/index.html": {
+    "mtime": 1780242909.955245,
+    "ast_hash": "0df98b1c2db7cc9db8051f4d75def80d",
+    "semantic_hash": ""
+  },
+  "src/robots.txt": {
+    "mtime": 1774755845.1012437,
+    "ast_hash": "05ae42eae6a99c5a2cff9c569daabc09",
+    "semantic_hash": ""
+  },
+  "public/android-chrome-192x192.png": {
+    "mtime": 1764027316.0031145,
+    "ast_hash": "b56cdfaca4ee72441afe2bb2063373b8",
+    "semantic_hash": ""
+  },
+  "public/android-chrome-512x512.png": {
+    "mtime": 1764027316.0341387,
+    "ast_hash": "694675111473199a0aa6b4e994f55e86",
+    "semantic_hash": ""
+  },
+  "public/app-store-badge.webp": {
+    "mtime": 1764027945.5677474,
+    "ast_hash": "ba72399e31746ad53d10f4b5453a59f9",
+    "semantic_hash": ""
+  },
+  "public/apple-touch-icon.png": {
+    "mtime": 1764027315.9755204,
+    "ast_hash": "1d5364a06cf7f59615387ae94ed02438",
+    "semantic_hash": ""
+  },
+  "public/break-ice-en.png": {
+    "mtime": 1780179827.0778136,
+    "ast_hash": "1a9190057698ae12d08dae4cdd2f0e24",
+    "semantic_hash": ""
+  },
+  "public/break-ice-es.png": {
+    "mtime": 1780179827.8742754,
+    "ast_hash": "0bb08fad3a42df2f7b4f6429feeef4bc",
+    "semantic_hash": ""
+  },
+  "public/coachIA-conversation-en.jpeg": {
+    "mtime": 1774900714.506438,
+    "ast_hash": "d3b128d1b97e43e1fe98f3e20e971fb3",
+    "semantic_hash": ""
+  },
+  "public/coachIA-conversation-es.png": {
+    "mtime": 1780179828.3525584,
+    "ast_hash": "9ed38e3d73538361183d2b831294a4d5",
+    "semantic_hash": ""
+  },
+  "public/coachIA-en.png": {
+    "mtime": 1780179828.9825313,
+    "ast_hash": "167de199a18d707c70cadeb3bf5821ba",
+    "semantic_hash": ""
+  },
+  "public/coachIA-es.png": {
+    "mtime": 1780179829.653756,
+    "ast_hash": "019577ace4c0eb209852760cae6cf6a6",
+    "semantic_hash": ""
+  },
+  "public/coachIA-photo-en.jpeg": {
+    "mtime": 1774877235.77578,
+    "ast_hash": "d2714c20f073267cc3be091bd06ecb9a",
+    "semantic_hash": ""
+  },
+  "public/coachIA-photo-es.jpeg": {
+    "mtime": 1774878030.498964,
+    "ast_hash": "a7051a59adfec774873da2a2bbe12462",
+    "semantic_hash": ""
+  },
+  "public/coachIA-simulate-en.png": {
+    "mtime": 1780179830.147891,
+    "ast_hash": "485ac2225539f9de5d7bbe1278d27621",
+    "semantic_hash": ""
+  },
+  "public/coachIA-simulate-es.png": {
+    "mtime": 1780179830.694862,
+    "ast_hash": "2602b55efbdd00cbd6eb71a258390c2f",
+    "semantic_hash": ""
+  },
+  "public/discovery-en.png": {
+    "mtime": 1780179831.2791338,
+    "ast_hash": "9927bf328f5792ee3e3a2294f8412697",
+    "semantic_hash": ""
+  },
+  "public/discovery-es.png": {
+    "mtime": 1780179832.2427967,
+    "ast_hash": "bfcceb1aa01a8edd0d0faa2806e9ac8e",
+    "semantic_hash": ""
+  },
+  "public/favicon-16x16.png": {
+    "mtime": 1764027315.9209332,
+    "ast_hash": "11741b02c71a0d236a3d4b2dc1f8b78e",
+    "semantic_hash": ""
+  },
+  "public/favicon-32x32.png": {
+    "mtime": 1764027315.947735,
+    "ast_hash": "2f443d59a6ccc013abd841e101ee8c54",
+    "semantic_hash": ""
+  },
+  "public/google-play-badge.webp": {
+    "mtime": 1764027945.5702868,
+    "ast_hash": "4ab4776317d0f46d4518a6b1bd02baa7",
+    "semantic_hash": ""
+  },
+  "public/logo-21.png": {
+    "mtime": 1780179832.2965014,
+    "ast_hash": "418786d8085123ce646da3e7c52ccdbf",
+    "semantic_hash": ""
+  },
+  "public/og-image.png": {
+    "mtime": 1775826402.531987,
+    "ast_hash": "56dff011be333307979637389bbe17d2",
+    "semantic_hash": ""
+  },
+  "public/places-coach-en.png": {
+    "mtime": 1780179832.7971034,
+    "ast_hash": "b009d8692a2188f4fca23c58f4663c22",
+    "semantic_hash": ""
+  },
+  "public/places-coach-es.png": {
+    "mtime": 1780179833.4099138,
+    "ast_hash": "74fbdc1e7c996eab7aea2bce2b62c19a",
+    "semantic_hash": ""
+  },
+  "public/planning-en.jpg": {
+    "mtime": 1780179833.5946283,
+    "ast_hash": "ca8c22f448155cf75df1254abe6aaefa",
+    "semantic_hash": ""
+  },
+  "public/planning-es.png": {
+    "mtime": 1780179834.257371,
+    "ast_hash": "6b69244df2cda2a1f0fa123ad43e8748",
+    "semantic_hash": ""
+  }
+}
