@@ -140,8 +140,15 @@ const I18N: Record<string, any> = {
       <section class="cw-panel" role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
-            <div><b>{{ t().title }}</b><span class="cw-demo">{{ t().demo }}</span></div></div>
-          <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
+            <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? (lang()==='en' ? 'Connected' : 'Conectado') : t().demo }}</span></div></div>
+          <div class="cw-head-r">
+            @if (user(); as u) {
+              <button class="cw-avatar" (click)="signOut()" [title]="(lang()==='en' ? 'Sign out' : 'Cerrar sesión') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
+            } @else {
+              <button class="cw-signin" (click)="signIn()">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
+            }
+            <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
+          </div>
         </header>
 
         <div class="cw-body" #body>
@@ -421,6 +428,10 @@ const I18N: Record<string, any> = {
     .cw-id { display:flex; align-items:center; gap:10px; } .cw-id .cw-spark { color:var(--cw-gold); font-size:20px; filter:drop-shadow(0 0 8px rgba(212,175,55,.5)); }
     .cw-id b { display:block; font-size:15px; color:var(--cw-text); }
     .cw-demo { font-size:10.5px; color:var(--cw-gold); border:1px solid rgba(212,175,55,.4); border-radius:999px; padding:1px 7px; display:inline-block; margin-top:2px; }
+    .cw-head-r { display:flex; align-items:center; gap:8px; }
+    .cw-signin { background:transparent; border:1px solid rgba(212,175,55,.5); color:var(--cw-gold); border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+    .cw-signin:hover { background:rgba(212,175,55,.1); }
+    .cw-avatar { width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,175,55,.6); background:rgba(212,175,55,.12); color:var(--cw-gold); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
@@ -874,18 +885,54 @@ export class CoachWidgetComponent {
     await this.ask({ message: this.lastUserMsg, ...extra });
   }
 
+  // R64: logged-in web users (optional sign-in) get the authenticated coach.
+  get user() { return this.firebase.currentUser; }
+  async signIn() { try { await this.firebase.signInWithGoogle(); } catch { /* user cancelled */ } }
+  async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } }
+  initial(u: { displayName?: string | null; email?: string | null } | null): string {
+    const n = (u?.displayName || u?.email || '?').trim();
+    return (n.charAt(0) || '?').toUpperCase();
+  }
+  /** Map the authenticated dateCoachChat response into the widget's render model (places/phrases). */
+  private mapAuthCoachResponse(r: any): any {
+    const acts = Array.isArray(r?.activitySuggestions) ? r.activitySuggestions : [];
+    const places = acts.map((a: any) => ({
+      name: a.title || a.name || '', address: a.address || '', rating: typeof a.rating === 'number' ? a.rating : null,
+      mapsUrl: a.googleMapsUrl || '', why: a.psychWhy || null,
+      perspectives: Array.isArray(a.psychPerspectives) ? a.psychPerspectives : [],
+      score: typeof a.psychFit === 'number' ? a.psychFit : null, tip: a.psychTip || null,
+    })).filter((p: any) => p.name);
+    const suggestions = Array.isArray(r?.suggestions) ? r.suggestions.filter((s: any) => typeof s === 'string' && s.trim()) : [];
+    return {
+      reply: (r && typeof r.reply === 'string') ? r.reply : '',
+      places: places.length ? places : undefined,
+      phrases: (!places.length && suggestions.length) ? suggestions : undefined,
+    };
+  }
+
   private async ask(payload: { message: string; lat?: number; lng?: number; city?: string }) {
     this.busy.set(true);
     if (!this.thinking()) { this.thinkingLabel.set(this.t().thinking); }
     this.thinking.set(true); this.scroll();
     try {
-      const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
-      const res = await fetch(ENDPOINT, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        // R37/R45: send venues + phrases already shown so the panel returns OTHERS on re-press (no repeats).
-        body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId, exclude: [...this.shownPlaces], excludePhrases: [...this.shownPhrases] }),
-      });
-      const data = await res.json().catch(() => ({}));
+      let data: any = null;
+      if (this.user()) {
+        // R64: logged-in → the SAME authenticated coach as the apps (persists + feeds the agent).
+        try {
+          const r = await this.firebase.coachChat({ message: payload.message, userLanguage: this.coachLang(), city: payload.city || undefined });
+          const mapped = this.mapAuthCoachResponse(r);
+          if (mapped.reply || mapped.places || mapped.phrases) data = mapped;
+        } catch { /* e.g. web-only account without a profile → fall back to the demo coach */ }
+      }
+      if (data === null) {
+        const history = this.messages().filter((m) => !m.places && !m.phrases).slice(-8).map((m) => ({ role: m.role, text: m.text }));
+        const res = await fetch(ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          // R37/R45: send venues + phrases already shown so the panel returns OTHERS on re-press (no repeats).
+          body: JSON.stringify({ ...payload, userLanguage: this.coachLang(), history, sessionId: this.sessionId, exclude: [...this.shownPlaces], excludePhrases: [...this.shownPhrases] }),
+        });
+        data = await res.json().catch(() => ({}));
+      }
       this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
       if (typeof data?.appCta === 'boolean') this.appCtaEnabled.set(data.appCta); // RC: app-store CTA + funnel
       if (data?.places?.length) {

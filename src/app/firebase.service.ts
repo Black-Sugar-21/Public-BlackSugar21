@@ -36,6 +36,11 @@ import {
   logEvent as firebaseLogEvent,
   Analytics
 } from 'firebase/analytics';
+import {
+  getFunctions,
+  httpsCallable,
+  Functions
+} from 'firebase/functions';
 import { firebaseConfig, recaptchaSiteKey } from './firebase.config';
 import { signal } from '@angular/core';
 
@@ -61,6 +66,7 @@ export class FirebaseService {
   private db: Firestore;
   private remoteConfig: RemoteConfig;
   private analytics: Analytics;
+  private functions: Functions;
 
   currentUser = signal<User | null>(null);
   userProfile = signal<UserProfile | null>(null);
@@ -71,6 +77,7 @@ export class FirebaseService {
     this.db = getFirestore(this.app);
     this.remoteConfig = getRemoteConfig(this.app);
     this.analytics = getAnalytics(this.app);
+    this.functions = getFunctions(this.app, 'us-central1');
 
     // Configurar intervalo de actualización (en desarrollo puede ser bajo)
     this.remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hora
@@ -263,6 +270,15 @@ export class FirebaseService {
       console.error('Error fetching minimum_age_by_country:', error);
     }
     return { default: 18 };
+  }
+
+  // R64: authenticated coach chat for logged-in web users — calls the SAME dateCoachChat callable
+  // as the apps (auth + App Check attached automatically), so the web conversation persists to the
+  // user's profile + coach memory + personal agent. Anonymous visitors keep the demo endpoints.
+  async coachChat(data: Record<string, unknown>): Promise<any> {
+    const fn = httpsCallable(this.functions, 'dateCoachChat');
+    const res = await fn(data);
+    return res.data;
   }
 
   // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
