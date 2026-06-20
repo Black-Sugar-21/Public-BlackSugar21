@@ -265,6 +265,21 @@ export class FirebaseService {
     return { default: 18 };
   }
 
+  // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
+  async getCoachPlannerConfig(): Promise<any | null> {
+    try {
+      await fetchAndActivate(this.remoteConfig);
+      const raw = getString(this.remoteConfig, 'coach_planner_config');
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        return cfg && cfg.enabled === false ? null : cfg;
+      }
+    } catch (error) {
+      console.warn('Error fetching coach_planner_config:', error);
+    }
+    return null;
+  }
+
   // Store Links
   async getStoreLinks(): Promise<{ ios: string; android: string }> {
     try {

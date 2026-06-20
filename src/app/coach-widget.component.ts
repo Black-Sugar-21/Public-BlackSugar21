@@ -326,11 +326,11 @@ const I18N: Record<string, any> = {
             </div>
             <!-- Date planner: pick a venue type. The one fitting the current hour is marked "suggested". -->
             <div class="cw-plan">
-              <span class="cw-plan-h">{{ t().planLabel }}</span>
+              <span class="cw-plan-h">{{ planLabelText() }}</span>
               <div class="cw-plan-cats">
-                @for (cat of t().placeCats; track cat.key) {
+                @for (cat of planCats(); track cat.key) {
                   <button class="cw-cat" [class.sug]="cat.key === suggestedCat()" (click)="askPlaces(cat.q, cat.t)">
-                    {{ cat.t }}@if (cat.key === suggestedCat()) { <span class="cw-cat-sug">{{ t().suggested }}</span> }
+                    {{ cat.t }}@if (cat.key === suggestedCat()) { <span class="cw-cat-sug">{{ suggestedNowText() }}</span> }
                   </button>
                 }
               </div>
@@ -641,9 +641,40 @@ export class CoachWidgetComponent {
   readonly freeLeft = computed(() => Math.max(0, FREE_TASTE - this.coachReplies()));
   // Time-aware date-place suggestion: highlight the category that fits the current local hour
   // (morning→café, day→restaurant, evening→bar, late-night→club) using the app's venue categories.
+  // R62: date-planner config from Remote Config (coach_planner_config) — single source shared with
+  // iOS/Android. Falls back to the i18n placeCats when RC is unavailable. NOT hardcoded.
+  readonly rcPlanner = signal<any | null>(null);
+  readonly planCats = computed(() => {
+    const rc = this.rcPlanner(); const lang = this.lang();
+    if (rc?.categories?.length) {
+      return rc.categories.map((c: any) => ({
+        key: c.key,
+        t: (c.emoji ? c.emoji + ' ' : '') + (c.label?.[lang] || c.label?.['en'] || c.key),
+        q: c.query?.[lang] || c.query?.['en'] || '',
+      }));
+    }
+    return this.t().placeCats;
+  });
+  readonly planLabelText = computed(() => {
+    const rc = this.rcPlanner(); const lang = this.lang();
+    return (rc?.planLabel?.[lang] || rc?.planLabel?.['en']) || this.t().planLabel;
+  });
+  readonly suggestedNowText = computed(() => {
+    const rc = this.rcPlanner(); const lang = this.lang();
+    return (rc?.suggestedNow?.[lang] || rc?.suggestedNow?.['en']) || this.t().suggested;
+  });
   readonly suggestedCat = computed(() => {
     void this.lang(); // re-evaluate on language change
     const h = this.isBrowser ? new Date().getHours() : 13;
+    const rc = this.rcPlanner();
+    if (rc?.categories?.length) {
+      const hit = rc.categories.find((c: any) => {
+        if (!Array.isArray(c.hours) || c.hours.length !== 2) return false;
+        const [s, e] = c.hours;
+        return s <= e ? (h >= s && h < e) : (h >= s || h < e);
+      });
+      if (hit) return hit.key;
+    }
     if (h >= 5 && h < 12) return 'cafe';
     if (h >= 12 && h < 18) return 'restaurant';
     if (h >= 18 && h < 23) return 'bar';
@@ -674,6 +705,8 @@ export class CoachWidgetComponent {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
+      // R62: load the RC date-planner config once (single source shared with the apps).
+      this.firebase.getCoachPlannerConfig().then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
       // Open from the hero CTA (or any "Talk to the Coach" button on the page).
       window.addEventListener('open-coach', () => {
         if (!this.open()) {
