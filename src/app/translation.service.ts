@@ -113,12 +113,18 @@ export class TranslationService {
     'hero.tryCoach': {
       es: 'Conversa con tu Coach IA',
       pt: 'Converse com seu Coach IA',
-      en: 'Talk with your AI Coach'
+      en: 'Talk with your AI Coach',
+      fr: 'Discute avec ton Coach IA', de: 'Sprich mit deinem KI-Coach', it: 'Parla con il tuo Coach IA',
+      zh: '与你的 AI 教练聊聊', ja: 'AIコーチと話す', ko: 'AI 코치와 대화하기', ru: 'Поговори с ИИ-коучем',
+      ar: 'تحدّث مع كوتش الذكاء الاصطناعي', id: 'Ngobrol dengan Coach AI', tr: "AI Koçunla konuş"
     },
     'hero.alsoOn': {
       es: 'También en la app',
       pt: 'Também no app',
-      en: 'Also on the app'
+      en: 'Also on the app',
+      fr: "Aussi sur l'app", de: 'Auch in der App', it: "Anche nell'app",
+      zh: '也在应用中', ja: 'アプリでも', ko: '앱에서도', ru: 'Также в приложении',
+      ar: 'متوفر أيضًا في التطبيق', id: 'Juga di aplikasi', tr: 'Uygulamada da'
     },
 
     // Features Section
@@ -599,12 +605,32 @@ export class TranslationService {
     'terms.ai': {
       es: 'Este sitio y la app usan inteligencia artificial (IA) para generar sugerencias, frases y recomendaciones, y para moderar contenido. Las respuestas son generadas por IA y pueden ser imprecisas o incompletas: úsalas con criterio.',
       pt: 'Este site e o app usam inteligência artificial (IA) para gerar sugestões, frases e recomendações, e para moderar conteúdo. As respostas são geradas por IA e podem ser imprecisas ou incompletas — use-as com critério.',
-      en: 'This website and app use artificial intelligence (AI) to generate suggestions, phrases and recommendations, and to moderate content. Responses are AI-generated and may be inaccurate or incomplete — use them with discretion.'
+      en: 'This website and app use artificial intelligence (AI) to generate suggestions, phrases and recommendations, and to moderate content. Responses are AI-generated and may be inaccurate or incomplete — use them with discretion.',
+      fr: "Ce site et l'application utilisent l'intelligence artificielle (IA) pour générer des suggestions, des phrases et des recommandations, et pour modérer le contenu. Les réponses sont générées par IA et peuvent être inexactes ou incomplètes — utilisez-les avec discernement.",
+      de: "Diese Website und App nutzen künstliche Intelligenz (KI), um Vorschläge, Sätze und Empfehlungen zu erstellen und Inhalte zu moderieren. Die Antworten werden von KI generiert und können ungenau oder unvollständig sein – nutze sie mit Bedacht.",
+      it: "Questo sito e l'app usano l'intelligenza artificiale (IA) per generare suggerimenti, frasi e raccomandazioni e per moderare i contenuti. Le risposte sono generate dall'IA e possono essere imprecise o incomplete: usale con criterio.",
+      zh: "本网站和应用使用人工智能（AI）生成建议、文案和推荐，并对内容进行审核。回复由 AI 生成，可能不准确或不完整——请谨慎使用。",
+      ja: "本サイトとアプリは、提案・メッセージ・おすすめの生成やコンテンツのモデレーションに人工知能（AI）を使用します。回答はAIによって生成され、不正確または不完全な場合があります。ご自身の判断でご利用ください。",
+      ko: "본 사이트와 앱은 제안·문구·추천 생성과 콘텐츠 검수를 위해 인공지능(AI)을 사용합니다. 답변은 AI가 생성하며 부정확하거나 불완전할 수 있으니 신중하게 활용하세요.",
+      ru: "Этот сайт и приложение используют искусственный интеллект (ИИ) для генерации подсказок, фраз и рекомендаций, а также для модерации контента. Ответы создаются ИИ и могут быть неточными или неполными — используйте их обдуманно.",
+      ar: "يستخدم هذا الموقع والتطبيق الذكاء الاصطناعي (AI) لإنشاء الاقتراحات والعبارات والتوصيات ولمراجعة المحتوى. تُنشأ الردود بواسطة الذكاء الاصطناعي وقد تكون غير دقيقة أو غير مكتملة — استخدمها بحكمة.",
+      id: "Situs dan aplikasi ini menggunakan kecerdasan buatan (AI) untuk membuat saran, kalimat, dan rekomendasi, serta untuk memoderasi konten. Respons dihasilkan oleh AI dan bisa tidak akurat atau tidak lengkap — gunakan dengan bijak.",
+      tr: "Bu site ve uygulama; öneri, mesaj ve tavsiyeler oluşturmak ve içeriği denetlemek için yapay zeka (YZ) kullanır. Yanıtlar YZ tarafından üretilir ve hatalı veya eksik olabilir — dikkatle kullanın."
     },
     'terms.userResponsibility': {
       es: 'Eres el único responsable de la información, fotos y contenido que envías, y del uso que hagas de las sugerencias de la IA. Aunque moderamos y arbitramos el contenido, esto no traslada esa responsabilidad: Black Sugar 21 no se hace responsable del contenido subido por los usuarios ni de las decisiones tomadas a partir de las sugerencias de la IA.',
       pt: 'Você é o único responsável pelas informações, fotos e conteúdo que envia, e pelo uso que faz das sugestões da IA. Embora moderemos e arbitremos o conteúdo, isso não transfere essa responsabilidade: a Black Sugar 21 não se responsabiliza pelo conteúdo enviado pelos usuários nem pelas decisões tomadas com base nas sugestões da IA.',
-      en: 'You are solely responsible for the information, photos and content you submit, and for how you use the AI suggestions. While we moderate and arbitrate content, this does not transfer that responsibility: Black Sugar 21 is not liable for user-submitted content or for decisions made based on AI suggestions.'
+      en: 'You are solely responsible for the information, photos and content you submit, and for how you use the AI suggestions. While we moderate and arbitrate content, this does not transfer that responsibility: Black Sugar 21 is not liable for user-submitted content or for decisions made based on AI suggestions.',
+      fr: "Vous êtes seul responsable des informations, photos et contenus que vous soumettez, ainsi que de l'usage que vous faites des suggestions de l'IA. Bien que nous modérions et arbitrions le contenu, cela ne transfère pas cette responsabilité : Black Sugar 21 n'est pas responsable du contenu soumis par les utilisateurs ni des décisions prises sur la base des suggestions de l'IA.",
+      de: "Du bist allein verantwortlich für die Informationen, Fotos und Inhalte, die du übermittelst, sowie für die Nutzung der KI-Vorschläge. Obwohl wir Inhalte moderieren und schlichten, überträgt dies diese Verantwortung nicht: Black Sugar 21 haftet nicht für von Nutzern eingereichte Inhalte oder für Entscheidungen auf Basis der KI-Vorschläge.",
+      it: "Sei l'unico responsabile delle informazioni, foto e contenuti che invii e dell'uso che fai dei suggerimenti dell'IA. Pur moderando e arbitrando i contenuti, ciò non trasferisce tale responsabilità: Black Sugar 21 non è responsabile dei contenuti inviati dagli utenti né delle decisioni prese in base ai suggerimenti dell'IA.",
+      zh: "您对所提交的信息、照片和内容，以及对 AI 建议的使用，负有唯一责任。尽管我们会审核和仲裁内容，但这并不转移该责任：Black Sugar 21 不对用户提交的内容或基于 AI 建议所做的决定负责。",
+      ja: "送信する情報・写真・コンテンツ、およびAIの提案の利用について、あなたが単独で責任を負います。当社はコンテンツのモデレーションと仲裁を行いますが、それによってこの責任は移転しません。Black Sugar 21 は、ユーザーが投稿したコンテンツやAIの提案に基づく判断について責任を負いません。",
+      ko: "제출하는 정보·사진·콘텐츠와 AI 제안의 사용에 대한 책임은 전적으로 귀하에게 있습니다. 당사가 콘텐츠를 검수·중재하더라도 그 책임이 이전되지는 않습니다. Black Sugar 21은 사용자가 올린 콘텐츠나 AI 제안에 따른 결정에 대해 책임지지 않습니다.",
+      ru: "Вы несёте единоличную ответственность за информацию, фотографии и контент, который отправляете, а также за использование подсказок ИИ. Хотя мы модерируем и арбитрируем контент, это не снимает с вас этой ответственности: Black Sugar 21 не несёт ответственности за пользовательский контент и за решения, принятые на основе подсказок ИИ.",
+      ar: "أنت وحدك المسؤول عن المعلومات والصور والمحتوى الذي ترسله، وعن استخدامك لاقتراحات الذكاء الاصطناعي. ورغم أننا نراجع المحتوى ونحكّم فيه، فإن ذلك لا ينقل هذه المسؤولية: لا تتحمل Black Sugar 21 مسؤولية المحتوى الذي يرسله المستخدمون ولا القرارات المتخذة بناءً على اقتراحات الذكاء الاصطناعي.",
+      id: "Anda sepenuhnya bertanggung jawab atas informasi, foto, dan konten yang Anda kirim, serta atas penggunaan saran AI. Meskipun kami memoderasi dan menengahi konten, hal itu tidak mengalihkan tanggung jawab tersebut: Black Sugar 21 tidak bertanggung jawab atas konten yang dikirim pengguna maupun keputusan yang diambil berdasarkan saran AI.",
+      tr: "Gönderdiğiniz bilgi, fotoğraf ve içerikten ve YZ önerilerini kullanımınızdan yalnızca siz sorumlusunuz. İçeriği denetleyip hakemlik yapsak da bu, söz konusu sorumluluğu devretmez: Black Sugar 21, kullanıcıların gönderdiği içerikten veya YZ önerilerine dayanarak alınan kararlardan sorumlu değildir."
     },
     'terms.violation': {
       es: 'Los mensajes y fotos son revisados automáticamente por IA para garantizar un entorno seguro. El incumplimiento de estas normas puede resultar en la suspensión permanente de la cuenta.',
@@ -656,12 +682,48 @@ export class TranslationService {
     'privacy.ai': {
       es: 'Inteligencia artificial',
       pt: 'Inteligência artificial',
-      en: 'Artificial intelligence'
+      en: 'Artificial intelligence',
+      fr: 'Intelligence artificielle', de: 'Künstliche Intelligenz', it: 'Intelligenza artificiale',
+      zh: '人工智能', ja: '人工知能', ko: '인공지능', ru: 'Искусственный интеллект',
+      ar: 'الذكاء الاصطناعي', id: 'Kecerdasan buatan', tr: 'Yapay zeka'
     },
     'privacy.aiText': {
       es: 'El Coach IA procesa los mensajes y datos que escribes mediante proveedores de inteligencia artificial (como Google Gemini) para generar respuestas y sugerencias. No compartas información sensible que no quieras que sea procesada. El contenido que envías es de tu responsabilidad.',
       pt: 'O Coach IA processa as mensagens e dados que você escreve por meio de provedores de inteligência artificial (como o Google Gemini) para gerar respostas e sugestões. Não compartilhe informações sensíveis que não queira que sejam processadas. O conteúdo que você envia é de sua responsabilidade.',
-      en: 'The AI Coach processes the messages and data you enter through artificial-intelligence providers (such as Google Gemini) to generate responses and suggestions. Do not share sensitive information you do not want processed. The content you submit is your responsibility.'
+      en: 'The AI Coach processes the messages and data you enter through artificial-intelligence providers (such as Google Gemini) to generate responses and suggestions. Do not share sensitive information you do not want processed. The content you submit is your responsibility.',
+      fr: "Le Coach IA traite les messages et données que vous saisissez via des fournisseurs d'IA (comme Google Gemini) pour générer des réponses et des suggestions. Ne partagez pas d'informations sensibles que vous ne souhaitez pas voir traitées. Le contenu que vous envoyez relève de votre responsabilité.",
+      de: "Der KI-Coach verarbeitet die von dir eingegebenen Nachrichten und Daten über KI-Anbieter (wie Google Gemini), um Antworten und Vorschläge zu erstellen. Teile keine sensiblen Informationen, die nicht verarbeitet werden sollen. Der von dir gesendete Inhalt liegt in deiner Verantwortung.",
+      it: "Il Coach IA elabora i messaggi e i dati che inserisci tramite fornitori di IA (come Google Gemini) per generare risposte e suggerimenti. Non condividere informazioni sensibili che non vuoi vengano elaborate. Il contenuto che invii è di tua responsabilità.",
+      zh: "AI 教练通过 AI 提供商（如 Google Gemini）处理您输入的消息和数据，以生成回复和建议。请勿分享您不希望被处理的敏感信息。您提交的内容由您自行负责。",
+      ja: "AIコーチは、入力されたメッセージやデータをAIプロバイダー（Google Geminiなど）を通じて処理し、回答や提案を生成します。処理されたくない機微な情報は共有しないでください。送信するコンテンツはご自身の責任です。",
+      ko: "AI 코치는 입력한 메시지와 데이터를 AI 제공업체(예: Google Gemini)를 통해 처리하여 답변과 제안을 생성합니다. 처리되길 원치 않는 민감한 정보는 공유하지 마세요. 보내는 콘텐츠는 본인의 책임입니다.",
+      ru: "ИИ-коуч обрабатывает вводимые вами сообщения и данные через поставщиков ИИ (например, Google Gemini) для генерации ответов и подсказок. Не делитесь конфиденциальной информацией, которую не хотите обрабатывать. Отправляемый вами контент — ваша ответственность.",
+      ar: "يعالج كوتش الذكاء الاصطناعي الرسائل والبيانات التي تكتبها عبر مزوّدي الذكاء الاصطناعي (مثل Google Gemini) لإنشاء الردود والاقتراحات. لا تشارك معلومات حساسة لا ترغب في معالجتها. المحتوى الذي ترسله هو مسؤوليتك.",
+      id: "Coach AI memproses pesan dan data yang Anda masukkan melalui penyedia AI (seperti Google Gemini) untuk menghasilkan respons dan saran. Jangan bagikan informasi sensitif yang tidak ingin diproses. Konten yang Anda kirim menjadi tanggung jawab Anda.",
+      tr: "AI Koç, girdiğiniz mesaj ve verileri yanıt ve öneri üretmek için yapay zeka sağlayıcıları (Google Gemini gibi) aracılığıyla işler. İşlenmesini istemediğiniz hassas bilgileri paylaşmayın. Gönderdiğiniz içerik sizin sorumluluğunuzdadır."
+    },
+    'privacy.analytics': {
+      es: 'Analítica y mejora de la experiencia',
+      pt: 'Análises e melhoria da experiência',
+      en: 'Analytics and experience improvement',
+      fr: "Analyses et amélioration de l'expérience", de: 'Analysen und Verbesserung der Erfahrung', it: "Analisi e miglioramento dell'esperienza",
+      zh: '分析与体验改进', ja: '分析と体験の改善', ko: '분석 및 경험 개선', ru: 'Аналитика и улучшение опыта',
+      ar: 'التحليلات وتحسين التجربة', id: 'Analitik dan peningkatan pengalaman', tr: 'Analitik ve deneyim iyileştirme'
+    },
+    'privacy.analyticsText': {
+      es: 'Usamos herramientas de analítica (como Google Analytics/Firebase) para entender de forma agregada y anónima cómo se usa el sitio y la app, y así mejorar la experiencia. Estos datos no se usan para identificarte personalmente.',
+      pt: 'Usamos ferramentas de análise (como Google Analytics/Firebase) para entender de forma agregada e anônima como o site e o app são usados e, assim, melhorar a experiência. Esses dados não são usados para identificá-lo pessoalmente.',
+      en: 'We use analytics tools (such as Google Analytics/Firebase) to understand, in an aggregated and anonymous way, how the site and app are used so we can improve the experience. This data is not used to personally identify you.',
+      fr: "Nous utilisons des outils d'analyse (comme Google Analytics/Firebase) pour comprendre, de manière agrégée et anonyme, comment le site et l'application sont utilisés afin d'améliorer l'expérience. Ces données ne servent pas à vous identifier personnellement.",
+      de: "Wir verwenden Analysetools (wie Google Analytics/Firebase), um aggregiert und anonym zu verstehen, wie Website und App genutzt werden, und so die Erfahrung zu verbessern. Diese Daten werden nicht verwendet, um dich persönlich zu identifizieren.",
+      it: "Usiamo strumenti di analisi (come Google Analytics/Firebase) per capire, in modo aggregato e anonimo, come vengono usati il sito e l'app e migliorare così l'esperienza. Questi dati non vengono usati per identificarti personalmente.",
+      zh: "我们使用分析工具（如 Google Analytics/Firebase）以汇总和匿名的方式了解网站和应用的使用情况，从而改善体验。这些数据不会用于识别您的个人身份。",
+      ja: "当社は分析ツール（Google Analytics/Firebaseなど）を使用し、サイトやアプリの利用状況を集計・匿名の形で把握し、体験の改善に役立てます。これらのデータは個人を特定する目的では使用しません。",
+      ko: "당사는 분석 도구(예: Google Analytics/Firebase)를 사용해 사이트와 앱의 사용 방식을 집계·익명 형태로 파악하여 경험을 개선합니다. 이 데이터는 개인을 식별하는 데 사용되지 않습니다.",
+      ru: "Мы используем инструменты аналитики (такие как Google Analytics/Firebase), чтобы в обобщённом и анонимном виде понимать, как используются сайт и приложение, и улучшать опыт. Эти данные не используются для вашей персональной идентификации.",
+      ar: "نستخدم أدوات تحليلية (مثل Google Analytics/Firebase) لفهم كيفية استخدام الموقع والتطبيق بشكل مجمّع ومجهول الهوية، وذلك لتحسين التجربة. لا تُستخدم هذه البيانات للتعرّف عليك شخصيًا.",
+      id: "Kami menggunakan alat analitik (seperti Google Analytics/Firebase) untuk memahami secara agregat dan anonim bagaimana situs dan aplikasi digunakan, sehingga kami dapat meningkatkan pengalaman. Data ini tidak digunakan untuk mengidentifikasi Anda secara pribadi.",
+      tr: "Siteyi ve uygulamayı nasıl kullandığınızı toplu ve anonim biçimde anlayıp deneyimi iyileştirmek için analiz araçları (Google Analytics/Firebase gibi) kullanırız. Bu veriler sizi kişisel olarak tanımlamak için kullanılmaz."
     },
 
     // Data Deletion
