@@ -373,7 +373,7 @@ const I18N: Record<string, any> = {
             }
           </div>
         }
-        @if (!showCta()) {
+        @if (appCtaEnabled() && !showCta()) {
           <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : t().taste2 }}</div>
         }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
@@ -606,6 +606,9 @@ export class CoachWidgetComponent {
   draft = '';
   cityDraft = '';
   private readonly coachReplies = signal(0); // reactive so the free-taste counter + CTA update live
+  // R50: app-store CTA + free-taste funnel are OFF until the apps are approved. Backend sends `appCta`
+  // (RC flag coach_demo_app_cta, default false) → both stay hidden until flipped on in Remote Config.
+  readonly appCtaEnabled = signal(false);
   private lastCoachText = '';
   private lastUserMsg = '';
   private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
@@ -634,7 +637,7 @@ export class CoachWidgetComponent {
   // Free "taste" of the coach before nudging to the app. Generous: we never block — after FREE_TASTE
   // replies we show the download CTA, but the visitor can keep asking (the per-IP/hour backstop only
   // guards against abuse). The counter is a soft, attractive nudge.
-  readonly showCta = computed(() => this.coachReplies() >= FREE_TASTE);
+  readonly showCta = computed(() => this.appCtaEnabled() && this.coachReplies() >= FREE_TASTE);
   readonly freeLeft = computed(() => Math.max(0, FREE_TASTE - this.coachReplies()));
   // Time-aware date-place suggestion: highlight the category that fits the current local hour
   // (morning→café, day→restaurant, evening→bar, late-night→club) using the app's venue categories.
@@ -851,6 +854,7 @@ export class CoachWidgetComponent {
       });
       const data = await res.json().catch(() => ({}));
       this.thinking.set(false); // response arrived → hide the loader before rendering/typewriter
+      if (typeof data?.appCta === 'boolean') this.appCtaEnabled.set(data.appCta); // RC: app-store CTA + funnel
       if (data?.places?.length) {
         if (data?.exhausted) this.shownPlaces.clear(); // saw everything nearby → recycle next time
         for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); }
