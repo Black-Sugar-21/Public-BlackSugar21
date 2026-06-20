@@ -145,26 +145,56 @@ const I18N: Record<string, any> = {
             @if (user(); as u) {
               <button class="cw-avatar" (click)="signOut()" [title]="(lang()==='en' ? 'Sign out' : 'Cerrar sesión') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
-              <button class="cw-signin" (click)="loginOpen.set(true)">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
+              <button class="cw-signin" (click)="openLogin()">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
             }
             <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
           </div>
         </header>
 
         @if (loginOpen()) {
-          <div class="cw-login-ov" (click)="loginOpen.set(false)"></div>
-          <div class="cw-login" role="dialog">
-            <button class="cw-login-x" (click)="loginOpen.set(false)" aria-label="Cerrar">✕</button>
+          <div class="cw-login-ov" (click)="closeLogin()"></div>
+          <div class="cw-login" role="dialog" aria-modal="true">
+            <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
             <h3 class="cw-login-t">{{ lang()==='en' ? 'Sign in or sign up' : lang()==='pt' ? 'Entrar ou cadastrar-se' : 'Iniciar sesión o registrarse' }}</h3>
             <p class="cw-login-s">{{ lang()==='en' ? 'Smarter answers, your history saved, and matches aligned with your profile.' : lang()==='pt' ? 'Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.' : 'Respuestas más inteligentes, tu historial guardado y matches alineados a tu perfil.' }}</p>
-            <button class="cw-prov" (click)="signInGoogle()">
-              <span class="cw-prov-i">G</span> {{ lang()==='en' ? 'Continue with Google' : lang()==='pt' ? 'Continuar com Google' : 'Continuar con Google' }}
-            </button>
-            @if (appleDevice) {
-              <button class="cw-prov" (click)="signInApple()">
-                <span class="cw-prov-i"></span> {{ lang()==='en' ? 'Continue with Apple' : lang()==='pt' ? 'Continuar com Apple' : 'Continuar con Apple' }}
+
+            @if (loginStep() === 'choose') {
+              <button class="cw-prov" (click)="signInGoogle()">
+                <svg class="cw-prov-i" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.98 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+                {{ lang()==='en' ? 'Continue with Google' : lang()==='pt' ? 'Continuar com Google' : 'Continuar con Google' }}
+              </button>
+              @if (appleDevice) {
+                <button class="cw-prov cw-prov-apple" (click)="signInApple()">
+                  <svg class="cw-prov-i" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M11.18 8.46c-.02-1.7 1.39-2.52 1.45-2.56-.79-1.16-2.02-1.32-2.46-1.34-1.05-.1-2.04.61-2.57.61-.53 0-1.35-.6-2.22-.58-1.14.02-2.19.66-2.78 1.68-1.18 2.05-.3 5.08.85 6.74.56.81 1.23 1.72 2.1 1.69.84-.03 1.16-.54 2.18-.54s1.3.54 2.19.52c.9-.01 1.48-.83 2.03-1.64.64-.94.9-1.85.92-1.9-.02-.01-1.76-.68-1.78-2.69zM9.6 3.5c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.98 1.02-.43.5-.81 1.3-.71 2.07.76.06 1.53-.39 1.99-.94z"/></svg>
+                  {{ lang()==='en' ? 'Continue with Apple' : lang()==='pt' ? 'Continuar com Apple' : 'Continuar con Apple' }}
+                </button>
+              }
+              <button class="cw-prov" (click)="loginStep.set('phone')">
+                <span class="cw-prov-i cw-prov-emoji">📱</span>
+                {{ lang()==='en' ? 'Continue with your phone' : lang()==='pt' ? 'Continuar com seu telefone' : 'Continuar con tu teléfono' }}
               </button>
             }
+
+            @if (loginStep() === 'phone') {
+              <input class="cw-login-in" [(ngModel)]="phoneInput" name="cwphone" type="tel" inputmode="tel" autocomplete="tel"
+                [placeholder]="lang()==='en' ? 'Phone, e.g. +56 9 1234 5678' : 'Teléfono, ej. +56 9 1234 5678'" />
+              <button class="cw-prov cw-prov-go" (click)="sendCode()" [disabled]="phoneBusy()">
+                {{ phoneBusy() ? (lang()==='en' ? 'Sending…' : 'Enviando…') : (lang()==='en' ? 'Send code' : 'Enviar código') }}
+              </button>
+              <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ lang()==='en' ? 'Back' : 'Volver' }}</button>
+            }
+
+            @if (loginStep() === 'code') {
+              <input class="cw-login-in" [(ngModel)]="codeInput" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                [placeholder]="lang()==='en' ? '6-digit code' : 'Código de 6 dígitos'" />
+              <button class="cw-prov cw-prov-go" (click)="verifyCode()" [disabled]="phoneBusy()">
+                {{ phoneBusy() ? (lang()==='en' ? 'Verifying…' : 'Verificando…') : (lang()==='en' ? 'Verify' : 'Verificar') }}
+              </button>
+              <button class="cw-login-back" (click)="loginStep.set('phone')">← {{ lang()==='en' ? 'Change number' : 'Cambiar número' }}</button>
+            }
+
+            @if (phoneErr()) { <p class="cw-login-err">{{ phoneErr() }}</p> }
+            <div id="cw-recaptcha"></div>
           </div>
         }
 
@@ -449,14 +479,31 @@ const I18N: Record<string, any> = {
     .cw-signin { background:transparent; border:1px solid rgba(212,175,55,.5); color:var(--cw-gold); border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
     .cw-signin:hover { background:rgba(212,175,55,.1); }
     .cw-avatar { width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,175,55,.6); background:rgba(212,175,55,.12); color:var(--cw-gold); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
-    .cw-login-ov { position:absolute; inset:0; background:rgba(0,0,0,.55); z-index:5; }
-    .cw-login { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:6; width:min(340px,90%); background:var(--cw-bg,#15151A); border:1px solid var(--cw-border); border-radius:18px; padding:22px 20px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
-    .cw-login-x { position:absolute; top:12px; left:14px; background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
-    .cw-login-t { font-size:19px; font-weight:700; margin:14px 0 6px; text-align:center; }
-    .cw-login-s { font-size:12.5px; color:var(--cw-muted); text-align:center; margin:0 0 16px; line-height:1.45; }
-    .cw-prov { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; background:transparent; border:1px solid var(--cw-border); color:var(--cw-text); border-radius:999px; padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; margin-bottom:10px; }
-    .cw-prov:hover { border-color:var(--cw-gold-d); }
-    .cw-prov-i { font-weight:800; font-size:15px; }
+    .cw-login-ov { position:absolute; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px); z-index:5; animation:cwFade .2s ease; }
+    .cw-login { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:6; width:min(360px,92%); background:var(--cw-bg,#15151A); border:1px solid var(--cw-border); border-radius:22px; padding:26px 22px 22px; box-shadow:0 24px 70px rgba(0,0,0,.6); animation:cwPop .26s cubic-bezier(.22,1,.36,1); }
+    @keyframes cwFade { from{opacity:0} to{opacity:1} }
+    @keyframes cwPop { from{opacity:0; transform:translate(-50%,-46%) scale(.96)} to{opacity:1; transform:translate(-50%,-50%) scale(1)} }
+    .cw-login-x { position:absolute; top:14px; left:16px; background:none; border:none; color:var(--cw-muted); font-size:18px; line-height:1; cursor:pointer; padding:2px 6px; border-radius:8px; }
+    .cw-login-x:hover { color:var(--cw-text); background:rgba(255,255,255,.06); }
+    .cw-login-t { font-size:21px; font-weight:700; margin:8px 0 8px; text-align:center; letter-spacing:-.2px; }
+    .cw-login-s { font-size:12.5px; color:var(--cw-muted); text-align:center; margin:0 0 20px; line-height:1.5; padding:0 6px; }
+    .cw-prov { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; background:transparent; border:1px solid var(--cw-border); color:var(--cw-text); border-radius:999px; padding:12px 16px; font-size:14px; font-weight:600; cursor:pointer; margin-bottom:11px; transition:border-color .15s, background .15s, transform .08s; }
+    .cw-prov:hover { border-color:var(--cw-gold-d); background:rgba(255,255,255,.03); }
+    .cw-prov:active { transform:scale(.985); }
+    .cw-prov:disabled { opacity:.6; cursor:default; }
+    .cw-prov-i { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 18px; }
+    .cw-prov-emoji { font-size:16px; }
+    .cw-prov-apple { color:#fff; }
+    .cw-prov-go { background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); border:none; color:#1A1206; font-weight:700; }
+    .cw-prov-go:hover { filter:brightness(1.05); background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); }
+    .cw-login-in { width:100%; box-sizing:border-box; background:var(--cw-card); border:1px solid var(--cw-border); color:var(--cw-text); border-radius:14px; padding:12px 14px; font-size:14px; margin-bottom:11px; outline:none; }
+    .cw-login-in:focus { border-color:var(--cw-gold-d); }
+    .cw-login-back { background:none; border:none; color:var(--cw-muted); font-size:12.5px; cursor:pointer; display:block; margin:2px auto 0; padding:6px; }
+    .cw-login-back:hover { color:var(--cw-text); }
+    .cw-login-err { color:#ff8a96; font-size:12px; text-align:center; margin:8px 0 0; line-height:1.4; }
+    .cw-login-or { display:flex; align-items:center; gap:10px; margin:4px 0 12px; color:var(--cw-muted); font-size:11px; }
+    .cw-login-or::before, .cw-login-or::after { content:''; flex:1; height:1px; background:var(--cw-border); }
+    .cw-login-hint { font-size:11.5px; color:var(--cw-muted); text-align:center; margin:0; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
@@ -918,11 +965,35 @@ export class CoachWidgetComponent {
   // R64: logged-in web users (optional sign-in) get the authenticated coach.
   get user() { return this.firebase.currentUser; }
   readonly loginOpen = signal(false);
+  readonly loginStep = signal<'choose' | 'phone' | 'code'>('choose');
+  readonly phoneBusy = signal(false);
+  readonly phoneErr = signal('');
+  phoneInput = '';
+  codeInput = '';
   // Apple Sign-In is offered ONLY on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
   appleDevice = false;
-  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.loginOpen.set(false); } catch { /* cancelled */ } }
-  async signInApple() { try { await this.firebase.signInWithApple(); this.loginOpen.set(false); } catch { /* cancelled */ } }
+  openLogin() { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginOpen.set(true); }
+  closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); }
+  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.closeLogin(); } catch { /* cancelled */ } }
+  async signInApple() { try { await this.firebase.signInWithApple(); this.closeLogin(); } catch { /* cancelled */ } }
   async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } }
+  // Phone OTP (2 steps): enter number → SMS code → verify.
+  async sendCode() {
+    const phone = this.phoneInput.trim().replace(/[^\d+]/g, '');
+    if (!/^\+\d{8,15}$/.test(phone)) { this.phoneErr.set(this.lang() === 'en' ? 'Enter your number with country code, e.g. +56 9 1234 5678' : 'Ingresa tu número con código de país, ej. +56 9 1234 5678'); return; }
+    this.phoneBusy.set(true); this.phoneErr.set('');
+    try { await this.firebase.startPhoneSignIn(phone, 'cw-recaptcha'); this.loginStep.set('code'); }
+    catch { this.phoneErr.set(this.lang() === 'en' ? "Couldn't send the code — check the number and try again." : 'No se pudo enviar el código — revisa el número e inténtalo de nuevo.'); }
+    finally { this.phoneBusy.set(false); }
+  }
+  async verifyCode() {
+    const code = this.codeInput.trim().replace(/\D/g, '');
+    if (code.length < 4) { this.phoneErr.set(this.lang() === 'en' ? 'Enter the 6-digit code.' : 'Ingresa el código de 6 dígitos.'); return; }
+    this.phoneBusy.set(true); this.phoneErr.set('');
+    try { await this.firebase.confirmPhoneCode(code); this.closeLogin(); }
+    catch { this.phoneErr.set(this.lang() === 'en' ? 'Wrong or expired code.' : 'Código incorrecto o vencido.'); }
+    finally { this.phoneBusy.set(false); }
+  }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();

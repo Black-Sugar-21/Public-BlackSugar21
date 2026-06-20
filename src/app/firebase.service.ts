@@ -10,7 +10,10 @@ import {
   User,
   GoogleAuthProvider,
   OAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -207,6 +210,38 @@ export class FirebaseService {
       await this.updateLastLogin(user.uid);
     }
 
+    return user;
+  }
+
+  // R64: Phone sign-in (web) — invisible reCAPTCHA + SMS OTP, 2 steps.
+  private phoneConfirmation: ConfirmationResult | null = null;
+  private recaptchaVerifier: RecaptchaVerifier | null = null;
+
+  async startPhoneSignIn(phoneE164: string, recaptchaContainerId: string): Promise<void> {
+    if (!this.recaptchaVerifier) {
+      this.recaptchaVerifier = new RecaptchaVerifier(this.auth, recaptchaContainerId, { size: 'invisible' });
+    }
+    this.phoneConfirmation = await signInWithPhoneNumber(this.auth, phoneE164, this.recaptchaVerifier);
+  }
+
+  async confirmPhoneCode(code: string): Promise<User> {
+    if (!this.phoneConfirmation) throw new Error('no_confirmation');
+    const cred = await this.phoneConfirmation.confirm(code);
+    const user = cred.user;
+    const profileExists = await this.checkUserProfileExists(user.uid);
+    if (!profileExists) {
+      await this.createUserProfile({
+        uid: user.uid,
+        email: user.email || `${user.uid}@phone.blacksugar21`,
+        displayName: user.displayName || user.phoneNumber || 'Usuario',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        preferences: { language: 'es' }
+      });
+    } else {
+      await this.updateLastLogin(user.uid);
+    }
+    this.phoneConfirmation = null;
     return user;
   }
 
