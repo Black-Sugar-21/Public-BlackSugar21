@@ -49,6 +49,13 @@ const I18N: Record<string, any> = {
     mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidad', mvInsights: 'Claves de esta conexión',
     fbAsk: '¿Te sirvió?', fbThanks: '¡Gracias por tu feedback! 💛',
     placeChip: '📍 Lugares para una cita', placeQuery: '¿Qué lugares me recomiendas para una primera cita cerca de mí?',
+    planLabel: 'Planea tu cita', suggested: 'sugerido ahora',
+    placeCats: [
+      { key: 'cafe', t: '☕ Café', q: '¿Qué cafeterías acogedoras hay cerca para una cita?' },
+      { key: 'restaurant', t: '🍽️ Restaurante', q: '¿Qué restaurantes con buen ambiente hay cerca para una cita?' },
+      { key: 'bar', t: '🍸 Bar', q: '¿Qué bares con buen ambiente hay cerca para una cita?' },
+      { key: 'nightclub', t: '🪩 Discoteca', q: '¿Qué discotecas buenas hay cerca para salir a bailar de noche?' },
+    ],
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
     locRequesting: 'Pidiendo permiso de ubicación 📍…',
     locBlocked: 'Tu navegador tiene la ubicación bloqueada 🔒 Habilítala en el candado de la barra de direcciones, o escribe tu ciudad aquí abajo y te recomiendo lugares 👇',
@@ -73,6 +80,13 @@ const I18N: Record<string, any> = {
     mvAnalyzing: 'Simulating 5 universes…', mvCompat: 'Compatibility', mvInsights: 'Keys to this connection',
     fbAsk: 'Was this helpful?', fbThanks: 'Thanks for your feedback! 💛',
     placeChip: '📍 Date spots near me', placeQuery: 'What are some good places for a first date near me?',
+    planLabel: 'Plan your date', suggested: 'suggested now',
+    placeCats: [
+      { key: 'cafe', t: '☕ Coffee', q: 'What cozy coffee shops are near me for a date?' },
+      { key: 'restaurant', t: '🍽️ Restaurant', q: 'What restaurants with great ambiance are near me for a date?' },
+      { key: 'bar', t: '🍸 Bar', q: 'What good bars are near me for a date?' },
+      { key: 'nightclub', t: '🪩 Club', q: 'What good clubs are near me to go dancing at night?' },
+    ],
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
     locRequesting: 'Requesting location permission 📍…',
     locBlocked: "Your browser has location blocked 🔒 Enable it from the lock icon in the address bar, or type your city below and I'll suggest spots 👇",
@@ -97,6 +111,13 @@ const I18N: Record<string, any> = {
     mvAnalyzing: 'Simulando 5 universos…', mvCompat: 'Compatibilidade', mvInsights: 'Chaves desta conexão',
     fbAsk: 'Foi útil?', fbThanks: 'Obrigado pelo seu feedback! 💛',
     placeChip: '📍 Lugares para um encontro', placeQuery: 'Que lugares você recomenda para um primeiro encontro perto de mim?',
+    planLabel: 'Planeje seu encontro', suggested: 'sugerido agora',
+    placeCats: [
+      { key: 'cafe', t: '☕ Café', q: 'Que cafeterias aconchegantes tem perto para um encontro?' },
+      { key: 'restaurant', t: '🍽️ Restaurante', q: 'Que restaurantes com bom ambiente tem perto para um encontro?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Que bons bares tem perto para um encontro?' },
+      { key: 'nightclub', t: '🪩 Balada', q: 'Que boas baladas tem perto para sair para dançar à noite?' },
+    ],
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
     locRequesting: 'Pedindo permissão de localização 📍…',
     locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade aqui embaixo e te recomendo lugares 👇',
@@ -124,6 +145,13 @@ const I18N: Record<string, any> = {
         </header>
 
         <div class="cw-body" #body>
+          @if (isWelcome()) {
+            <div class="cw-welcome">
+              <div class="cw-welcome-spark">✦</div>
+              <h2 class="cw-welcome-title">{{ t().title }}</h2>
+              <p class="cw-welcome-sub">{{ t().greeting }}</p>
+            </div>
+          } @else {
           @for (m of messages(); track mi; let mi = $index) {
             <div class="cw-msg" [class.user]="m.role==='user'">
               <div class="cw-bubble">
@@ -282,6 +310,7 @@ const I18N: Record<string, any> = {
               </div>
             </div>
           }
+          }
           @if (thinking()) {
             <div class="cw-msg">
               <div class="cw-bubble cw-thinking">
@@ -300,6 +329,17 @@ const I18N: Record<string, any> = {
             <div class="cw-chips">
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
               <button class="cw-chip cw-chip-place" (click)="askPlaces()">{{ t().placeChip }}</button>
+            </div>
+            <!-- Date planner: pick a venue type. The one fitting the current hour is marked "suggested". -->
+            <div class="cw-plan">
+              <span class="cw-plan-h">{{ t().planLabel }}</span>
+              <div class="cw-plan-cats">
+                @for (cat of t().placeCats; track cat.key) {
+                  <button class="cw-cat" [class.sug]="cat.key === suggestedCat()" (click)="askPlaces(cat.q, cat.t)">
+                    {{ cat.t }}@if (cat.key === suggestedCat()) { <span class="cw-cat-sug">{{ t().suggested }}</span> }
+                  </button>
+                }
+              </div>
             </div>
           }
           @if (simLoading()) {
@@ -426,6 +466,19 @@ const I18N: Record<string, any> = {
     .cw-chip-sim { border-color:rgba(212,175,55,.45); color:var(--cw-gold); font-weight:600; }
     .cw-chip-place { border-color:rgba(156,89,234,.5); color:var(--cw-purple-l,#9c59ea); font-weight:600; background:rgba(156,89,234,.08); }
     .cw-chip-place:hover { border-color:var(--cw-purple-l,#9c59ea); background:rgba(156,89,234,.16); }
+    /* Welcome / empty state — clean, centered (ChatGPT/Claude vibe). */
+    .cw-welcome { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:30px 16px 18px; }
+    .cw-welcome-spark { font-size:40px; color:var(--cw-gold); filter:drop-shadow(0 0 14px rgba(212,175,55,.5)); }
+    .cw-welcome-title { font-family:'Playfair Display',Georgia,serif; font-size:24px; font-weight:600; color:var(--cw-text); margin:0; }
+    .cw-welcome-sub { font-size:13.5px; line-height:1.5; color:var(--cw-muted); max-width:34ch; margin:0; }
+    /* Date planner — simple, clear row of venue categories; current-hour one is highlighted. */
+    .cw-plan { margin-top:10px; }
+    .cw-plan-h { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--cw-muted); margin:0 0 7px 2px; }
+    .cw-plan-cats { display:flex; flex-wrap:wrap; gap:7px; }
+    .cw-cat { display:inline-flex; align-items:center; gap:6px; background:var(--cw-card); border:1px solid var(--cw-border); color:var(--cw-text); border-radius:12px; padding:8px 12px; font-size:12.5px; cursor:pointer; transition:border-color .15s, background .15s; }
+    .cw-cat:hover { border-color:var(--cw-gold-d); }
+    .cw-cat.sug { border-color:var(--cw-gold); background:rgba(212,175,55,.1); color:var(--cw-gold); font-weight:600; }
+    .cw-cat-sug { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; background:rgba(212,175,55,.2); color:var(--cw-gold); border-radius:6px; padding:1px 5px; }
     /* elegant "coach is thinking" loader (chat + places) */
     .cw-thinking { display:inline-flex; align-items:center; gap:10px; background:var(--cw-card); border:1px solid var(--cw-border); animation:cwFade .25s ease; }
     .cw-dots { display:inline-flex; gap:4px; align-items:center; }
@@ -589,6 +642,18 @@ export class CoachWidgetComponent {
   // guards against abuse). The counter is a soft, attractive nudge.
   readonly showCta = computed(() => this.coachReplies() >= FREE_TASTE);
   readonly freeLeft = computed(() => Math.max(0, FREE_TASTE - this.coachReplies()));
+  // Time-aware date-place suggestion: highlight the category that fits the current local hour
+  // (morning→café, day→restaurant, evening→bar, late-night→club) using the app's venue categories.
+  readonly suggestedCat = computed(() => {
+    void this.lang(); // re-evaluate on language change
+    const h = this.isBrowser ? new Date().getHours() : 13;
+    if (h >= 5 && h < 12) return 'cafe';
+    if (h >= 12 && h < 18) return 'restaurant';
+    if (h >= 18 && h < 23) return 'bar';
+    return 'nightclub'; // 23:00–05:00
+  });
+  // Welcome/empty state (ChatGPT/Claude-style) — shown before the first real exchange.
+  readonly isWelcome = computed(() => this.messages().length <= 1 && !this.simMode() && !this.simLoading() && !this.thinking());
   // Re-show the suggestion chips (starters + place chip) on the first screen AND after every coach
   // answer, so the visitor always has all options again. Hidden while waiting or in a simulation.
   readonly showChips = computed(() => {
@@ -863,12 +928,12 @@ export class CoachWidgetComponent {
    *  - Otherwise (prompt / denied / unknown / no-API) → instantly show the city input + a
    *    "use my location" button. The user types a city (always works) or taps to allow.
    */
-  async askPlaces() {
+  async askPlaces(query?: string, label?: string) {
     if (this.busy()) return;
-    const q = this.t().placeQuery;
+    const q = query || this.t().placeQuery;
     this.lastUserMsg = q;
-    this.messages.update((m) => [...m, { role: 'user', text: this.t().placeChip }]);
-    this.ga('coach_demo_place_chip', { lang: this.coachLang() });
+    this.messages.update((m) => [...m, { role: 'user', text: label || this.t().placeChip }]);
+    this.ga('coach_demo_place_chip', { lang: this.coachLang(), cat: label ? 'category' : 'general' });
 
     const state = this.isBrowser && navigator.geolocation ? await this.geoPermissionState() : 'unknown';
     if (state === 'granted') {
