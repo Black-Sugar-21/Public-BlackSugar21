@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
   User,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
 import {
@@ -174,6 +175,33 @@ export class FirebaseService {
         preferences: {
           language: 'es'
         }
+      });
+    } else {
+      await this.updateLastLogin(user.uid);
+    }
+
+    return user;
+  }
+
+  // R64: Sign in with Apple (web). Shown only on Apple devices in the UI. Requires the Apple
+  // provider enabled in Firebase Auth console (Services ID + return URL for black-sugar21.web.app).
+  async signInWithApple(): Promise<User> {
+    const provider = new OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    const userCredential = await signInWithPopup(this.auth, provider);
+    const user = userCredential.user;
+
+    const profileExists = await this.checkUserProfileExists(user.uid);
+    if (!profileExists) {
+      await this.createUserProfile({
+        uid: user.uid,
+        email: user.email || `${user.uid}@privaterelay.appleid.com`,
+        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario'),
+        photoURL: user.photoURL || undefined,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        preferences: { language: 'es' }
       });
     } else {
       await this.updateLastLogin(user.uid);

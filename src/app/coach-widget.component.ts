@@ -145,11 +145,28 @@ const I18N: Record<string, any> = {
             @if (user(); as u) {
               <button class="cw-avatar" (click)="signOut()" [title]="(lang()==='en' ? 'Sign out' : 'Cerrar sesión') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
-              <button class="cw-signin" (click)="signIn()">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
+              <button class="cw-signin" (click)="loginOpen.set(true)">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
             }
             <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
           </div>
         </header>
+
+        @if (loginOpen()) {
+          <div class="cw-login-ov" (click)="loginOpen.set(false)"></div>
+          <div class="cw-login" role="dialog">
+            <button class="cw-login-x" (click)="loginOpen.set(false)" aria-label="Cerrar">✕</button>
+            <h3 class="cw-login-t">{{ lang()==='en' ? 'Sign in or sign up' : lang()==='pt' ? 'Entrar ou cadastrar-se' : 'Iniciar sesión o registrarse' }}</h3>
+            <p class="cw-login-s">{{ lang()==='en' ? 'Smarter answers, your history saved, and matches aligned with your profile.' : lang()==='pt' ? 'Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.' : 'Respuestas más inteligentes, tu historial guardado y matches alineados a tu perfil.' }}</p>
+            <button class="cw-prov" (click)="signInGoogle()">
+              <span class="cw-prov-i">G</span> {{ lang()==='en' ? 'Continue with Google' : lang()==='pt' ? 'Continuar com Google' : 'Continuar con Google' }}
+            </button>
+            @if (appleDevice) {
+              <button class="cw-prov" (click)="signInApple()">
+                <span class="cw-prov-i"></span> {{ lang()==='en' ? 'Continue with Apple' : lang()==='pt' ? 'Continuar com Apple' : 'Continuar con Apple' }}
+              </button>
+            }
+          </div>
+        }
 
         <div class="cw-body" #body>
           @if (isWelcome()) {
@@ -432,6 +449,14 @@ const I18N: Record<string, any> = {
     .cw-signin { background:transparent; border:1px solid rgba(212,175,55,.5); color:var(--cw-gold); border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
     .cw-signin:hover { background:rgba(212,175,55,.1); }
     .cw-avatar { width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,175,55,.6); background:rgba(212,175,55,.12); color:var(--cw-gold); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+    .cw-login-ov { position:absolute; inset:0; background:rgba(0,0,0,.55); z-index:5; }
+    .cw-login { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:6; width:min(340px,90%); background:var(--cw-bg,#15151A); border:1px solid var(--cw-border); border-radius:18px; padding:22px 20px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+    .cw-login-x { position:absolute; top:12px; left:14px; background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
+    .cw-login-t { font-size:19px; font-weight:700; margin:14px 0 6px; text-align:center; }
+    .cw-login-s { font-size:12.5px; color:var(--cw-muted); text-align:center; margin:0 0 16px; line-height:1.45; }
+    .cw-prov { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; background:transparent; border:1px solid var(--cw-border); color:var(--cw-text); border-radius:999px; padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; margin-bottom:10px; }
+    .cw-prov:hover { border-color:var(--cw-gold-d); }
+    .cw-prov-i { font-weight:800; font-size:15px; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
@@ -716,6 +741,11 @@ export class CoachWidgetComponent {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
+      // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
+      try {
+        const ua = navigator.userAgent || '';
+        this.appleDevice = /iPhone|iPad|iPod|Macintosh/i.test(ua) && !/Android/i.test(ua);
+      } catch { this.appleDevice = false; }
       // R62: load the RC date-planner config once (single source shared with the apps).
       this.firebase.getCoachPlannerConfig().then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
       // Open from the hero CTA (or any "Talk to the Coach" button on the page).
@@ -887,7 +917,11 @@ export class CoachWidgetComponent {
 
   // R64: logged-in web users (optional sign-in) get the authenticated coach.
   get user() { return this.firebase.currentUser; }
-  async signIn() { try { await this.firebase.signInWithGoogle(); } catch { /* user cancelled */ } }
+  readonly loginOpen = signal(false);
+  // Apple Sign-In is offered ONLY on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
+  appleDevice = false;
+  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.loginOpen.set(false); } catch { /* cancelled */ } }
+  async signInApple() { try { await this.firebase.signInWithApple(); this.loginOpen.set(false); } catch { /* cancelled */ } }
   async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
