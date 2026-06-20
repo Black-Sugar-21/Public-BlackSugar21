@@ -596,6 +596,16 @@ export class TranslationService {
       pt: 'O Coach IA e os recursos de simulação são ferramentas de orientação. Suas sugestões não substituem o julgamento pessoal nem constituem aconselhamento profissional.',
       en: 'The AI Coach and simulation features are guidance tools. Their suggestions do not replace personal judgment or constitute professional advice.'
     },
+    'terms.ai': {
+      es: 'Este sitio y la app usan inteligencia artificial (IA) para generar sugerencias, frases y recomendaciones, y para moderar contenido. Las respuestas son generadas por IA y pueden ser imprecisas o incompletas: úsalas con criterio.',
+      pt: 'Este site e o app usam inteligência artificial (IA) para gerar sugestões, frases e recomendações, e para moderar conteúdo. As respostas são geradas por IA e podem ser imprecisas ou incompletas — use-as com critério.',
+      en: 'This website and app use artificial intelligence (AI) to generate suggestions, phrases and recommendations, and to moderate content. Responses are AI-generated and may be inaccurate or incomplete — use them with discretion.'
+    },
+    'terms.userResponsibility': {
+      es: 'Eres el único responsable de la información, fotos y contenido que envías, y del uso que hagas de las sugerencias de la IA. Aunque moderamos y arbitramos el contenido, esto no traslada esa responsabilidad: Black Sugar 21 no se hace responsable del contenido subido por los usuarios ni de las decisiones tomadas a partir de las sugerencias de la IA.',
+      pt: 'Você é o único responsável pelas informações, fotos e conteúdo que envia, e pelo uso que faz das sugestões da IA. Embora moderemos e arbitremos o conteúdo, isso não transfere essa responsabilidade: a Black Sugar 21 não se responsabiliza pelo conteúdo enviado pelos usuários nem pelas decisões tomadas com base nas sugestões da IA.',
+      en: 'You are solely responsible for the information, photos and content you submit, and for how you use the AI suggestions. While we moderate and arbitrate content, this does not transfer that responsibility: Black Sugar 21 is not liable for user-submitted content or for decisions made based on AI suggestions.'
+    },
     'terms.violation': {
       es: 'Los mensajes y fotos son revisados automáticamente por IA para garantizar un entorno seguro. El incumplimiento de estas normas puede resultar en la suspensión permanente de la cuenta.',
       pt: 'As mensagens e fotos são revisadas automaticamente por IA para garantir um ambiente seguro. O descumprimento destas normas pode resultar na suspensão permanente da conta.',
@@ -642,6 +652,16 @@ export class TranslationService {
       es: 'Tus datos se almacenan de forma segura en Firebase (Google). Puedes eliminar tu cuenta y todos tus datos permanentemente desde la app en cualquier momento. Los tokens de notificación y datos sensibles se encriptan y nunca se exponen en registros del sistema.',
       pt: 'Seus dados são armazenados com segurança no Firebase (Google). Você pode excluir sua conta e todos os seus dados permanentemente pelo app a qualquer momento. Os tokens de notificação e dados sensíveis são criptografados e nunca expostos em registros do sistema.',
       en: 'Your data is securely stored in Firebase (Google). You can permanently delete your account and all your data from the app at any time. Notification tokens and sensitive data are encrypted and never exposed in system logs.'
+    },
+    'privacy.ai': {
+      es: 'Inteligencia artificial',
+      pt: 'Inteligência artificial',
+      en: 'Artificial intelligence'
+    },
+    'privacy.aiText': {
+      es: 'El Coach IA procesa los mensajes y datos que escribes mediante proveedores de inteligencia artificial (como Google Gemini) para generar respuestas y sugerencias. No compartas información sensible que no quieras que sea procesada. El contenido que envías es de tu responsabilidad.',
+      pt: 'O Coach IA processa as mensagens e dados que você escreve por meio de provedores de inteligência artificial (como o Google Gemini) para gerar respostas e sugestões. Não compartilhe informações sensíveis que não queira que sejam processadas. O conteúdo que você envia é de sua responsabilidade.',
+      en: 'The AI Coach processes the messages and data you enter through artificial-intelligence providers (such as Google Gemini) to generate responses and suggestions. Do not share sensitive information you do not want processed. The content you submit is your responsibility.'
     },
 
     // Data Deletion
