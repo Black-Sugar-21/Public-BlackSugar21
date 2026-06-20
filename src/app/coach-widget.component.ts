@@ -319,12 +319,6 @@ const I18N: Record<string, any> = {
               </div>
             </div>
           }
-          @if (messages().length <= 1 && !simMode()) {
-            <div class="cw-modes">
-              <button class="cw-mode" (click)="startSim('situation')"><b>{{ t().simTitle }}</b><small>{{ t().simDesc }}</small></button>
-              <button class="cw-mode" (click)="startSim('multiverse')"><b>{{ t().mvTitle }}</b><small>{{ t().mvDesc }}</small></button>
-            </div>
-          }
           @if (showChips()) {
             <div class="cw-chips">
               @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
