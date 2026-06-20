@@ -39,6 +39,15 @@ Eres el **Firebase Functions Manager de Black Sugar 21**. Gestionas las Cloud Fu
 dateCoachChat, getCoachHistory, deleteCoachMessage, resetCoachMessages, getRealtimeCoachTips, rateCoachResponse
 ```
 
+### Coach Engagement & Virality (R23/R24 · 8 CFs · owner `/coach-engagement`)
+```
+getBioCoaching (coach-coldstart.js), getDailyCoachBriefing + getWeeklyCoachReport (coach-briefing.js),
+getReferralInfo + redeemReferralCode (coach-referral.js), generateCoachShareCard (coach-sharecard.js),
+getDatingArchetype + sendArchetypeInvite (coach-archetype.js)
+```
+Helper (no CF): `coach-memory.js` (getMemoryContext + distillMemory) inyectado en dateCoachChat.
+**NOTA: el backend VIVO es `/Users/daniel/IdeaProjects/CoachFish/lib/` + `index.js` (registra estos módulos), NO Public/functions (stale).** Gated por `ai_feature_flags` (ver `/remote-config`). Invariantes en `/coach-engagement` (maxOutputTokens 4096 rich-JSON, cachés idioma-aware, rate-limits, deep-link `dating_archetype`).
+
 ### AI Date Blueprint (1 CF)
 ```
 generateDateBlueprint  // {matchId, userLanguage, duration} → {success, blueprint: {title, totalDuration, estimatedBudget, dresscode, icebreaker, steps: [{order, time, duration, activity, place: {name, photos:[{url,width,height}], googleMapsUrl, placeId, address, rating}, tip, whyThisPlace, travelTimeToNext}]}}
@@ -629,6 +638,33 @@ Todos los maps usan spread merge: `{...DEFAULT, ...rcOverride}` — RC agrega/so
 - **Response**: `{success, events[]}`
 - `searchDaysAhead` RC-configurable (default 14)
 - Caches results in `eventCache` collection (TTL 1h)
+
+## Public Demo Coach — coach-demo.js (NEW)
+
+**File**: `/Users/daniel/IdeaProjects/CoachFish/lib/coach-demo.js` (project `black-sugar21`, region `us-central1`)
+No-auth public surface for the marketing site. Reuses the REAL coach brain (`getCoachConfig` + `retrieveCoachKnowledge` RAG) — NOT a separate model. All `onRequest` CFs are CORS-allowlisted to the public domains and gated by RC flag `coachDemo` (default ON). The 4 `onRequest` CFs write `demoChatLogs` history; admin reads via `getDemoUsage` / `getDemoQueryLog` (coach-admin.js).
+
+### coachDemoChat
+- **Type**: public `onRequest` (CORS allowlist + per-IP hourly rate limit, no auth)
+- No-auth demo chat for the marketing site. Dynamic model routing: simple → `AI_MODEL_LITE`, substantive → `AI_MODEL_NAME`.
+- **Intents**: `general` (RAG-backed coach reply) · `place` (progressive radius 8→25km, returns Google `googleMapsUri`) · `phrase` (suggested phrases)
+- Gated by RC `coachDemo`.
+
+### coachDemoSimulate
+- **Type**: public `onRequest`
+- Situation simulation via `generateApproachesWithDebate` (6 perspectives), grounded in `STAGE_PSYCHOLOGY`.
+
+### coachDemoMultiverse
+- **Type**: public `onRequest`
+- 5-stage relationship trajectory. Deterministic 13-language compatibility label via exported `getCompatibilityLabel` (from `multi-universe-simulation.js`).
+
+### coachDemoFeedback
+- **Type**: public `onRequest`, fail-open
+- Writes `demoFeedback`: 👍/👎 + `{question, answer, lang, country, intent}`, 30-day TTL.
+
+### analyzeDemoFeedback
+- **Type**: Firestore trigger `onDocumentCreated('demoFeedback/{id}')`
+- On `rating='down'`, Gemini-Lite writes a `diagnosis` `{category, reason, suggestion, severity}` back to the doc so the admin can auto-detect why an answer failed.
 
 ## isInappropriateVenue Filter (NEW)
 

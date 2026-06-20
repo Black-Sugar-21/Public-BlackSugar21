@@ -282,7 +282,7 @@ export class FirebaseService {
     }
   }
 
-  // Analytics
+  // Analytics — anonymous usage analytics (disclosed in Terms & Privacy). No cookies.
   logEvent(eventName: string, params?: Record<string, unknown>): void {
     try {
       firebaseLogEvent(this.analytics, eventName, params);

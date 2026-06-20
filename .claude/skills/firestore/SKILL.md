@@ -150,6 +150,18 @@ learningProfile: {interactionCount, positiveEngagementCount, topTopics, recentTo
 places, lastRadiusUsed, timestamp (TTL 15min)
 ```
 
+### Coach Engagement & Virality (R23/R24 — CF-only, default-deny, owner `/coach-engagement`)
+
+Colecciones nuevas escritas SOLO por Cloud Functions (Admin SDK bypassa rules) → cubiertas por el catch-all `match /{document=**} { allow read,write: if false }`. NO requieren bloque de rules. NUNCA legibles por clientes (privacidad).
+
+- `coachUserMemory/{uid}` — `{ summary, observations[], lastDistillAt, updatedAt }`. Hechos durables del usuario (coach-memory.js), inyectados en dateCoachChat.
+- `coachArchetype/{uid}` — `{ card{archetypeKey,emoji,colorHex,name,tagline,description,superpower,idealMatch,referralCode,watermark}, lang, updatedAt }`. Caché incluye `lang` (mismatch → re-quiz).
+- `coachBriefing/{uid}` — `{ date, lang, briefing{headline,action,why,ctaType,matchId}, updatedAt }`. Caché por día local + idioma.
+- `coachWeekly/{uid}` — `{ week (ISO "2026-W23"), lang, report{wins[],focus,encouragement}, updatedAt }`.
+- `referralCodes/{CODE}` — `{ uid, createdAt, redeemedCount }`. CODE = 7 chars alfabeto 31-símbolos (rejection-sampling).
+- `referralRedemptions/{uid}` — `{ code, ownerUid, redeemerUid, perk, redeemedAt }`. Ledger de atribución (idempotencia).
+- `users/{uid}` campos añadidos: `referralCode`, `referredBy`, `referralRedeemedAt`, `coachMessagesRemaining` (grant del referral) — TODOS en el blocklist de update de `users` (CF-only).
+
 ### `moderationKnowledge/{chunkId}`
 
 93 chunks multilingües (EN:39, ES:21, FR:5, DE:4, PT:5, AR:4, JA:4, RU:4, ZH:4, ID:3). 13 categorías. Embedding 768 dims `gemini-embedding-001`.
@@ -312,6 +324,10 @@ Created by `respondToDateCheckIn` (SOS) or `processDateCheckIns` (no response). 
 | `coach_config` | 19+ campos: enabled, dailyCredits, maxMessageLength, coachingSpecializations, stagePrompts, placeSearch, rag, learningEnabled, etc. |
 | `places_search_config` | 21 campos: progressiveRadiusSteps, minPlacesTarget, loadMoreExpansionBase, categoryQueryMap, etc. |
 | `moderation_config` | rag: {enabled, topK:4, minScore:0.25, fetchMultiplier:3, collection} |
+| `admin_panel_access` (JSON, v97) | `{emails:["dverdugo85@gmail.com"], uids:["tvmkXqXGSzfriAkQUI4KrQF6sZm2","VrZigyvzLFR3XoGEkUbpxVTjvd72"]}` — **source of truth** for the admin panel + admin callables access (server-side gate, cached 5 min). `ADMIN_UIDS` env is fallback. |
+| `ai_feature_flags.coachDemo` (v98) | default `{enabled:true, rollout:100}` — gates the public demo coach (`coachDemoChat`) on the marketing site. |
+
+> **2026-06 — admin panel live RC editing:** the admin panel can now EDIT 9 RC configs live via `setAdminConfig`: `coach_config`, `ai_feature_flags`, `places_search_config`, `wing_person_config`, `simulation_config`, `situation_simulation_config`, `moderation_config`, `discovery_config`, `admin_panel_access`.
 
 **Intervalo fetch**: 3600s (idéntico iOS y Android).
 
@@ -693,3 +709,78 @@ ragChunkGenerated: Boolean
 resolvedAt: Timestamp
 ```
 Tracks moderation dispute resolutions. Written by `resolveDisputesDaily` scheduled CF.
+
+---
+
+## Admin panel + demo coach (2026-06)
+
+> Backend for these collections is the **CoachFish** repo (`/Users/daniel/IdeaProjects/CoachFish/functions/`) — the LIVE backend. NOTE: `Public-BlackSugar21/functions` is STALE.
+
+### `coachQualityReports/{date}` collection (R26 P2)
+
+```
+dimensionAverages: Map        // per-dimension average scores
+failureCategories: Map        // count per failure category
+byLanguage: Map               // aggregates per language
+knowledgeGaps: [..]           // RAG gaps surfaced that day
+worstExamples: [..]           // lowest-scoring sampled responses
+evaluated: Number             // count of responses evaluated
+```
+Daily Claude-eval aggregates of coach response quality. Doc id = date (`YYYY-MM-DD`).
+
+### `coachKnowledgeGaps/{slug}` collection
+
+```
+gap: String                   // the recurring gap topic
+count7d: Number               // hits in trailing 7 days (>=3 to be recorded)
+status: String
+lastSeen: Timestamp
+```
+Recurring RAG knowledge gaps (≥3 hits / 7 days). Doc id = slug of the gap.
+
+### `demoChatLogs/{auto}` collection (BlackSugar21, project `black-sugar21`)
+
+```
+message: String               // the visitor query / situation / context
+intent: String                // "general"|"place"|"phrase"|"simulate"|"multiverse"
+lang: String                  // language code
+country: String               // 2-letter ISO (IP→country via geojs.io / ipapi.co)
+sessionId: String             // client-generated
+ts: Timestamp                 // serverTimestamp
+expiresAt: Timestamp          // 30-day TTL
+```
+Public demo usage log. Written **CF-only** (Admin SDK, no client access) by `CoachFish/lib/coach-demo.js` + `coach-admin.js`. Read by admin `getDemoUsage` (aggregates) + `getDemoQueryLog` (paginated, cursor by `ts`).
+
+### `demoFeedback/{auto}` collection (BlackSugar21, project `black-sugar21`)
+
+```
+rating: String                // "up"|"down" — 👍/👎 on a demo answer (R32/R33)
+intent: String                // "general"|"place"|"phrase"|"simulate"|"multiverse"
+lang: String                  // language code
+sessionId: String             // client-generated
+country: String               // 2-letter ISO
+question: String              // the visitor question
+answer: String                // the demo answer that was rated
+ts: Timestamp                 // serverTimestamp
+expiresAt: Timestamp          // 30-day TTL
+diagnosis: {                  // ONLY for 👎 — written by the `analyzeDemoFeedback` trigger
+  category: String            // too_generic|off_topic|not_actionable|wrong_language|factual_error|tone_mismatch|incomplete|unclear|repetitive|other
+  reason: String
+  suggestion: String
+  severity: String            // low|medium|high
+  at: Timestamp
+}
+```
+👍/👎 ratings on demo answers. Written **CF-only** (Admin SDK, no client access) by `CoachFish/lib/coach-demo.js` + `coach-admin.js`; `diagnosis` is added by the `analyzeDemoFeedback` trigger on 👎. Read by admin `getDemoUsage` (satisfaction% + `recentNegative` with diagnosis).
+
+### `demoRateLimits/{ipHash}_{bucket}_{hour}` collection
+
+```
+count: Number
+expiresAt: Timestamp          // short-lived TTL
+```
+Per-IP hourly rate-limit counter for the **public** demo coach (`coachDemoChat`). Doc id = `{ipHash}_{bucket}_{hour}` where `ipHash` is an fnv1a hash of the IP. Written **CF-only** (Admin SDK, no client access) by `CoachFish/lib/coach-demo.js` + `coach-admin.js`.
+
+### `coachEvaluations/{id}` — field added (2026-06)
+
+`coachEvaluations` now includes a `language` field (the detected language of the evaluated response), in addition to the fields documented above.

@@ -1,70 +1,6 @@
 {
     "indexes": [
         {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "accountStatus",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "paused",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "g",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "visible",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "paused",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "g",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "createdAt",
-                    "order": "DESCENDING"
-                },
-                {
-                    "fieldPath": "visible",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "matches",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "usersMatched",
-                    "arrayConfig": "CONTAINS"
-                },
-                {
-                    "fieldPath": "createdAt",
-                    "order": "DESCENDING"
-                }
-            ]
-        },
-        {
             "collectionGroup": "matches",
             "queryScope": "COLLECTION",
             "fields": [
@@ -75,34 +11,6 @@
                 {
                     "fieldPath": "timestamp",
                     "order": "DESCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "swipes",
-            "queryScope": "COLLECTION_GROUP",
-            "fields": [
-                {
-                    "fieldPath": "timestamp",
-                    "order": "DESCENDING"
-                },
-                {
-                    "fieldPath": "liked",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "messages",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
                 }
             ]
         },
@@ -121,138 +29,6 @@
             ]
         },
         {
-            "collectionGroup": "messages",
-            "queryScope": "COLLECTION_GROUP",
-            "fields": [
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "DESCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "isPersonal",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "matchId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "DESCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "pendingNotifications",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "processed",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "createdAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "male",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "paused",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "g",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "orientation",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "paused",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "g",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "users",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "isDiscoveryProfile",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "g",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
             "collectionGroup": "users",
             "queryScope": "COLLECTION",
             "fields": [
@@ -267,52 +43,6 @@
             ]
         },
         {
-            "collectionGroup": "matches",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "userId1",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "DESCENDING"
-                },
-                {
-                    "fieldPath": "lastMessageSeq",
-                    "order": "DESCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "messages",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "chatId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "DESCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "messages",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "chatId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "createdAt",
-                    "order": "DESCENDING"
-                }
-            ]
-        },
-        {
             "collectionGroup": "stories",
             "queryScope": "COLLECTION",
             "fields": [
@@ -322,92 +52,6 @@
                 },
                 {
                     "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "isPersonal",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "isPersonal",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "isPersonal",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "senderId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "expiresAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "stories",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "matchId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "timestamp",
                     "order": "ASCENDING"
                 },
                 {
@@ -439,24 +83,6 @@
             "queryScope": "COLLECTION",
             "fields": [
                 {
-                    "fieldPath": "status",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "priorityRank",
-                    "order": "DESCENDING"
-                },
-                {
-                    "fieldPath": "queuedAt",
-                    "order": "ASCENDING"
-                }
-            ]
-        },
-        {
-            "collectionGroup": "intentLearningQueue",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
                     "fieldPath": "language",
                     "order": "ASCENDING"
                 },
@@ -474,8 +100,14 @@
             "collectionGroup": "dateCheckIns",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "status", "order": "ASCENDING"},
-                {"fieldPath": "scheduledTime", "order": "ASCENDING"}
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "scheduledTime",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -483,8 +115,14 @@
             "collectionGroup": "dateCheckIns",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "status", "order": "ASCENDING"},
-                {"fieldPath": "checkInSentAt", "order": "ASCENDING"}
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "checkInSentAt",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -492,8 +130,14 @@
             "collectionGroup": "dateCheckIns",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "status", "order": "ASCENDING"},
-                {"fieldPath": "followUpScheduledAt", "order": "ASCENDING"}
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "followUpScheduledAt",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -501,9 +145,18 @@
             "collectionGroup": "dateCheckIns",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "userId", "order": "ASCENDING"},
-                {"fieldPath": "matchId", "order": "ASCENDING"},
-                {"fieldPath": "status", "order": "ASCENDING"}
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "matchId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -511,8 +164,14 @@
             "collectionGroup": "users",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "accountStatus", "order": "ASCENDING"},
-                {"fieldPath": "paused", "order": "ASCENDING"}
+                {
+                    "fieldPath": "accountStatus",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "paused",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -520,9 +179,18 @@
             "collectionGroup": "users",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "accountStatus", "order": "ASCENDING"},
-                {"fieldPath": "paused", "order": "ASCENDING"},
-                {"fieldPath": "male", "order": "ASCENDING"}
+                {
+                    "fieldPath": "accountStatus",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "paused",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "male",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -530,8 +198,14 @@
             "collectionGroup": "messages",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "type", "order": "ASCENDING"},
-                {"fieldPath": "timestamp", "order": "DESCENDING"}
+                {
+                    "fieldPath": "type",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
@@ -539,8 +213,14 @@
             "collectionGroup": "messages",
             "queryScope": "COLLECTION_GROUP",
             "fields": [
-                {"fieldPath": "sender", "order": "ASCENDING"},
-                {"fieldPath": "timestamp", "order": "ASCENDING"}
+                {
+                    "fieldPath": "sender",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -548,8 +228,14 @@
             "collectionGroup": "moderationDisputes",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "status", "order": "ASCENDING"},
-                {"fieldPath": "createdAt", "order": "DESCENDING"}
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
@@ -557,8 +243,14 @@
             "collectionGroup": "reports",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "autoGenerated", "order": "ASCENDING"},
-                {"fieldPath": "createdAt", "order": "DESCENDING"}
+                {
+                    "fieldPath": "autoGenerated",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
@@ -566,9 +258,18 @@
             "collectionGroup": "moderationDisputes",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "originalCategory", "order": "ASCENDING"},
-                {"fieldPath": "disputeType", "order": "ASCENDING"},
-                {"fieldPath": "status", "order": "ASCENDING"}
+                {
+                    "fieldPath": "originalCategory",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "disputeType",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -576,8 +277,14 @@
             "collectionGroup": "moderationDisputes",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "disputeType", "order": "ASCENDING"},
-                {"fieldPath": "createdAt", "order": "DESCENDING"}
+                {
+                    "fieldPath": "disputeType",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
@@ -585,8 +292,14 @@
             "collectionGroup": "reports",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "reportedUserId", "order": "ASCENDING"},
-                {"fieldPath": "status", "order": "ASCENDING"}
+                {
+                    "fieldPath": "reportedUserId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -594,8 +307,14 @@
             "collectionGroup": "moderationDisputes",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "userId", "order": "ASCENDING"},
-                {"fieldPath": "createdAt", "order": "DESCENDING"}
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
@@ -603,8 +322,14 @@
             "collectionGroup": "testerSignups",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "email", "order": "ASCENDING"},
-                {"fieldPath": "status", "order": "ASCENDING"}
+                {
+                    "fieldPath": "email",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
@@ -612,38 +337,71 @@
             "collectionGroup": "wingPersonNotifications",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "userId", "order": "ASCENDING"},
-                {"fieldPath": "sentAt", "order": "ASCENDING"}
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "sentAt",
+                    "order": "ASCENDING"
+                }
             ]
         },
         {
             "collectionGroup": "messages",
             "queryScope": "COLLECTION_GROUP",
             "fields": [
-                {"fieldPath": "sender", "order": "ASCENDING"},
-                {"fieldPath": "timestamp", "order": "DESCENDING"}
+                {
+                    "fieldPath": "sender",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "DESCENDING"
+                }
             ]
         },
         {
             "collectionGroup": "coachKnowledge",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+                {
+                    "fieldPath": "embedding",
+                    "vectorConfig": {
+                        "dimension": 768,
+                        "flat": {}
+                    }
+                }
             ]
         },
         {
             "collectionGroup": "moderationKnowledge",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+                {
+                    "fieldPath": "embedding",
+                    "vectorConfig": {
+                        "dimension": 768,
+                        "flat": {}
+                    }
+                }
             ]
         },
         {
             "collectionGroup": "coachKnowledge",
             "queryScope": "COLLECTION",
             "fields": [
-                {"fieldPath": "category", "order": "ASCENDING"},
-                {"fieldPath": "embedding", "vectorConfig": {"dimension": 768, "flat": {}}}
+                {
+                    "fieldPath": "category",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "embedding",
+                    "vectorConfig": {
+                        "dimension": 768,
+                        "flat": {}
+                    }
+                }
             ]
         }
     ],
