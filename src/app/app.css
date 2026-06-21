@@ -510,6 +510,26 @@ a:hover {
     overflow: hidden;
 }
 
+/* Hero layout (restructured 2026-06-21): value prop + CTA + trust, phone carousel as proof. */
+.hero-content { width: 100%; max-width: 1180px; display: flex; flex-direction: column; align-items: center; }
+.hero-text { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.hero-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold); background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.32); border-radius: 999px; padding: 7px 15px; margin-bottom: 16px; }
+.hero-trust { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+.hero-trust-chip { font-size: 0.8rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 999px; padding: 6px 13px; }
+
+/* Two-column hero on desktop: value prop left, phone carousel right (high-conversion app layout) */
+@media (min-width: 980px) {
+    .hero-section { min-height: 92vh; }
+    .hero-content { flex-direction: row; align-items: center; gap: 56px; text-align: left; }
+    .hero-text { align-items: flex-start; flex: 1 1 0; min-width: 0; }
+    .hero-section h1, .hero-text .tagline, .hero-text .sub-tagline { text-align: left; }
+    .hero-text .logo-container { margin-bottom: 8px; }
+    .hero-text .logo-container img { width: 132px; height: 132px; }
+    .hero-text .hero-trust { justify-content: flex-start; }
+    .hero-text .download-buttons.secondary, .hero-text .coach-cta-buttons.secondary { align-items: flex-start; }
+    .hero-carousel { flex: 0 0 clamp(300px, 36%, 410px); margin-top: 0; }
+}
+
 .logo-container {
     margin-bottom: var(--spacing-md);
     filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.4));

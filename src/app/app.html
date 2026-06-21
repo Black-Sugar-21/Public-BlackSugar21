@@ -115,10 +115,12 @@
 
     <section id="inicio" class="hero-section">
       <div class="hero-content">
+       <div class="hero-text">
         <div class="logo-container animate-in delay-1">
           <img src="logo-21.png" alt="Black Sugar 21" width="200" height="200" fetchpriority="high" />
         </div>
 
+        <span class="hero-eyebrow animate-in delay-1"><span class="hero-cta-spark">✦</span> {{ getCurrentLanguage() === 'es' ? 'Coach de IA · Inteligencia Emocional' : 'AI Coach · Emotional Intelligence' }}</span>
         <h1 class="animate-in delay-2">{{ t('hero.title') }}</h1>
         <p class="tagline animate-in delay-3">{{ t('hero.tagline') }}</p>
         <p class="sub-tagline animate-in delay-3">{{ t('hero.subtitle') }}</p>
@@ -127,6 +129,13 @@
         <button type="button" class="hero-cta-coach animate-in delay-3" (click)="openCoach()">
           <span class="hero-cta-spark">✦</span> {{ t('hero.tryCoach') }}
         </button>
+
+        <!-- Trust micro-chips: instant credibility under the CTA -->
+        <div class="hero-trust animate-in delay-3">
+          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '✦ IA en tiempo real' : '✦ Real-time AI' }}</span>
+          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '🌐 13 idiomas' : '🌐 13 languages' }}</span>
+          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '🆓 Gratis para probar' : '🆓 Free to try' }}</span>
+        </div>
 
         <!-- Secondary: the app stores, demoted (the bot, not the platforms, is the focus). -->
         <div class="download-buttons secondary animate-in delay-4">
@@ -140,6 +149,7 @@
             </a>
           </div>
         </div>
+       </div>
 
         <div class="hero-carousel animate-in delay-4">
           <div class="carousel-track" [style.transform]="'translateX(-' + currentSlide() * 100 + '%)'">
