@@ -93,7 +93,42 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epTapSuggestion: {"es":"Toca una para usarla","en":"Tap one to use it","pt":"Toque para usar","fr":"Touche pour l'utiliser","de":"Zum Übernehmen tippen","it":"Tocca per usarla","zh":"点击使用","ja":"タップして使用","ko":"탭하여 사용","ru":"Нажмите, чтобы применить","ar":"اضغط للاستخدام","id":"Ketuk untuk pakai","tr":"Kullanmak için dokun"},
   epPhotoCoach: {"es":"Coach IA de Fotos","en":"AI Photo Coach","pt":"Coach IA de Fotos","fr":"Coach Photo IA","de":"KI-Foto-Coach","it":"Coach Foto IA","zh":"AI 照片教练","ja":"AI フォトコーチ","ko":"AI 사진 코치","ru":"ИИ фото-коуч","ar":"مدرب الصور","id":"Pelatih Foto AI","tr":"AI Foto Koçu"},
   epPhotoScore: {"es":"Puntaje del perfil","en":"Profile score","pt":"Pontuação do perfil","fr":"Score du profil","de":"Profil-Score","it":"Punteggio profilo","zh":"资料评分","ja":"プロフィールスコア","ko":"프로필 점수","ru":"Оценка профиля","ar":"تقييم الملف","id":"Skor profil","tr":"Profil puanı"},
+  epLocation: {"es":"Ubicación","en":"Location","pt":"Localização","fr":"Localisation","de":"Standort","it":"Posizione","zh":"位置","ja":"位置","ko":"위치","ru":"Местоположение","ar":"الموقع","id":"Lokasi","tr":"Konum"},
+  epUpdateLocation: {"es":"Actualizar ubicación","en":"Update location","pt":"Atualizar localização","fr":"Mettre à jour la position","de":"Standort aktualisieren","it":"Aggiorna posizione","zh":"更新位置","ja":"位置を更新","ko":"위치 업데이트","ru":"Обновить местоположение","ar":"تحديث الموقع","id":"Perbarui lokasi","tr":"Konumu güncelle"},
+  epLocDone: {"es":"Ubicación actualizada","en":"Location updated","pt":"Localização atualizada","fr":"Position mise à jour","de":"Standort aktualisiert","it":"Posizione aggiornata","zh":"位置已更新","ja":"位置を更新しました","ko":"위치가 업데이트됨","ru":"Местоположение обновлено","ar":"تم تحديث الموقع","id":"Lokasi diperbarui","tr":"Konum güncellendi"},
+  epLocError: {"es":"No se pudo obtener la ubicación","en":"Couldn't get your location","pt":"Não foi possível obter a localização","fr":"Impossible d'obtenir la position","de":"Standort konnte nicht ermittelt werden","it":"Impossibile ottenere la posizione","zh":"无法获取位置","ja":"位置を取得できませんでした","ko":"위치를 가져올 수 없습니다","ru":"Не удалось определить местоположение","ar":"تعذّر تحديد الموقع","id":"Tidak bisa mendapatkan lokasi","tr":"Konum alınamadı"},
 };
+
+// Curated interest catalog — IDENTICAL ids to iOS UserInterest.swift (interest_*), so interests are
+// cross-platform consistent + localized everywhere. t: 'prime' | 'elite' | 'both' (applicableUserTypes).
+const INTEREST_CATALOG: Array<{ id: string; t: 'prime' | 'elite' | 'both'; es: string; en: string }> = [
+  { id: 'interest_travel_adventures', t: 'prime', es: 'Viajes y Aventuras ✈️', en: 'Travel & Adventures ✈️' },
+  { id: 'interest_shopping_fashion', t: 'prime', es: 'Compras y Moda 🛍️', en: 'Shopping & Fashion 🛍️' },
+  { id: 'interest_fine_dining', t: 'prime', es: 'Alta Gastronomía 🍷', en: 'Fine Dining 🍷' },
+  { id: 'interest_art_culture', t: 'prime', es: 'Arte y Cultura 🎭', en: 'Art & Culture 🎭' },
+  { id: 'interest_fitness_wellness', t: 'prime', es: 'Fitness y Bienestar 💪', en: 'Fitness & Wellness 💪' },
+  { id: 'interest_education_growth', t: 'prime', es: 'Educación y Crecimiento 📖', en: 'Education & Growth 📖' },
+  { id: 'interest_exclusive_events', t: 'prime', es: 'Eventos Exclusivos ✨', en: 'Exclusive Events ✨' },
+  { id: 'interest_spa_relaxation', t: 'prime', es: 'Spa y Relajación 🧖‍♀️', en: 'Spa & Relaxation 🧖‍♀️' },
+  { id: 'interest_music_concerts', t: 'prime', es: 'Música y Conciertos 🎵', en: 'Music & Concerts 🎵' },
+  { id: 'interest_beach_vacation', t: 'prime', es: 'Vacaciones en la Playa 🏖️', en: 'Beach Vacation 🏖️' },
+  { id: 'interest_mentorship_business', t: 'elite', es: 'Mentoría y Negocios 💼', en: 'Mentorship & Business 💼' },
+  { id: 'interest_luxury_experiences', t: 'elite', es: 'Experiencias Únicas 💎', en: 'Unique Experiences 💎' },
+  { id: 'interest_international_travel', t: 'elite', es: 'Viajes Internacionales 🌍', en: 'International Travel 🌍' },
+  { id: 'interest_gourmet_cuisine', t: 'elite', es: 'Cocina Gourmet 🍽️', en: 'Gourmet Cuisine 🍽️' },
+  { id: 'interest_art_collecting', t: 'elite', es: 'Arte y Coleccionismo 🎨', en: 'Art & Collecting 🎨' },
+  { id: 'interest_golf_premium_sports', t: 'elite', es: 'Golf y Deportes Premium ⛳', en: 'Golf & Premium Sports ⛳' },
+  { id: 'interest_vip_events', t: 'elite', es: 'Eventos VIP 🎉', en: 'VIP Events 🎉' },
+  { id: 'interest_philanthropy', t: 'elite', es: 'Filantropía ❤️', en: 'Philanthropy ❤️' },
+  { id: 'interest_wine_spirits', t: 'elite', es: 'Vinos y Licores 🥃', en: 'Wine & Spirits 🥃' },
+  { id: 'interest_sailing_yachting', t: 'elite', es: 'Navegación y Yates ⛵', en: 'Sailing & Yachting ⛵' },
+  { id: 'interest_movies_theater', t: 'both', es: 'Cine y Teatro 🎬', en: 'Movies & Theater 🎬' },
+  { id: 'interest_photography', t: 'both', es: 'Fotografía 📸', en: 'Photography 📸' },
+  { id: 'interest_books_reading', t: 'both', es: 'Libros y Lectura 📚', en: 'Books & Reading 📚' },
+  { id: 'interest_cooking', t: 'both', es: 'Cocina 👨‍🍳', en: 'Cooking 👨‍🍳' },
+  { id: 'interest_yoga_meditation', t: 'both', es: 'Yoga y Meditación 🧘', en: 'Yoga & Meditation 🧘' },
+  { id: 'interest_nature_outdoors', t: 'both', es: 'Naturaleza y Aire Libre 🌿', en: 'Nature & Outdoors 🌿' },
+];
 
 // Static bio examples — fallback when getBioCoaching is unavailable (parity with iOS staticBioFallback).
 const BIO_FALLBACK: Record<string, string[]> = {
@@ -325,8 +360,34 @@ export class AppShellComponent implements OnDestroy {
   readonly epEditing = signal(false);
   readonly epSaving = signal(false);
   readonly epError = signal('');
-  ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, interestInput: '' };
+  ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, lat: null as number | null, lng: null as number | null };
   readonly epInterests = signal<string[]>([]);
+  readonly epLocStatus = signal<'idle' | 'loading' | 'done' | 'error'>('idle');
+  /** Curated interest catalog filtered by the chosen type (parity with iOS UserInterest). */
+  interestsForType(): Array<{ id: string; t: string; es: string; en: string }> {
+    const ty = this.ep.type; if (!ty) return [];
+    return INTEREST_CATALOG.filter((x) => x.t === 'both' || x.t === ty);
+  }
+  epToggleInterest(id: string) {
+    const cur = this.epInterests();
+    if (cur.includes(id)) this.epInterests.set(cur.filter((x) => x !== id));
+    else if (cur.length < 5) this.epInterests.set([...cur, id]);
+  }
+  /** Interests stored as IDs but the user previously had free-text/legacy ones (shown as removable). */
+  epCustomInterests(): string[] { return this.epInterests().filter((id) => !INTEREST_CATALOG.some((x) => x.id === id)); }
+  /** Localize an interest ID (interest_*) → label; free-text legacy values pass through. */
+  interestLabel(id: string): string {
+    const it = INTEREST_CATALOG.find((x) => x.id === id);
+    if (!it) return id;
+    return this.lang() === 'es' ? it.es : it.en;
+  }
+  async epUpdateLocation() {
+    if (this.epLocStatus() === 'loading') return;
+    this.epLocStatus.set('loading');
+    const geo = await this.getGeo();
+    if (geo) { this.ep.lat = geo.lat; this.ep.lng = geo.lng; this.epLocStatus.set('done'); }
+    else this.epLocStatus.set('error');
+  }
   readonly epPhotos = signal<Array<{ name: string; url: string }>>([]);
   readonly grid9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   // Bio AI suggestions (getBioCoaching, iOS parity) + static fallback
@@ -363,7 +424,7 @@ export class AppShellComponent implements OnDestroy {
     this.ep.minAge = typeof p.minAge === 'number' ? p.minAge : 18;
     this.ep.maxAge = typeof p.maxAge === 'number' ? p.maxAge : 50;
     this.ep.maxDistance = typeof p.maxDistance === 'number' ? p.maxDistance : 50;
-    this.ep.interestInput = '';
+    this.ep.lat = null; this.ep.lng = null; this.epLocStatus.set('idle');
     this.epInterests.set(Array.isArray(p.interests) ? [...p.interests] : []);
     if (!this.profilePhotos().length) await this.loadProfilePhotos();
     const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
@@ -385,12 +446,6 @@ export class AppShellComponent implements OnDestroy {
     }
   }
   epRemovePhoto(i: number) { this.epPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
-  epAddInterest() {
-    const v = this.ep.interestInput.trim();
-    if (!v || this.epInterests().length >= 8 || this.epInterests().includes(v)) { this.ep.interestInput = ''; return; }
-    this.epInterests.update((a) => [...a, v]);
-    this.ep.interestInput = '';
-  }
   epRemoveInterest(it: string) { this.epInterests.update((a) => a.filter((x) => x !== it)); }
   epMinChanged(v: any) { this.ep.minAge = +v; if (this.ep.minAge > +this.ep.maxAge) this.ep.maxAge = this.ep.minAge; }
   epMaxChanged(v: any) { this.ep.maxAge = +v; if (this.ep.maxAge < +this.ep.minAge) this.ep.minAge = this.ep.maxAge; }
@@ -407,6 +462,7 @@ export class AppShellComponent implements OnDestroy {
         orientation: this.ep.orientation, interests: this.epInterests(),
         pictures: this.epPhotos().map((p) => p.name),
         minAge: this.ep.minAge, maxAge: this.ep.maxAge, maxDistance: this.ep.maxDistance,
+        ...(this.ep.lat != null && this.ep.lng != null ? { latitude: this.ep.lat, longitude: this.ep.lng } : {}),
       });
       this.profilePhotos.set([]);
       await this.loadProfilePhotos();

@@ -60,7 +60,7 @@
                       }
                       @if (p.interests?.length) {
                         <div class="disco-chips">
-                          @for (it of p.interests.slice(0, 4); track it) { <span>{{ it }}</span> }
+                          @for (it of p.interests.slice(0, 4); track it) { <span>{{ interestLabel(it) }}</span> }
                         </div>
                       }
                     </div>
@@ -207,20 +207,19 @@
                       <button class="ep-opt" [class.on]="ep.type === 'prime'" (click)="ep.type = 'prime'">{{ s('obPrime') }}</button>
                     </div>
                   </div>
-                  <!-- Intereses -->
+                  <!-- Intereses — selector curado (mismos IDs interest_* que iOS) -->
                   <div class="ep-sec">
-                    <label class="ep-label">{{ s('epInterests') }} <span class="ep-count-inline">{{ epInterests().length }}/8</span></label>
-                    @if (epInterests().length) {
+                    <label class="ep-label">{{ s('epInterests') }} <span class="ep-count-inline">{{ epInterests().length }}/5</span></label>
+                    @if (epCustomInterests().length) {
                       <div class="pf-interests">
-                        @for (it of epInterests(); track it) { <button class="pf-chip ep-chip" (click)="epRemoveInterest(it)">{{ it }} ✕</button> }
+                        @for (it of epCustomInterests(); track it) { <button class="pf-chip ep-chip" (click)="epRemoveInterest(it)">{{ it }} ✕</button> }
                       </div>
                     }
-                    @if (epInterests().length < 8) {
-                      <form class="ep-interest-add" (submit)="$event.preventDefault(); epAddInterest()">
-                        <input [(ngModel)]="ep.interestInput" name="epInt" [placeholder]="s('epAddInterest')" maxlength="24" />
-                        <button type="submit" aria-label="＋">＋</button>
-                      </form>
-                    }
+                    <div class="ep-int-grid">
+                      @for (it of interestsForType(); track it.id) {
+                        <button class="ep-int" [class.on]="epInterests().includes(it.id)" (click)="epToggleInterest(it.id)">{{ lang() === 'es' ? it.es : it.en }}</button>
+                      }
+                    </div>
                   </div>
                   <!-- Rango de edad -->
                   <div class="ep-sec">
@@ -235,6 +234,13 @@
                     <label class="ep-label">{{ s('epDistance') }}</label>
                     <div class="ep-slider-row"><span></span><b>{{ ep.maxDistance }} km</b></div>
                     <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ep.maxDistance" (ngModelChange)="ep.maxDistance = +$event" />
+                  </div>
+                  <!-- Ubicación (iOS location section) — re-detecta geo y actualiza g/geohash -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('epLocation') }}</label>
+                    <button class="ep-photocoach ep-loc-btn" [disabled]="epLocStatus() === 'loading'" (click)="epUpdateLocation()">📍 {{ epLocStatus() === 'loading' ? '…' : s('epUpdateLocation') }}</button>
+                    @if (epLocStatus() === 'done') { <div class="ep-loc-ok">✓ {{ s('epLocDone') }}</div> }
+                    @if (epLocStatus() === 'error') { <div class="ob-error">{{ s('epLocError') }}</div> }
                   </div>
                   @if (epError()) { <div class="ob-error">{{ epError() }}</div> }
                 </div>
@@ -273,7 +279,7 @@
                 @if ($any(firebase.userProfile())?.bio) { <p class="pf-bio">{{ $any(firebase.userProfile()).bio }}</p> }
                 @if (profileInterests().length) {
                   <div class="pf-interests">
-                    @for (it of profileInterests(); track it) { <span class="pf-chip">{{ it }}</span> }
+                    @for (it of profileInterests(); track it) { <span class="pf-chip">{{ interestLabel(it) }}</span> }
                   </div>
                 }
 

@@ -464,7 +464,7 @@ export class FirebaseService {
 
   /** In-web profile edit (iOS EditProfileView parity) — writes ONLY update-legal fields
    *  (none are in the users-update blocklist; userType is constrained to the valid enum by the rule). */
-  async updateProfile(fields: { name: string; bio: string; male: boolean; userType: string; orientation: string; interests: string[]; pictures: string[]; minAge: number; maxAge: number; maxDistance: number }): Promise<void> {
+  async updateProfile(fields: { name: string; bio: string; male: boolean; userType: string; orientation: string; interests: string[]; pictures: string[]; minAge: number; maxAge: number; maxDistance: number; latitude?: number; longitude?: number }): Promise<void> {
     const u = this.currentUser();
     if (!u) return;
     const data: Record<string, unknown> = {
@@ -479,6 +479,12 @@ export class FirebaseService {
       maxAge: Math.max(18, Math.min(99, Math.round(fields.maxAge))),
       maxDistance: Math.max(1, Math.min(500, Math.round(fields.maxDistance))),
     };
+    // Location edit — write lat/lng + recompute the `g`/geohash the discovery feed range-queries on.
+    if (typeof fields.latitude === 'number' && typeof fields.longitude === 'number') {
+      data['latitude'] = fields.latitude; data['longitude'] = fields.longitude;
+      const gh = this.encodeGeohash(fields.latitude, fields.longitude);
+      data['g'] = gh; data['geohash'] = gh;
+    }
     await updateDoc(doc(this.db, 'users', u.uid), data);
     await this.refreshProfile();
   }
