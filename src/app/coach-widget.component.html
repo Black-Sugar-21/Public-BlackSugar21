@@ -19,7 +19,7 @@
             } @else {
               <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
             }
-            @if (!embedded) { <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button> }
+            @if (!embedded) { <button class="cw-x" (click)="toggle()" [attr.aria-label]="ui('ariaClose')">✕</button> }
           </div>
         </header>
 
@@ -33,7 +33,7 @@
                 <p class="cw-signin-t">{{ li('signingIn') }}</p>
               </div>
             }
-            <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
+            <button class="cw-login-x" (click)="closeLogin()" [attr.aria-label]="ui('ariaClose')">✕</button>
             <h3 class="cw-login-t">{{ li('title') }}</h3>
             @if (loginGate()) {
               <p class="cw-login-gate">{{ li('gate') }}</p>
@@ -91,14 +91,14 @@
         @if (historyOpen()) {
           <div class="cw-login-ov" (click)="closeHistory()"></div>
           <div class="cw-history" role="dialog" aria-modal="true">
-            <button class="cw-login-x" (click)="closeHistory()" aria-label="Cerrar">✕</button>
+            <button class="cw-login-x" (click)="closeHistory()" [attr.aria-label]="ui('ariaClose')">✕</button>
             <h3 class="cw-login-t">{{ ui('historyTitle') }}</h3>
             <button class="cw-hist-new" (click)="newConversation()">＋ {{ ui('newChat') }}</button>
             @for (c of convoList(); track c.id) {
               <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
                 <span class="cw-hist-title">{{ c.title }}</span>
                 <span class="cw-hist-time">{{ convoTime(c.updatedAt) }}</span>
-                <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" aria-label="Eliminar">🗑</span>
+                <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" [attr.aria-label]="ui('ariaDelete')">🗑</span>
               </button>
             }
             @if (convoList().length === 0) { <p class="cw-hist-empty">{{ ui('historyEmpty') }}</p> }
@@ -218,14 +218,14 @@
                         }
                       </div>
                       @if (m.sim.approaches.length > 1) {
-                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
-                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.sim.approaches.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" [attr.aria-label]="ui('ariaPrev')">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.sim.approaches.length - 1" (click)="navCarousel(mi, 1)" [attr.aria-label]="ui('ariaNext')">›</button>
                       }
                     </div>
                     @if (m.sim.approaches.length > 1) {
                       <div class="cw-dots">
                         @for (a of m.sim.approaches; track di; let di = $index) {
-                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a enfoque"></button>
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" [attr.aria-label]="ui('ariaGoFocus')"></button>
                         }
                       </div>
                     }
@@ -258,14 +258,14 @@
                         }
                       </div>
                       @if (m.mv.stages.length > 1) {
-                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
-                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.mv.stages.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" [attr.aria-label]="ui('ariaPrev')">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.mv.stages.length - 1" (click)="navCarousel(mi, 1)" [attr.aria-label]="ui('ariaNext')">›</button>
                       }
                     </div>
                     @if (m.mv.stages.length > 1) {
                       <div class="cw-dots">
                         @for (st of m.mv.stages; track di; let di = $index) {
-                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a etapa"></button>
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" [attr.aria-label]="ui('ariaGoStage')"></button>
                         }
                       </div>
                     }
@@ -346,7 +346,7 @@
           <div class="cw-modebar">
             @if (simMode()) {
               <span class="cw-modeon">{{ simMode() === 'multiverse' ? t().mvTitle : t().simTitle }}</span>
-              <button class="cw-modex" (click)="exitSim()" aria-label="Salir del modo">✕</button>
+              <button class="cw-modex" (click)="exitSim()" [attr.aria-label]="ui('ariaExitMode')">✕</button>
             } @else {
               <button class="cw-modetab" (click)="startSim('situation')">{{ t().simTitle }}</button>
               <button class="cw-modetab" (click)="startSim('multiverse')">{{ t().mvTitle }}</button>

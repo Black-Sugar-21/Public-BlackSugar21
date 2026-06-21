@@ -62,6 +62,14 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
 // 13-language UI strings for the newer widget chrome (greeting, conversation history, discover hint).
 // Kept here (not in the 3-lang content I18N) so these features are localized for ALL supported languages.
 const UI_I18N: Record<string, Record<string, string>> = {
+  // a11y aria-labels (13-lang)
+  ariaClose: {"es":"Cerrar","en":"Close","pt":"Fechar","fr":"Fermer","de":"Schließen","it":"Chiudi","zh":"关闭","ja":"閉じる","ko":"닫기","ru":"Закрыть","ar":"إغلاق","id":"Tutup","tr":"Kapat"},
+  ariaDelete: {"es":"Eliminar","en":"Delete","pt":"Excluir","fr":"Supprimer","de":"Löschen","it":"Elimina","zh":"删除","ja":"削除","ko":"삭제","ru":"Удалить","ar":"حذف","id":"Hapus","tr":"Sil"},
+  ariaPrev: {"es":"Anterior","en":"Previous","pt":"Anterior","fr":"Précédent","de":"Zurück","it":"Precedente","zh":"上一个","ja":"前へ","ko":"이전","ru":"Назад","ar":"السابق","id":"Sebelumnya","tr":"Önceki"},
+  ariaNext: {"es":"Siguiente","en":"Next","pt":"Próximo","fr":"Suivant","de":"Weiter","it":"Successivo","zh":"下一个","ja":"次へ","ko":"다음","ru":"Вперёд","ar":"التالي","id":"Berikutnya","tr":"Sonraki"},
+  ariaGoFocus: {"es":"Ir a enfoque","en":"Go to focus","pt":"Ir para o foco","fr":"Aller au focus","de":"Zum Fokus","it":"Vai al focus","zh":"前往焦点","ja":"フォーカスへ","ko":"포커스로 이동","ru":"К фокусу","ar":"الذهاب إلى التركيز","id":"Ke fokus","tr":"Odağa git"},
+  ariaGoStage: {"es":"Ir a etapa","en":"Go to stage","pt":"Ir para a etapa","fr":"Aller à l'étape","de":"Zur Phase","it":"Vai alla fase","zh":"前往阶段","ja":"ステージへ","ko":"단계로 이동","ru":"К этапу","ar":"الذهاب إلى المرحلة","id":"Ke tahap","tr":"Aşamaya git"},
+  ariaExitMode: {"es":"Salir del modo","en":"Exit mode","pt":"Sair do modo","fr":"Quitter le mode","de":"Modus verlassen","it":"Esci dalla modalità","zh":"退出模式","ja":"モードを終了","ko":"모드 종료","ru":"Выйти из режима","ar":"الخروج من الوضع","id":"Keluar mode","tr":"Moddan çık"},
   morning: {"es":"Buenos días","en":"Good morning","pt":"Bom dia","fr":"Bonjour","de":"Guten Morgen","it":"Buongiorno","zh":"早上好","ja":"おはよう","ko":"좋은 아침","ru":"Доброе утро","ar":"صباح الخير","id":"Selamat pagi","tr":"Günaydın"},
   afternoon: {"es":"Buenas tardes","en":"Good afternoon","pt":"Boa tarde","fr":"Bon après-midi","de":"Guten Tag","it":"Buon pomeriggio","zh":"下午好","ja":"こんにちは","ko":"좋은 오후","ru":"Добрый день","ar":"مساء الخير","id":"Selamat siang","tr":"İyi günler"},
   evening: {"es":"Buenas noches","en":"Good evening","pt":"Boa noite","fr":"Bonsoir","de":"Guten Abend","it":"Buonasera","zh":"晚上好","ja":"こんばんは","ko":"좋은 저녁","ru":"Добрый вечер","ar":"مساء الخير","id":"Selamat malam","tr":"İyi akşamlar"},
