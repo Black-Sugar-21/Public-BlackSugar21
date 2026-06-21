@@ -30,6 +30,9 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
   headerSignIn: {"es":"Iniciar sesión","en":"Sign in","pt":"Entrar","fr":"Se connecter","de":"Anmelden","it":"Accedi","zh":"登录","ja":"ログイン","ko":"로그인","ru":"Войти","ar":"تسجيل الدخول","id":"Masuk","tr":"Giriş yap"},
   connected: {"es":"Conectado","en":"Connected","pt":"Conectado","fr":"Connecté","de":"Verbunden","it":"Connesso","zh":"已连接","ja":"接続済み","ko":"연결됨","ru":"Подключено","ar":"متصل","id":"Terhubung","tr":"Bağlandı"},
   signOut: {"es":"Cerrar sesión","en":"Sign out","pt":"Sair","fr":"Se déconnecter","de":"Abmelden","it":"Esci","zh":"退出登录","ja":"ログアウト","ko":"로그아웃","ru":"Выйти","ar":"تسجيل الخروج","id":"Keluar","tr":"Çıkış yap"},
+  signOutConfirm: {"es":"¿Cerrar sesión?","en":"Sign out?","pt":"Sair?","fr":"Se déconnecter ?","de":"Abmelden?","it":"Uscire?","zh":"退出登录？","ja":"ログアウトしますか？","ko":"로그아웃할까요?","ru":"Выйти?","ar":"تسجيل الخروج؟","id":"Keluar?","tr":"Çıkış yapılsın mı?"},
+  signOutBody: {"es":"Tendrás que iniciar sesión de nuevo.","en":"You'll need to sign in again.","pt":"Você precisará entrar de novo.","fr":"Tu devras te reconnecter.","de":"Du musst dich erneut anmelden.","it":"Dovrai accedere di nuovo.","zh":"你需要重新登录。","ja":"再度ログインが必要です。","ko":"다시 로그인해야 해요.","ru":"Нужно будет войти снова.","ar":"ستحتاج لتسجيل الدخول مجدداً.","id":"Kamu perlu masuk lagi.","tr":"Tekrar giriş yapman gerekir."},
+  cancel: {"es":"Cancelar","en":"Cancel","pt":"Cancelar","fr":"Annuler","de":"Abbrechen","it":"Annulla","zh":"取消","ja":"キャンセル","ko":"취소","ru":"Отмена","ar":"إلغاء","id":"Batal","tr":"İptal"},
   title: {"es":"Inicia sesión o regístrate","en":"Sign in or sign up","pt":"Entre ou cadastre-se","fr":"Connexion ou inscription","de":"Anmelden oder registrieren","it":"Accedi o registrati","zh":"登录或注册","ja":"ログインまたは登録","ko":"로그인 또는 가입","ru":"Войти или зарегистрироваться","ar":"سجّل الدخول أو أنشئ حساباً","id":"Masuk atau daftar","tr":"Giriş yap veya kayıt ol"},
   subtitle: {"es":"Respuestas más inteligentes, tu historial guardado y matches alineados con tu perfil.","en":"Smarter answers, your history saved, and matches aligned with your profile.","pt":"Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.","fr":"Des réponses plus pertinentes, votre historique sauvegardé et des matchs alignés sur votre profil.","de":"Klügere Antworten, dein Verlauf gespeichert und Matches passend zu deinem Profil.","it":"Risposte più intelligenti, la tua cronologia salvata e match in linea con il tuo profilo.","zh":"更智能的回答、保存的历史记录，以及与你资料相符的匹配。","ja":"より賢い回答、履歴の保存、プロフィールに合ったマッチを。","ko":"더 똑똑한 답변, 저장되는 기록, 프로필에 맞는 매치까지.","ru":"Умные ответы, сохранённая история и совпадения по вашему профилю.","ar":"إجابات أذكى، سجلّك محفوظ، ومطابقات تناسب ملفك.","id":"Jawaban lebih cerdas, riwayat tersimpan, dan match sesuai profilmu.","tr":"Daha akıllı yanıtlar, kayıtlı geçmişin ve profiline uygun eşleşmeler."},
   gate: {"es":"Probaste el Coach IA ✦ Inicia sesión gratis y desbloquea tu experiencia completa.","en":"You've tried the AI Coach ✦ Sign in free and unlock your full experience.","pt":"Você experimentou o Coach IA ✦ Entre grátis e desbloqueie sua experiência completa.","fr":"Vous avez essayé le Coach IA ✦ Connectez-vous gratuitement et débloquez l'expérience complète.","de":"Du hast den KI-Coach getestet ✦ Melde dich kostenlos an und schalte dein volles Erlebnis frei.","it":"Hai provato il Coach IA ✦ Accedi gratis e sblocca l'esperienza completa.","zh":"你已体验 AI 教练 ✦ 免费登录，解锁完整体验。","ja":"AIコーチを試しましたね ✦ 無料でログインして、フル体験を解放しましょう。","ko":"AI 코치를 경험했어요 ✦ 무료로 로그인하고 전체 경험을 해제하세요.","ru":"Вы попробовали ИИ-коуча ✦ Войдите бесплатно и откройте полный доступ.","ar":"لقد جرّبت مدرّب الذكاء الاصطناعي ✦ سجّل الدخول مجاناً واكتشف التجربة الكاملة.","id":"Kamu sudah mencoba Coach AI ✦ Masuk gratis dan buka pengalaman lengkapmu.","tr":"Yapay Zekâ Koçu'nu denedin ✦ Ücretsiz giriş yap ve tam deneyimin kilidini aç."},
@@ -188,7 +191,7 @@ const I18N: Record<string, any> = {
             <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
             <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎</button>
             @if (user(); as u) {
-              <button class="cw-avatar" (click)="signOut()" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
+              <button class="cw-avatar" (click)="confirmSignOut.set(true)" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
               <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
             }
@@ -268,6 +271,20 @@ const I18N: Record<string, any> = {
               </button>
             }
             @if (convoList().length === 0) { <p class="cw-hist-empty">{{ ui('historyEmpty') }}</p> }
+          </div>
+        }
+
+        <!-- Sign-out confirmation -->
+        @if (confirmSignOut()) {
+          <div class="cw-login-ov" (click)="confirmSignOut.set(false)"></div>
+          <div class="cw-confirm" role="dialog" aria-modal="true">
+            <div class="cw-confirm-ic">👋</div>
+            <h3 class="cw-login-t">{{ li('signOutConfirm') }}</h3>
+            <p class="cw-confirm-b">{{ li('signOutBody') }}</p>
+            <div class="cw-confirm-row">
+              <button class="cw-confirm-cancel" (click)="confirmSignOut.set(false)">{{ li('cancel') }}</button>
+              <button class="cw-confirm-ok" (click)="signOut()">{{ li('signOut') }}</button>
+            </div>
           </div>
         }
 
@@ -608,6 +625,13 @@ const I18N: Record<string, any> = {
     .cw-hist-del { font-size:12px; opacity:.5; flex:none; padding:0 2px; }
     .cw-hist-del:hover { opacity:1; }
     .cw-hist-empty { color:var(--cw-muted); font-size:12.5px; text-align:center; padding:14px 0; }
+    .cw-confirm { position:absolute; top:50%; left:14px; right:14px; transform:translateY(-50%); z-index:31; background:var(--cw-card); border:1px solid var(--cw-border); border-radius:18px; padding:22px 18px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.55); }
+    .cw-confirm-ic { font-size:38px; }
+    .cw-confirm-b { color:var(--cw-muted); font-size:13px; line-height:1.45; margin:6px 0 16px; }
+    .cw-confirm-row { display:flex; gap:9px; }
+    .cw-confirm-cancel, .cw-confirm-ok { flex:1; padding:11px; border-radius:999px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+    .cw-confirm-cancel { background:none; border:1px solid var(--cw-border); color:var(--cw-text); }
+    .cw-confirm-ok { background:var(--cw-app-red,#FF4457); border:none; color:#fff; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
     .cw-bubble { max-width:80%; padding:12px 16px; border-radius:15px; font-size:14.5px; line-height:1.55; color:var(--cw-text);
@@ -789,6 +813,7 @@ export class CoachWidgetComponent {
   // Multi-conversation (ChatGPT-style): every chat is saved to localStorage so nothing is lost and
   // the user can SELECT a previous session and continue it. The active conversation's messages live
   // in `messages`; the full list lives in localStorage and is surfaced via the history picker.
+  readonly confirmSignOut = signal(false);
   readonly historyOpen = signal(false);
   readonly convoList = signal<Array<{ id: string; title: string; updatedAt: number; active: boolean }>>([]);
   private activeId = '';
@@ -1190,7 +1215,7 @@ export class CoachWidgetComponent {
   }
   async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } }
   async signInApple() { try { await this.firebase.signInWithApple(); this.afterSignIn(); } catch { /* cancelled */ } }
-  async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } }
+  async signOut() { this.confirmSignOut.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   // Phone OTP (2 steps): enter number → SMS code → verify.
   async sendCode() {
     const phone = this.phoneInput.trim().replace(/[^\d+]/g, '');

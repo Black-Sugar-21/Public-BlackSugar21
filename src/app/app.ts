@@ -61,7 +61,15 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();
   }
+  // Sign-out requires explicit confirmation (avoid accidental logout).
+  showSignOutConfirm = signal(false);
+  requestSignOut(): void {
+    this.accountMenuOpen.set(false);
+    this.showProfileModal.set(false);
+    this.showSignOutConfirm.set(true);
+  }
   async signOut(): Promise<void> {
+    this.showSignOutConfirm.set(false);
     this.accountMenuOpen.set(false);
     this.showProfileModal.set(false);
     try { await this.firebase.signOutUser(); } catch (e) { console.error('signOut failed', e); }

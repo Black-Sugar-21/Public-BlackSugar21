@@ -96,7 +96,7 @@
                 <a class="account-item" routerLink="/app" (click)="closeAccountMenu()">✦ {{ getCurrentLanguage()==='es' ? 'Abrir Black Sugar 21' : 'Open Black Sugar 21' }}</a>
                 <button class="account-item" (click)="openProfile()">👤 {{ getCurrentLanguage()==='es' ? 'Mi perfil' : 'My profile' }}</button>
                 <a class="account-item" [href]="storeLinks().ios" target="_blank" rel="noopener" (click)="closeAccountMenu()">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
-                <button class="account-item danger" (click)="signOut()">⏻ {{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
+                <button class="account-item danger" (click)="requestSignOut()">⏻ {{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
               </div>
             }
           </div>
@@ -568,7 +568,22 @@
             <div class="profile-row"><span>{{ getCurrentLanguage()==='es' ? 'Idioma' : 'Language' }}</span><b>{{ currentLangOption().flag }} {{ currentLangOption().name }}</b></div>
           </div>
           <a class="profile-cta" [href]="storeLinks().ios" target="_blank" rel="noopener">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
-          <button class="profile-signout" (click)="signOut()">{{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
+          <button class="profile-signout" (click)="requestSignOut()">{{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Sign-out confirmation -->
+  @if (showSignOutConfirm()) {
+    <div class="modal-overlay" (click)="showSignOutConfirm.set(false)">
+      <div class="modal-content glass-panel confirm-panel" (click)="$event.stopPropagation()">
+        <div class="modal-icon">👋</div>
+        <h2 class="modal-title">{{ getCurrentLanguage()==='es' ? '¿Cerrar sesión?' : 'Sign out?' }}</h2>
+        <p class="modal-subtitle">{{ getCurrentLanguage()==='es' ? 'Tendrás que iniciar sesión de nuevo para volver a tu cuenta.' : 'You\'ll need to sign in again to get back to your account.' }}</p>
+        <div class="confirm-actions">
+          <button class="confirm-cancel" (click)="showSignOutConfirm.set(false)">{{ getCurrentLanguage()==='es' ? 'Cancelar' : 'Cancel' }}</button>
+          <button class="confirm-ok" (click)="signOut()">{{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
         </div>
       </div>
     </div>

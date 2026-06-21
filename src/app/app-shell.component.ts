@@ -20,6 +20,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   signIn: {"es":"Inicia sesión para ver tu perfil","en":"Sign in to see your profile","pt":"Entre para ver seu perfil","fr":"Connecte-toi pour voir ton profil","de":"Melde dich an, um dein Profil zu sehen","it":"Accedi per vedere il profilo","zh":"登录以查看资料","ja":"ログインしてプロフィールを表示","ko":"로그인하고 프로필 보기","ru":"Войдите, чтобы увидеть профиль","ar":"سجّل الدخول لعرض ملفك","id":"Masuk untuk melihat profil","tr":"Profilini görmek için giriş yap"},
   signOut: {"es":"Cerrar sesión","en":"Sign out","pt":"Sair","fr":"Se déconnecter","de":"Abmelden","it":"Esci","zh":"退出登录","ja":"ログアウト","ko":"로그아웃","ru":"Выйти","ar":"تسجيل الخروج","id":"Keluar","tr":"Çıkış yap"},
   backHome: {"es":"Volver al inicio","en":"Back to home","pt":"Voltar ao início","fr":"Retour à l'accueil","de":"Zur Startseite","it":"Torna alla home","zh":"返回首页","ja":"ホームに戻る","ko":"홈으로","ru":"На главную","ar":"العودة للرئيسية","id":"Ke beranda","tr":"Ana sayfa"},
+  confirmTitle: {"es":"¿Cerrar sesión?","en":"Sign out?","pt":"Sair?","fr":"Se déconnecter ?","de":"Abmelden?","it":"Uscire?","zh":"退出登录？","ja":"ログアウトしますか？","ko":"로그아웃할까요?","ru":"Выйти?","ar":"تسجيل الخروج؟","id":"Keluar?","tr":"Çıkış yapılsın mı?"},
+  confirmBody: {"es":"Tendrás que iniciar sesión de nuevo para volver a tu cuenta.","en":"You'll need to sign in again to get back to your account.","pt":"Você precisará entrar de novo para voltar à sua conta.","fr":"Tu devras te reconnecter pour retrouver ton compte.","de":"Du musst dich erneut anmelden, um zurückzukehren.","it":"Dovrai accedere di nuovo per tornare al tuo account.","zh":"你需要重新登录才能回到账户。","ja":"アカウントに戻るには再度ログインが必要です。","ko":"계정으로 돌아가려면 다시 로그인해야 해요.","ru":"Чтобы вернуться, нужно будет войти снова.","ar":"ستحتاج لتسجيل الدخول مجدداً للعودة لحسابك.","id":"Kamu perlu masuk lagi untuk kembali ke akun.","tr":"Hesabına dönmek için tekrar giriş yapman gerekir."},
+  cancel: {"es":"Cancelar","en":"Cancel","pt":"Cancelar","fr":"Annuler","de":"Abbrechen","it":"Annulla","zh":"取消","ja":"キャンセル","ko":"취소","ru":"Отмена","ar":"إلغاء","id":"Batal","tr":"İptal"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -80,7 +83,7 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
                 <h2>{{ u.displayName || u.email }}</h2>
                 @if (u.email) { <p class="shell-pf-mail">{{ u.email }}</p> }
                 <a class="shell-cta" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
-                <button class="shell-signout" (click)="signOut()">{{ s('signOut') }}</button>
+                <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
               } @else {
                 <div class="shell-teaser-ic">👤</div>
                 <p>{{ s('signIn') }}</p>
@@ -90,6 +93,21 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
           }
         }
       </main>
+
+      <!-- Sign-out confirmation -->
+      @if (showConfirm()) {
+        <div class="shell-confirm-ov" (click)="showConfirm.set(false)">
+          <div class="shell-confirm" (click)="$event.stopPropagation()">
+            <div class="shell-confirm-ic">👋</div>
+            <h3>{{ s('confirmTitle') }}</h3>
+            <p>{{ s('confirmBody') }}</p>
+            <div class="shell-confirm-row">
+              <button class="shell-confirm-cancel" (click)="showConfirm.set(false)">{{ s('cancel') }}</button>
+              <button class="shell-confirm-ok" (click)="signOut()">{{ s('signOut') }}</button>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Mobile bottom nav -->
       <nav class="shell-tabs">
@@ -127,6 +145,15 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
     .shell-pf-av.initial { display:inline-flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#D4AF37,#B8860B); color:#0A0A0A; font-weight:700; font-size:2rem; }
     .shell-pf-mail { color:#B0B0B0; }
     .shell-signout { background:none; border:1px solid rgba(255,255,255,.18); color:#E0E0E0; border-radius:999px; padding:11px 24px; font-family:inherit; cursor:pointer; }
+    .shell-confirm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:24px; }
+    .shell-confirm { background:#1A1A1A; border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:28px 24px; max-width:360px; text-align:center; }
+    .shell-confirm-ic { font-size:42px; }
+    .shell-confirm h3 { font-family:'Playfair Display',serif; font-size:22px; margin:10px 0 6px; }
+    .shell-confirm p { color:#B0B0B0; font-size:14px; line-height:1.5; margin:0 0 20px; }
+    .shell-confirm-row { display:flex; gap:10px; }
+    .shell-confirm-cancel, .shell-confirm-ok { flex:1; padding:12px; border-radius:999px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+    .shell-confirm-cancel { background:none; border:1px solid rgba(255,255,255,.18); color:#E0E0E0; }
+    .shell-confirm-ok { background:#ff4d5e; border:none; color:#fff; }
     .shell-tabs { display:none; }
     @media (max-width: 860px) {
       .shell-side { display:none; }
@@ -141,6 +168,7 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 export class AppShellComponent {
   private isBrowser: boolean;
   readonly section = signal<Section>('coach');
+  readonly showConfirm = signal(false);
   readonly navItems: Array<{ key: Section; icon: string }> = [
     { key: 'discovery', icon: '🔥' },
     { key: 'coach', icon: '✦' },
@@ -163,5 +191,5 @@ export class AppShellComponent {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();
   }
-  async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } this.router.navigate(['/']); }
+  async signOut() { this.showConfirm.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } this.router.navigate(['/']); }
 }
