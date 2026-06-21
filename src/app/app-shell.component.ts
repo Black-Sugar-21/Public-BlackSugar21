@@ -205,9 +205,10 @@ export class AppShellComponent implements OnDestroy {
     if (this.discoLocStatus() === 'loading') return;
     this.discoLocStatus.set('loading');
     const geo = await this.getGeo();
-    if (!geo) { this.discoLocStatus.set('denied'); return; }
+    if (!geo) { this.discoLocStatus.set('denied'); this.track('location_denied'); return; }
     try {
       await this.firebase.updateLocation(geo.lat, geo.lng);
+      this.track('location_enabled');
       this.discoLocStatus.set('idle');
       this.discoLoaded.set(false);
       await this.loadDiscovery();
@@ -265,9 +266,15 @@ export class AppShellComponent implements OnDestroy {
 
   lang(): Language { return this.translate.currentLanguage(); }
   s(key: string): string { const m = SHELL_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
+  /** Firebase Analytics (GA4) — logs for ALL visitors, logged-in or anonymous (GA4 client_id).
+   *  Tagged auth state + platform=web so the web app is comparable to iOS/Android in Firebase. */
+  private track(event: string, params: Record<string, unknown> = {}) {
+    try { this.firebase.logEvent(event, { ...params, platform: 'web', surface: 'app', authed: !!this.firebase.currentUser() }); } catch { /* analytics best-effort */ }
+  }
   go(sec: Section) {
     if (this.needsOnboarding()) { this.section.set('profile'); return; }  // can't leave onboarding until complete
     this.section.set(sec);
+    this.track('screen_view', { firebase_screen: sec, screen_name: sec });
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser() && this.hasLocation()) this.loadDiscovery();
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
     if (sec === 'profile' && this.profileComplete()) {
@@ -370,7 +377,8 @@ export class AppShellComponent implements OnDestroy {
     if (!p || this.swiping()) return;
     this.swiping.set(action === 'pass' ? 'pass' : 'like');
     this.dragY.set(-1100); // fly up out of view
-    this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
+    this.track('discovery_swipe', { action });
+    this.firebase.recordSwipe(p.userId, action).then((matchId) => { if (matchId) this.track('new_match'); }).catch(() => { /* best-effort */ });
     setTimeout(() => this.advance(), 400);
   }
 
@@ -460,7 +468,7 @@ export class AppShellComponent implements OnDestroy {
     this.chatText = '';
     this.chatError.set('');
     // Surface send failures (e.g. first-message gate) instead of silently restoring — iOS parity.
-    try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; this.chatError.set(this.s('chatSendErr')); }
+    try { await this.firebase.sendMessage(m.id, t); this.track('message_sent'); } catch { this.chatText = t; this.chatError.set(this.s('chatSendErr')); }
   }
 
   // ── Profile + onboarding ─────────────────────────────────────────────────────
@@ -616,6 +624,7 @@ export class AppShellComponent implements OnDestroy {
       });
       this.profilePhotos.set([]);
       await this.loadProfilePhotos();
+      this.track('profile_saved');
       this.epEditing.set(false);
     } catch { this.epError.set(this.s('obSaveErr')); }
     finally { this.epSaving.set(false); }
@@ -698,6 +707,7 @@ export class AppShellComponent implements OnDestroy {
         bio: this.ob.bio.trim() || undefined, latitude: geo?.lat, longitude: geo?.lng,
         pictures: this.obPhotos().map((p) => p.name),
       });
+      this.track('onboarding_complete', { userType });
       this.obStep.set(0);
     } catch { this.obError.set(this.s('obSaveErr')); }
     finally { this.obSaving.set(false); }
