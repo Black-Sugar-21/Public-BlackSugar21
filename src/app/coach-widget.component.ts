@@ -156,6 +156,9 @@ const I18N: Record<string, any> = {
           <div class="cw-login" role="dialog" aria-modal="true">
             <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
             <h3 class="cw-login-t">{{ lang()==='en' ? 'Sign in or sign up' : lang()==='pt' ? 'Entrar ou cadastrar-se' : 'Iniciar sesión o registrarse' }}</h3>
+            @if (loginGate()) {
+              <p class="cw-login-gate">{{ lang()==='en' ? 'You\'ve used your 2 free questions. Sign in to continue — up to 4 a day.' : lang()==='pt' ? 'Você usou suas 2 perguntas grátis. Entre para continuar — até 4 por dia.' : 'Usaste tus 2 preguntas gratis. Inicia sesión para seguir — hasta 4 al día.' }}</p>
+            }
             <p class="cw-login-s">{{ lang()==='en' ? 'Smarter answers, your history saved, and matches aligned with your profile.' : lang()==='pt' ? 'Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.' : 'Respuestas más inteligentes, tu historial guardado y matches alineados a tu perfil.' }}</p>
 
             @if (loginStep() === 'choose') {
@@ -504,6 +507,7 @@ const I18N: Record<string, any> = {
     .cw-login-or { display:flex; align-items:center; gap:10px; margin:4px 0 12px; color:var(--cw-muted); font-size:11px; }
     .cw-login-or::before, .cw-login-or::after { content:''; flex:1; height:1px; background:var(--cw-border); }
     .cw-login-hint { font-size:11.5px; color:var(--cw-muted); text-align:center; margin:0; }
+    .cw-login-gate { font-size:12.5px; color:var(--cw-gold); text-align:center; margin:0 0 12px; line-height:1.45; font-weight:600; background:rgba(212,175,55,.08); border:1px solid rgba(212,175,55,.3); border-radius:12px; padding:8px 12px; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
@@ -965,17 +969,24 @@ export class CoachWidgetComponent {
   // R64: logged-in web users (optional sign-in) get the authenticated coach.
   get user() { return this.firebase.currentUser; }
   readonly loginOpen = signal(false);
+  readonly loginGate = signal(false); // true → opened because the free-taste limit was hit
   readonly loginStep = signal<'choose' | 'phone' | 'code'>('choose');
   readonly phoneBusy = signal(false);
   readonly phoneErr = signal('');
   phoneInput = '';
   codeInput = '';
+  private pendingAsk: { message: string; lat?: number; lng?: number; city?: string } | null = null;
   // Apple Sign-In is offered ONLY on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
   appleDevice = false;
-  openLogin() { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginOpen.set(true); }
-  closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); }
-  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.closeLogin(); } catch { /* cancelled */ } }
-  async signInApple() { try { await this.firebase.signInWithApple(); this.closeLogin(); } catch { /* cancelled */ } }
+  openLogin(gated = false) { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
+  closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
+  // After any successful sign-in, resume the question the visitor was trying to ask.
+  private afterSignIn() {
+    this.closeLogin();
+    if (this.pendingAsk) { const p = this.pendingAsk; this.pendingAsk = null; this.ask(p); }
+  }
+  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } }
+  async signInApple() { try { await this.firebase.signInWithApple(); this.afterSignIn(); } catch { /* cancelled */ } }
   async signOut() { try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   // Phone OTP (2 steps): enter number → SMS code → verify.
   async sendCode() {
@@ -990,7 +1001,7 @@ export class CoachWidgetComponent {
     const code = this.codeInput.trim().replace(/\D/g, '');
     if (code.length < 4) { this.phoneErr.set(this.lang() === 'en' ? 'Enter the 6-digit code.' : 'Ingresa el código de 6 dígitos.'); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
-    try { await this.firebase.confirmPhoneCode(code); this.closeLogin(); }
+    try { await this.firebase.confirmPhoneCode(code); this.afterSignIn(); }
     catch { this.phoneErr.set(this.lang() === 'en' ? 'Wrong or expired code.' : 'Código incorrecto o vencido.'); }
     finally { this.phoneBusy.set(false); }
   }
@@ -1016,6 +1027,12 @@ export class CoachWidgetComponent {
   }
 
   private async ask(payload: { message: string; lat?: number; lng?: number; city?: string }) {
+    // R65: anonymous visitors get FREE_TASTE (2) questions; to reach the default 4/day they sign in.
+    if (!this.user() && this.coachReplies() >= FREE_TASTE) {
+      this.pendingAsk = payload;
+      this.openLogin(true);
+      return;
+    }
     this.busy.set(true);
     if (!this.thinking()) { this.thinkingLabel.set(this.t().thinking); }
     this.thinking.set(true); this.scroll();
