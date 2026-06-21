@@ -13,7 +13,7 @@
             <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
             <button class="cw-new" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">🕘<span class="cw-new-lbl">{{ ui('historyShort') }}</span></button>
             <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
-            <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎<span class="cw-new-lbl">{{ ui('newChat') }}</span></button>
+            <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎<span class="cw-new-lbl">{{ ui('newShort') }}</span></button>
             @if (user(); as u) {
               <button class="cw-avatar" (click)="confirmSignOut.set(true)" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
