@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, signal, computed } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, signal, computed, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from './translation.service';
@@ -60,7 +60,7 @@ const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
@@ -92,7 +92,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
-    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version',
+    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
@@ -123,7 +123,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
@@ -172,6 +172,8 @@ const I18N: Record<string, any> = {
           <div class="cw-id"><span class="cw-spark">✦</span>
             <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
+            <!-- Nueva conversación: clears the screen without losing the prior chat (archived). -->
+            <button class="cw-new" (click)="newConversation()" [title]="t().newChat" [attr.aria-label]="t().newChat">✎</button>
             @if (user(); as u) {
               <button class="cw-avatar" (click)="signOut()" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
@@ -239,6 +241,9 @@ const I18N: Record<string, any> = {
         }
 
         <div class="cw-body" #body>
+          @if (hasArchive()) {
+            <button class="cw-show-prev" (click)="showPrevious()">⌃ {{ t().showPrev }}</button>
+          }
           @if (isWelcome()) {
             <div class="cw-welcome">
               <div class="cw-welcome-spark">✦</div>
@@ -551,6 +556,10 @@ const I18N: Record<string, any> = {
     .cw-benefit-i { flex:none; width:18px; text-align:center; font-size:14px; line-height:1.4; filter:drop-shadow(0 0 4px rgba(212,175,55,.4)); }
     .cw-login-trust { font-size:11px; color:var(--cw-muted); text-align:center; margin:10px 0 0; letter-spacing:.02em; }
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
+    .cw-new { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; padding:0 2px; line-height:1; }
+    .cw-new:hover { color:var(--cw-gold); }
+    .cw-show-prev { align-self:center; background:rgba(156,89,234,.08); border:1px solid rgba(156,89,234,.3); color:var(--cw-purple-l,#9c59ea); font-size:12px; font-weight:600; border-radius:999px; padding:6px 12px; cursor:pointer; margin-bottom:4px; }
+    .cw-show-prev:hover { background:rgba(156,89,234,.16); }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
     .cw-bubble { max-width:80%; padding:12px 16px; border-radius:15px; font-size:14.5px; line-height:1.55; color:var(--cw-text);
@@ -721,6 +730,11 @@ export class CoachWidgetComponent {
   readonly isBrowser: boolean;
   readonly open = signal(false);
   readonly messages = signal<Msg[]>([]);
+  // "Nueva conversación": archive the current chat to localStorage so clearing never loses it
+  // (restorable via "Ver conversación anterior"). hasArchive = there is a recoverable prior chat.
+  readonly hasArchive = signal(false);
+  private static readonly LS_MSGS = 'bs21_coach_msgs';
+  private static readonly LS_ARCHIVE = 'bs21_coach_archive';
   readonly busy = signal(false);
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
@@ -834,6 +848,20 @@ export class CoachWidgetComponent {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
+      // Restore a persisted session so a refresh / "clear" never loses prior requests.
+      try {
+        const saved = localStorage.getItem(CoachWidgetComponent.LS_MSGS);
+        if (saved) { const arr = JSON.parse(saved); if (Array.isArray(arr) && arr.length) this.messages.set(arr); }
+        this.hasArchive.set(!!localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE));
+      } catch { /* noop */ }
+      // Persist the live conversation on every change (drops transient typing bubbles).
+      effect(() => {
+        const m = this.messages().filter((x) => !x.typing);
+        try {
+          if (m.length) localStorage.setItem(CoachWidgetComponent.LS_MSGS, JSON.stringify(m));
+          else localStorage.removeItem(CoachWidgetComponent.LS_MSGS);
+        } catch { /* quota / private mode */ }
+      });
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
       try {
         const ua = navigator.userAgent || '';
@@ -863,6 +891,37 @@ export class CoachWidgetComponent {
       this.ga('coach_demo_open');
       if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
     }
+  }
+
+  /** "Nueva conversación": clear the screen to the greeting without losing anything — the current
+   *  chat is appended to the localStorage archive (restorable via showPrevious). */
+  newConversation() {
+    const cur = this.messages().filter((x) => !x.typing && !(x.role === 'coach' && x.text === this.t().greeting));
+    if (cur.length) {
+      try {
+        const prev = localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE);
+        const prevArr = prev ? (JSON.parse(prev) || []) : [];
+        localStorage.setItem(CoachWidgetComponent.LS_ARCHIVE, JSON.stringify([...prevArr, ...cur]));
+        this.hasArchive.set(true);
+      } catch { /* noop */ }
+    }
+    this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+    this.ga('coach_demo_new_conversation');
+  }
+
+  /** Restore the previously-cleared conversation (prepends the archived messages, then empties it). */
+  showPrevious() {
+    try {
+      const arch = localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE);
+      if (arch) {
+        const arr = JSON.parse(arch);
+        if (Array.isArray(arr) && arr.length) {
+          this.messages.update((m) => [...arr, ...m.filter((x) => !x.typing)]);
+        }
+      }
+      localStorage.removeItem(CoachWidgetComponent.LS_ARCHIVE);
+    } catch { /* noop */ }
+    this.hasArchive.set(false);
   }
 
   loadEmojis() { return this.loadingMode() === 'multiverse' ? ['🌟', '💬', '💕', '⚡', '🚀'] : ['💬', '😏', '💕', '🌱']; }
