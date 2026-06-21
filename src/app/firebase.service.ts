@@ -137,9 +137,8 @@ export class FirebaseService {
         // En desarrollo, no bloquear la aplicación por errores de App Check
         console.warn('⚠️ Error al inicializar App Check (ignorado en desarrollo):', error);
       }
-    } else {
-      console.warn('⚠️ App Check no configurado - falta recaptchaSiteKey en firebase.config.ts');
     }
+    // (App Check intentionally disabled via appCheckEnabled — no warning; not enforced on any API.)
 
     // Listen to auth state changes
     onAuthStateChanged(this.auth, async (user) => {
