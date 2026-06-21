@@ -24,6 +24,31 @@ const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.n
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
 const FREE_TASTE = 2; // free coach replies shown as a "taste" before the (non-blocking) app CTA
+
+// R65: login sheet strings in all 13 languages (single source; no hardcoded per-string ternaries).
+const LOGIN_I18N: Record<string, Record<string, string>> = {
+  headerSignIn: {"es":"Iniciar sesión","en":"Sign in","pt":"Entrar","fr":"Se connecter","de":"Anmelden","it":"Accedi","zh":"登录","ja":"ログイン","ko":"로그인","ru":"Войти","ar":"تسجيل الدخول","id":"Masuk","tr":"Giriş yap"},
+  connected: {"es":"Conectado","en":"Connected","pt":"Conectado","fr":"Connecté","de":"Verbunden","it":"Connesso","zh":"已连接","ja":"接続済み","ko":"연결됨","ru":"Подключено","ar":"متصل","id":"Terhubung","tr":"Bağlandı"},
+  signOut: {"es":"Cerrar sesión","en":"Sign out","pt":"Sair","fr":"Se déconnecter","de":"Abmelden","it":"Esci","zh":"退出登录","ja":"ログアウト","ko":"로그아웃","ru":"Выйти","ar":"تسجيل الخروج","id":"Keluar","tr":"Çıkış yap"},
+  title: {"es":"Inicia sesión o regístrate","en":"Sign in or sign up","pt":"Entre ou cadastre-se","fr":"Connexion ou inscription","de":"Anmelden oder registrieren","it":"Accedi o registrati","zh":"登录或注册","ja":"ログインまたは登録","ko":"로그인 또는 가입","ru":"Войти или зарегистрироваться","ar":"سجّل الدخول أو أنشئ حساباً","id":"Masuk atau daftar","tr":"Giriş yap veya kayıt ol"},
+  subtitle: {"es":"Respuestas más inteligentes, tu historial guardado y matches alineados con tu perfil.","en":"Smarter answers, your history saved, and matches aligned with your profile.","pt":"Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.","fr":"Des réponses plus pertinentes, votre historique sauvegardé et des matchs alignés sur votre profil.","de":"Klügere Antworten, dein Verlauf gespeichert und Matches passend zu deinem Profil.","it":"Risposte più intelligenti, la tua cronologia salvata e match in linea con il tuo profilo.","zh":"更智能的回答、保存的历史记录，以及与你资料相符的匹配。","ja":"より賢い回答、履歴の保存、プロフィールに合ったマッチを。","ko":"더 똑똑한 답변, 저장되는 기록, 프로필에 맞는 매치까지.","ru":"Умные ответы, сохранённая история и совпадения по вашему профилю.","ar":"إجابات أذكى، سجلّك محفوظ، ومطابقات تناسب ملفك.","id":"Jawaban lebih cerdas, riwayat tersimpan, dan match sesuai profilmu.","tr":"Daha akıllı yanıtlar, kayıtlı geçmişin ve profiline uygun eşleşmeler."},
+  gate: {"es":"Usaste tus 2 preguntas gratis. Inicia sesión para continuar — hasta 4 al día.","en":"You've used your 2 free questions. Sign in to continue — up to 4 a day.","pt":"Você usou suas 2 perguntas grátis. Entre para continuar — até 4 por dia.","fr":"Vous avez utilisé vos 2 questions gratuites. Connectez-vous pour continuer — jusqu'à 4 par jour.","de":"Du hast deine 2 kostenlosen Fragen genutzt. Melde dich an, um weiterzumachen — bis zu 4 pro Tag.","it":"Hai usato le tue 2 domande gratuite. Accedi per continuare — fino a 4 al giorno.","zh":"你已用完 2 个免费提问。登录即可继续——每天最多 4 个。","ja":"無料の 2 つの質問を使い切りました。ログインして続行 — 1日最大 4 つ。","ko":"무료 질문 2개를 모두 사용했어요. 로그인하면 계속할 수 있어요 — 하루 최대 4개.","ru":"Вы использовали 2 бесплатных вопроса. Войдите, чтобы продолжить — до 4 в день.","ar":"لقد استخدمت سؤاليك المجانيين. سجّل الدخول للمتابعة — حتى 4 يومياً.","id":"Kamu sudah memakai 2 pertanyaan gratis. Masuk untuk lanjut — hingga 4 per hari.","tr":"2 ücretsiz sorunu kullandın. Devam etmek için giriş yap — günde 4'e kadar."},
+  google: {"es":"Continuar con Google","en":"Continue with Google","pt":"Continuar com o Google","fr":"Continuer avec Google","de":"Mit Google fortfahren","it":"Continua con Google","zh":"使用 Google 继续","ja":"Google で続ける","ko":"Google로 계속하기","ru":"Продолжить с Google","ar":"المتابعة بحساب Google","id":"Lanjutkan dengan Google","tr":"Google ile devam et"},
+  apple: {"es":"Continuar con Apple","en":"Continue with Apple","pt":"Continuar com a Apple","fr":"Continuer avec Apple","de":"Mit Apple fortfahren","it":"Continua con Apple","zh":"使用 Apple 继续","ja":"Apple で続ける","ko":"Apple로 계속하기","ru":"Продолжить с Apple","ar":"المتابعة بحساب Apple","id":"Lanjutkan dengan Apple","tr":"Apple ile devam et"},
+  phone: {"es":"Continuar con tu teléfono","en":"Continue with your phone","pt":"Continuar com seu telefone","fr":"Continuer avec votre téléphone","de":"Mit deinem Telefon fortfahren","it":"Continua con il tuo telefono","zh":"使用手机号继续","ja":"電話番号で続ける","ko":"휴대폰으로 계속하기","ru":"Продолжить с телефоном","ar":"المتابعة برقم هاتفك","id":"Lanjutkan dengan ponselmu","tr":"Telefonunla devam et"},
+  phonePh: {"es":"Teléfono, ej. +56 9 1234 5678","en":"Phone, e.g. +56 9 1234 5678","pt":"Telefone, ex. +56 9 1234 5678","fr":"Téléphone, ex. +56 9 1234 5678","de":"Telefon, z. B. +56 9 1234 5678","it":"Telefono, es. +56 9 1234 5678","zh":"电话，例如 +56 9 1234 5678","ja":"電話番号、例 +56 9 1234 5678","ko":"전화번호, 예: +56 9 1234 5678","ru":"Телефон, напр. +56 9 1234 5678","ar":"الهاتف، مثال +56 9 1234 5678","id":"Telepon, mis. +56 9 1234 5678","tr":"Telefon, örn. +56 9 1234 5678"},
+  sendCode: {"es":"Enviar código","en":"Send code","pt":"Enviar código","fr":"Envoyer le code","de":"Code senden","it":"Invia codice","zh":"发送验证码","ja":"コードを送信","ko":"코드 전송","ru":"Отправить код","ar":"إرسال الرمز","id":"Kirim kode","tr":"Kod gönder"},
+  sending: {"es":"Enviando…","en":"Sending…","pt":"Enviando…","fr":"Envoi…","de":"Senden…","it":"Invio…","zh":"发送中…","ja":"送信中…","ko":"전송 중…","ru":"Отправка…","ar":"جارٍ الإرسال…","id":"Mengirim…","tr":"Gönderiliyor…"},
+  codePh: {"es":"Código de 6 dígitos","en":"6-digit code","pt":"Código de 6 dígitos","fr":"Code à 6 chiffres","de":"6-stelliger Code","it":"Codice di 6 cifre","zh":"6 位验证码","ja":"6 桁のコード","ko":"6자리 코드","ru":"6-значный код","ar":"رمز من 6 أرقام","id":"Kode 6 digit","tr":"6 haneli kod"},
+  verify: {"es":"Verificar","en":"Verify","pt":"Verificar","fr":"Vérifier","de":"Bestätigen","it":"Verifica","zh":"验证","ja":"認証","ko":"확인","ru":"Подтвердить","ar":"تحقّق","id":"Verifikasi","tr":"Doğrula"},
+  verifying: {"es":"Verificando…","en":"Verifying…","pt":"Verificando…","fr":"Vérification…","de":"Bestätigen…","it":"Verifica…","zh":"验证中…","ja":"認証中…","ko":"확인 중…","ru":"Проверка…","ar":"جارٍ التحقّق…","id":"Memverifikasi…","tr":"Doğrulanıyor…"},
+  back: {"es":"Atrás","en":"Back","pt":"Voltar","fr":"Retour","de":"Zurück","it":"Indietro","zh":"返回","ja":"戻る","ko":"뒤로","ru":"Назад","ar":"رجوع","id":"Kembali","tr":"Geri"},
+  changeNumber: {"es":"Cambiar número","en":"Change number","pt":"Alterar número","fr":"Changer de numéro","de":"Nummer ändern","it":"Cambia numero","zh":"更换号码","ja":"番号を変更","ko":"번호 변경","ru":"Изменить номер","ar":"تغيير الرقم","id":"Ubah nomor","tr":"Numarayı değiştir"},
+  errInvalidPhone: {"es":"Ingresa tu número con código de país, ej. +56 9 1234 5678","en":"Enter your number with country code, e.g. +56 9 1234 5678","pt":"Digite seu número com o código do país, ex. +56 9 1234 5678","fr":"Saisissez votre numéro avec l'indicatif du pays, ex. +56 9 1234 5678","de":"Gib deine Nummer mit Ländervorwahl ein, z. B. +56 9 1234 5678","it":"Inserisci il numero con il prefisso internazionale, es. +56 9 1234 5678","zh":"请输入带国家代码的号码，例如 +56 9 1234 5678","ja":"国番号付きで番号を入力してください、例 +56 9 1234 5678","ko":"국가 코드를 포함해 번호를 입력하세요, 예: +56 9 1234 5678","ru":"Введите номер с кодом страны, напр. +56 9 1234 5678","ar":"أدخل رقمك مع رمز الدولة، مثال +56 9 1234 5678","id":"Masukkan nomormu dengan kode negara, mis. +56 9 1234 5678","tr":"Numaranı ülke koduyla gir, örn. +56 9 1234 5678"},
+  errSend: {"es":"No se pudo enviar el código — revisa el número e inténtalo de nuevo.","en":"Couldn't send the code — check the number and try again.","pt":"Não foi possível enviar o código — verifique o número e tente novamente.","fr":"Impossible d'envoyer le code — vérifiez le numéro et réessayez.","de":"Code konnte nicht gesendet werden — prüfe die Nummer und versuch es erneut.","it":"Impossibile inviare il codice — controlla il numero e riprova.","zh":"无法发送验证码——请检查号码后重试。","ja":"コードを送信できませんでした — 番号を確認してもう一度お試しください。","ko":"코드를 보내지 못했어요 — 번호를 확인하고 다시 시도하세요.","ru":"Не удалось отправить код — проверьте номер и попробуйте снова.","ar":"تعذّر إرسال الرمز — تحقّق من الرقم وحاول مجدداً.","id":"Gagal mengirim kode — periksa nomor lalu coba lagi.","tr":"Kod gönderilemedi — numarayı kontrol edip tekrar dene."},
+  errCode: {"es":"Ingresa el código de 6 dígitos.","en":"Enter the 6-digit code.","pt":"Digite o código de 6 dígitos.","fr":"Saisissez le code à 6 chiffres.","de":"Gib den 6-stelligen Code ein.","it":"Inserisci il codice di 6 cifre.","zh":"请输入 6 位验证码。","ja":"6 桁のコードを入力してください。","ko":"6자리 코드를 입력하세요.","ru":"Введите 6-значный код.","ar":"أدخل الرمز المكوّن من 6 أرقام.","id":"Masukkan kode 6 digit.","tr":"6 haneli kodu gir."},
+  errWrong: {"es":"Código incorrecto o expirado.","en":"Wrong or expired code.","pt":"Código incorreto ou expirado.","fr":"Code incorrect ou expiré.","de":"Falscher oder abgelaufener Code.","it":"Codice errato o scaduto.","zh":"验证码错误或已过期。","ja":"コードが間違っているか期限切れです。","ko":"잘못되었거나 만료된 코드예요.","ru":"Неверный или истёкший код.","ar":"رمز غير صحيح أو منتهي الصلاحية.","id":"Kode salah atau kedaluwarsa.","tr":"Hatalı veya süresi dolmuş kod."},
+};
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
@@ -140,12 +165,12 @@ const I18N: Record<string, any> = {
       <section class="cw-panel" role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
-            <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? (lang()==='en' ? 'Connected' : 'Conectado') : t().demo }}</span></div></div>
+            <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
             @if (user(); as u) {
-              <button class="cw-avatar" (click)="signOut()" [title]="(lang()==='en' ? 'Sign out' : 'Cerrar sesión') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
+              <button class="cw-avatar" (click)="signOut()" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
-              <button class="cw-signin" (click)="openLogin()">{{ lang()==='es' ? 'Entrar' : lang()==='pt' ? 'Entrar' : lang()==='fr' ? 'Connexion' : lang()==='de' ? 'Anmelden' : 'Sign in' }}</button>
+              <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
             }
             <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
           </div>
@@ -155,45 +180,45 @@ const I18N: Record<string, any> = {
           <div class="cw-login-ov" (click)="closeLogin()"></div>
           <div class="cw-login" role="dialog" aria-modal="true">
             <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
-            <h3 class="cw-login-t">{{ lang()==='en' ? 'Sign in or sign up' : lang()==='pt' ? 'Entrar ou cadastrar-se' : 'Iniciar sesión o registrarse' }}</h3>
+            <h3 class="cw-login-t">{{ li('title') }}</h3>
             @if (loginGate()) {
-              <p class="cw-login-gate">{{ lang()==='en' ? 'You\'ve used your 2 free questions. Sign in to continue — up to 4 a day.' : lang()==='pt' ? 'Você usou suas 2 perguntas grátis. Entre para continuar — até 4 por dia.' : 'Usaste tus 2 preguntas gratis. Inicia sesión para seguir — hasta 4 al día.' }}</p>
+              <p class="cw-login-gate">{{ li('gate') }}</p>
             }
-            <p class="cw-login-s">{{ lang()==='en' ? 'Smarter answers, your history saved, and matches aligned with your profile.' : lang()==='pt' ? 'Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.' : 'Respuestas más inteligentes, tu historial guardado y matches alineados a tu perfil.' }}</p>
+            <p class="cw-login-s">{{ li('subtitle') }}</p>
 
             @if (loginStep() === 'choose') {
               <button class="cw-prov" (click)="signInGoogle()">
                 <svg class="cw-prov-i" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.98 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
-                {{ lang()==='en' ? 'Continue with Google' : lang()==='pt' ? 'Continuar com Google' : 'Continuar con Google' }}
+                {{ li('google') }}
               </button>
               @if (appleDevice) {
                 <button class="cw-prov cw-prov-apple" (click)="signInApple()">
                   <svg class="cw-prov-i" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M11.18 8.46c-.02-1.7 1.39-2.52 1.45-2.56-.79-1.16-2.02-1.32-2.46-1.34-1.05-.1-2.04.61-2.57.61-.53 0-1.35-.6-2.22-.58-1.14.02-2.19.66-2.78 1.68-1.18 2.05-.3 5.08.85 6.74.56.81 1.23 1.72 2.1 1.69.84-.03 1.16-.54 2.18-.54s1.3.54 2.19.52c.9-.01 1.48-.83 2.03-1.64.64-.94.9-1.85.92-1.9-.02-.01-1.76-.68-1.78-2.69zM9.6 3.5c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.98 1.02-.43.5-.81 1.3-.71 2.07.76.06 1.53-.39 1.99-.94z"/></svg>
-                  {{ lang()==='en' ? 'Continue with Apple' : lang()==='pt' ? 'Continuar com Apple' : 'Continuar con Apple' }}
+                  {{ li('apple') }}
                 </button>
               }
               <button class="cw-prov" (click)="loginStep.set('phone')">
                 <span class="cw-prov-i cw-prov-emoji">📱</span>
-                {{ lang()==='en' ? 'Continue with your phone' : lang()==='pt' ? 'Continuar com seu telefone' : 'Continuar con tu teléfono' }}
+                {{ li('phone') }}
               </button>
             }
 
             @if (loginStep() === 'phone') {
               <input class="cw-login-in" [(ngModel)]="phoneInput" name="cwphone" type="tel" inputmode="tel" autocomplete="tel"
-                [placeholder]="lang()==='en' ? 'Phone, e.g. +56 9 1234 5678' : 'Teléfono, ej. +56 9 1234 5678'" />
+                [placeholder]="li('phonePh')" />
               <button class="cw-prov cw-prov-go" (click)="sendCode()" [disabled]="phoneBusy()">
-                {{ phoneBusy() ? (lang()==='en' ? 'Sending…' : 'Enviando…') : (lang()==='en' ? 'Send code' : 'Enviar código') }}
+                {{ phoneBusy() ? li('sending') : li('sendCode') }}
               </button>
-              <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ lang()==='en' ? 'Back' : 'Volver' }}</button>
+              <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ li('back') }}</button>
             }
 
             @if (loginStep() === 'code') {
               <input class="cw-login-in" [(ngModel)]="codeInput" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-                [placeholder]="lang()==='en' ? '6-digit code' : 'Código de 6 dígitos'" />
+                [placeholder]="li('codePh')" />
               <button class="cw-prov cw-prov-go" (click)="verifyCode()" [disabled]="phoneBusy()">
-                {{ phoneBusy() ? (lang()==='en' ? 'Verifying…' : 'Verificando…') : (lang()==='en' ? 'Verify' : 'Verificar') }}
+                {{ phoneBusy() ? li('verifying') : li('verify') }}
               </button>
-              <button class="cw-login-back" (click)="loginStep.set('phone')">← {{ lang()==='en' ? 'Change number' : 'Cambiar número' }}</button>
+              <button class="cw-login-back" (click)="loginStep.set('phone')">← {{ li('changeNumber') }}</button>
             }
 
             @if (phoneErr()) { <p class="cw-login-err">{{ phoneErr() }}</p> }
@@ -978,6 +1003,8 @@ export class CoachWidgetComponent {
   private pendingAsk: { message: string; lat?: number; lng?: number; city?: string } | null = null;
   // Apple Sign-In is offered ONLY on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
   appleDevice = false;
+  /** Localized login string (13 langs) — en fallback. */
+  li(key: string): string { const m = LOGIN_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   openLogin(gated = false) { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
   // After any successful sign-in, resume the question the visitor was trying to ask.
@@ -991,18 +1018,18 @@ export class CoachWidgetComponent {
   // Phone OTP (2 steps): enter number → SMS code → verify.
   async sendCode() {
     const phone = this.phoneInput.trim().replace(/[^\d+]/g, '');
-    if (!/^\+\d{8,15}$/.test(phone)) { this.phoneErr.set(this.lang() === 'en' ? 'Enter your number with country code, e.g. +56 9 1234 5678' : 'Ingresa tu número con código de país, ej. +56 9 1234 5678'); return; }
+    if (!/^\+\d{8,15}$/.test(phone)) { this.phoneErr.set(this.li('errInvalidPhone')); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
     try { await this.firebase.startPhoneSignIn(phone, 'cw-recaptcha'); this.loginStep.set('code'); }
-    catch { this.phoneErr.set(this.lang() === 'en' ? "Couldn't send the code — check the number and try again." : 'No se pudo enviar el código — revisa el número e inténtalo de nuevo.'); }
+    catch { this.phoneErr.set(this.li('errSend')); }
     finally { this.phoneBusy.set(false); }
   }
   async verifyCode() {
     const code = this.codeInput.trim().replace(/\D/g, '');
-    if (code.length < 4) { this.phoneErr.set(this.lang() === 'en' ? 'Enter the 6-digit code.' : 'Ingresa el código de 6 dígitos.'); return; }
+    if (code.length < 4) { this.phoneErr.set(this.li('errCode')); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
     try { await this.firebase.confirmPhoneCode(code); this.afterSignIn(); }
-    catch { this.phoneErr.set(this.lang() === 'en' ? 'Wrong or expired code.' : 'Código incorrecto o vencido.'); }
+    catch { this.phoneErr.set(this.li('errWrong')); }
     finally { this.phoneBusy.set(false); }
   }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
