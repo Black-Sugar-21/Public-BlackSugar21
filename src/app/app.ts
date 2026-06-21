@@ -545,6 +545,12 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     return u === '/' || u === '';
   }
 
+  /** The logged-in web-app shell (/app) renders full-screen without the marketing toolbar/age-gate. */
+  isAppRoute(): boolean {
+    const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
+    return u === '/app' || u.startsWith('/app/');
+  }
+
   toggleMobileMenu(): void {
     this.mobileMenuOpen.set(!this.mobileMenuOpen());
   }

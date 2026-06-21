@@ -2,7 +2,7 @@
   <router-outlet></router-outlet>
 
   <!-- Age Gate Overlay -->
-  <div class="age-gate" *ngIf="!ageVerified() && !isLegalRoute()">
+  <div class="age-gate" *ngIf="!ageVerified() && !isLegalRoute() && !isAppRoute()">
     <div class="age-gate-content">
       <div class="logo-large">
         <img src="logo-21.png" alt="Black Sugar 21" width="160" height="160" />
@@ -93,6 +93,7 @@
                     <span>{{ u.email }}</span>
                   </div>
                 </div>
+                <a class="account-item" routerLink="/app" (click)="closeAccountMenu()">✦ {{ getCurrentLanguage()==='es' ? 'Abrir Black Sugar 21' : 'Open Black Sugar 21' }}</a>
                 <button class="account-item" (click)="openProfile()">👤 {{ getCurrentLanguage()==='es' ? 'Mi perfil' : 'My profile' }}</button>
                 <a class="account-item" [href]="storeLinks().ios" target="_blank" rel="noopener" (click)="closeAccountMenu()">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
                 <button class="account-item danger" (click)="signOut()">⏻ {{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>

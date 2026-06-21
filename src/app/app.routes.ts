@@ -45,5 +45,10 @@ export const routes: Routes = [
     path: 'analytics',
     loadComponent: () => import('./pages/analytics/analytics').then(m => m.AnalyticsComponent),
     title: 'AI Analytics - Black Sugar 21'
+  },
+  {
+    path: 'app',
+    loadComponent: () => import('./app-shell.component').then(m => m.AppShellComponent),
+    title: 'Black Sugar 21'
   }
 ];

@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, signal, computed, effect } from '@angular/core';
+import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from './translation.service';
@@ -172,13 +172,13 @@ const I18N: Record<string, any> = {
   imports: [CommonModule, FormsModule],
   template: `
   @if (isBrowser) {
-    @if (!open()) {
+    @if (!embedded && !open()) {
       <button class="cw-fab" (click)="toggle()" [attr.aria-label]="t().fab">
         <span class="cw-spark">✦</span><span class="cw-fab-label">{{ t().fab }}</span>
       </button>
     } @else {
-      <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div>
-      <section class="cw-panel" role="dialog" [attr.aria-label]="t().title">
+      @if (!embedded) { <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div> }
+      <section class="cw-panel" [class.cw-embedded]="embedded" role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
             <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
@@ -192,7 +192,7 @@ const I18N: Record<string, any> = {
             } @else {
               <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
             }
-            <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button>
+            @if (!embedded) { <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button> }
           </div>
         </header>
 
@@ -539,6 +539,8 @@ const I18N: Record<string, any> = {
       display:flex; flex-direction:column; background:var(--cw-bg); border:1px solid var(--cw-border); border-radius:20px; overflow:hidden;
       box-shadow:0 32px 90px rgba(0,0,0,0.6); animation:cwIn .26s cubic-bezier(.22,1,.36,1);
       -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    /* Embedded mode (web-app shell): fill the parent container, no floating/positioning. */
+    .cw-panel.cw-embedded { position:relative; inset:auto; margin:0; z-index:1; width:100%; height:100%; max-width:none; max-height:none; border:none; border-radius:0; box-shadow:none; animation:none; }
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
     @keyframes cwIn { from{opacity:0; transform:scale(.965) translateY(8px)} to{opacity:1; transform:none} }
@@ -777,6 +779,12 @@ const I18N: Record<string, any> = {
 export class CoachWidgetComponent {
   readonly isBrowser: boolean;
   readonly open = signal(false);
+  // Embedded mode: render the coach inline as a full panel (no FAB / overlay / close) — used by the
+  // web-app shell where the Coach is the main centerpiece. Forces the panel open.
+  private _embedded = false;
+  @Input() set embedded(v: boolean) { this._embedded = v; if (v) this.open.set(true); }
+  get embedded(): boolean { return this._embedded; }
+
   readonly messages = signal<Msg[]>([]);
   // Multi-conversation (ChatGPT-style): every chat is saved to localStorage so nothing is lost and
   // the user can SELECT a previous session and continue it. The active conversation's messages live
