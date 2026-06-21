@@ -228,11 +228,14 @@ export class AppShellComponent implements OnDestroy {
     return typeof v === 'number' ? v : this.coachDailyCredits();
   }
   readonly profilePhotos = signal<string[]>([]);
+  readonly photosLoading = signal(false);
   private async loadProfilePhotos() {
     const p: any = this.firebase.userProfile();
     const names = Array.isArray(p?.pictures) ? p.pictures : (Array.isArray(p?.pictureNames) ? p.pictureNames : []);
     if (!names.length) return;
+    this.photosLoading.set(true);
     try { this.profilePhotos.set(await this.firebase.getOwnPhotoUrls(names)); } catch { /* keep avatar fallback */ }
+    finally { this.photosLoading.set(false); }
   }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
@@ -362,6 +365,7 @@ export class AppShellComponent implements OnDestroy {
   readonly epError = signal('');
   ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, lat: null as number | null, lng: null as number | null };
   readonly epInterests = signal<string[]>([]);
+  readonly epLoading = signal(false);
   readonly epLocStatus = signal<'idle' | 'loading' | 'done' | 'error'>('idle');
   /** Curated interest catalog filtered by the chosen type (parity with iOS UserInterest). */
   interestsForType(): Array<{ id: string; t: string; es: string; en: string }> {
@@ -426,14 +430,20 @@ export class AppShellComponent implements OnDestroy {
     this.ep.maxDistance = typeof p.maxDistance === 'number' ? p.maxDistance : 50;
     this.ep.lat = null; this.ep.lng = null; this.epLocStatus.set('idle');
     this.epInterests.set(Array.isArray(p.interests) ? [...p.interests] : []);
-    if (!this.profilePhotos().length) await this.loadProfilePhotos();
     const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
-    const urls = this.profilePhotos();
-    this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '' })));
+    // Show the editor immediately with SKELETON photo cells (url:'') while the backend signs the URLs
+    // — same UX intent as iOS .showLoading(isLoading) on EditProfileView.
+    this.epPhotos.set(names.map((n) => ({ name: n, url: '' })));
     this.epBioSuggestions.set([]);
     this.epPhotoCoach.set(null);
     this.epError.set('');
     this.epEditing.set(true);
+    this.epLoading.set(true);
+    try {
+      if (!this.profilePhotos().length) await this.loadProfilePhotos();
+      const urls = this.profilePhotos();
+      this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '' })));
+    } finally { this.epLoading.set(false); }
   }
   closeEditProfile() { this.epEditing.set(false); this.epError.set(''); }
   async epAddPhotos(ev: Event) {

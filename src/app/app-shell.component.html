@@ -144,8 +144,8 @@
                   <div class="ep-grid">
                     @for (i of grid9; track i) {
                       @if (i < epPhotos().length) {
-                        <div class="ep-cell filled" [style.background-image]="epPhotos()[i].url ? 'url(' + epPhotos()[i].url + ')' : null">
-                          <button class="ep-cell-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button>
+                        <div class="ep-cell filled" [class.skel]="!epPhotos()[i].url" [style.background-image]="epPhotos()[i].url ? 'url(' + epPhotos()[i].url + ')' : null">
+                          @if (epPhotos()[i].url) { <button class="ep-cell-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button> }
                         </div>
                       } @else {
                         <label class="ep-cell empty">
@@ -252,6 +252,7 @@
                 <div class="pf-head">
                   <div class="pf-avatar-ring">
                     @if (profilePhotos().length) { <img class="pf-avatar" [src]="profilePhotos()[0]" alt="" /> }
+                    @else if (photosLoading()) { <span class="pf-avatar skel"></span> }
                     @else if (firebase.currentUser()?.photoURL) { <img class="pf-avatar" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
                     @else { <span class="pf-avatar initial">{{ initial(firebase.currentUser()) }}</span> }
                   </div>

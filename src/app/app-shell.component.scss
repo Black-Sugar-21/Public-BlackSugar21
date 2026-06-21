@@ -75,6 +75,10 @@
     /* Photo grid — 3 columns × 9 cells, portrait 0.6 aspect, gold + / white ✕ (iOS PictureGridView) */
     .ep-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
     .ep-cell { position:relative; aspect-ratio:0.62; border-radius:10px; background-size:cover; background-position:center; }
+    /* Skeleton shimmer (shown while the backend signs photo URLs — same intent as iOS .showLoading) */
+    .skel { background:linear-gradient(100deg, rgba(255,255,255,.05) 30%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.05) 70%) !important; background-size:200% 100% !important; animation:bsShimmer 1.3s linear infinite; }
+    @keyframes bsShimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .skel { animation:none; background:rgba(255,255,255,.08) !important; } }
     .ep-cell.empty { border:2px dashed rgba(255,255,255,.22); background-color:var(--bg-card); display:flex; align-items:center; justify-content:center; cursor:pointer; }
     .ep-cell.empty:hover { border-color:var(--gold); }
     .ep-cell-plus, .ep-cell-x { position:absolute; right:-6px; bottom:-6px; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.4); }
