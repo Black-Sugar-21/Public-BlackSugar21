@@ -74,6 +74,7 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   likesRemainingToday: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
   coachQuestions: {"es":"Coach IA","en":"AI Coach","pt":"Coach IA","fr":"Coach IA","de":"KI-Coach","it":"Coach IA","zh":"AI教练","ja":"AIコーチ","ko":"AI 코치","ru":"ИИ Коуч","ar":"مدرب الذكاء","id":"Coach AI","tr":"AI Koç"},
   coachQuestionsRemaining: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
+  like: {"es":"Me gusta","en":"Like","pt":"Curtir","fr":"J'aime","de":"Gefällt mir","it":"Mi piace","zh":"喜欢","ja":"いいね","ko":"좋아요","ru":"Нравится","ar":"إعجاب","id":"Suka","tr":"Beğen"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -160,22 +161,6 @@ export class AppShellComponent implements OnDestroy {
     return typeof v === 'number' ? v : this.coachDailyCredits();
   }
   readonly profilePhotos = signal<string[]>([]);
-  readonly pfPhotoIdx = signal(0);
-  /** Hero photo for the profile view (real photo → Google avatar fallback). */
-  pfHeroUrl(): string | null {
-    const ph = this.profilePhotos();
-    if (ph.length) return ph[Math.min(this.pfPhotoIdx(), ph.length - 1)] || null;
-    return this.firebase.currentUser()?.photoURL || null;
-  }
-  cyclePfPhoto() { const n = this.profilePhotos().length; if (n > 1) this.pfPhotoIdx.update((v) => (v + 1) % n); }
-  /** Profile type display name (Elite / Prime) from the backend userType. */
-  profileTypeName(): string {
-    const t = (this.firebase.userProfile() as any)?.userType || '';
-    if (t === 'SUGAR_BABY') return this.s('typePrime');
-    if (t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY') return this.s('typeElite');
-    return '';
-  }
-  profileBio(): string { return (this.firebase.userProfile() as any)?.bio || ''; }
   private async loadProfilePhotos() {
     const p: any = this.firebase.userProfile();
     const names = Array.isArray(p?.pictures) ? p.pictures : (Array.isArray(p?.pictureNames) ? p.pictureNames : []);

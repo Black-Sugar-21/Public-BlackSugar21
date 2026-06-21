@@ -112,7 +112,8 @@ export class FirebaseService {
       minimum_age_by_country: JSON.stringify({ "default": 18 }),
       // Homologado con iOS/Android RemoteConfigService (daily_likes_limit / coach_daily_credits).
       daily_likes_limit: 100,
-      coach_daily_credits: 4
+      coach_daily_credits: 4,
+      daily_super_likes_limit: 5
     };
 
     // Inicializar App Check con reCAPTCHA v3 (desactivado por defecto — ver appCheckEnabled).
@@ -273,10 +274,23 @@ export class FirebaseService {
   // Firestore Methods
   private async createUserProfile(profile: UserProfile): Promise<void> {
     const userRef = doc(this.db, 'users', profile.uid);
+    // Seed the server-managed counters AT CREATE — the users UPDATE rule blocks accountStatus /
+    // coachMessagesRemaining, so they can ONLY be set here (parity with iOS/Android signup payload).
+    let limits = { dailyLikesLimit: 100, coachDailyCredits: 4, superLikesLimit: 5 };
+    try { limits = await this.getProfileLimits(); } catch { /* keep defaults */ }
     await setDoc(userRef, {
       ...profile,
       createdAt: Timestamp.fromDate(profile.createdAt),
-      lastLogin: Timestamp.fromDate(profile.lastLogin)
+      lastLogin: Timestamp.fromDate(profile.lastLogin),
+      accountStatus: 'active',
+      dailyLikesRemaining: limits.dailyLikesLimit,
+      dailyLikesLimit: limits.dailyLikesLimit,
+      superLikesRemaining: limits.superLikesLimit,
+      superLikesUsedToday: 0,
+      coachMessagesRemaining: limits.coachDailyCredits,
+      lastLikeResetDate: serverTimestamp(),
+      lastSuperLikeResetDate: serverTimestamp(),
+      lastCoachResetDate: serverTimestamp(),
     });
     this.userProfile.set(profile);
   }
@@ -392,10 +406,33 @@ export class FirebaseService {
     }));
     return out.filter(Boolean);
   }
+  /** Standard base32 geohash encoder — produces the `g` field the discovery feed range-queries on
+   *  (homologado con GeoHashUtils.encode en iOS/Android). Precision 9 ≈ ~4.8 m. */
+  private encodeGeohash(lat: number, lng: number, precision = 9): string {
+    const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+    let latMin = -90, latMax = 90, lngMin = -180, lngMax = 180;
+    let hash = '', bit = 0, ch = 0, even = true;
+    while (hash.length < precision) {
+      if (even) {
+        const mid = (lngMin + lngMax) / 2;
+        if (lng >= mid) { ch = (ch << 1) + 1; lngMin = mid; } else { ch = ch << 1; lngMax = mid; }
+      } else {
+        const mid = (latMin + latMax) / 2;
+        if (lat >= mid) { ch = (ch << 1) + 1; latMin = mid; } else { ch = ch << 1; latMax = mid; }
+      }
+      even = !even;
+      if (++bit === 5) { hash += BASE32[ch]; bit = 0; ch = 0; }
+    }
+    return hash;
+  }
+
   /** Persist onboarding — writes the exact discovery-valid schema the apps read. */
   async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[]; pictures?: string[] }): Promise<void> {
     const u = this.currentUser();
     if (!u) return;
+    // NOTE: accountStatus is intentionally NOT written here — it is blocked on UPDATE by the
+    // users rule and is seeded at CREATE in createUserProfile(). Including it would reject the
+    // whole onboarding write (audited 2026-06-21).
     const data: Record<string, unknown> = {
       name: d.name,
       birthDate: Timestamp.fromDate(d.birthDate),
@@ -403,14 +440,24 @@ export class FirebaseService {
       userType: d.userType,           // SUGAR_DADDY | SUGAR_MOMMY | SUGAR_BABY
       orientation: d.orientation,     // men | women | both
       onboardingCompleted: true,
-      accountStatus: 'active',
+      // discovery search prefs (apps write these; used as the caller's feed filters)
+      minAge: 18,
+      maxAge: 99,
+      maxDistance: 100,
     };
     if (d.bio) data['bio'] = d.bio;
     if (Array.isArray(d.interests)) data['interests'] = d.interests;
     if (Array.isArray(d.pictures) && d.pictures.length) data['pictures'] = d.pictures;
     if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
       data['latitude'] = d.latitude; data['longitude'] = d.longitude;
+      // getDiscoveryFeed range-queries on `g` — without it web users never appear in the feed.
+      const gh = this.encodeGeohash(d.latitude, d.longitude);
+      data['g'] = gh; data['geohash'] = gh;
     }
+    try {
+      data['timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      data['timezoneOffsetMinutes'] = -new Date().getTimezoneOffset();
+    } catch { /* timezone is best-effort (used by scheduled nudges) */ }
     await updateDoc(doc(this.db, 'users', u.uid), data);
     await this.refreshProfile();
   }
@@ -437,7 +484,15 @@ export class FirebaseService {
 
     const upd: Record<string, unknown> = { [isLike ? 'liked' : 'passed']: arrayUnion(targetUid) };
     if (isLike) upd['dailyLikesRemaining'] = increment(-1);
-    if (isSuper) upd['superLiked'] = arrayUnion(targetUid);
+    if (isSuper) {
+      upd['superLiked'] = arrayUnion(targetUid);
+      // Debit the super-like quota like the apps (guard >0 so the rule's `>= 0` constraint holds).
+      const sr = (this.userProfile() as any)?.superLikesRemaining;
+      if (typeof sr === 'number' && sr > 0) {
+        upd['superLikesRemaining'] = increment(-1);
+        upd['superLikesUsedToday'] = increment(1);
+      }
+    }
     await updateDoc(userRef, upd);
     await setDoc(doc(this.db, 'users', u.uid, 'swipes', targetUid), { timestamp: serverTimestamp(), isLike, isSuperLike: isSuper });
     if (isLike) await setDoc(doc(this.db, 'users', u.uid, 'liked', targetUid), { exists: true, superLike: isSuper });
@@ -476,7 +531,8 @@ export class FirebaseService {
       const rows = snap.docs.map((d) => {
         const data: any = d.data();
         const other = (data.usersMatched || []).find((x: string) => x !== u.uid) || '';
-        return { id: d.id, otherUid: other, lastMessage: data.lastMessage || '', lastMessageTime: data.lastMessageTime?.toMillis?.() || 0, ...data };
+        // computed fields AFTER the spread so they win (raw Timestamp objects must not overwrite millis).
+        return { ...data, id: d.id, otherUid: other, lastMessage: data.lastMessage || '', lastMessageTime: (data.lastMessageTimestamp?.toMillis?.() || data.lastMessageTime?.toMillis?.() || 0) };
       }).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
       cb(rows);
     }, () => cb([]));
@@ -501,7 +557,17 @@ export class FirebaseService {
     await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
       message: body.slice(0, 4000), senderId: u.uid, timestamp: serverTimestamp(), type: 'text', isEphemeral: false,
     });
-    try { await updateDoc(doc(this.db, 'matches', matchId), { lastMessage: body.slice(0, 120), lastMessageTime: serverTimestamp() }); } catch { /* lastMessage is best-effort */ }
+    // messageCount increment is REQUIRED: the first-message gate (firestore.rules R141) unlocks the
+    // SUGAR_BABY reply only when messageCount>0. lastMessageTimestamp/timestamp = app match-list ordering.
+    try {
+      await updateDoc(doc(this.db, 'matches', matchId), {
+        lastMessage: body.slice(0, 120),
+        lastMessageTime: serverTimestamp(),
+        lastMessageTimestamp: serverTimestamp(),
+        timestamp: serverTimestamp(),
+        messageCount: increment(1),
+      });
+    } catch { /* match-doc update is best-effort */ }
   }
 
   // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
@@ -520,18 +586,20 @@ export class FirebaseService {
   }
 
   // Profile-tab limits (daily likes + coach credits) — single source shared with iOS/Android RC.
-  async getProfileLimits(): Promise<{ dailyLikesLimit: number; coachDailyCredits: number }> {
+  async getProfileLimits(): Promise<{ dailyLikesLimit: number; coachDailyCredits: number; superLikesLimit: number }> {
     try {
       await fetchAndActivate(this.remoteConfig);
       const likes = getNumber(this.remoteConfig, 'daily_likes_limit');
       const coach = getNumber(this.remoteConfig, 'coach_daily_credits');
+      const supers = getNumber(this.remoteConfig, 'daily_super_likes_limit');
       return {
         dailyLikesLimit: likes > 0 ? likes : 100,
-        coachDailyCredits: coach > 0 ? coach : 4
+        coachDailyCredits: coach > 0 ? coach : 4,
+        superLikesLimit: supers > 0 ? supers : 5
       };
     } catch (error) {
       console.warn('Error fetching profile limits from Remote Config:', error);
-      return { dailyLikesLimit: 100, coachDailyCredits: 4 };
+      return { dailyLikesLimit: 100, coachDailyCredits: 4, superLikesLimit: 5 };
     }
   }
 
