@@ -36,14 +36,13 @@
               <div class="shell-teaser"><div class="disco-spin"></div><p>{{ s('discoLoading') }}</p></div>
             } @else if (currentProfile(); as p) {
               <div class="disco-wrap">
+                <!-- iOS-exact: full-bleed photo, info bottom-left (name · ↗ near · ✦ chemistry %),
+                     single green ♥ bottom-right. Swipe UP to pass (vertical pager). -->
                 <div class="disco-card" [class.dragging]="dragging()"
-                     [style.transform]="'translate(' + dragX() + 'px,' + dragY() + 'px) rotate(' + cardRotation() + 'deg)'"
+                     [style.transform]="'translateY(' + dragY() + 'px)'"
                      [style.opacity]="swiping() ? 0 : 1"
                      (pointerdown)="onCardDown($event)" (pointermove)="onCardMove($event)"
                      (pointerup)="onCardUp()" (pointercancel)="onCardUp()" (pointerleave)="onCardUp()">
-                  <!-- Directional hint that fades in with the drag (LIKE green / NOPE red). -->
-                  <div class="disco-hint like" [style.opacity]="dragX() > 20 ? (dragX()/140) : 0">♥</div>
-                  <div class="disco-hint pass" [style.opacity]="dragX() < -20 ? (-dragX()/140) : 0">✕</div>
                   <div class="disco-photo" (click)="!dragging() && nextPhoto()" [style.background-image]="profilePhoto() ? 'url(' + profilePhoto() + ')' : null">
                     @if (!profilePhoto()) { <div class="disco-nophoto">✦</div> }
                     @if (p.pictures?.length > 1) {
@@ -51,16 +50,15 @@
                         @for (pic of p.pictures; track $index) { <span [class.on]="$index === photoIdx()"></span> }
                       </div>
                     }
-                    @if (p.compatibilityScore != null) { <div class="disco-compat">{{ p.compatibilityScore }}% ✦</div> }
                     <div class="disco-grad">
-                      <div class="disco-name">{{ p.name }}@if (p.age) { <span>, {{ p.age }}</span> }</div>
-                      @if (p.bio) { <p class="disco-bio">{{ p.bio }}</p> }
+                      <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }</div>
+                      <div class="disco-meta near">↗ {{ s('near') }}</div>
+                      @if (p.compatibilityScore != null) {
+                        <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
+                      }
                     </div>
+                    <button class="disco-like" (click)="$event.stopPropagation(); swipe('like')" [attr.aria-label]="s('like')">♥</button>
                   </div>
-                </div>
-                <div class="disco-actions">
-                  <button class="disco-act pass" (click)="swipe('pass')" [attr.aria-label]="s('pass')">✕</button>
-                  <button class="disco-act like" (click)="swipe('like')" [attr.aria-label]="s('like')">♥</button>
                 </div>
               </div>
             } @else {

@@ -29,32 +29,30 @@
     /* Discovery — Tinder-style card, aligned with the native app aesthetic (dark + gold + green/red). */
     .disco-spin { width:30px; height:30px; border-radius:50%; border:3px solid rgba(212,175,55,.25); border-top-color:var(--gold); animation:disco-rot .8s linear infinite; }
     @keyframes disco-rot { to { transform:rotate(360deg); } }
-    .disco-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:24px 16px; width:100%; }
-    .disco-card { position:relative; width:100%; max-width:420px; aspect-ratio:3/4.2; border-radius:22px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.55);
-      transition:transform .4s cubic-bezier(.22,1,.36,1), opacity .4s ease; touch-action:pan-y; cursor:grab; will-change:transform; }
+    /* iOS-exact Discovery: full-bleed photo, vertical pager (swipe up = pass). */
+    .disco-wrap { flex:1; display:flex; align-items:stretch; justify-content:center; width:100%; min-height:0; overflow:hidden; }
+    .disco-card { position:relative; width:100%; max-width:480px; height:100%; overflow:hidden;
+      transition:transform .4s cubic-bezier(.22,1,.36,1), opacity .4s ease; touch-action:none; cursor:grab; will-change:transform; }
     .disco-card.dragging { transition:none; cursor:grabbing; }
-    /* Directional drag hint (subtle) — green ♥ when swiping right (like), red ✕ when left (pass). */
-    .disco-hint { position:absolute; top:24px; z-index:3; width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; pointer-events:none; }
-    .disco-hint.like { left:20px; color:var(--like-green2); border:3px solid var(--like-green2); background:rgba(22,219,161,.12); transform:rotate(-14deg); }
-    .disco-hint.pass { right:20px; color:var(--dislike-red2); border:3px solid var(--dislike-red2); background:rgba(248,55,112,.12); transform:rotate(14deg); }
     .disco-photo { position:relative; width:100%; height:100%; background-size:cover; background-position:center; background-color:var(--bg-card); cursor:inherit; }
-    .disco-nophoto { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:60px; color:var(--gold); opacity:.5; }
-    .disco-dots { position:absolute; top:10px; left:10px; right:10px; display:flex; gap:4px; }
+    .disco-nophoto { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:70px; color:var(--gold); opacity:.5; }
+    .disco-dots { position:absolute; top:12px; left:12px; right:12px; display:flex; gap:4px; }
     .disco-dots span { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.35); }
-    .disco-dots span.on { background:#fff; }
-    .disco-compat { position:absolute; top:18px; right:14px; background:rgba(10,10,10,.6); backdrop-filter:blur(6px); color:var(--gold); font-weight:700; font-size:13px; padding:6px 11px; border-radius:999px; border:1px solid rgba(212,175,55,.4); }
-    /* Match iOS ProfileDetailsSheet: tall 3-stop gradient, big bold name with shadow, gold-tinted bio. */
-    .disco-grad { position:absolute; left:0; right:0; bottom:0; padding:90px 20px 20px; background:linear-gradient(to top, rgba(0,0,0,.88), rgba(0,0,0,.45) 45%, transparent); }
-    .disco-name { font-size:30px; font-weight:800; color:#fff; letter-spacing:-0.5px; text-shadow:0 2px 4px rgba(0,0,0,.45); line-height:1.1; }
+    .disco-dots span.on { background:var(--gold); }
+    /* Bottom-left info overlay — matches iOS: name (bold + light age), ↗ near (gold), ✦ chemistry % (gold + green %). */
+    .disco-grad { position:absolute; left:0; right:0; bottom:0; padding:96px 22px 26px; background:linear-gradient(to top, rgba(0,0,0,.9), rgba(0,0,0,.4) 48%, transparent); }
+    .disco-name { font-size:34px; font-weight:800; color:#fff; letter-spacing:-0.5px; text-shadow:0 2px 5px rgba(0,0,0,.5); line-height:1.05; }
     .disco-name span { font-weight:400; }
-    .disco-bio { color:rgba(255,255,255,.9); font-size:15px; line-height:1.5; margin:8px 0 0; text-shadow:0 1px 3px rgba(0,0,0,.4); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .disco-actions { display:flex; gap:22px; }
-    .disco-act { width:60px; height:60px; border-radius:50%; border:none; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .15s ease, box-shadow .15s ease; }
-    .disco-act:hover { transform:scale(1.08); }
-    .disco-act.pass { background:var(--bg-card); color:var(--dislike-red2); border:1px solid rgba(248,55,112,.4); }
-    .disco-act.pass:hover { box-shadow:0 8px 22px rgba(248,55,112,.3); }
-    .disco-act.like { background:var(--bg-card); color:var(--like-green2); border:1px solid rgba(22,219,161,.45); }
-    .disco-act.like:hover { box-shadow:0 8px 22px rgba(22,219,161,.3); }
+    .disco-meta { display:flex; align-items:center; gap:5px; font-size:15px; font-weight:600; margin-top:7px; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+    .disco-meta.near { color:var(--gold); }
+    .disco-meta.chem { color:var(--gold); }
+    .disco-meta.chem b { color:var(--like-green2); font-weight:700; }
+    /* Single green ♥ like button, bottom-right with glow (iOS). Pass = swipe up. */
+    .disco-like { position:absolute; right:20px; bottom:24px; z-index:4; width:62px; height:62px; border-radius:50%;
+      background:rgba(10,10,10,.35); backdrop-filter:blur(4px); border:2px solid var(--like-green2); color:var(--like-green2);
+      font-size:26px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 0 18px rgba(22,219,161,.45); transition:transform .15s ease, box-shadow .15s ease; }
+    .disco-like:hover { transform:scale(1.08); box-shadow:0 0 26px rgba(22,219,161,.6); }
     /* Chat — matches list + live thread */
     .chat-list { flex:1; width:100%; max-width:560px; margin:0 auto; padding:14px; overflow-y:auto; }
     .chat-row { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; border-bottom:1px solid rgba(255,255,255,.06); padding:13px 8px; cursor:pointer; }

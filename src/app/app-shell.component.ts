@@ -28,6 +28,8 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoEmpty: {"es":"No hay más perfiles por ahora. Vuelve más tarde.","en":"No more profiles right now. Check back later.","pt":"Sem mais perfis por agora. Volte mais tarde.","fr":"Plus de profils pour l'instant. Reviens plus tard.","de":"Vorerst keine weiteren Profile. Schau später vorbei.","it":"Nessun altro profilo per ora. Torna più tardi.","zh":"暂时没有更多人了，稍后再来。","ja":"今はこれ以上いません。あとでまた見てね。","ko":"지금은 더 없어요. 나중에 다시 확인해요.","ru":"Пока больше нет анкет. Загляните позже.","ar":"لا مزيد من الملفات الآن. عُد لاحقاً.","id":"Tidak ada profil lagi. Cek lagi nanti.","tr":"Şimdilik başka profil yok. Sonra tekrar bak."},
   discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
+  chemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契","ja":"相性","ko":"케미","ru":"Химия","ar":"كيمياء","id":"Kimia","tr":"Kimya"},
+  near: {"es":"Cerca","en":"Near","pt":"Perto","fr":"Proche","de":"In der Nähe","it":"Vicino","zh":"附近","ja":"近く","ko":"근처","ru":"Рядом","ar":"قريب","id":"Dekat","tr":"Yakın"},
   chatsEmpty: {"es":"Aún no tienes matches. ¡Ve a Descubrir!","en":"No matches yet. Head to Discover!","pt":"Sem matches ainda. Vá em Descobrir!","fr":"Pas encore de matchs. Va dans Découvrir !","de":"Noch keine Matches. Geh zu Entdecken!","it":"Nessun match ancora. Vai su Scopri!","zh":"还没有匹配，去发现页看看！","ja":"まだマッチがありません。発見へ！","ko":"아직 매치가 없어요. 발견으로 가요!","ru":"Пока нет совпадений. Загляните в Поиск!","ar":"لا توجد مطابقات بعد. اذهب إلى اكتشف!","id":"Belum ada match. Ke Jelajah!","tr":"Henüz eşleşme yok. Keşfet'e git!"},
   chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
@@ -129,36 +131,34 @@ export class AppShellComponent implements OnDestroy {
     this.photoIdx.update((v) => (v + 1) % p.pictures.length);
   }
   private advance() { this.photoIdx.set(0); this.dragX.set(0); this.dragY.set(0); this.swiping.set(null); this.discoIdx.update((v) => v + 1); }
-  /** Live rotation while dragging — mirrors the native rotationZ = offsetX/N, capped. */
-  cardRotation(): number { return Math.max(-16, Math.min(16, this.dragX() / 18)); }
 
+  // iOS-exact vertical pager (TikTok-style): swipe UP advances to the next profile (a pass if you
+  // didn't like it); the ♥ button likes + advances; you CANNOT go back (drag-down springs back).
   onCardDown(e: PointerEvent) {
-    if (!this.currentProfile()) return;
+    if (!this.currentProfile() || this.swiping()) return;
     this.dragging.set(true);
-    this.dragStartX = e.clientX; this.dragStartY = e.clientY;
+    this.dragStartY = e.clientY;
     try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
   }
   onCardMove(e: PointerEvent) {
     if (!this.dragging()) return;
-    this.dragX.set(e.clientX - this.dragStartX);
-    this.dragY.set((e.clientY - this.dragStartY) * 0.35); // dampen vertical, horizontal-led like the apps
+    const dy = e.clientY - this.dragStartY;
+    this.dragY.set(dy < 0 ? dy : dy * 0.18); // up follows; down resists (no going back)
   }
   onCardUp() {
     if (!this.dragging()) return;
     this.dragging.set(false);
-    const x = this.dragX();
-    if (Math.abs(x) > this.SWIPE_THRESHOLD) this.swipe(x > 0 ? 'like' : 'pass');
-    else { this.dragX.set(0); this.dragY.set(0); } // springs back (CSS transition)
+    if (this.dragY() < -this.SWIPE_THRESHOLD) this.swipe('pass'); // swiped up enough → pass + advance
+    else this.dragY.set(0); // springs back (CSS transition)
   }
+  /** Like / pass → record then scroll the card up and bring in the next (≈400ms, like the native transition). */
   swipe(action: 'like' | 'pass' | 'superlike') {
     const p = this.currentProfile();
-    if (!p) return;
-    // Fly the card off-screen in the swipe direction, then advance (≈400ms, matches tween).
-    const dir = action === 'pass' ? 'pass' : 'like';
-    this.swiping.set(dir);
-    this.dragX.set(dir === 'like' ? 1000 : -1000);
+    if (!p || this.swiping()) return;
+    this.swiping.set(action === 'pass' ? 'pass' : 'like');
+    this.dragY.set(-1100); // fly up out of view
     this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
-    setTimeout(() => this.advance(), 380);
+    setTimeout(() => this.advance(), 400);
   }
 
   // ── Chat ─────────────────────────────────────────────────────────────────────
