@@ -1,41 +1,10 @@
 <div class="app-container">
   <router-outlet></router-outlet>
 
-  <!-- Age Gate Overlay -->
-  <div class="age-gate" *ngIf="!ageVerified() && !isLegalRoute() && !isAppRoute()">
-    <div class="age-gate-content">
-      <div class="logo-large">
-        <img src="logo-21.png" alt="Black Sugar 21" width="160" height="160" />
-      </div>
-      <h2>{{ t('age.title') }}</h2>
-      <p class="warning-text">{{ translateWithParams('age.exclusive', { age: legalAge() }) }}</p>
-      <p class="subtext">{{ translateWithParams('age.restricted', { age: legalAge() }) }}</p>
-
-      <button class="btn-primary" (click)="verifyAge()">{{ translateWithParams('age.button', { age: legalAge() }) }}</button>
-      <p class="subtext-xs">{{ t('age.terms') }}</p>
-
-      <!-- Language selector (also available before age verification) -->
-      <div class="lang-dropdown" [class.open]="gateLangMenuOpen()">
-        <button class="lang-trigger" (click)="toggleGateLangMenu()" [attr.aria-expanded]="gateLangMenuOpen()" aria-haspopup="listbox" aria-label="Language">
-          <span class="flag">{{ currentLangOption().flag }}</span>
-          <span class="lang-text">{{ currentLangOption().name }}</span>
-          <span class="lang-caret">▾</span>
-        </button>
-        @if (gateLangMenuOpen()) {
-          <div class="lang-backdrop" (click)="closeGateLangMenu()"></div>
-          <ul class="lang-menu" role="listbox">
-            @for (l of languages; track l.code) {
-              <li role="option" [attr.aria-selected]="l.code === getCurrentLanguage()">
-                <button class="lang-option" [class.active]="l.code === getCurrentLanguage()" (click)="selectLanguage(l.code)">
-                  <span class="flag">{{ l.flag }}</span><span class="lang-name">{{ l.name }}</span>
-                </button>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-    </div>
-  </div>
+  <!-- Age gate REMOVED (2026-06-21): the entry-wall scared visitors away and blocked the
+       no-login demo. 18+ is validated where it legally matters — at onboarding (birthDate step:
+       obAge18 client check + the server-side R17 floor in firestore.rules rejects any <18
+       birthDate at create/update). The public site + Coach IA demo are usable without logging in. -->
 
   <!-- Main Content — rendered by ROUTE (always in the DOM on '/', so crawlers/prerender
        see the marketing copy). The age-gate above is an opaque overlay (z-index 1000) that
