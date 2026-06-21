@@ -1,0 +1,44 @@
+    :host { display:block; }
+    .shell { display:flex; min-height:100dvh; background:var(--bg-dark); color:var(--text-primary); font-family:'Outfit',sans-serif; }
+    .shell-side { width:240px; flex:none; background:var(--bg-sidebar); border-right:1px solid rgba(255,255,255,.08); display:flex; flex-direction:column; padding:18px 12px; }
+    .shell-brand { display:flex; align-items:center; gap:8px; color:var(--text-primary); text-decoration:none; font-size:18px; font-weight:700; padding:8px 10px 18px; }
+    .shell-brand b { color:var(--gold); } .shell-spark { color:var(--gold); }
+    .shell-nav { display:flex; flex-direction:column; gap:4px; flex:1; }
+    .shell-nav-item { display:flex; align-items:center; gap:12px; background:none; border:none; color:var(--text-secondary); font-family:inherit; font-size:15px; padding:12px 12px; border-radius:12px; cursor:pointer; text-align:left; }
+    .shell-nav-item:hover { background:rgba(255,255,255,.05); }
+    .shell-nav-item.active { background:rgba(212,175,55,.12); color:var(--gold); font-weight:600; }
+    .shell-nav-ic { font-size:18px; width:22px; text-align:center; }
+    .shell-acct { display:flex; align-items:center; gap:9px; width:100%; background:none; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:9px 10px; color:var(--text-secondary); cursor:pointer; font-family:inherit; }
+    .shell-acct img, .shell-acct-i { width:30px; height:30px; border-radius:50%; flex:none; }
+    .shell-acct-i { display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; }
+    .shell-acct-n { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .shell-main { flex:1; min-width:0; display:flex; }
+    .shell-coach { flex:1; display:flex; min-height:0; }
+    .shell-teaser, .shell-profile { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px; }
+    .shell-teaser-ic { font-size:54px; }
+    .shell-teaser h2, .shell-profile h2 { font-family:'Playfair Display',serif; font-size:26px; margin:0; }
+    .shell-teaser p, .shell-profile p { color:var(--text-muted); max-width:42ch; line-height:1.5; margin:0; }
+    .shell-cta { display:inline-block; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; padding:13px 26px; border-radius:999px; text-decoration:none; margin-top:6px; }
+    .shell-pf-av { width:84px; height:84px; border-radius:50%; object-fit:cover; border:2px solid var(--gold); }
+    .shell-pf-av.initial { display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; font-size:2rem; }
+    .shell-pf-mail { color:var(--text-muted); }
+    .shell-signout { background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:11px 24px; font-family:inherit; cursor:pointer; }
+    .shell-confirm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:24px; }
+    .shell-confirm { background:var(--bg-card); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:28px 24px; max-width:360px; text-align:center; }
+    .shell-confirm-ic { font-size:42px; }
+    .shell-confirm h3 { font-family:'Playfair Display',serif; font-size:22px; margin:10px 0 6px; }
+    .shell-confirm p { color:var(--text-muted); font-size:14px; line-height:1.5; margin:0 0 20px; }
+    .shell-confirm-row { display:flex; gap:10px; }
+    .shell-confirm-cancel, .shell-confirm-ok { flex:1; padding:12px; border-radius:999px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+    .shell-confirm-cancel { background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); }
+    .shell-confirm-ok { background:var(--app-red); border:none; color:var(--text-primary); }
+    .shell-tabs { display:none; }
+    @media (max-width: 860px) {
+      .shell-side { display:none; }
+      .shell { flex-direction:column; }
+      .shell-main { padding-bottom:64px; }
+      .shell-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:60px; background:var(--bg-sidebar); border-top:1px solid rgba(255,255,255,.1); z-index:50; }
+      .shell-tab { flex:1; background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; }
+      .shell-tab.active { color:var(--gold); }
+    }
+  

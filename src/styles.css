@@ -9,6 +9,7 @@
 
   /* Palette — aligned with iOS ColorTheme.swift + AppColor.swift */
   --bg-dark: #0A0A0A;           /* iOS: primaryDark */
+  --bg-sidebar: #101010;        /* web-app shell sidebar / bottom-nav */
   --bg-card: #1A1A1A;           /* iOS: surfaceDark */
   --bg-overlay: #2D2D2D;        /* iOS: textSecondaryLight */
   --card-bg: #1E1E1E;           /* iOS: cardBgDark */

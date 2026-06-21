@@ -2505,8 +2505,8 @@ button:focus-visible,
 .confirm-cancel, .confirm-ok { flex: 1; padding: 12px; border-radius: 999px; font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
 .confirm-cancel { background: none; border: 1px solid rgba(255,255,255,0.18); color: var(--text-secondary); }
 .confirm-cancel:hover { border-color: var(--gold); color: var(--text-primary); }
-.confirm-ok { background: #ff4d5e; border: none; color: #fff; }
-.confirm-ok:hover { background: #ff3346; }
+.confirm-ok { background: var(--app-red); border: none; color: #fff; }
+.confirm-ok:hover { filter: brightness(1.08); }
 .lang-caret { font-size: 0.7rem; opacity: 0.7; transition: transform 0.2s ease; }
 .lang-dropdown.open .lang-caret { transform: rotate(180deg); }
 

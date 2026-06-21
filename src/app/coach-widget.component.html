@@ -1,0 +1,366 @@
+  @if (isBrowser) {
+    @if (!embedded && !open()) {
+      <button class="cw-fab" (click)="toggle()" [attr.aria-label]="t().fab">
+        <span class="cw-spark">✦</span><span class="cw-fab-label">{{ t().fab }}</span>
+      </button>
+    } @else {
+      @if (!embedded) { <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div> }
+      <section class="cw-panel" [class.cw-embedded]="embedded" role="dialog" [attr.aria-label]="t().title">
+        <header class="cw-head">
+          <div class="cw-id"><span class="cw-spark">✦</span>
+            <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
+          <div class="cw-head-r">
+            <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
+            <button class="cw-new" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">🕘</button>
+            <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
+            <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎</button>
+            @if (user(); as u) {
+              <button class="cw-avatar" (click)="confirmSignOut.set(true)" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
+            } @else {
+              <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
+            }
+            @if (!embedded) { <button class="cw-x" (click)="toggle()" aria-label="Cerrar">✕</button> }
+          </div>
+        </header>
+
+        @if (loginOpen()) {
+          <div class="cw-login-ov" (click)="closeLogin()"></div>
+          <div class="cw-login" role="dialog" aria-modal="true">
+            <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
+            <h3 class="cw-login-t">{{ li('title') }}</h3>
+            @if (loginGate()) {
+              <p class="cw-login-gate">{{ li('gate') }}</p>
+            }
+            <p class="cw-login-s">{{ li('subtitle') }}</p>
+
+            @if (loginStep() === 'choose') {
+              <div class="cw-benefits">
+                <p class="cw-benefits-t">{{ li('benefitsTitle') }}</p>
+                <div class="cw-benefit"><span class="cw-benefit-i">✦</span><span>{{ li('benefit1') }}</span></div>
+                <div class="cw-benefit"><span class="cw-benefit-i">🔥</span><span>{{ li('benefit2') }}</span></div>
+                <div class="cw-benefit"><span class="cw-benefit-i">🧠</span><span>{{ li('benefit3') }}</span></div>
+              </div>
+              <button class="cw-prov" (click)="signInGoogle()">
+                <svg class="cw-prov-i" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.98 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+                {{ li('google') }}
+              </button>
+              @if (appleDevice) {
+                <button class="cw-prov cw-prov-apple" (click)="signInApple()">
+                  <svg class="cw-prov-i" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M11.18 8.46c-.02-1.7 1.39-2.52 1.45-2.56-.79-1.16-2.02-1.32-2.46-1.34-1.05-.1-2.04.61-2.57.61-.53 0-1.35-.6-2.22-.58-1.14.02-2.19.66-2.78 1.68-1.18 2.05-.3 5.08.85 6.74.56.81 1.23 1.72 2.1 1.69.84-.03 1.16-.54 2.18-.54s1.3.54 2.19.52c.9-.01 1.48-.83 2.03-1.64.64-.94.9-1.85.92-1.9-.02-.01-1.76-.68-1.78-2.69zM9.6 3.5c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.98 1.02-.43.5-.81 1.3-.71 2.07.76.06 1.53-.39 1.99-.94z"/></svg>
+                  {{ li('apple') }}
+                </button>
+              }
+              <button class="cw-prov" (click)="loginStep.set('phone')">
+                <span class="cw-prov-i cw-prov-emoji">📱</span>
+                {{ li('phone') }}
+              </button>
+              <p class="cw-login-trust">{{ li('trust') }}</p>
+            }
+
+            @if (loginStep() === 'phone') {
+              <input class="cw-login-in" [(ngModel)]="phoneInput" name="cwphone" type="tel" inputmode="tel" autocomplete="tel"
+                [placeholder]="li('phonePh')" />
+              <button class="cw-prov cw-prov-go" (click)="sendCode()" [disabled]="phoneBusy()">
+                {{ phoneBusy() ? li('sending') : li('sendCode') }}
+              </button>
+              <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ li('back') }}</button>
+            }
+
+            @if (loginStep() === 'code') {
+              <input class="cw-login-in" [(ngModel)]="codeInput" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                [placeholder]="li('codePh')" />
+              <button class="cw-prov cw-prov-go" (click)="verifyCode()" [disabled]="phoneBusy()">
+                {{ phoneBusy() ? li('verifying') : li('verify') }}
+              </button>
+              <button class="cw-login-back" (click)="loginStep.set('phone')">← {{ li('changeNumber') }}</button>
+            }
+
+            @if (phoneErr()) { <p class="cw-login-err">{{ phoneErr() }}</p> }
+            <div id="cw-recaptcha"></div>
+          </div>
+        }
+
+        <!-- Conversation history picker — select a previous session and continue it. -->
+        @if (historyOpen()) {
+          <div class="cw-login-ov" (click)="closeHistory()"></div>
+          <div class="cw-history" role="dialog" aria-modal="true">
+            <button class="cw-login-x" (click)="closeHistory()" aria-label="Cerrar">✕</button>
+            <h3 class="cw-login-t">{{ ui('historyTitle') }}</h3>
+            <button class="cw-hist-new" (click)="newConversation()">＋ {{ ui('newChat') }}</button>
+            @for (c of convoList(); track c.id) {
+              <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
+                <span class="cw-hist-title">{{ c.title }}</span>
+                <span class="cw-hist-time">{{ convoTime(c.updatedAt) }}</span>
+                <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" aria-label="Eliminar">🗑</span>
+              </button>
+            }
+            @if (convoList().length === 0) { <p class="cw-hist-empty">{{ ui('historyEmpty') }}</p> }
+          </div>
+        }
+
+        <!-- Sign-out confirmation -->
+        @if (confirmSignOut()) {
+          <div class="cw-login-ov" (click)="confirmSignOut.set(false)"></div>
+          <div class="cw-confirm" role="dialog" aria-modal="true">
+            <div class="cw-confirm-ic">👋</div>
+            <h3 class="cw-login-t">{{ li('signOutConfirm') }}</h3>
+            <p class="cw-confirm-b">{{ li('signOutBody') }}</p>
+            <div class="cw-confirm-row">
+              <button class="cw-confirm-cancel" (click)="confirmSignOut.set(false)">{{ li('cancel') }}</button>
+              <button class="cw-confirm-ok" (click)="signOut()">{{ li('signOut') }}</button>
+            </div>
+          </div>
+        }
+
+        <div class="cw-body" #body>
+          @if (isWelcome()) {
+            <div class="cw-welcome">
+              <div class="cw-welcome-spark">✦</div>
+              @if (user() && firstName) {
+                <!-- Claude.ai-style personalized, time-aware greeting when signed in. -->
+                <h2 class="cw-welcome-title">{{ greetingTime() }}, {{ firstName }}</h2>
+              } @else {
+                <h2 class="cw-welcome-title">{{ t().title }}</h2>
+                <p class="cw-welcome-sub">{{ t().greeting }}</p>
+              }
+            </div>
+          } @else {
+          @for (m of messages(); track mi; let mi = $index) {
+            <div class="cw-msg" [class.user]="m.role==='user'">
+              <div class="cw-bubble">
+                <span>{{ m.text }}{{ m.typing ? ' ▌' : '' }}</span>
+
+                @if (m.needLocation) {
+                  <div class="cw-loc">
+                    <button class="cw-chip" (click)="useLocation()">{{ t().useLoc }}</button>
+                    <form class="cw-city" (submit)="$event.preventDefault(); sendCity()">
+                      <input [(ngModel)]="cityDraft" name="city" [placeholder]="t().cityPh" autocomplete="off" />
+                      <button type="submit" class="cw-snd sm">→</button>
+                    </form>
+                  </div>
+                }
+
+                @if (m.places?.length) {
+                  <div class="cw-places">
+                    @for (p of m.places!; track p.name; let pi = $index) {
+                      <a class="cw-place" [class.best]="pi === 0 && p.score != null" [href]="p.mapsUrl" target="_blank" rel="noopener" (click)="placeClick(p, pi)">
+                        <div class="cw-place-i"><b>{{ p.name }}</b>
+                          @if (p.score != null) { <span class="cw-fit">{{ p.score }}% ✦</span> }
+                          @else if (p.rating) { <span class="cw-rate">★ {{ p.rating }}</span> }</div>
+                        <small>{{ p.address }}</small>
+                        @if (p.why) { <p class="cw-place-why">{{ p.why }}</p> }
+                        @if (p.perspectives?.length) {
+                          <div class="cw-place-persp">@for (pp of p.perspectives!; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                        }
+                        @if (p.tip) { <p class="cw-place-tip">💡 {{ p.tip }}</p> }
+                        <span class="cw-map">{{ t().viewMap }} →</span>
+                      </a>
+                    }
+                  </div>
+                }
+
+                @if (m.phrases?.length) {
+                  <div class="cw-phrases">
+                    @for (ph of m.phrases!; track ph; let i = $index) {
+                      <div class="cw-phrase">
+                        <div class="cw-phrase-body">
+                          <span>{{ ph }}</span>
+                          @if (m.phraseMeta?.[i]; as pm) {
+                            <div class="cw-phrase-meta">
+                              <span class="cw-phrase-lens">{{ pm.perspective }}</span>
+                              @if (pm.why) { <span class="cw-phrase-why">· {{ pm.why }}</span> }
+                            </div>
+                          }
+                        </div>
+                        <button class="cw-copy" (click)="copyPhrase(ph, i)">{{ copiedIdx() === i ? t().copied : t().copy }}</button>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (m.sim) {
+                  <div class="cw-sim">
+                    <div class="cw-sim-meta">
+                      <span class="cw-sim-stage">{{ t().simStage }}: {{ m.sim.stage }}</span>
+                      <div class="cw-sim-persp">
+                        <small>{{ t().simBy }}:</small>
+                        @for (p of m.sim.perspectiveNames; track p) { <span class="cw-pill-p">{{ p }}</span> }
+                      </div>
+                    </div>
+
+                    <!-- horizontal carousel — one approach per page (matches iOS/Android pager) -->
+                    <div class="cw-car-wrap">
+                      <div class="cw-carousel" [id]="'cwcar-' + mi" (scroll)="onCarouselScroll($event, mi)">
+                        @for (a of m.sim.approaches; track ai; let ai = $index) {
+                          <div class="cw-appr" [class.best]="ai === bestIdx(m.sim!)">
+                            <div class="cw-appr-top">
+                              <span class="cw-tone">{{ toneEmoji(a.toneKey) }} {{ a.tone }}</span>
+                              @if (ai === bestIdx(m.sim!)) { <span class="cw-best">★ {{ t().simBest }}</span> }
+                              <button class="cw-copy" (click)="copyPhrase(a.phrase, msgKey(mi) + ai)">{{ copiedIdx() === msgKey(mi) + ai ? t().copied : t().copy }}</button>
+                            </div>
+                            <p class="cw-appr-phrase">"{{ a.phrase }}"</p>
+                            <div class="cw-stars">
+                              @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= stars(a.confidence)">★</span> }
+                              @if (a.confidence != null) { <span class="cw-conf">{{ a.confidence }}%</span> }
+                            </div>
+                            @if (a.why) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ a.why }}</p> }
+                            @if (a.perspectives.length) {
+                              <div class="cw-appr-tags">@for (pp of a.perspectives; track pp) { <span class="cw-tag">{{ pp }}</span> }</div>
+                            }
+                          </div>
+                        }
+                      </div>
+                      @if (m.sim.approaches.length > 1) {
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.sim.approaches.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
+                      }
+                    </div>
+                    @if (m.sim.approaches.length > 1) {
+                      <div class="cw-dots">
+                        @for (a of m.sim.approaches; track di; let di = $index) {
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a enfoque"></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (m.mv) {
+                  <div class="cw-mv">
+                    <div class="cw-mv-head">
+                      <div class="cw-stars">
+                        @for (s of [1,2,3,4,5]; track s) { <span [class.on]="s <= mvStars(m.mv!.compatibilityStars)">★</span> }
+                        @if (m.mv.compatibilityScore != null) { <span class="cw-conf">{{ m.mv.compatibilityScore }}%</span> }
+                      </div>
+                      <div class="cw-mv-label">{{ m.mv.compatibilityLabel }}</div>
+                      <small class="cw-mv-cap">{{ t().mvCompat }}</small>
+                    </div>
+                    <div class="cw-car-wrap">
+                      <div class="cw-carousel" [id]="'cwcar-' + mi" (scroll)="onCarouselScroll($event, mi)">
+                        @for (st of m.mv.stages; track si; let si = $index) {
+                          <div class="cw-stage">
+                            <div class="cw-stage-h"><span class="cw-stage-emoji">{{ st.emoji }}</span><b>{{ st.label }}</b>
+                              @if (st.score != null) { <span class="cw-conf">{{ st.score }}/10</span> }</div>
+                            <p class="cw-stage-narr">{{ st.narrative }}</p>
+                            @if (st.bestPhrase) {
+                              <div class="cw-stage-phrase"><span>"{{ st.bestPhrase }}"</span>
+                                <button class="cw-copy" (click)="copyPhrase(st.bestPhrase, msgKey(mi) + si)">{{ copiedIdx() === msgKey(mi) + si ? t().copied : t().copy }}</button></div>
+                            }
+                            @if (st.tip) { <p class="cw-appr-why"><b>{{ t().simWhy }}:</b> {{ st.tip }}</p> }
+                          </div>
+                        }
+                      </div>
+                      @if (m.mv.stages.length > 1) {
+                        <button class="cw-arrow left" [class.hidden]="(carouselPage()[mi] || 0) === 0" (click)="navCarousel(mi, -1)" aria-label="Anterior">‹</button>
+                        <button class="cw-arrow right" [class.hidden]="(carouselPage()[mi] || 0) >= m.mv.stages.length - 1" (click)="navCarousel(mi, 1)" aria-label="Siguiente">›</button>
+                      }
+                    </div>
+                    @if (m.mv.stages.length > 1) {
+                      <div class="cw-dots">
+                        @for (st of m.mv.stages; track di; let di = $index) {
+                          <button class="cw-dot" [class.on]="(carouselPage()[mi] || 0) === di" (click)="goToPage(mi, di)" aria-label="Ir a etapa"></button>
+                        }
+                      </div>
+                    }
+                    @if (m.mv.keyInsights.length) {
+                      <div class="cw-mv-insights"><small>{{ t().mvInsights }}</small>
+                        <ul>@for (k of m.mv.keyInsights; track k) { <li>{{ k }}</li> }</ul></div>
+                    }
+                  </div>
+                }
+
+                @if (m.role === 'coach' && m.ask && !m.typing) {
+                  <div class="cw-fb">
+                    @if (m.fb) {
+                      <span class="cw-fb-thx">{{ t().fbThanks }}</span>
+                    } @else {
+                      <span class="cw-fb-q">{{ t().fbAsk }}</span>
+                      <button class="cw-fb-btn" (click)="feedback(mi, 'up')" aria-label="Sí">👍</button>
+                      <button class="cw-fb-btn" (click)="feedback(mi, 'down')" aria-label="No">👎</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          }
+          @if (thinking()) {
+            <div class="cw-msg">
+              <div class="cw-bubble cw-thinking">
+                <span class="cw-dots"><i></i><i></i><i></i></span>
+                <span class="cw-thinking-t">{{ thinkingLabel() || t().thinking }}</span>
+              </div>
+            </div>
+          }
+          @if (showChips()) {
+            <div class="cw-chips">
+              @for (c of t().chips; track c) { <button class="cw-chip" (click)="send(c)">{{ c }}</button> }
+              <button class="cw-chip cw-chip-place" (click)="askPlaces()">{{ t().placeChip }}</button>
+            </div>
+            <!-- Date planner: pick a venue type. The one fitting the current hour is marked "suggested". -->
+            <div class="cw-plan">
+              <span class="cw-plan-h">{{ planLabelText() }}</span>
+              <div class="cw-plan-cats">
+                @for (cat of planCats(); track cat.key) {
+                  <button class="cw-cat" [class.sug]="cat.key === suggestedCat()" (click)="askPlaces(cat.q, cat.t)">
+                    {{ cat.t }}@if (cat.key === suggestedCat()) { <span class="cw-cat-sug">{{ suggestedNowText() }}</span> }
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          @if (simLoading()) {
+            <div class="cw-simload">
+              <div class="cw-simload-cards">
+                @for (e of loadEmojis(); track $index) {
+                  <div class="cw-simload-card" [style.animation-delay.ms]="$index * 380">
+                    <span class="cw-simload-emoji">{{ e }}</span>
+                    <div class="cw-simload-bar"></div><div class="cw-simload-bar short"></div>
+                  </div>
+                }
+              </div>
+              <b class="cw-simload-title">{{ loadingMode() === 'multiverse' ? t().mvAnalyzing : t().simAnalyzing }}</b>
+              @if (loadingMode() !== 'multiverse') { <small class="cw-simload-sub">{{ t().simThinking }}</small> }
+            </div>
+          }
+          @if (showCta()) {
+            <div class="cw-cta">
+              <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
+              <div class="cw-cta-actions">
+                <a class="cw-btn gold" [href]="storeLink" target="_blank" rel="noopener" (click)="trackDownload()">{{ t().download }}</a>
+                <button class="cw-btn" (click)="share()">{{ justShared() ? t().shared : t().share }}</button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- persistent mode bar — start/switch a simulation at any point (not only on first screen) -->
+        @if (!busy()) {
+          <div class="cw-modebar">
+            @if (simMode()) {
+              <span class="cw-modeon">{{ simMode() === 'multiverse' ? t().mvTitle : t().simTitle }}</span>
+              <button class="cw-modex" (click)="exitSim()" aria-label="Salir del modo">✕</button>
+            } @else {
+              <button class="cw-modetab" (click)="startSim('situation')">{{ t().simTitle }}</button>
+              <button class="cw-modetab" (click)="startSim('multiverse')">{{ t().mvTitle }}</button>
+            }
+          </div>
+        }
+        @if (appCtaEnabled() && !showCta()) {
+          <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : t().taste2 }}</div>
+        }
+        <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
+          <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />
+          <button type="submit" class="cw-snd" [disabled]="busy() || !draft.trim()">
+            @if (busy()) { <span class="cw-spin"></span> } @else { ↑ }
+          </button>
+        </form>
+        @if (isWelcome()) {
+          <!-- Subtle mention that the native app has Discovery (don't overload the screen). -->
+          <a class="cw-discover-hint" [href]="storeLink" target="_blank" rel="noopener">{{ ui('discoverHint') }}</a>
+        }
+        <div class="cw-foot">{{ t().footer }}</div>
+      </section>
+    }
+  }
+  
