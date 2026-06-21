@@ -1,5 +1,6 @@
-import { Component, Inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { CoachWidgetComponent } from './coach-widget.component';
 import { TranslationService, Language } from './translation.service';
@@ -27,6 +28,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoEmpty: {"es":"No hay más perfiles por ahora. Vuelve más tarde.","en":"No more profiles right now. Check back later.","pt":"Sem mais perfis por agora. Volte mais tarde.","fr":"Plus de profils pour l'instant. Reviens plus tard.","de":"Vorerst keine weiteren Profile. Schau später vorbei.","it":"Nessun altro profilo per ora. Torna più tardi.","zh":"暂时没有更多人了，稍后再来。","ja":"今はこれ以上いません。あとでまた見てね。","ko":"지금은 더 없어요. 나중에 다시 확인해요.","ru":"Пока больше нет анкет. Загляните позже.","ar":"لا مزيد من الملفات الآن. عُد لاحقاً.","id":"Tidak ada profil lagi. Cek lagi nanti.","tr":"Şimdilik başka profil yok. Sonra tekrar bak."},
   discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
+  chatsEmpty: {"es":"Aún no tienes matches. ¡Ve a Descubrir!","en":"No matches yet. Head to Discover!","pt":"Sem matches ainda. Vá em Descobrir!","fr":"Pas encore de matchs. Va dans Découvrir !","de":"Noch keine Matches. Geh zu Entdecken!","it":"Nessun match ancora. Vai su Scopri!","zh":"还没有匹配，去发现页看看！","ja":"まだマッチがありません。発見へ！","ko":"아직 매치가 없어요. 발견으로 가요!","ru":"Пока нет совпадений. Загляните в Поиск!","ar":"لا توجد مطابقات بعد. اذهب إلى اكتشف!","id":"Belum ada match. Ke Jelajah!","tr":"Henüz eşleşme yok. Keşfet'e git!"},
+  chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
+  chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
+  chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -34,11 +39,12 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterModule, CoachWidgetComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnDestroy {
   private isBrowser: boolean;
   readonly section = signal<Section>('coach');
   readonly showConfirm = signal(false);
@@ -49,6 +55,14 @@ export class AppShellComponent {
   readonly discoLoaded = signal(false);
   readonly photoIdx = signal(0);
   readonly swiping = signal<'like' | 'pass' | null>(null);
+  // Chat state
+  readonly matches = signal<any[]>([]);
+  readonly matchNames = signal<Record<string, string>>({});
+  readonly selectedMatch = signal<any | null>(null);
+  readonly chatMsgs = signal<any[]>([]);
+  chatText = '';
+  private unsubMatches: (() => void) | null = null;
+  private unsubMsgs: (() => void) | null = null;
   readonly navItems: Array<{ key: Section; icon: string }> = [
     { key: 'discovery', icon: '🔥' },
     { key: 'coach', icon: '✦' },
@@ -69,6 +83,7 @@ export class AppShellComponent {
   go(sec: Section) {
     this.section.set(sec);
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
+    if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
   }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
@@ -113,4 +128,39 @@ export class AppShellComponent {
     this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
     setTimeout(() => this.advance(), 220);
   }
+
+  // ── Chat ─────────────────────────────────────────────────────────────────────
+  private subscribeMatches() {
+    this.unsubMatches = this.firebase.listenMatches((rows) => {
+      this.matches.set(rows);
+      const names = { ...this.matchNames() };
+      rows.forEach((r) => {
+        if (r.otherUid && names[r.otherUid] === undefined) {
+          names[r.otherUid] = '';
+          this.firebase.getUserBasic(r.otherUid).then((b) => {
+            if (b) this.matchNames.update((m) => ({ ...m, [r.otherUid]: b.name }));
+          });
+        }
+      });
+      this.matchNames.set(names);
+    });
+  }
+  matchName(uid: string): string { return this.matchNames()[uid] || '…'; }
+  openChat(match: any) {
+    this.selectedMatch.set(match);
+    this.chatMsgs.set([]);
+    if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
+    this.unsubMsgs = this.firebase.listenMessages(match.id, (msgs) => this.chatMsgs.set(msgs));
+  }
+  backToList() { this.selectedMatch.set(null); if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; } }
+  myUid(): string { return this.firebase.currentUser()?.uid || ''; }
+  async sendChat() {
+    const m = this.selectedMatch();
+    const t = this.chatText.trim();
+    if (!m || !t) return;
+    this.chatText = '';
+    try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; /* restore on failure (e.g., first-message gate) */ }
+  }
+
+  ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); }
 }

@@ -25,6 +25,14 @@ import {
   deleteDoc,
   arrayUnion,
   serverTimestamp,
+  increment,
+  collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  limit as fbLimit,
+  onSnapshot,
   Timestamp
 } from 'firebase/firestore';
 import {
@@ -353,18 +361,86 @@ export class FirebaseService {
     return (res?.data?.profiles) || [];
   }
 
-  // Record a swipe — mirrors the apps: a swipes/{targetUid} doc excludes the profile from future
-  // feeds, and a LIKE also adds the target to the `liked` array (the backend forms mutual matches).
-  async recordSwipe(targetUid: string, action: 'like' | 'pass' | 'superlike'): Promise<void> {
+  // Record a swipe — faithfully mirrors iOS/Android `swipeUser`/`superLikeUser`:
+  //  1) liked|passed arrayUnion + dailyLikesRemaining decrement (on like)
+  //  2) swipes/{target} = {timestamp, isLike, isSuperLike} (feed exclusion)
+  //  3) liked/{target} subcollection = {exists, superLike} (on like)
+  //  4) if the other user already liked me back → create the match (same shape + matchId as the apps)
+  // Returns the matchId when a mutual match was created, else ''.
+  async recordSwipe(targetUid: string, action: 'like' | 'pass' | 'superlike'): Promise<string> {
     const u = this.currentUser();
-    if (!u || !targetUid) return;
-    await setDoc(doc(this.db, 'users', u.uid, 'swipes', targetUid), { action, timestamp: serverTimestamp() });
-    if (action === 'like' || action === 'superlike') {
-      await updateDoc(doc(this.db, 'users', u.uid), {
-        liked: arrayUnion(targetUid),
-        ...(action === 'superlike' ? { superLiked: arrayUnion(targetUid) } : {}),
-      });
-    }
+    if (!u || !targetUid) return '';
+    const isLike = action === 'like' || action === 'superlike';
+    const isSuper = action === 'superlike';
+    const userRef = doc(this.db, 'users', u.uid);
+
+    const upd: Record<string, unknown> = { [isLike ? 'liked' : 'passed']: arrayUnion(targetUid) };
+    if (isLike) upd['dailyLikesRemaining'] = increment(-1);
+    if (isSuper) upd['superLiked'] = arrayUnion(targetUid);
+    await updateDoc(userRef, upd);
+    await setDoc(doc(this.db, 'users', u.uid, 'swipes', targetUid), { timestamp: serverTimestamp(), isLike, isSuperLike: isSuper });
+    if (isLike) await setDoc(doc(this.db, 'users', u.uid, 'liked', targetUid), { exists: true, superLike: isSuper });
+
+    if (!isLike) return '';
+    // Mutual-like check → create the match instantly (same as the apps; cron is the fallback).
+    try {
+      const otherSnap = await getDoc(doc(this.db, 'users', targetUid));
+      const other: any = otherSnap.data() || {};
+      const likedBack = Array.isArray(other.liked) && other.liked.includes(u.uid);
+      if (!likedBack) return '';
+      const matchId = u.uid > targetUid ? u.uid + targetUid : targetUid + u.uid;
+      const myType = (this.userProfile() as any)?.userType || (await getDoc(userRef)).data()?.['userType'];
+      const otherType = other.userType;
+      const data: Record<string, unknown> = {
+        users: [u.uid, targetUid],
+        usersMatched: [u.uid, targetUid],
+        timestamp: serverTimestamp(),
+        lastMessageTimestamp: serverTimestamp(),
+        messageCount: 0,
+        lastSeenTimestamps: { [u.uid]: serverTimestamp(), [targetUid]: serverTimestamp() },
+      };
+      if (myType && otherType) data['userTypesAtMatch'] = { [u.uid]: myType, [targetUid]: otherType };
+      await setDoc(doc(this.db, 'matches', matchId), data);
+      return matchId;
+    } catch { return ''; }
+  }
+
+  // ── Matches + chat (web) — same Firestore schema the apps use ────────────────
+  /** Live matches for the current user (matches where usersMatched contains me). Returns unsub fn. */
+  listenMatches(cb: (matches: any[]) => void): () => void {
+    const u = this.currentUser();
+    if (!u) { cb([]); return () => {}; }
+    const q = query(collection(this.db, 'matches'), where('usersMatched', 'array-contains', u.uid));
+    return onSnapshot(q, (snap) => {
+      const rows = snap.docs.map((d) => {
+        const data: any = d.data();
+        const other = (data.usersMatched || []).find((x: string) => x !== u.uid) || '';
+        return { id: d.id, otherUid: other, lastMessage: data.lastMessage || '', lastMessageTime: data.lastMessageTime?.toMillis?.() || 0, ...data };
+      }).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
+      cb(rows);
+    }, () => cb([]));
+  }
+  /** Basic profile (name) for a match row — photos need signed URLs, so we use initials in the UI. */
+  async getUserBasic(uid: string): Promise<{ name: string } | null> {
+    try { const s = await getDoc(doc(this.db, 'users', uid)); return s.exists() ? { name: (s.data() as any).name || '' } : null; }
+    catch { return null; }
+  }
+  /** Live messages for a match, oldest→newest. Returns unsub fn. */
+  listenMessages(matchId: string, cb: (msgs: any[]) => void): () => void {
+    const q = query(collection(this.db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'), fbLimit(200));
+    return onSnapshot(q, (snap) => {
+      cb(snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }));
+    }, () => cb([]));
+  }
+  /** Send a text message — same shape as the apps; rules enforce sender/membership/first-message gate. */
+  async sendMessage(matchId: string, text: string): Promise<void> {
+    const u = this.currentUser();
+    const body = (text || '').trim();
+    if (!u || !matchId || !body) return;
+    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
+      message: body.slice(0, 4000), senderId: u.uid, timestamp: serverTimestamp(), type: 'text', isEphemeral: false,
+    });
+    try { await updateDoc(doc(this.db, 'matches', matchId), { lastMessage: body.slice(0, 120), lastMessageTime: serverTimestamp() }); } catch { /* lastMessage is best-effort */ }
   }
 
   // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
