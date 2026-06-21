@@ -120,7 +120,7 @@
           <img src="logo-21.png" alt="Black Sugar 21" width="200" height="200" fetchpriority="high" />
         </div>
 
-        <span class="hero-eyebrow animate-in delay-1"><span class="hero-cta-spark">✦</span> {{ getCurrentLanguage() === 'es' ? 'Coach de IA · Inteligencia Emocional' : 'AI Coach · Emotional Intelligence' }}</span>
+        <span class="hero-eyebrow animate-in delay-1"><span class="hero-cta-spark">✦</span> {{ t('hero.eyebrow') }}</span>
         <h1 class="animate-in delay-2">{{ t('hero.title') }}</h1>
         <p class="tagline animate-in delay-3">{{ t('hero.tagline') }}</p>
         <p class="sub-tagline animate-in delay-3">{{ t('hero.subtitle') }}</p>
@@ -132,9 +132,9 @@
 
         <!-- Trust micro-chips: instant credibility under the CTA -->
         <div class="hero-trust animate-in delay-3">
-          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '✦ IA en tiempo real' : '✦ Real-time AI' }}</span>
-          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '🌐 13 idiomas' : '🌐 13 languages' }}</span>
-          <span class="hero-trust-chip">{{ getCurrentLanguage() === 'es' ? '🆓 Gratis para probar' : '🆓 Free to try' }}</span>
+          <span class="hero-trust-chip">{{ t('hero.trustRealtime') }}</span>
+          <span class="hero-trust-chip">{{ t('hero.trustLangs') }}</span>
+          <span class="hero-trust-chip">{{ t('hero.trustFree') }}</span>
         </div>
 
         <!-- Secondary: the app stores, demoted (the bot, not the platforms, is the focus). -->

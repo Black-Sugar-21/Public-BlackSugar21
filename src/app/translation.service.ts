@@ -166,6 +166,26 @@ export class TranslationService {
       id: "Pelatih AI pribadimu.",
       tr: "Kişisel Yapay Zekâ Koçun.",
     },
+    'hero.eyebrow': {
+      es: 'Coach de IA · Inteligencia Emocional', en: 'AI Coach · Emotional Intelligence', pt: 'Coach de IA · Inteligência Emocional',
+      fr: 'Coach IA · Intelligence Émotionnelle', de: 'KI-Coach · Emotionale Intelligenz', it: 'Coach IA · Intelligenza Emotiva',
+      zh: 'AI 教练 · 情商', ja: 'AIコーチ · 心の知能', ko: 'AI 코치 · 감성 지능', ru: 'ИИ-коуч · Эмоциональный интеллект',
+      ar: 'مدرب ذكاء اصطناعي · ذكاء عاطفي', id: 'Coach AI · Kecerdasan Emosional', tr: 'Yapay Zekâ Koçu · Duygusal Zekâ',
+    },
+    'hero.trustRealtime': {
+      es: '✦ IA en tiempo real', en: '✦ Real-time AI', pt: '✦ IA em tempo real', fr: '✦ IA en temps réel', de: '✦ KI in Echtzeit',
+      it: '✦ IA in tempo reale', zh: '✦ 实时 AI', ja: '✦ リアルタイムAI', ko: '✦ 실시간 AI', ru: '✦ ИИ в реальном времени',
+      ar: '✦ ذكاء فوري', id: '✦ AI real-time', tr: '✦ Gerçek zamanlı YZ',
+    },
+    'hero.trustLangs': {
+      es: '🌐 13 idiomas', en: '🌐 13 languages', pt: '🌐 13 idiomas', fr: '🌐 13 langues', de: '🌐 13 Sprachen', it: '🌐 13 lingue',
+      zh: '🌐 13 种语言', ja: '🌐 13言語', ko: '🌐 13개 언어', ru: '🌐 13 языков', ar: '🌐 13 لغة', id: '🌐 13 bahasa', tr: '🌐 13 dil',
+    },
+    'hero.trustFree': {
+      es: '🆓 Gratis para probar', en: '🆓 Free to try', pt: '🆓 Grátis para testar', fr: "🆓 Gratuit à l'essai", de: '🆓 Kostenlos testen',
+      it: '🆓 Prova gratis', zh: '🆓 免费试用', ja: '🆓 無料で試せる', ko: '🆓 무료로 체험', ru: '🆓 Бесплатно попробовать',
+      ar: '🆓 جرّبه مجاناً', id: '🆓 Gratis dicoba', tr: '🆓 Ücretsiz dene',
+    },
     'hero.tagline': {
       es: 'Menos swipe sin sentido. Más conexión real.',
       pt: 'Menos swipe sem sentido. Mais conexão real.',
