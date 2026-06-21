@@ -25,6 +25,10 @@ const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.n
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
 const FREE_TASTE = 3; // free coach replies for unauthenticated visitors before the login soft-gate
+// Flip to true ONLY after the web Apple OAuth is configured (Apple Services ID + .p8 key uploaded to
+// Firebase Console → Auth → Apple). Until then signInWithPopup('apple.com') returns operation-not-allowed,
+// so the button is hidden to avoid a broken option. Native iOS/Android Apple sign-in is unaffected.
+const APPLE_WEB_ENABLED = false;
 
 // R65: login sheet strings in all 13 languages (single source; no hardcoded per-string ternaries).
 const LOGIN_I18N: Record<string, Record<string, string>> = {
@@ -54,6 +58,10 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
   verifying: {"es":"Verificando…","en":"Verifying…","pt":"Verificando…","fr":"Vérification…","de":"Bestätigen…","it":"Verifica…","zh":"验证中…","ja":"認証中…","ko":"확인 중…","ru":"Проверка…","ar":"جارٍ التحقّق…","id":"Memverifikasi…","tr":"Doğrulanıyor…"},
   back: {"es":"Atrás","en":"Back","pt":"Voltar","fr":"Retour","de":"Zurück","it":"Indietro","zh":"返回","ja":"戻る","ko":"뒤로","ru":"Назад","ar":"رجوع","id":"Kembali","tr":"Geri"},
   changeNumber: {"es":"Cambiar número","en":"Change number","pt":"Alterar número","fr":"Changer de numéro","de":"Nummer ändern","it":"Cambia numero","zh":"更换号码","ja":"番号を変更","ko":"번호 변경","ru":"Изменить номер","ar":"تغيير الرقم","id":"Ubah nomor","tr":"Numarayı değiştir"},
+  errProviderOff: {"es":"Este método de inicio no está disponible ahora. Prueba con Google o tu teléfono.","en":"This sign-in method isn't available right now. Try Google or your phone.","pt":"Este método de login não está disponível agora. Tente Google ou seu telefone.","fr":"Cette méthode de connexion n'est pas disponible. Essaie Google ou ton téléphone.","de":"Diese Anmeldemethode ist gerade nicht verfügbar. Versuch Google oder dein Telefon.","it":"Questo accesso non è disponibile ora. Prova Google o il telefono.","zh":"此登录方式暂不可用，请用 Google 或手机。","ja":"このログイン方法は現在利用できません。Googleか電話でお試しください。","ko":"이 로그인 방법을 지금은 사용할 수 없어요. Google이나 전화를 사용하세요.","ru":"Этот способ входа сейчас недоступен. Попробуйте Google или телефон.","ar":"طريقة الدخول هذه غير متاحة الآن. جرّب Google أو هاتفك.","id":"Metode masuk ini belum tersedia. Coba Google atau teleponmu.","tr":"Bu giriş yöntemi şu an kullanılamıyor. Google veya telefonunu dene."},
+  errPopupBlocked: {"es":"Tu navegador bloqueó la ventana. Permite ventanas emergentes e inténtalo de nuevo.","en":"Your browser blocked the popup. Allow popups and try again.","pt":"Seu navegador bloqueou a janela. Permita pop-ups e tente de novo.","fr":"Ton navigateur a bloqué la fenêtre. Autorise les pop-ups et réessaie.","de":"Dein Browser hat das Fenster blockiert. Pop-ups erlauben und erneut versuchen.","it":"Il browser ha bloccato la finestra. Consenti i popup e riprova.","zh":"浏览器拦截了弹窗，请允许弹窗后重试。","ja":"ブラウザがポップアップをブロックしました。許可して再試行してください。","ko":"브라우저가 팝업을 차단했어요. 팝업을 허용하고 다시 시도하세요.","ru":"Браузер заблокировал окно. Разрешите всплывающие окна и повторите.","ar":"حظر متصفحك النافذة. اسمح بالنوافذ المنبثقة وحاول مجدداً.","id":"Browser memblokir popup. Izinkan popup dan coba lagi.","tr":"Tarayıcı pencereyi engelledi. Açılır pencerelere izin verip tekrar dene."},
+  errNetwork: {"es":"Problema de conexión. Revisa tu internet e inténtalo de nuevo.","en":"Connection problem. Check your internet and try again.","pt":"Problema de conexão. Verifique a internet e tente de novo.","fr":"Problème de connexion. Vérifie ton internet et réessaie.","de":"Verbindungsproblem. Prüfe dein Internet und versuch es erneut.","it":"Problema di connessione. Controlla internet e riprova.","zh":"连接出现问题，请检查网络后重试。","ja":"接続に問題があります。通信環境を確認して再試行してください。","ko":"연결 문제예요. 인터넷을 확인하고 다시 시도하세요.","ru":"Проблема соединения. Проверьте интернет и повторите.","ar":"مشكلة في الاتصال. تحقق من الإنترنت وحاول مجدداً.","id":"Masalah koneksi. Periksa internet dan coba lagi.","tr":"Bağlantı sorunu. İnternetini kontrol edip tekrar dene."},
+  errAuthFailed: {"es":"No se pudo iniciar sesión. Inténtalo de nuevo.","en":"Couldn't sign you in. Please try again.","pt":"Não foi possível entrar. Tente de novo.","fr":"Connexion impossible. Réessaie.","de":"Anmeldung fehlgeschlagen. Versuch es erneut.","it":"Accesso non riuscito. Riprova.","zh":"登录失败，请重试。","ja":"ログインできませんでした。もう一度お試しください。","ko":"로그인하지 못했어요. 다시 시도하세요.","ru":"Не удалось войти. Повторите.","ar":"تعذّر تسجيل الدخول. حاول مجدداً.","id":"Gagal masuk. Coba lagi.","tr":"Giriş yapılamadı. Tekrar dene."},
   errInvalidPhone: {"es":"Ingresa tu número con código de país, ej. +56 9 1234 5678","en":"Enter your number with country code, e.g. +56 9 1234 5678","pt":"Digite seu número com o código do país, ex. +56 9 1234 5678","fr":"Saisissez votre numéro avec l'indicatif du pays, ex. +56 9 1234 5678","de":"Gib deine Nummer mit Ländervorwahl ein, z. B. +56 9 1234 5678","it":"Inserisci il numero con il prefisso internazionale, es. +56 9 1234 5678","zh":"请输入带国家代码的号码，例如 +56 9 1234 5678","ja":"国番号付きで番号を入力してください、例 +56 9 1234 5678","ko":"국가 코드를 포함해 번호를 입력하세요, 예: +56 9 1234 5678","ru":"Введите номер с кодом страны, напр. +56 9 1234 5678","ar":"أدخل رقمك مع رمز الدولة، مثال +56 9 1234 5678","id":"Masukkan nomormu dengan kode negara, mis. +56 9 1234 5678","tr":"Numaranı ülke koduyla gir, örn. +56 9 1234 5678"},
   errSend: {"es":"No se pudo enviar el código — revisa el número e inténtalo de nuevo.","en":"Couldn't send the code — check the number and try again.","pt":"Não foi possível enviar o código — verifique o número e tente novamente.","fr":"Impossible d'envoyer le code — vérifiez le numéro et réessayez.","de":"Code konnte nicht gesendet werden — prüfe die Nummer und versuch es erneut.","it":"Impossibile inviare il codice — controlla il numero e riprova.","zh":"无法发送验证码——请检查号码后重试。","ja":"コードを送信できませんでした — 番号を確認してもう一度お試しください。","ko":"코드를 보내지 못했어요 — 번호를 확인하고 다시 시도하세요.","ru":"Не удалось отправить код — проверьте номер и попробуйте снова.","ar":"تعذّر إرسال الرمز — تحقّق من الرقم وحاول مجدداً.","id":"Gagal mengirim kode — periksa nomor lalu coba lagi.","tr":"Kod gönderilemedi — numarayı kontrol edip tekrar dene."},
   errCode: {"es":"Ingresa el código de 6 dígitos.","en":"Enter the 6-digit code.","pt":"Digite o código de 6 dígitos.","fr":"Saisissez le code à 6 chiffres.","de":"Gib den 6-stelligen Code ein.","it":"Inserisci il codice di 6 cifre.","zh":"请输入 6 位验证码。","ja":"6 桁のコードを入力してください。","ko":"6자리 코드를 입력하세요.","ru":"Введите 6-значный код.","ar":"أدخل الرمز المكوّن من 6 أرقام.","id":"Masukkan kode 6 digit.","tr":"6 haneli kodu gir."},
@@ -349,7 +357,10 @@ export class CoachWidgetComponent {
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
       try {
         const ua = navigator.userAgent || '';
-        this.appleDevice = /iPhone|iPad|iPod|Macintosh/i.test(ua) && !/Android/i.test(ua);
+        // Apple device AND the web Apple OAuth is fully configured. Firebase returns
+        // auth/operation-not-allowed until the Apple Services ID + .p8 key are set up in
+        // Apple Developer + Firebase Console — so hide the button until then (no broken option).
+        this.appleDevice = APPLE_WEB_ENABLED && /iPhone|iPad|iPod|Macintosh/i.test(ua) && !/Android/i.test(ua);
       } catch { this.appleDevice = false; }
       // R62: load the RC date-planner config once (single source shared with the apps).
       this.firebase.getCoachPlannerConfig().then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
@@ -588,6 +599,7 @@ export class CoachWidgetComponent {
   readonly loginGate = signal(false); // true → opened because the free-taste limit was hit
   readonly loginStep = signal<'choose' | 'phone' | 'code'>('choose');
   readonly signingIn = signal(false); // elegant "signing in…" state after picking a Google/Apple account
+  readonly authErr = signal('');      // surfaced provider error (Apple/Google) — never fail silently
   readonly phoneBusy = signal(false);
   readonly phoneErr = signal('');
   phoneInput = '';
@@ -599,7 +611,7 @@ export class CoachWidgetComponent {
   li(key: string): string { const m = LOGIN_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   /** 13-language UI string (greeting / history / discover) — falls back to English. */
   ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
-  openLogin(gated = false) { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
+  openLogin(gated = false) { this.phoneErr.set(''); this.authErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
   // After any successful sign-in: if the account has NO profile yet, send them to onboarding (/app)
   // — iOS/Android parity (a profile-less login always lands in onboarding). Otherwise resume the question.
@@ -609,8 +621,29 @@ export class CoachWidgetComponent {
     if (!this.firebase.isProfileComplete()) { this.pendingAsk = null; this.router.navigate(['/app']); return; }
     if (this.pendingAsk) { const p = this.pendingAsk; this.pendingAsk = null; this.ask(p); }
   }
-  async signInGoogle() { this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } finally { this.signingIn.set(false); } }
-  async signInApple() { this.signingIn.set(true); try { await this.firebase.signInWithApple(); this.afterSignIn(); } catch { /* cancelled */ } finally { this.signingIn.set(false); } }
+  async signInGoogle() { this.authErr.set(''); this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch (e) { this.handleAuthError(e); } finally { this.signingIn.set(false); } }
+  async signInApple() {
+    this.authErr.set(''); this.signingIn.set(true);
+    try { await this.firebase.signInWithApple(); this.afterSignIn(); }
+    catch (e) {
+      // Popup blocked → retry via full-page redirect (more reliable for Apple on Safari/macOS).
+      const code = (e as any)?.code || '';
+      if (code.includes('popup-blocked')) {
+        try { await this.firebase.signInWithAppleRedirect(); return; } catch (e2) { this.handleAuthError(e2); }
+      } else { this.handleAuthError(e); }
+    }
+    finally { this.signingIn.set(false); }
+  }
+  /** Classify a provider auth error → a localized message (silent only on genuine user cancel). */
+  private handleAuthError(e: unknown) {
+    const code = (e as any)?.code || '';
+    if (code.includes('cancelled-popup-request') || code === 'auth/user-cancelled') return; // user dismissed → no error
+    if (code.includes('popup-closed-by-user')) return;
+    if (code.includes('operation-not-allowed')) this.authErr.set(this.li('errProviderOff'));
+    else if (code.includes('popup-blocked')) this.authErr.set(this.li('errPopupBlocked'));
+    else if (code.includes('network')) this.authErr.set(this.li('errNetwork'));
+    else this.authErr.set(this.li('errAuthFailed'));
+  }
   async signOut() { this.confirmSignOut.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   // Phone OTP (2 steps): enter number → SMS code → verify.
   async sendCode() {

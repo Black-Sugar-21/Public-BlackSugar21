@@ -11,6 +11,8 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   ConfirmationResult
@@ -159,6 +161,8 @@ export class FirebaseService {
         this.profileChecked.set(true);
       }
     });
+    // Complete any pending Apple redirect sign-in (popup-blocked fallback).
+    this.handleRedirectResult();
   }
 
   // Authentication Methods
@@ -215,13 +219,14 @@ export class FirebaseService {
 
   // R64: Sign in with Apple (web). Shown only on Apple devices in the UI. Requires the Apple
   // provider enabled in Firebase Auth console (Services ID + return URL for black-sugar21.web.app).
-  async signInWithApple(): Promise<User> {
+  private appleProvider(): OAuthProvider {
     const provider = new OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
-    const userCredential = await signInWithPopup(this.auth, provider);
-    const user = userCredential.user;
-
+    return provider;
+  }
+  /** Ensure the Firestore profile exists for an OAuth (Apple) user — shared by popup + redirect paths. */
+  private async ensureAppleProfile(user: User): Promise<void> {
     const profileExists = await this.checkUserProfileExists(user.uid);
     if (!profileExists) {
       await this.createUserProfile({
@@ -236,8 +241,22 @@ export class FirebaseService {
     } else {
       await this.updateLastLogin(user.uid);
     }
-
-    return user;
+  }
+  async signInWithApple(): Promise<User> {
+    const userCredential = await signInWithPopup(this.auth, this.appleProvider());
+    await this.ensureAppleProfile(userCredential.user);
+    return userCredential.user;
+  }
+  /** Full-page redirect fallback (popups blocked / Safari). Completed by handleRedirectResult() on load. */
+  async signInWithAppleRedirect(): Promise<void> {
+    await signInWithRedirect(this.auth, this.appleProvider());
+  }
+  /** Process a pending Apple redirect sign-in on app load (creates the profile for new users). */
+  private async handleRedirectResult(): Promise<void> {
+    try {
+      const res = await getRedirectResult(this.auth);
+      if (res?.user) await this.ensureAppleProfile(res.user);
+    } catch (e) { console.warn('redirect sign-in result error:', e); }
   }
 
   // R64: Phone sign-in (web) — invisible reCAPTCHA + SMS OTP, 2 steps.
