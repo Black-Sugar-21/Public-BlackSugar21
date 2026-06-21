@@ -269,6 +269,14 @@
                   </div>
                   @if (epError()) { <div class="ob-error">{{ epError() }}</div> }
                 </div>
+                @if (epLoading()) {
+                  <div class="ep-loading-overlay">
+                    <div class="ep-loading-card">
+                      <span class="ep-spin ep-spin-lg"></span>
+                      <div class="ep-loading-txt">{{ s('epLoadingProfile') }}</div>
+                    </div>
+                  </div>
+                }
               </div>
             } @else if (profileComplete()) {
               <!-- Profile view — réplica del tab de Perfil de iOS (ProfileView.swift) -->

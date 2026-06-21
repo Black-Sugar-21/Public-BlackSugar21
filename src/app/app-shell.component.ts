@@ -98,6 +98,7 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epAnalyzingSub: {"es":"Analizando tus fotos con IA, dame unos segundos…","en":"Analyzing your photos with AI, just a few seconds…","pt":"Analisando suas fotos com IA, alguns segundos…","fr":"Analyse de tes photos par l'IA, quelques secondes…","de":"Deine Fotos werden per KI analysiert, einen Moment…","it":"Analisi delle tue foto con l'IA, qualche secondo…","zh":"AI 正在分析你的照片，请稍候…","ja":"AIが写真を分析中です。少々お待ちください…","ko":"AI가 사진을 분석 중이에요. 잠시만요…","ru":"ИИ анализирует ваши фото, несколько секунд…","ar":"يحلّل الذكاء صورك، بضع ثوانٍ…","id":"AI menganalisis fotomu, beberapa detik…","tr":"Yapay zeka fotoğraflarını analiz ediyor, birkaç saniye…"},
   epGenerating: {"es":"Generando…","en":"Generating…","pt":"Gerando…","fr":"Génération…","de":"Erstelle…","it":"Generazione…","zh":"生成中…","ja":"生成中…","ko":"생성 중…","ru":"Генерация…","ar":"جارٍ الإنشاء…","id":"Membuat…","tr":"Oluşturuluyor…"},
   epCoachError: {"es":"No se pudo analizar ahora. Inténtalo de nuevo en un momento.","en":"Couldn't analyze right now. Try again in a moment.","pt":"Não foi possível analisar agora. Tente de novo em instantes.","fr":"Analyse impossible pour le moment. Réessaie bientôt.","de":"Analyse momentan nicht möglich. Versuch es gleich erneut.","it":"Analisi non riuscita ora. Riprova tra poco.","zh":"暂时无法分析，请稍后再试。","ja":"今は分析できませんでした。少し後でもう一度お試しください。","ko":"지금은 분석할 수 없어요. 잠시 후 다시 시도하세요.","ru":"Сейчас не удалось проанализировать. Повторите чуть позже.","ar":"تعذّر التحليل الآن. حاول مجدداً بعد قليل.","id":"Tidak bisa menganalisis sekarang. Coba lagi sebentar.","tr":"Şu anda analiz edilemedi. Birazdan tekrar dene."},
+  epLoadingProfile: {"es":"Cargando tu perfil…","en":"Loading your profile…","pt":"Carregando seu perfil…","fr":"Chargement de ton profil…","de":"Dein Profil wird geladen…","it":"Caricamento del tuo profilo…","zh":"正在加载你的资料…","ja":"プロフィールを読み込み中…","ko":"프로필을 불러오는 중…","ru":"Загружаем ваш профиль…","ar":"جارٍ تحميل ملفك…","id":"Memuat profilmu…","tr":"Profilin yükleniyor…"},
   epLocation: {"es":"Ubicación","en":"Location","pt":"Localização","fr":"Localisation","de":"Standort","it":"Posizione","zh":"位置","ja":"位置","ko":"위치","ru":"Местоположение","ar":"الموقع","id":"Lokasi","tr":"Konum"},
   epUpdateLocation: {"es":"Actualizar ubicación","en":"Update location","pt":"Atualizar localização","fr":"Mettre à jour la position","de":"Standort aktualisieren","it":"Aggiorna posizione","zh":"更新位置","ja":"位置を更新","ko":"위치 업데이트","ru":"Обновить местоположение","ar":"تحديث الموقع","id":"Perbarui lokasi","tr":"Konumu güncelle"},
   epLocDone: {"es":"Ubicación actualizada","en":"Location updated","pt":"Localização atualizada","fr":"Position mise à jour","de":"Standort aktualisiert","it":"Posizione aggiornata","zh":"位置已更新","ja":"位置を更新しました","ko":"위치가 업데이트됨","ru":"Местоположение обновлено","ar":"تم تحديث الموقع","id":"Lokasi diperbarui","tr":"Konum güncellendi"},
@@ -480,9 +481,12 @@ export class AppShellComponent implements OnDestroy {
     this.epPhotoCoachErr.set(false);
     this.epError.set('');
     this.epEditing.set(true);
-    this.epLoading.set(true);
+    // iOS .showLoading parity: dim overlay + spinner ONLY while the backend signs the photo URLs
+    // (skip the overlay flash when they're already cached).
+    const needFetch = !this.profilePhotos().length && names.length > 0;
+    if (needFetch) this.epLoading.set(true);
     try {
-      if (!this.profilePhotos().length) await this.loadProfilePhotos();
+      if (needFetch) await this.loadProfilePhotos();
       const urls = this.profilePhotos();
       this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '', loaded: false })));
     } finally { this.epLoading.set(false); }
