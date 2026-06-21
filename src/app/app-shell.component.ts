@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal, computed, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -29,6 +29,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoEmpty: {"es":"No hay más perfiles por ahora. Vuelve más tarde.","en":"No more profiles right now. Check back later.","pt":"Sem mais perfis por agora. Volte mais tarde.","fr":"Plus de profils pour l'instant. Reviens plus tard.","de":"Vorerst keine weiteren Profile. Schau später vorbei.","it":"Nessun altro profilo per ora. Torna più tardi.","zh":"暂时没有更多人了，稍后再来。","ja":"今はこれ以上いません。あとでまた見てね。","ko":"지금은 더 없어요. 나중에 다시 확인해요.","ru":"Пока больше нет анкет. Загляните позже.","ar":"لا مزيد من الملفات الآن. عُد لاحقاً.","id":"Tidak ada profil lagi. Cek lagi nanti.","tr":"Şimdilik başka profil yok. Sonra tekrar bak."},
   discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
   discoError: {"es":"No se pudo cargar el feed. Revisa tu conexión e inténtalo de nuevo.","en":"Couldn't load the feed. Check your connection and try again.","pt":"Não foi possível carregar o feed. Verifique a conexão e tente de novo.","fr":"Échec du chargement. Vérifie ta connexion et réessaie.","de":"Feed konnte nicht geladen werden. Prüfe deine Verbindung und versuch es erneut.","it":"Impossibile caricare il feed. Controlla la connessione e riprova.","zh":"无法加载，请检查网络后重试。","ja":"読み込めませんでした。接続を確認して再試行してください。","ko":"불러오지 못했어요. 연결을 확인하고 다시 시도하세요.","ru":"Не удалось загрузить. Проверьте соединение и повторите.","ar":"تعذّر تحميل القائمة. تحقّق من اتصالك وحاول مجدداً.","id":"Tidak bisa memuat. Periksa koneksi dan coba lagi.","tr":"Akış yüklenemedi. Bağlantını kontrol edip tekrar dene."},
+  chatLoadOlder: {"es":"Cargar mensajes anteriores","en":"Load older messages","pt":"Carregar mensagens antigas","fr":"Charger les messages plus anciens","de":"Ältere Nachrichten laden","it":"Carica messaggi precedenti","zh":"加载更早的消息","ja":"以前のメッセージを読み込む","ko":"이전 메시지 불러오기","ru":"Загрузить ранние сообщения","ar":"تحميل الرسائل الأقدم","id":"Muat pesan lama","tr":"Eski mesajları yükle"},
+  viewOnMaps: {"es":"Ver en Maps","en":"View on Maps","pt":"Ver no Maps","fr":"Voir sur Maps","de":"Auf Maps ansehen","it":"Vedi su Maps","zh":"在地图查看","ja":"マップで見る","ko":"지도에서 보기","ru":"Открыть на карте","ar":"عرض على الخرائط","id":"Lihat di Maps","tr":"Haritalarda gör"},
+  getTickets: {"es":"Entradas","en":"Get tickets","pt":"Ingressos","fr":"Billets","de":"Tickets","it":"Biglietti","zh":"购票","ja":"チケット","ko":"티켓 구매","ru":"Билеты","ar":"التذاكر","id":"Tiket","tr":"Biletler"},
   chatSendErr: {"es":"No se pudo enviar el mensaje. Inténtalo de nuevo.","en":"Couldn't send the message. Try again.","pt":"Não foi possível enviar. Tente de novo.","fr":"Échec de l'envoi. Réessaie.","de":"Nachricht konnte nicht gesendet werden. Versuch es erneut.","it":"Invio non riuscito. Riprova.","zh":"消息发送失败，请重试。","ja":"送信できませんでした。もう一度お試しください。","ko":"메시지를 보내지 못했어요. 다시 시도하세요.","ru":"Не удалось отправить. Повторите.","ar":"تعذّر إرسال الرسالة. حاول مجدداً.","id":"Gagal mengirim pesan. Coba lagi.","tr":"Mesaj gönderilemedi. Tekrar dene."},
   discoLocTitle: {"es":"Activa tu ubicación","en":"Enable your location","pt":"Ative sua localização","fr":"Active ta localisation","de":"Standort aktivieren","it":"Attiva la posizione","zh":"开启你的位置","ja":"位置情報をオンに","ko":"위치를 켜세요","ru":"Включите геолокацию","ar":"فعّل موقعك","id":"Aktifkan lokasimu","tr":"Konumunu aç"},
   discoLocBody: {"es":"La usamos solo para mostrarte personas cerca de ti. Nunca la compartimos con nadie.","en":"We use it only to show you people near you. We never share it with anyone.","pt":"Usamos apenas para mostrar pessoas perto de você. Nunca compartilhamos.","fr":"Nous l'utilisons uniquement pour te montrer des personnes près de toi. Jamais partagée.","de":"Wir nutzen ihn nur, um dir Menschen in deiner Nähe zu zeigen. Niemals geteilt.","it":"La usiamo solo per mostrarti persone vicine. Mai condivisa.","zh":"仅用于向你展示附近的人，绝不分享。","ja":"近くの人を表示するためだけに使用します。共有しません。","ko":"근처 사람을 보여주기 위해서만 사용해요. 공유하지 않습니다.","ru":"Используем только чтобы показать людей рядом. Никогда не передаём.","ar":"نستخدمه فقط لعرض أشخاص قريبين منك. لا نشاركه أبداً.","id":"Hanya untuk menampilkan orang di dekatmu. Tidak pernah dibagikan.","tr":"Yalnızca yakınındaki kişileri göstermek için kullanırız. Asla paylaşmayız."},
@@ -224,7 +227,14 @@ export class AppShellComponent implements OnDestroy {
   readonly matches = signal<any[]>([]);
   readonly matchNames = signal<Record<string, string>>({});
   readonly selectedMatch = signal<any | null>(null);
-  readonly chatMsgs = signal<any[]>([]);
+  // iOS pagination parity: a live TAIL listener (latest page) + cursor-fetched OLDER pages, merged.
+  readonly chatTail = signal<any[]>([]);
+  readonly chatOlder = signal<any[]>([]);
+  readonly chatMsgs = computed(() => {
+    const map = new Map<string, any>();
+    for (const m of [...this.chatOlder(), ...this.chatTail()]) map.set(m.id, m);
+    return [...map.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  });
   chatText = '';
   private unsubMatches: (() => void) | null = null;
   private unsubMsgs: (() => void) | null = null;
@@ -381,21 +391,42 @@ export class AppShellComponent implements OnDestroy {
     });
   }
   matchName(uid: string): string { return this.matchNames()[uid] || '…'; }
+  private static readonly CHAT_PAGE = 30; // iOS messagesPageSize
+  readonly chatHasMore = signal(false);
+  readonly chatLoadingOlder = signal(false);
   openChat(match: any) {
     this.selectedMatch.set(match);
-    this.chatMsgs.set([]);
+    this.chatTail.set([]);
+    this.chatOlder.set([]);
+    this.chatHasMore.set(false);
     this.chatError.set('');
-    if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     // iOS ChatView parity: mark read + set this as the active chat (suppresses the recipient's push).
     this.firebase.markMatchRead(match.id);
     this.firebase.setActiveChat(match.id);
-    this.unsubMsgs = this.firebase.listenMessages(match.id, (msgs) => {
-      this.chatMsgs.set(msgs);
-      // Mark read when a new message arrives from the other user while the chat is open.
+    // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
+    if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
+    this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
+      this.chatTail.set(msgs);
+      if (this.chatOlder().length === 0) this.chatHasMore.set(more);  // more older than the first page?
       const last = msgs[msgs.length - 1];
       if (last && last.senderId && last.senderId !== this.myUid()) this.firebase.markMatchRead(match.id);
     });
   }
+  /** Load older messages via timestamp cursor + prepend (iOS loadOlderMessages parity). */
+  async loadOlderChat() {
+    const m = this.selectedMatch(); if (!m || this.chatLoadingOlder()) return;
+    const oldest = this.chatMsgs()[0];
+    if (!oldest?.ts) return;
+    this.chatLoadingOlder.set(true);
+    try {
+      const older = await this.firebase.loadOlderMessages(m.id, oldest.ts, AppShellComponent.CHAT_PAGE);
+      if (older.length) this.chatOlder.update((cur) => [...older, ...cur]);
+      this.chatHasMore.set(older.length >= AppShellComponent.CHAT_PAGE);
+    } catch { /* keep what we have */ }
+    finally { this.chatLoadingOlder.set(false); }
+  }
+  // ── Rich message cards (place / event / blueprint) — render iOS-sent message types ──
+  placeCategory(p: any): string { return (p?.category || '📍').toString(); }
   backToList() {
     this.selectedMatch.set(null);
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }

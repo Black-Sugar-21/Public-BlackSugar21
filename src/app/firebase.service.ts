@@ -23,6 +23,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   arrayUnion,
@@ -661,13 +662,30 @@ export class FirebaseService {
     try { const s = await getDoc(doc(this.db, 'users', uid)); return s.exists() ? { name: (s.data() as any).name || '' } : null; }
     catch { return null; }
   }
-  /** Live messages for a match, oldest→newest. Returns unsub fn. */
-  listenMessages(matchId: string, cb: (msgs: any[]) => void): () => void {
-    const q = query(collection(this.db, 'matches', matchId, 'messages'), orderBy('timestamp', 'asc'), fbLimit(200));
+  /** Live messages for a match (iOS pagination parity): listens to the latest `limit` messages
+   *  (desc+limit, reversed to oldest→newest). "Load older" grows `limit` and re-subscribes.
+   *  cb(msgs, hasMore) — hasMore is true when the window is full (older messages may exist). */
+  listenMessages(matchId: string, limit: number, cb: (msgs: any[], hasMore: boolean) => void): () => void {
+    const q = query(collection(this.db, 'matches', matchId, 'messages'), orderBy('timestamp', 'desc'), fbLimit(limit));
     return onSnapshot(q, (snap) => {
-      cb(snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }));
-    }, () => cb([]));
+      const msgs = snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }).reverse();
+      cb(msgs, snap.size >= limit);
+    }, () => cb([], false));
   }
+  /** Fetch one older page of messages before `beforeMs` (iOS loadOlderMessages cursor parity).
+   *  One-time get, oldest→newest. */
+  async loadOlderMessages(matchId: string, beforeMs: number, pageSize: number): Promise<any[]> {
+    const cursor = Timestamp.fromMillis(beforeMs);
+    const q = query(
+      collection(this.db, 'matches', matchId, 'messages'),
+      where('timestamp', '<', cursor),
+      orderBy('timestamp', 'desc'),
+      fbLimit(pageSize),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }).reverse();
+  }
+
   /** Send a text message — same shape as the apps; rules enforce sender/membership/first-message gate. */
   async sendMessage(matchId: string, text: string): Promise<void> {
     const u = this.currentUser();

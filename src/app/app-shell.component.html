@@ -108,9 +108,51 @@
                   <b>{{ matchName(m.otherUid) }}</b>
                 </div>
                 <div class="chat-msgs">
+                  @if (chatHasMore()) {
+                    <button class="chat-loadmore" [disabled]="chatLoadingOlder()" (click)="loadOlderChat()">{{ chatLoadingOlder() ? '…' : s('chatLoadOlder') }}</button>
+                  }
                   @if (chatMsgs().length === 0) { <div class="chat-empty">{{ s('chatStart') }}</div> }
                   @for (msg of chatMsgs(); track msg.id) {
-                    <div class="chat-bubble" [class.mine]="msg.senderId === myUid()">{{ msg.message }}@if (fmtTime(msg.ts)) { <span class="chat-time">{{ fmtTime(msg.ts) }}</span> }</div>
+                    @switch (msg.type) {
+                      @case ('place') {
+                        <div class="chat-msg-card" [class.mine]="msg.senderId === myUid()">
+                          @if (msg.placeData?.photos?.[0]?.url) { <img class="chat-card-img" [src]="msg.placeData.photos[0].url" alt="" /> }
+                          <div class="chat-card-body">
+                            <div class="chat-card-cat">{{ placeCategory(msg.placeData) }}</div>
+                            <div class="chat-card-title">{{ msg.placeData?.name }}</div>
+                            @if (msg.placeData?.address) { <div class="chat-card-line">📍 {{ msg.placeData.address }}</div> }
+                            @if (msg.placeData?.rating) { <div class="chat-card-line">⭐ {{ msg.placeData.rating }}/5</div> }
+                            @if (msg.placeData?.googleMapsUrl) { <a class="chat-card-cta" [href]="msg.placeData.googleMapsUrl" target="_blank" rel="noopener">{{ s('viewOnMaps') }} →</a> }
+                          </div>
+                        </div>
+                      }
+                      @case ('event') {
+                        <div class="chat-msg-card" [class.mine]="msg.senderId === myUid()">
+                          @if (msg.eventData?.imageUrl) { <img class="chat-card-img" [src]="msg.eventData.imageUrl" alt="" /> }
+                          <div class="chat-card-body">
+                            @if (msg.eventData?.category) { <div class="chat-card-cat">{{ msg.eventData.category }}</div> }
+                            <div class="chat-card-title">{{ msg.eventData?.name }}</div>
+                            @if (msg.eventData?.date) { <div class="chat-card-line">📅 {{ msg.eventData.date }}{{ msg.eventData.time ? ' · ' + msg.eventData.time : '' }}</div> }
+                            @if (msg.eventData?.venue) { <div class="chat-card-line">📍 {{ msg.eventData.venue }}</div> }
+                            @if (msg.eventData?.price) { <div class="chat-card-line">💰 {{ msg.eventData.price }}</div> }
+                            @if (msg.eventData?.ticketUrl) { <a class="chat-card-cta" [href]="msg.eventData.ticketUrl" target="_blank" rel="noopener">🎟️ {{ s('getTickets') }} →</a> }
+                          </div>
+                        </div>
+                      }
+                      @case ('date_blueprint') {
+                        <div class="chat-msg-card blueprint" [class.mine]="msg.senderId === myUid()">
+                          @if (msg.blueprintData?.steps?.[0]?.photoUrl) { <img class="chat-card-img" [src]="msg.blueprintData.steps[0].photoUrl" alt="" /> }
+                          <div class="chat-card-body">
+                            <div class="chat-card-cat">🗺️ AI DATE BLUEPRINT</div>
+                            <div class="chat-card-title">{{ msg.blueprintData?.title || msg.message }}</div>
+                            @if (msg.blueprintData?.title && msg.message) { <div class="chat-card-line">{{ msg.message }}</div> }
+                          </div>
+                        </div>
+                      }
+                      @default {
+                        <div class="chat-bubble" [class.mine]="msg.senderId === myUid()">{{ msg.message }}@if (fmtTime(msg.ts)) { <span class="chat-time">{{ fmtTime(msg.ts) }}</span> }</div>
+                      }
+                    }
                   }
                 </div>
                 @if (chatError()) { <div class="chat-err">{{ chatError() }}</div> }

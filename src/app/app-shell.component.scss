@@ -223,6 +223,20 @@
     .chat-bubble { max-width:74%; padding:10px 14px; border-radius:16px; font-size:14.5px; line-height:1.45; color:var(--text-primary); align-self:flex-start; background:var(--bg-card); border-bottom-left-radius:5px; }
     .chat-bubble.mine { align-self:flex-end; background:var(--gradient-gold); color:var(--bg-dark); font-weight:500; border-radius:16px; border-bottom-right-radius:5px; }
     .chat-err { text-align:center; color:var(--dislike-red1); font-size:12.5px; padding:6px 16px 0; }
+    /* Load-older button (iOS pagination) */
+    .chat-loadmore { align-self:center; margin:4px auto 10px; background:var(--bg-card); border:1px solid rgba(255,255,255,.14); color:var(--text-secondary); border-radius:999px; padding:7px 16px; font-family:inherit; font-size:12.5px; cursor:pointer; }
+    .chat-loadmore:hover { border-color:var(--gold); color:var(--gold); }
+    /* Rich message cards (place / event / blueprint) — iOS MessageView parity */
+    .chat-msg-card { align-self:flex-start; max-width:78%; background:var(--bg-card); border:1px solid rgba(255,255,255,.1); border-radius:16px; overflow:hidden; margin:2px 0; }
+    .chat-msg-card.mine { align-self:flex-end; border-color:rgba(212,175,55,.3); }
+    .chat-msg-card.blueprint { border-color:rgba(212,175,55,.35); }
+    .chat-card-img { width:100%; height:130px; object-fit:cover; display:block; background:rgba(255,255,255,.05); }
+    .chat-card-body { padding:11px 13px; display:flex; flex-direction:column; gap:4px; }
+    .chat-card-cat { font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--gold); }
+    .chat-card-title { font-size:15px; font-weight:700; color:var(--text-primary); line-height:1.25; }
+    .chat-card-line { font-size:12.5px; color:var(--text-secondary); }
+    .chat-card-cta { margin-top:4px; font-size:13px; font-weight:700; color:var(--gold); text-decoration:none; }
+    .chat-card-cta:hover { text-decoration:underline; }
     .chat-input { display:flex; gap:8px; padding:12px 16px; border-top:1px solid rgba(255,255,255,.08); }
     .chat-input input { flex:1; background:var(--bg-card); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:12px 16px; color:var(--text-primary); font-family:inherit; font-size:14.5px; outline:none; }
     .chat-input input:focus { border-color:var(--gold-dark); }
