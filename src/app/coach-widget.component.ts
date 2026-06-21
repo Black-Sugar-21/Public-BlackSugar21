@@ -23,7 +23,7 @@ const FB_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachD
 const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoPlaceClick';
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
-const FREE_TASTE = 2; // free coach replies shown as a "taste" before the (non-blocking) app CTA
+const FREE_TASTE = 3; // free coach replies for unauthenticated visitors before the login soft-gate
 
 // R65: login sheet strings in all 13 languages (single source; no hardcoded per-string ternaries).
 const LOGIN_I18N: Record<string, Record<string, string>> = {
@@ -38,7 +38,7 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
   subtitle: {"es":"Respuestas más inteligentes, tu historial guardado y matches alineados con tu perfil.","en":"Smarter answers, your history saved, and matches aligned with your profile.","pt":"Respostas mais inteligentes, seu histórico salvo e matches alinhados ao seu perfil.","fr":"Des réponses plus pertinentes, votre historique sauvegardé et des matchs alignés sur votre profil.","de":"Klügere Antworten, dein Verlauf gespeichert und Matches passend zu deinem Profil.","it":"Risposte più intelligenti, la tua cronologia salvata e match in linea con il tuo profilo.","zh":"更智能的回答、保存的历史记录，以及与你资料相符的匹配。","ja":"より賢い回答、履歴の保存、プロフィールに合ったマッチを。","ko":"더 똑똑한 답변, 저장되는 기록, 프로필에 맞는 매치까지.","ru":"Умные ответы, сохранённая история и совпадения по вашему профилю.","ar":"إجابات أذكى، سجلّك محفوظ، ومطابقات تناسب ملفك.","id":"Jawaban lebih cerdas, riwayat tersimpan, dan match sesuai profilmu.","tr":"Daha akıllı yanıtlar, kayıtlı geçmişin ve profiline uygun eşleşmeler."},
   gate: {"es":"Probaste el Coach IA ✦ Inicia sesión gratis y desbloquea tu experiencia completa.","en":"You've tried the AI Coach ✦ Sign in free and unlock your full experience.","pt":"Você experimentou o Coach IA ✦ Entre grátis e desbloqueie sua experiência completa.","fr":"Vous avez essayé le Coach IA ✦ Connectez-vous gratuitement et débloquez l'expérience complète.","de":"Du hast den KI-Coach getestet ✦ Melde dich kostenlos an und schalte dein volles Erlebnis frei.","it":"Hai provato il Coach IA ✦ Accedi gratis e sblocca l'esperienza completa.","zh":"你已体验 AI 教练 ✦ 免费登录，解锁完整体验。","ja":"AIコーチを試しましたね ✦ 無料でログインして、フル体験を解放しましょう。","ko":"AI 코치를 경험했어요 ✦ 무료로 로그인하고 전체 경험을 해제하세요.","ru":"Вы попробовали ИИ-коуча ✦ Войдите бесплатно и откройте полный доступ.","ar":"لقد جرّبت مدرّب الذكاء الاصطناعي ✦ سجّل الدخول مجاناً واكتشف التجربة الكاملة.","id":"Kamu sudah mencoba Coach AI ✦ Masuk gratis dan buka pengalaman lengkapmu.","tr":"Yapay Zekâ Koçu'nu denedin ✦ Ücretsiz giriş yap ve tam deneyimin kilidini aç."},
   benefitsTitle: {"es":"Al entrar desbloqueas:","en":"When you sign in you unlock:","pt":"Ao entrar você desbloqueia:","fr":"En vous connectant, vous débloquez :","de":"Mit der Anmeldung schaltest du frei:","it":"Accedendo sblocchi:","zh":"登录后即可解锁：","ja":"ログインで解放：","ko":"로그인하면 해제됩니다:","ru":"При входе вы получаете:","ar":"عند تسجيل الدخول تفتح:","id":"Saat masuk kamu membuka:","tr":"Giriş yapınca açılır:"},
-  benefit1: {"es":"4 preguntas al día — el doble de la prueba","en":"4 questions a day — double the taste","pt":"4 perguntas por dia — o dobro da prévia","fr":"4 questions par jour — le double de l'essai","de":"4 Fragen pro Tag — doppelt so viel","it":"4 domande al giorno — il doppio dell'assaggio","zh":"每天 4 个提问——是体验的两倍","ja":"1日4つの質問 — お試しの2倍","ko":"하루 4개 질문 — 체험의 2배","ru":"4 вопроса в день — вдвое больше пробы","ar":"4 أسئلة يومياً — ضعف التجربة","id":"4 pertanyaan per hari — dua kali lipat","tr":"Günde 4 soru — denemenin iki katı"},
+  benefit1: {"es":"4 preguntas al día, todos los días","en":"4 questions a day, every day","pt":"4 perguntas por dia, todos os dias","fr":"4 questions par jour, chaque jour","de":"4 Fragen pro Tag, jeden Tag","it":"4 domande al giorno, ogni giorno","zh":"每天 4 个提问，天天如此","ja":"毎日4つの質問","ko":"매일 4개의 질문","ru":"4 вопроса каждый день","ar":"4 أسئلة كل يوم","id":"4 pertanyaan setiap hari","tr":"Her gün 4 soru"},
   benefit2: {"es":"Racha diaria: vuelve cada día y gana preguntas extra","en":"Daily streak: come back each day and earn extra questions","pt":"Sequência diária: volte todo dia e ganhe perguntas extras","fr":"Série quotidienne : revenez chaque jour et gagnez des questions bonus","de":"Tägliche Serie: komm jeden Tag wieder und verdiene Extra-Fragen","it":"Serie giornaliera: torna ogni giorno e guadagna domande extra","zh":"每日连续：每天回来赢得额外提问","ja":"デイリーストリーク：毎日戻って追加の質問を獲得","ko":"매일 연속 출석: 매일 돌아와 추가 질문 획득","ru":"Ежедневная серия: возвращайтесь и получайте доп. вопросы","ar":"سلسلة يومية: عُد كل يوم واكسب أسئلة إضافية","id":"Rentetan harian: kembali tiap hari, dapat pertanyaan ekstra","tr":"Günlük seri: her gün gel, ekstra soru kazan"},
   benefit3: {"es":"Tu coach te recuerda — historial y avances guardados","en":"Your coach remembers you — history and progress saved","pt":"Seu coach lembra de você — histórico e progresso salvos","fr":"Votre coach se souvient de vous — historique et progrès sauvegardés","de":"Dein Coach erinnert sich — Verlauf und Fortschritt gespeichert","it":"Il tuo coach ti ricorda — cronologia e progressi salvati","zh":"你的教练记得你——历史与进度已保存","ja":"コーチがあなたを記憶 — 履歴と進捗を保存","ko":"코치가 당신을 기억해요 — 기록과 진행 상황 저장","ru":"Ваш коуч помнит вас — история и прогресс сохранены","ar":"مدرّبك يتذكّرك — السجل والتقدّم محفوظان","id":"Coach-mu mengingatmu — riwayat dan progres tersimpan","tr":"Koçun seni hatırlar — geçmiş ve ilerleme kaydedilir"},
   trust: {"es":"Gratis · privado · sin spam","en":"Free · private · no spam","pt":"Grátis · privado · sem spam","fr":"Gratuit · privé · sans spam","de":"Kostenlos · privat · kein Spam","it":"Gratis · privato · niente spam","zh":"免费 · 私密 · 无垃圾信息","ja":"無料 · プライベート · スパムなし","ko":"무료 · 비공개 · 스팸 없음","ru":"Бесплатно · конфиденциально · без спама","ar":"مجاني · خاص · بدون رسائل مزعجة","id":"Gratis · privat · tanpa spam","tr":"Ücretsiz · gizli · spam yok"},
@@ -81,7 +81,7 @@ const I18N: Record<string, any> = {
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
     ctaTitle: '✦ Probaste el Coach IA', ctaText: 'En la app son 4 preguntas al día: te recuerda, conoce tus matches y simula tu relación.',
-    taste2: '✦ 2 preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
+    taste2: 'preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
     footer: 'Generado por IA · versión beta',
@@ -113,7 +113,7 @@ const I18N: Record<string, any> = {
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
     ctaTitle: '✦ You tried the AI Coach', ctaText: 'In the app it\'s 4 questions a day: it remembers you, knows your matches, and simulates your relationship.',
-    taste2: '✦ 2 free questions to try', taste1: '✦ 1 free question left',
+    taste2: 'free questions to try', taste1: '✦ 1 free question left',
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
     footer: 'AI-generated · beta version',
@@ -144,7 +144,7 @@ const I18N: Record<string, any> = {
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
     ctaTitle: '✦ Você testou o Coach IA', ctaText: 'No app são 4 perguntas por dia: ele lembra de você, conhece seus matches e simula sua relação.',
-    taste2: '✦ 2 perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
+    taste2: 'perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
     footer: 'Gerado por IA · versão beta',
@@ -651,7 +651,7 @@ export class CoachWidgetComponent {
   }
 
   private async ask(payload: { message: string; lat?: number; lng?: number; city?: string }) {
-    // R65: anonymous visitors get FREE_TASTE (2) questions; to reach the default 4/day they sign in.
+    // R65: anonymous visitors get FREE_TASTE (3) questions; to reach the default 4/day they sign in.
     if (!this.user() && this.coachReplies() >= FREE_TASTE) {
       this.pendingAsk = payload;
       this.openLogin(true);

@@ -354,7 +354,7 @@
           </div>
         }
         @if (appCtaEnabled() && !showCta()) {
-          <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : t().taste2 }}</div>
+          <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : ('✦ ' + freeLeft() + ' ' + t().taste2) }}</div>
         }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
           <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />
