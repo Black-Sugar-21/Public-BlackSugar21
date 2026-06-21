@@ -239,10 +239,15 @@
     .cw-cta-actions { display:flex; gap:8px; }
     .cw-btn { flex:1; text-align:center; padding:9px; border-radius:10px; border:1px solid var(--cw-border); background:var(--cw-bg); color:var(--cw-text); font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; }
     .cw-btn.gold { background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; border:none; }
-    .cw-modebar { display:flex; gap:7px; align-items:center; padding:9px 12px 0; }
-    .cw-modetab { flex:1; background:rgba(212,175,55,.08); border:1px solid rgba(212,175,55,.3); color:var(--cw-text);
-      border-radius:9px; padding:7px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:border-color .15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cw-modetab:hover { border-color:var(--cw-gold); }
+    .cw-modebar { display:flex; gap:10px; align-items:center; padding:10px 12px 2px; }
+    .cw-modetab { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; background:linear-gradient(135deg, rgba(212,175,55,.10), rgba(212,175,55,.04));
+      border:1px solid rgba(212,175,55,.32); color:var(--cw-text); border-radius:13px; padding:12px 12px; font-size:12.5px; font-weight:600; cursor:pointer;
+      transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cw-modetab:hover { border-color:var(--cw-gold); transform:translateY(-1px); box-shadow:0 6px 18px rgba(212,175,55,.14); }
+    /* Differentiate the two: situation = gold, relationship = purple. */
+    .cw-modetab:nth-child(2) { background:linear-gradient(135deg, rgba(156,89,234,.12), rgba(156,89,234,.04)); border-color:rgba(156,89,234,.4); }
+    .cw-modetab:nth-child(2):hover { border-color:var(--cw-purple-l,#9c59ea); box-shadow:0 6px 18px rgba(156,89,234,.18); }
+    .cw-panel.cw-embedded .cw-modebar { max-width:780px; width:100%; margin-inline:auto; }
     .cw-modeon { flex:1; font-size:12px; font-weight:600; color:var(--cw-gold); background:rgba(212,175,55,.1); border:1px solid rgba(212,175,55,.35); border-radius:9px; padding:7px 10px; }
     .cw-modex { width:30px; height:30px; border-radius:9px; border:1px solid var(--cw-border); background:var(--cw-card); color:var(--cw-muted); font-size:13px; cursor:pointer; }
     .cw-modex:hover { color:var(--cw-text); border-color:var(--cw-gold-d); }
