@@ -462,6 +462,27 @@ export class FirebaseService {
     await this.refreshProfile();
   }
 
+  /** In-web profile edit (iOS EditProfileView parity) — writes ONLY update-legal fields
+   *  (none are in the users-update blocklist; userType is constrained to the valid enum by the rule). */
+  async updateProfile(fields: { name: string; bio: string; male: boolean; userType: string; orientation: string; interests: string[]; pictures: string[]; minAge: number; maxAge: number; maxDistance: number }): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    const data: Record<string, unknown> = {
+      name: fields.name,
+      bio: fields.bio,
+      male: fields.male,
+      userType: fields.userType,
+      orientation: fields.orientation,
+      interests: fields.interests,
+      pictures: fields.pictures,
+      minAge: Math.max(18, Math.min(99, Math.round(fields.minAge))),
+      maxAge: Math.max(18, Math.min(99, Math.round(fields.maxAge))),
+      maxDistance: Math.max(1, Math.min(500, Math.round(fields.maxDistance))),
+    };
+    await updateDoc(doc(this.db, 'users', u.uid), data);
+    await this.refreshProfile();
+  }
+
   // Discovery feed (web) — SAME getDiscoveryFeed callable the apps use (V2 ranking, signed photo URLs).
   async getDiscoveryFeed(limit = 20): Promise<any[]> {
     const fn = httpsCallable(this.functions, 'getDiscoveryFeed');

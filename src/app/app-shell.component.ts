@@ -75,6 +75,19 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   coachQuestions: {"es":"Coach IA","en":"AI Coach","pt":"Coach IA","fr":"Coach IA","de":"KI-Coach","it":"Coach IA","zh":"AI教练","ja":"AIコーチ","ko":"AI 코치","ru":"ИИ Коуч","ar":"مدرب الذكاء","id":"Coach AI","tr":"AI Koç"},
   coachQuestionsRemaining: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
   like: {"es":"Me gusta","en":"Like","pt":"Curtir","fr":"J'aime","de":"Gefällt mir","it":"Mi piace","zh":"喜欢","ja":"いいね","ko":"좋아요","ru":"Нравится","ar":"إعجاب","id":"Suka","tr":"Beğen"},
+  typeElite: {"es":"Elite","en":"Elite","pt":"Elite","fr":"Elite","de":"Elite","it":"Elite","zh":"Elite","ja":"Elite","ko":"Elite","ru":"Elite","ar":"إيليت","id":"Elite","tr":"Elite"},
+  typePrime: {"es":"Prime","en":"Prime","pt":"Prime","fr":"Prime","de":"Prime","it":"Prime","zh":"Prime","ja":"Prime","ko":"Prime","ru":"Prime","ar":"برايم","id":"Prime","tr":"Prime"},
+  // ── Edit profile (in-web, iOS EditProfileView parity) ──
+  epEdit: {"es":"Editar perfil","en":"Edit profile","pt":"Editar perfil","fr":"Modifier le profil","de":"Profil bearbeiten","it":"Modifica profilo","zh":"编辑资料","ja":"プロフィール編集","ko":"프로필 편집","ru":"Изменить профиль","ar":"تعديل الملف","id":"Edit profil","tr":"Profili düzenle"},
+  epAbout: {"es":"Sobre ti","en":"About you","pt":"Sobre você","fr":"À propos de toi","de":"Über dich","it":"Su di te","zh":"关于你","ja":"あなたについて","ko":"자기소개","ru":"О себе","ar":"نبذة عنك","id":"Tentang kamu","tr":"Hakkında"},
+  epInterests: {"es":"Intereses","en":"Interests","pt":"Interesses","fr":"Centres d'intérêt","de":"Interessen","it":"Interessi","zh":"兴趣","ja":"興味","ko":"관심사","ru":"Интересы","ar":"الاهتمامات","id":"Minat","tr":"İlgi alanları"},
+  epAddInterest: {"es":"Añadir interés","en":"Add interest","pt":"Adicionar interesse","fr":"Ajouter un intérêt","de":"Interesse hinzufügen","it":"Aggiungi interesse","zh":"添加兴趣","ja":"興味を追加","ko":"관심사 추가","ru":"Добавить интерес","ar":"أضف اهتماماً","id":"Tambah minat","tr":"İlgi ekle"},
+  epAgeRange: {"es":"Rango de edad","en":"Age range","pt":"Faixa etária","fr":"Tranche d'âge","de":"Altersbereich","it":"Fascia d'età","zh":"年龄范围","ja":"年齢の範囲","ko":"나이 범위","ru":"Возрастной диапазон","ar":"الفئة العمرية","id":"Rentang usia","tr":"Yaş aralığı"},
+  epMinAge: {"es":"Edad mínima","en":"Minimum age","pt":"Idade mínima","fr":"Âge minimum","de":"Mindestalter","it":"Età minima","zh":"最小年龄","ja":"最小年齢","ko":"최소 나이","ru":"Мин. возраст","ar":"أدنى عمر","id":"Usia minimum","tr":"En düşük yaş"},
+  epMaxAge: {"es":"Edad máxima","en":"Maximum age","pt":"Idade máxima","fr":"Âge maximum","de":"Höchstalter","it":"Età massima","zh":"最大年龄","ja":"最大年齢","ko":"최대 나이","ru":"Макс. возраст","ar":"أقصى عمر","id":"Usia maksimum","tr":"En yüksek yaş"},
+  epDistance: {"es":"Distancia máxima","en":"Maximum distance","pt":"Distância máxima","fr":"Distance maximale","de":"Maximale Entfernung","it":"Distanza massima","zh":"最大距离","ja":"最大距離","ko":"최대 거리","ru":"Макс. расстояние","ar":"أقصى مسافة","id":"Jarak maksimum","tr":"En fazla mesafe"},
+  epSave: {"es":"Guardar","en":"Save","pt":"Salvar","fr":"Enregistrer","de":"Speichern","it":"Salva","zh":"保存","ja":"保存","ko":"저장","ru":"Сохранить","ar":"حفظ","id":"Simpan","tr":"Kaydet"},
+  epCancel: {"es":"Cancelar","en":"Cancel","pt":"Cancelar","fr":"Annuler","de":"Abbrechen","it":"Annulla","zh":"取消","ja":"キャンセル","ko":"취소","ru":"Отмена","ar":"إلغاء","id":"Batal","tr":"İptal"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -258,6 +271,19 @@ export class AppShellComponent implements OnDestroy {
   }
   backToList() { this.selectedMatch.set(null); if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; } }
   myUid(): string { return this.firebase.currentUser()?.uid || ''; }
+  /** WhatsApp-style per-bubble time (parity with iOS ContentMessageView). */
+  fmtTime(ms: number): string {
+    if (!ms) return '';
+    try { return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
+  }
+  // Discovery card userType badge (Elite / Prime) — parity with iOS SwipeView capsule.
+  discoTypeLabel(p: any): string {
+    const t = p?.userType;
+    if (t === 'SUGAR_BABY') return this.s('typePrime');
+    if (t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY') return this.s('typeElite');
+    return '';
+  }
+  discoIsElite(p: any): boolean { const t = p?.userType; return t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY'; }
   async sendChat() {
     const m = this.selectedMatch();
     const t = this.chatText.trim();
@@ -275,6 +301,75 @@ export class AppShellComponent implements OnDestroy {
     return Math.floor((Date.now() - ms) / (365.25 * 86400000));
   }
   profileInterests(): string[] { const p: any = this.firebase.userProfile(); return Array.isArray(p?.interests) ? p.interests : []; }
+
+  // ── Edit profile (in-web, iOS EditProfileView parity) ───────────────────────
+  readonly epEditing = signal(false);
+  readonly epSaving = signal(false);
+  readonly epError = signal('');
+  ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, interestInput: '' };
+  readonly epInterests = signal<string[]>([]);
+  readonly epPhotos = signal<Array<{ name: string; url: string }>>([]);
+  async openEditProfile() {
+    const p: any = this.firebase.userProfile() || {};
+    const t = p.userType;
+    this.ep.name = p.name || p.displayName || '';
+    this.ep.bio = p.bio || '';
+    this.ep.male = typeof p.male === 'boolean' ? p.male : null;
+    this.ep.type = t === 'SUGAR_BABY' ? 'prime' : (t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY' ? 'elite' : '');
+    this.ep.orientation = (p.orientation as 'men' | 'women' | 'both') || '';
+    this.ep.minAge = typeof p.minAge === 'number' ? p.minAge : 18;
+    this.ep.maxAge = typeof p.maxAge === 'number' ? p.maxAge : 50;
+    this.ep.maxDistance = typeof p.maxDistance === 'number' ? p.maxDistance : 50;
+    this.ep.interestInput = '';
+    this.epInterests.set(Array.isArray(p.interests) ? [...p.interests] : []);
+    if (!this.profilePhotos().length) await this.loadProfilePhotos();
+    const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
+    const urls = this.profilePhotos();
+    this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '' })));
+    this.epError.set('');
+    this.epEditing.set(true);
+  }
+  closeEditProfile() { this.epEditing.set(false); this.epError.set(''); }
+  async epAddPhotos(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const files = Array.from(input.files || []);
+    input.value = '';
+    for (const f of files.slice(0, 6 - this.epPhotos().length)) {
+      try { const name = await this.firebase.uploadProfilePhoto(f); this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]); }
+      catch { this.epError.set(this.s('obPhotoErr')); }
+    }
+  }
+  epRemovePhoto(i: number) { this.epPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
+  epAddInterest() {
+    const v = this.ep.interestInput.trim();
+    if (!v || this.epInterests().length >= 8 || this.epInterests().includes(v)) { this.ep.interestInput = ''; return; }
+    this.epInterests.update((a) => [...a, v]);
+    this.ep.interestInput = '';
+  }
+  epRemoveInterest(it: string) { this.epInterests.update((a) => a.filter((x) => x !== it)); }
+  epMinChanged(v: any) { this.ep.minAge = +v; if (this.ep.minAge > +this.ep.maxAge) this.ep.maxAge = this.ep.minAge; }
+  epMaxChanged(v: any) { this.ep.maxAge = +v; if (this.ep.maxAge < +this.ep.minAge) this.ep.minAge = this.ep.maxAge; }
+  epCanSave(): boolean { return this.ep.name.trim().length >= 2 && this.ep.male !== null && this.ep.type !== '' && !!this.ep.orientation && this.epPhotos().length >= 1; }
+  async epSave() {
+    if (this.epSaving()) return;
+    if (!this.epCanSave()) { this.epError.set(this.s('obRequired')); return; }
+    this.epSaving.set(true); this.epError.set('');
+    try {
+      const male = !!this.ep.male;
+      const userType = this.ep.type === 'elite' ? (male ? 'SUGAR_DADDY' : 'SUGAR_MOMMY') : 'SUGAR_BABY';
+      await this.firebase.updateProfile({
+        name: this.ep.name.trim(), bio: this.ep.bio.trim(), male, userType,
+        orientation: this.ep.orientation, interests: this.epInterests(),
+        pictures: this.epPhotos().map((p) => p.name),
+        minAge: this.ep.minAge, maxAge: this.ep.maxAge, maxDistance: this.ep.maxDistance,
+      });
+      this.profilePhotos.set([]);
+      await this.loadProfilePhotos();
+      this.epEditing.set(false);
+    } catch { this.epError.set(this.s('obSaveErr')); }
+    finally { this.epSaving.set(false); }
+  }
+
   profileTypeLabel(): string {
     const t = (this.firebase.userProfile() as any)?.userType || '';
     if (t === 'SUGAR_BABY') return '🌟';

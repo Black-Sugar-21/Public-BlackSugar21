@@ -51,10 +51,17 @@
                       </div>
                     }
                     <div class="disco-grad">
-                      <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }</div>
+                      <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }
+                        @if (discoTypeLabel(p)) { <span class="disco-badge" [class.elite]="discoIsElite(p)">{{ discoIsElite(p) ? '💎' : '🌟' }} {{ discoTypeLabel(p) }}</span> }
+                      </div>
                       <div class="disco-meta near">↗ {{ s('near') }}</div>
                       @if (p.compatibilityScore != null) {
                         <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
+                      }
+                      @if (p.interests?.length) {
+                        <div class="disco-chips">
+                          @for (it of p.interests.slice(0, 4); track it) { <span>{{ it }}</span> }
+                        </div>
                       }
                     </div>
                     <button class="disco-like" (click)="$event.stopPropagation(); swipe('like')" [attr.aria-label]="s('like')">
@@ -90,7 +97,7 @@
                 <div class="chat-msgs">
                   @if (chatMsgs().length === 0) { <div class="chat-empty">{{ s('chatStart') }}</div> }
                   @for (msg of chatMsgs(); track msg.id) {
-                    <div class="chat-bubble" [class.mine]="msg.senderId === myUid()">{{ msg.message }}</div>
+                    <div class="chat-bubble" [class.mine]="msg.senderId === myUid()">{{ msg.message }}@if (fmtTime(msg.ts)) { <span class="chat-time">{{ fmtTime(msg.ts) }}</span> }</div>
                   }
                 </div>
                 <form class="chat-input" (submit)="$event.preventDefault(); sendChat()">
@@ -124,6 +131,98 @@
                 <p>{{ s('signIn') }}</p>
                 <a routerLink="/" class="shell-cta">{{ s('backHome') }}</a>
               </div>
+            } @else if (profileComplete() && epEditing()) {
+              <!-- Edit profile (in-web) — réplica del EditProfileView de iOS -->
+              <div class="ep-form">
+                <div class="ep-head">
+                  <button class="chat-back" (click)="closeEditProfile()" aria-label="←">‹</button>
+                  <b>{{ s('epEdit') }}</b>
+                </div>
+                <div class="ep-body">
+                  <!-- Fotos -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('obPhotos') }}</label>
+                    <div class="ob-photos">
+                      @for (ph of epPhotos(); track ph.name; let i = $index) {
+                        <div class="ob-photo" [style.background-image]="ph.url ? 'url(' + ph.url + ')' : null">
+                          <button class="ob-photo-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button>
+                        </div>
+                      }
+                      @if (epPhotos().length < 6) {
+                        <label class="ob-photo ob-photo-add">
+                          <input type="file" accept="image/*" multiple hidden (change)="epAddPhotos($event)" />
+                          <span>{{ s('obAddPhoto') }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                  <!-- Bio -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('epAbout') }}</label>
+                    <textarea class="ep-textarea" maxlength="500" [(ngModel)]="ep.bio" [placeholder]="s('obBioPh')"></textarea>
+                    <div class="ep-count">{{ ep.bio.length }}/500</div>
+                  </div>
+                  <!-- Género -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('obGender') }}</label>
+                    <div class="ep-opts">
+                      <button class="ep-opt" [class.on]="ep.male === true" (click)="ep.male = true">{{ s('obMale') }}</button>
+                      <button class="ep-opt" [class.on]="ep.male === false" (click)="ep.male = false">{{ s('obFemale') }}</button>
+                    </div>
+                  </div>
+                  <!-- Orientación -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('obOrientation') }}</label>
+                    <div class="ep-opts">
+                      <button class="ep-opt" [class.on]="ep.orientation === 'men'" (click)="ep.orientation = 'men'">{{ s('obMen') }}</button>
+                      <button class="ep-opt" [class.on]="ep.orientation === 'women'" (click)="ep.orientation = 'women'">{{ s('obWomen') }}</button>
+                      <button class="ep-opt" [class.on]="ep.orientation === 'both'" (click)="ep.orientation = 'both'">{{ s('obBoth') }}</button>
+                    </div>
+                  </div>
+                  <!-- Tipo -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('obType') }}</label>
+                    <div class="ep-opts">
+                      <button class="ep-opt" [class.on]="ep.type === 'elite'" (click)="ep.type = 'elite'">{{ s('obElite') }}</button>
+                      <button class="ep-opt" [class.on]="ep.type === 'prime'" (click)="ep.type = 'prime'">{{ s('obPrime') }}</button>
+                    </div>
+                  </div>
+                  <!-- Intereses -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('epInterests') }} <span class="ep-count-inline">{{ epInterests().length }}/8</span></label>
+                    @if (epInterests().length) {
+                      <div class="pf-interests">
+                        @for (it of epInterests(); track it) { <button class="pf-chip ep-chip" (click)="epRemoveInterest(it)">{{ it }} ✕</button> }
+                      </div>
+                    }
+                    @if (epInterests().length < 8) {
+                      <form class="ep-interest-add" (submit)="$event.preventDefault(); epAddInterest()">
+                        <input [(ngModel)]="ep.interestInput" name="epInt" [placeholder]="s('epAddInterest')" maxlength="24" />
+                        <button type="submit" aria-label="＋">＋</button>
+                      </form>
+                    }
+                  </div>
+                  <!-- Rango de edad -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('epAgeRange') }}</label>
+                    <div class="ep-slider-row"><span>{{ s('epMinAge') }}</span><b>{{ ep.minAge }}</b></div>
+                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.minAge" (ngModelChange)="epMinChanged($event)" />
+                    <div class="ep-slider-row"><span>{{ s('epMaxAge') }}</span><b>{{ ep.maxAge }}</b></div>
+                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.maxAge" (ngModelChange)="epMaxChanged($event)" />
+                  </div>
+                  <!-- Distancia -->
+                  <div class="ep-sec">
+                    <label class="ep-label">{{ s('epDistance') }}</label>
+                    <div class="ep-slider-row"><span></span><b>{{ ep.maxDistance }} km</b></div>
+                    <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ep.maxDistance" (ngModelChange)="ep.maxDistance = +$event" />
+                  </div>
+                  @if (epError()) { <div class="ob-error">{{ epError() }}</div> }
+                </div>
+                <div class="ep-actions">
+                  <button class="shell-signout" (click)="closeEditProfile()">{{ s('epCancel') }}</button>
+                  <button class="shell-cta" [disabled]="epSaving()" (click)="epSave()">{{ epSaving() ? '…' : s('epSave') }}</button>
+                </div>
+              </div>
             } @else if (profileComplete()) {
               <!-- Profile view — réplica del tab de Perfil de iOS (ProfileView.swift) -->
               <div class="pf-tab">
@@ -136,7 +235,7 @@
                   </div>
                   <div class="pf-head-col">
                     <h2 class="pf-name">{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
-                    <a class="pf-edit-btn" [href]="storeLink" target="_blank" rel="noopener">{{ s('editInApp') }}</a>
+                    <button class="pf-edit-btn" (click)="openEditProfile()">{{ s('epEdit') }}</button>
                   </div>
                 </div>
 
