@@ -1,6 +1,7 @@
 import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
@@ -303,7 +304,7 @@ export class CoachWidgetComponent {
 
   private sessionId = '';
 
-  constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService, private firebase: FirebaseService) {
+  constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService, private firebase: FirebaseService, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
     if (this.isBrowser) {
       try {
@@ -592,9 +593,12 @@ export class CoachWidgetComponent {
   ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   openLogin(gated = false) { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
-  // After any successful sign-in, resume the question the visitor was trying to ask.
-  private afterSignIn() {
+  // After any successful sign-in: if the account has NO profile yet, send them to onboarding (/app)
+  // — iOS/Android parity (a profile-less login always lands in onboarding). Otherwise resume the question.
+  private async afterSignIn() {
     this.closeLogin();
+    try { await this.firebase.refreshProfile(); } catch { /* best-effort */ }
+    if (!this.firebase.isProfileComplete()) { this.pendingAsk = null; this.router.navigate(['/app']); return; }
     if (this.pendingAsk) { const p = this.pendingAsk; this.pendingAsk = null; this.ask(p); }
   }
   async signInGoogle() { this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } finally { this.signingIn.set(false); } }

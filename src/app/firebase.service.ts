@@ -92,6 +92,9 @@ export class FirebaseService {
 
   currentUser = signal<User | null>(null);
   userProfile = signal<UserProfile | null>(null);
+  /** False until the signed-in user's profile has been loaded/checked at least once — lets the UI
+   *  gate onboarding WITHOUT flashing it for existing users during the async profile load. */
+  profileChecked = signal(false);
 
   constructor() {
     this.app = initializeApp(firebaseConfig);
@@ -148,10 +151,12 @@ export class FirebaseService {
     // Listen to auth state changes
     onAuthStateChanged(this.auth, async (user) => {
       this.currentUser.set(user);
+      this.profileChecked.set(false);
       if (user) {
-        await this.loadUserProfile(user.uid);
+        try { await this.loadUserProfile(user.uid); } finally { this.profileChecked.set(true); }
       } else {
         this.userProfile.set(null);
+        this.profileChecked.set(true);
       }
     });
   }

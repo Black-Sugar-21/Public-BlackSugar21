@@ -2,13 +2,15 @@
       <!-- Desktop sidebar -->
       <aside class="shell-side">
         <a routerLink="/" class="shell-brand"><span class="shell-spark">✦</span> Black Sugar <b>21</b></a>
-        <nav class="shell-nav">
-          @for (it of navItems; track it.key) {
-            <button class="shell-nav-item" [class.active]="section() === it.key" (click)="go(it.key)">
-              <span class="shell-nav-ic"><app-shell-nav-icon [name]="it.key" /></span><span class="shell-nav-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
-            </button>
-          }
-        </nav>
+        @if (!needsOnboarding()) {
+          <nav class="shell-nav">
+            @for (it of navItems; track it.key) {
+              <button class="shell-nav-item" [class.active]="section() === it.key" (click)="go(it.key)">
+                <span class="shell-nav-ic"><app-shell-nav-icon [name]="it.key" /></span><span class="shell-nav-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
+              </button>
+            }
+          </nav>
+        }
         <div class="shell-side-foot">
           @if (firebase.currentUser(); as u) {
             <button class="shell-acct" (click)="go('profile')">
@@ -409,13 +411,15 @@
         </div>
       }
 
-      <!-- Mobile bottom nav -->
-      <nav class="shell-tabs">
-        @for (it of navItems; track it.key) {
-          <button class="shell-tab" [class.active]="section() === it.key" (click)="go(it.key)">
-            <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" /></span>
-          </button>
-        }
-      </nav>
+      <!-- Mobile bottom nav (hidden during the onboarding gate) -->
+      @if (!needsOnboarding()) {
+        <nav class="shell-tabs">
+          @for (it of navItems; track it.key) {
+            <button class="shell-tab" [class.active]="section() === it.key" (click)="go(it.key)">
+              <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" /></span>
+            </button>
+          }
+        </nav>
+      }
     </div>
   

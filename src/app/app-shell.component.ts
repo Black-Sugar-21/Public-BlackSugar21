@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -222,11 +222,22 @@ export class AppShellComponent implements OnDestroy {
     private translate: TranslationService,
     public firebase: FirebaseService,
     private router: Router,
-  ) { this.isBrowser = isPlatformBrowser(platformId); }
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+    // iOS/Android parity: a signed-in user WITHOUT a profile is gated into onboarding on every entry
+    // (not once). Force the onboarding view whenever the checked profile is incomplete.
+    effect(() => { if (this.needsOnboarding() && this.section() !== 'profile') this.section.set('profile'); });
+  }
+
+  /** Signed in + profile loaded + incomplete → must complete onboarding before using the app. */
+  needsOnboarding(): boolean {
+    return !!this.firebase.currentUser() && this.firebase.profileChecked() && !this.firebase.isProfileComplete();
+  }
 
   lang(): Language { return this.translate.currentLanguage(); }
   s(key: string): string { const m = SHELL_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   go(sec: Section) {
+    if (this.needsOnboarding()) { this.section.set('profile'); return; }  // can't leave onboarding until complete
     this.section.set(sec);
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
