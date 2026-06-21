@@ -5,7 +5,7 @@
         <nav class="shell-nav">
           @for (it of navItems; track it.key) {
             <button class="shell-nav-item" [class.active]="section() === it.key" (click)="go(it.key)">
-              <span class="shell-nav-ic">{{ it.icon }}</span><span class="shell-nav-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
+              <span class="shell-nav-ic"><app-shell-nav-icon [name]="it.key" /></span><span class="shell-nav-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
             </button>
           }
         </nav>
@@ -382,7 +382,7 @@
       <nav class="shell-tabs">
         @for (it of navItems; track it.key) {
           <button class="shell-tab" [class.active]="section() === it.key" (click)="go(it.key)">
-            <span class="shell-tab-ic">{{ it.icon }}</span>
+            <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" /></span>
           </button>
         }
       </nav>

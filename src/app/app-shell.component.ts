@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { CoachWidgetComponent } from './coach-widget.component';
+import { ShellNavIconComponent } from './shell-nav-icon.component';
 import { TranslationService, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
@@ -149,7 +150,7 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
