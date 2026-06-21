@@ -627,7 +627,8 @@
   }
 </div>
 
-<!-- Floating AI Coach demo widget (versión de prueba) — appears once age is verified -->
-@if (ageVerified()) {
+<!-- Floating AI Coach demo widget — appears once age is verified, but NOT inside the /app shell
+     (the shell already renders the coach embedded as its main panel). -->
+@if (ageVerified() && !isAppRoute()) {
   <app-coach-widget />
 }

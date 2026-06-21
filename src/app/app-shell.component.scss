@@ -14,6 +14,7 @@
     .shell-acct-n { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .shell-main { flex:1; min-width:0; display:flex; }
     .shell-coach { flex:1; display:flex; min-height:0; }
+    .shell-coach app-coach-widget { flex:1; display:flex; min-width:0; }
     .shell-teaser, .shell-profile { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px; }
     .shell-teaser-ic { font-size:54px; }
     .shell-teaser h2, .shell-profile h2 { font-family:'Playfair Display',serif; font-size:26px; margin:0; }
