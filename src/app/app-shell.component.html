@@ -125,25 +125,43 @@
                 <a routerLink="/" class="shell-cta">{{ s('backHome') }}</a>
               </div>
             } @else if (profileComplete()) {
-              <!-- Existing complete profile → view -->
-              <div class="shell-profile">
-                @if (profilePhotos().length) { <img class="shell-pf-av photo" [src]="profilePhotos()[0]" alt="" /> }
-                @else if (firebase.currentUser()?.photoURL) { <img class="shell-pf-av" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
-                @else { <span class="shell-pf-av initial">{{ initial(firebase.currentUser()) }}</span> }
-                @if (profilePhotos().length > 1) {
-                  <div class="pf-gallery">
-                    @for (ph of profilePhotos().slice(1, 6); track ph) { <img [src]="ph" alt="" /> }
+              <!-- Profile view — réplica del tab de Perfil de iOS (ProfileView.swift) -->
+              <div class="pf-tab">
+                <!-- Cabecera: avatar (anillo dorado) + nombre/edad + botón editar -->
+                <div class="pf-head">
+                  <div class="pf-avatar-ring">
+                    @if (profilePhotos().length) { <img class="pf-avatar" [src]="profilePhotos()[0]" alt="" /> }
+                    @else if (firebase.currentUser()?.photoURL) { <img class="pf-avatar" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
+                    @else { <span class="pf-avatar initial">{{ initial(firebase.currentUser()) }}</span> }
                   </div>
-                }
-                <h2>{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
-                @if (profileTypeLabel()) { <span class="pf-type">{{ profileTypeLabel() }}</span> }
+                  <div class="pf-head-col">
+                    <h2 class="pf-name">{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
+                    <a class="pf-edit-btn" [href]="storeLink" target="_blank" rel="noopener">{{ s('editInApp') }}</a>
+                  </div>
+                </div>
+
+                <!-- Dos tarjetas de stats: Likes diarios (azul) + Coach IA (morado) -->
+                <div class="pf-stats">
+                  <div class="pf-stat pf-stat-likes">
+                    <div class="pf-stat-head"><span class="pf-stat-ic">♥</span><span class="pf-stat-title">{{ s('dailyLikes') }}</span></div>
+                    <div class="pf-stat-num"><b>{{ dailyLikesRemaining() }}</b><span class="pf-stat-den">/ {{ dailyLikesLimit() }}</span></div>
+                    <div class="pf-stat-sub">{{ s('likesRemainingToday') }}</div>
+                  </div>
+                  <div class="pf-stat pf-stat-coach">
+                    <div class="pf-stat-head"><span class="pf-stat-ic">✦</span><span class="pf-stat-title">{{ s('coachQuestions') }}</span></div>
+                    <div class="pf-stat-num"><b>{{ coachMessagesRemaining() }}</b><span class="pf-stat-den">/ {{ coachDailyCredits() }}</span></div>
+                    <div class="pf-stat-sub">{{ s('coachQuestionsRemaining') }}</div>
+                  </div>
+                </div>
+
+                <!-- Bio + intereses (si existen) -->
                 @if ($any(firebase.userProfile())?.bio) { <p class="pf-bio">{{ $any(firebase.userProfile()).bio }}</p> }
                 @if (profileInterests().length) {
                   <div class="pf-interests">
                     @for (it of profileInterests(); track it) { <span class="pf-chip">{{ it }}</span> }
                   </div>
                 }
-                <a class="shell-cta" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('editInApp') }}</a>
+
                 <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
               </div>
             } @else {

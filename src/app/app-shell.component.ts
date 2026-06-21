@@ -68,6 +68,12 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   obAddPhoto: {"es":"＋ Agregar foto","en":"＋ Add photo","pt":"＋ Adicionar foto","fr":"＋ Ajouter une photo","de":"＋ Foto hinzufügen","it":"＋ Aggiungi foto","zh":"＋ 添加照片","ja":"＋ 写真を追加","ko":"＋ 사진 추가","ru":"＋ Добавить фото","ar":"＋ أضف صورة","id":"＋ Tambah foto","tr":"＋ Fotoğraf ekle"},
   obPhotoErr: {"es":"No se pudo subir la foto. Inténtalo de nuevo.","en":"Couldn't upload the photo. Try again.","pt":"Não foi possível enviar a foto. Tente de novo.","fr":"Échec de l'envoi de la photo. Réessaie.","de":"Foto-Upload fehlgeschlagen. Versuch es erneut.","it":"Caricamento foto non riuscito. Riprova.","zh":"照片上传失败，请重试。","ja":"写真をアップロードできませんでした。","ko":"사진 업로드 실패. 다시 시도.","ru":"Не удалось загрузить фото. Повторите.","ar":"تعذّر رفع الصورة. حاول مجدداً.","id":"Gagal mengunggah foto. Coba lagi.","tr":"Fotoğraf yüklenemedi. Tekrar dene."},
   editInApp: {"es":"Editar perfil en la app","en":"Edit profile in the app","pt":"Editar perfil no app","fr":"Modifier le profil dans l'app","de":"Profil in der App bearbeiten","it":"Modifica profilo nell'app","zh":"在 App 中编辑资料","ja":"アプリでプロフィール編集","ko":"앱에서 프로필 편집","ru":"Изменить профиль в приложении","ar":"عدّل الملف في التطبيق","id":"Edit profil di aplikasi","tr":"Profili uygulamada düzenle"},
+  // ── Profile tab (homologado con iOS ProfileView) ──
+  completeProfile: {"es":"Completar perfil","en":"Complete profile","pt":"Perfil completo","fr":"Profil complet","de":"Vollständiges Profil","it":"Completa il profilo","zh":"完善资料","ja":"完全なプロフィール","ko":"프로필 완성","ru":"Полный профиль","ar":"الملف الشخصي الكامل","id":"Profil lengkap","tr":"Profili tamamla"},
+  dailyLikes: {"es":"Likes Diarios","en":"Daily Likes","pt":"Curtidas Diárias","fr":"J'aime Quotidiens","de":"Tägliche Likes","it":"Mi piace giornalieri","zh":"每日喜欢","ja":"デイリーライク","ko":"일일 좋아요","ru":"Ежедневные лайки","ar":"الإعجابات اليومية","id":"Suka Harian","tr":"Günlük Beğeniler"},
+  likesRemainingToday: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
+  coachQuestions: {"es":"Coach IA","en":"AI Coach","pt":"Coach IA","fr":"Coach IA","de":"KI-Coach","it":"Coach IA","zh":"AI教练","ja":"AIコーチ","ko":"AI 코치","ru":"ИИ Коуч","ar":"مدرب الذكاء","id":"Coach AI","tr":"AI Koç"},
+  coachQuestionsRemaining: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -128,9 +134,48 @@ export class AppShellComponent implements OnDestroy {
     this.section.set(sec);
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
-    if (sec === 'profile' && this.profileComplete() && !this.profilePhotos().length) this.loadProfilePhotos();
+    if (sec === 'profile' && this.profileComplete()) {
+      if (!this.profilePhotos().length) this.loadProfilePhotos();
+      if (!this.limitsLoaded()) this.loadProfileLimits();
+    }
+  }
+  // Profile-tab limits (X / Y) — homologado con iOS ProfileView (daily likes + coach credits).
+  readonly dailyLikesLimit = signal(100);
+  readonly coachDailyCredits = signal(4);
+  readonly limitsLoaded = signal(false);
+  private async loadProfileLimits() {
+    try {
+      const l = await this.firebase.getProfileLimits();
+      this.dailyLikesLimit.set(l.dailyLikesLimit);
+      this.coachDailyCredits.set(l.coachDailyCredits);
+    } catch { /* keep defaults */ }
+    finally { this.limitsLoaded.set(true); }
+  }
+  dailyLikesRemaining(): number {
+    const v = (this.firebase.userProfile() as any)?.dailyLikesRemaining;
+    return typeof v === 'number' ? v : this.dailyLikesLimit();
+  }
+  coachMessagesRemaining(): number {
+    const v = (this.firebase.userProfile() as any)?.coachMessagesRemaining;
+    return typeof v === 'number' ? v : this.coachDailyCredits();
   }
   readonly profilePhotos = signal<string[]>([]);
+  readonly pfPhotoIdx = signal(0);
+  /** Hero photo for the profile view (real photo → Google avatar fallback). */
+  pfHeroUrl(): string | null {
+    const ph = this.profilePhotos();
+    if (ph.length) return ph[Math.min(this.pfPhotoIdx(), ph.length - 1)] || null;
+    return this.firebase.currentUser()?.photoURL || null;
+  }
+  cyclePfPhoto() { const n = this.profilePhotos().length; if (n > 1) this.pfPhotoIdx.update((v) => (v + 1) % n); }
+  /** Profile type display name (Elite / Prime) from the backend userType. */
+  profileTypeName(): string {
+    const t = (this.firebase.userProfile() as any)?.userType || '';
+    if (t === 'SUGAR_BABY') return this.s('typePrime');
+    if (t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY') return this.s('typeElite');
+    return '';
+  }
+  profileBio(): string { return (this.firebase.userProfile() as any)?.bio || ''; }
   private async loadProfilePhotos() {
     const p: any = this.firebase.userProfile();
     const names = Array.isArray(p?.pictures) ? p.pictures : (Array.isArray(p?.pictureNames) ? p.pictureNames : []);

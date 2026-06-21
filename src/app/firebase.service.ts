@@ -39,6 +39,7 @@ import {
   getRemoteConfig,
   fetchAndActivate,
   getString,
+  getNumber,
   RemoteConfig
 } from 'firebase/remote-config';
 import {
@@ -108,7 +109,10 @@ export class FirebaseService {
     this.remoteConfig.defaultConfig = {
       store_url_ios: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
       store_url_android: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
-      minimum_age_by_country: JSON.stringify({ "default": 18 })
+      minimum_age_by_country: JSON.stringify({ "default": 18 }),
+      // Homologado con iOS/Android RemoteConfigService (daily_likes_limit / coach_daily_credits).
+      daily_likes_limit: 100,
+      coach_daily_credits: 4
     };
 
     // Inicializar App Check con reCAPTCHA v3 (desactivado por defecto — ver appCheckEnabled).
@@ -513,6 +517,22 @@ export class FirebaseService {
       console.warn('Error fetching coach_planner_config:', error);
     }
     return null;
+  }
+
+  // Profile-tab limits (daily likes + coach credits) — single source shared with iOS/Android RC.
+  async getProfileLimits(): Promise<{ dailyLikesLimit: number; coachDailyCredits: number }> {
+    try {
+      await fetchAndActivate(this.remoteConfig);
+      const likes = getNumber(this.remoteConfig, 'daily_likes_limit');
+      const coach = getNumber(this.remoteConfig, 'coach_daily_credits');
+      return {
+        dailyLikesLimit: likes > 0 ? likes : 100,
+        coachDailyCredits: coach > 0 ? coach : 4
+      };
+    } catch (error) {
+      console.warn('Error fetching profile limits from Remote Config:', error);
+      return { dailyLikesLimit: 100, coachDailyCredits: 4 };
+    }
   }
 
   // Store Links

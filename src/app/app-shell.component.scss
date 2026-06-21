@@ -26,15 +26,32 @@
     .shell-signout { background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:11px 24px; font-family:inherit; cursor:pointer; }
     .shell-cta-2 { color:var(--text-muted); font-size:0.85rem; text-decoration:none; margin-top:4px; }
     .shell-cta-2:hover { color:var(--gold); }
-    /* Profile view extras */
-    .shell-pf-av.photo { width:120px; height:120px; }
-    .pf-gallery { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
-    .pf-gallery img { width:58px; height:58px; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,.12); }
-    .pf-age { font-weight:400; color:var(--text-secondary); }
-    .pf-type { font-size:26px; margin-top:-4px; }
-    .pf-bio { color:var(--text-secondary); font-size:15px; line-height:1.55; max-width:48ch; }
-    .pf-interests { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:440px; }
+    /* Profile view — réplica del tab de Perfil de iOS (ProfileView.swift) */
+    .pf-tab { flex:1; display:flex; flex-direction:column; align-items:stretch; text-align:left; padding:24px 20px; gap:18px; overflow-y:auto; width:100%; max-width:640px; margin:0 auto; }
+    .pf-head { display:flex; align-items:flex-start; gap:16px; }
+    .pf-avatar-ring { flex:none; padding:3.5px; border-radius:50%; background:var(--gradient-gold); box-shadow:0 2px 8px rgba(212,175,55,.3); }
+    .pf-avatar { display:block; width:96px; height:96px; border-radius:50%; object-fit:cover; border:3px solid var(--bg-card); }
+    .pf-avatar.initial { box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; background:var(--bg-card); color:var(--gold); font-weight:700; font-size:2.1rem; }
+    .pf-head-col { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; padding-top:8px; }
+    .pf-name { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; margin:0; color:var(--text-primary); line-height:1.15; }
+    .pf-age { font-weight:600; color:var(--text-secondary); }
+    .pf-edit-btn { display:block; text-align:center; border:2px solid var(--gold-dark); color:var(--text-primary); border-radius:28px; padding:13px 18px; font-weight:600; font-size:15px; text-decoration:none; transition:background .2s, border-color .2s; }
+    .pf-edit-btn:hover { background:rgba(212,175,55,.1); border-color:var(--gold); }
+    .pf-stats { display:flex; gap:12px; }
+    .pf-stat { flex:1; min-width:0; background:var(--bg-card); border-radius:14px; padding:16px 14px; display:flex; flex-direction:column; gap:6px; min-height:144px; }
+    .pf-stat-head { display:flex; align-items:center; gap:7px; }
+    .pf-stat-ic { font-size:14px; line-height:1; }
+    .pf-stat-title { font-size:15px; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pf-stat-num { display:flex; align-items:baseline; gap:5px; margin-top:auto; }
+    .pf-stat-num b { font-size:42px; font-weight:800; line-height:1; }
+    .pf-stat-den { font-size:18px; font-weight:500; color:var(--text-muted); }
+    .pf-stat-sub { font-size:11px; color:var(--text-muted); }
+    .pf-stat-likes .pf-stat-ic, .pf-stat-likes .pf-stat-num b { color:var(--likes-blue); }
+    .pf-stat-coach .pf-stat-ic, .pf-stat-coach .pf-stat-num b { color:var(--purple-vivid); }
+    .pf-bio { color:var(--text-secondary); font-size:15px; line-height:1.55; margin:0; }
+    .pf-interests { display:flex; flex-wrap:wrap; gap:8px; }
     .pf-chip { font-size:13px; color:var(--gold); border:1px solid rgba(212,175,55,.4); background:rgba(212,175,55,.08); border-radius:999px; padding:6px 13px; }
+    .pf-tab .shell-signout { align-self:flex-start; margin-top:4px; }
     /* Onboarding wizard (iOS-style elegant stepper) */
     .ob-wrap { flex:1; display:flex; flex-direction:column; width:100%; max-width:460px; margin:0 auto; padding:24px 22px; }
     .ob-progress { height:4px; border-radius:2px; background:rgba(255,255,255,.1); overflow:hidden; margin-bottom:32px; }
