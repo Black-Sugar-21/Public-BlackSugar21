@@ -60,7 +60,7 @@ const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión de prueba',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
@@ -68,7 +68,7 @@ const I18N: Record<string, any> = {
     taste2: '✦ 2 preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
-    footer: 'Generado por IA · versión de prueba',
+    footer: 'Generado por IA · versión beta',
     useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa',
     simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
     simAnalyzing: 'Analizando enfoques…', simThinking: '5 perspectivas pensando…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona', simBest: 'Recomendada',
@@ -92,7 +92,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
-    fab: 'AI Coach', title: 'AI Coach', demo: 'Demo',
+    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
@@ -100,7 +100,7 @@ const I18N: Record<string, any> = {
     taste2: '✦ 2 free questions to try', taste1: '✦ 1 free question left',
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
-    footer: 'AI-generated · demo version',
+    footer: 'AI-generated · beta version',
     useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map',
     simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
     simAnalyzing: 'Analyzing approaches…', simThinking: '5 perspectives thinking…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works', simBest: 'Recommended',
@@ -123,7 +123,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão de teste',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
@@ -131,7 +131,7 @@ const I18N: Record<string, any> = {
     taste2: '✦ 2 perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
-    footer: 'Gerado por IA · versão de teste',
+    footer: 'Gerado por IA · versão beta',
     useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver no mapa',
     simChip: '🔮 Simular uma situação', simHint: 'Descreva sua situação e minhas 5 perspectivas a analisam',
     simAnalyzing: 'Analisando abordagens…', simThinking: '5 perspectivas pensando…', simBy: 'Analisado por', simStage: 'Etapa', simWhy: 'Por que funciona', simBest: 'Recomendada',
