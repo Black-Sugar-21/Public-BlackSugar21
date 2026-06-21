@@ -510,6 +510,16 @@ export class FirebaseService {
     await this.refreshProfile();
   }
 
+  /** Location-only update (Discovery "enable location" flow) — writes lat/lng + the `g`/geohash the
+   *  feed range-queries on. Parity with iOS updateUserLocation. */
+  async updateLocation(lat: number, lng: number): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    const gh = this.encodeGeohash(lat, lng);
+    await updateDoc(doc(this.db, 'users', u.uid), { latitude: lat, longitude: lng, g: gh, geohash: gh });
+    await this.refreshProfile();
+  }
+
   /** Bio coaching — SAME getBioCoaching callable iOS uses (rewrites the bio into ready options).
    *  Returns [] on error so the caller can fall back to static examples (parity with iOS). */
   async getBioCoaching(bio: string, lang: string): Promise<string[]> {

@@ -30,6 +30,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
   discoError: {"es":"No se pudo cargar el feed. Revisa tu conexión e inténtalo de nuevo.","en":"Couldn't load the feed. Check your connection and try again.","pt":"Não foi possível carregar o feed. Verifique a conexão e tente de novo.","fr":"Échec du chargement. Vérifie ta connexion et réessaie.","de":"Feed konnte nicht geladen werden. Prüfe deine Verbindung und versuch es erneut.","it":"Impossibile caricare il feed. Controlla la connessione e riprova.","zh":"无法加载，请检查网络后重试。","ja":"読み込めませんでした。接続を確認して再試行してください。","ko":"불러오지 못했어요. 연결을 확인하고 다시 시도하세요.","ru":"Не удалось загрузить. Проверьте соединение и повторите.","ar":"تعذّر تحميل القائمة. تحقّق من اتصالك وحاول مجدداً.","id":"Tidak bisa memuat. Periksa koneksi dan coba lagi.","tr":"Akış yüklenemedi. Bağlantını kontrol edip tekrar dene."},
   chatSendErr: {"es":"No se pudo enviar el mensaje. Inténtalo de nuevo.","en":"Couldn't send the message. Try again.","pt":"Não foi possível enviar. Tente de novo.","fr":"Échec de l'envoi. Réessaie.","de":"Nachricht konnte nicht gesendet werden. Versuch es erneut.","it":"Invio non riuscito. Riprova.","zh":"消息发送失败，请重试。","ja":"送信できませんでした。もう一度お試しください。","ko":"메시지를 보내지 못했어요. 다시 시도하세요.","ru":"Не удалось отправить. Повторите.","ar":"تعذّر إرسال الرسالة. حاول مجدداً.","id":"Gagal mengirim pesan. Coba lagi.","tr":"Mesaj gönderilemedi. Tekrar dene."},
+  discoLocTitle: {"es":"Activa tu ubicación","en":"Enable your location","pt":"Ative sua localização","fr":"Active ta localisation","de":"Standort aktivieren","it":"Attiva la posizione","zh":"开启你的位置","ja":"位置情報をオンに","ko":"위치를 켜세요","ru":"Включите геолокацию","ar":"فعّل موقعك","id":"Aktifkan lokasimu","tr":"Konumunu aç"},
+  discoLocBody: {"es":"La usamos solo para mostrarte personas cerca de ti. Nunca la compartimos con nadie.","en":"We use it only to show you people near you. We never share it with anyone.","pt":"Usamos apenas para mostrar pessoas perto de você. Nunca compartilhamos.","fr":"Nous l'utilisons uniquement pour te montrer des personnes près de toi. Jamais partagée.","de":"Wir nutzen ihn nur, um dir Menschen in deiner Nähe zu zeigen. Niemals geteilt.","it":"La usiamo solo per mostrarti persone vicine. Mai condivisa.","zh":"仅用于向你展示附近的人，绝不分享。","ja":"近くの人を表示するためだけに使用します。共有しません。","ko":"근처 사람을 보여주기 위해서만 사용해요. 공유하지 않습니다.","ru":"Используем только чтобы показать людей рядом. Никогда не передаём.","ar":"نستخدمه فقط لعرض أشخاص قريبين منك. لا نشاركه أبداً.","id":"Hanya untuk menampilkan orang di dekatmu. Tidak pernah dibagikan.","tr":"Yalnızca yakınındaki kişileri göstermek için kullanırız. Asla paylaşmayız."},
+  discoLocBtn: {"es":"Activar ubicación","en":"Enable location","pt":"Ativar localização","fr":"Activer la localisation","de":"Standort aktivieren","it":"Attiva posizione","zh":"开启位置","ja":"位置情報をオンにする","ko":"위치 켜기","ru":"Включить геолокацию","ar":"تفعيل الموقع","id":"Aktifkan lokasi","tr":"Konumu aç"},
+  discoLocDenied: {"es":"Activa la ubicación desde los ajustes de tu navegador para ver personas cerca.","en":"Enable location in your browser settings to see people nearby.","pt":"Ative a localização nas configurações do navegador para ver pessoas perto.","fr":"Active la localisation dans les réglages du navigateur pour voir des personnes proches.","de":"Aktiviere den Standort in den Browser-Einstellungen, um Menschen in der Nähe zu sehen.","it":"Attiva la posizione nelle impostazioni del browser per vedere persone vicine.","zh":"请在浏览器设置中开启位置以查看附近的人。","ja":"近くの人を見るにはブラウザ設定で位置情報をオンにしてください。","ko":"근처 사람을 보려면 브라우저 설정에서 위치를 켜세요.","ru":"Включите геолокацию в настройках браузера, чтобы видеть людей рядом.","ar":"فعّل الموقع من إعدادات المتصفح لرؤية أشخاص قريبين.","id":"Aktifkan lokasi di pengaturan browser untuk melihat orang di dekatmu.","tr":"Yakındaki kişileri görmek için tarayıcı ayarlarından konumu aç."},
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
   chemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契","ja":"相性","ko":"케미","ru":"Химия","ar":"كيمياء","id":"Kimia","tr":"Kimya"},
   near: {"es":"Cerca","en":"Near","pt":"Perto","fr":"Proche","de":"In der Nähe","it":"Vicino","zh":"附近","ja":"近く","ko":"근처","ru":"Рядом","ar":"قريب","id":"Dekat","tr":"Yakın"},
@@ -191,6 +195,21 @@ export class AppShellComponent implements OnDestroy {
   readonly discoLoaded = signal(false);
   readonly discoError = signal(false);
   readonly chatError = signal('');
+  readonly discoLocStatus = signal<'idle' | 'loading' | 'denied'>('idle');
+  /** Discovery needs a location to rank nearby people. True once the profile has lat/lng. */
+  hasLocation(): boolean { const p: any = this.firebase.userProfile(); return typeof p?.latitude === 'number' && typeof p?.longitude === 'number'; }
+  async enableDiscoveryLocation() {
+    if (this.discoLocStatus() === 'loading') return;
+    this.discoLocStatus.set('loading');
+    const geo = await this.getGeo();
+    if (!geo) { this.discoLocStatus.set('denied'); return; }
+    try {
+      await this.firebase.updateLocation(geo.lat, geo.lng);
+      this.discoLocStatus.set('idle');
+      this.discoLoaded.set(false);
+      await this.loadDiscovery();
+    } catch { this.discoLocStatus.set('denied'); }
+  }
   readonly photoIdx = signal(0);
   readonly swiping = signal<'like' | 'pass' | null>(null);
   // Drag-to-swipe (replicates the native Tinder feel: card follows finger, rotates, springs back
@@ -239,7 +258,7 @@ export class AppShellComponent implements OnDestroy {
   go(sec: Section) {
     if (this.needsOnboarding()) { this.section.set('profile'); return; }  // can't leave onboarding until complete
     this.section.set(sec);
-    if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
+    if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser() && this.hasLocation()) this.loadDiscovery();
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
     if (sec === 'profile' && this.profileComplete()) {
       if (!this.profilePhotos().length) this.loadProfilePhotos();

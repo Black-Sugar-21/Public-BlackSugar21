@@ -34,6 +34,17 @@
                 <p>{{ s('discoSignIn') }}</p>
                 <a routerLink="/" class="shell-cta">{{ s('backHome') }}</a>
               </div>
+            } @else if (!hasLocation()) {
+              <!-- Elegant location request: explain WHY before asking (iOS-style rationale). -->
+              <div class="shell-teaser disco-loc">
+                <div class="shell-teaser-ic">📍</div>
+                <h2>{{ s('discoLocTitle') }}</h2>
+                <p>{{ s('discoLocBody') }}</p>
+                <button class="shell-cta" [disabled]="discoLocStatus() === 'loading'" (click)="enableDiscoveryLocation()">
+                  {{ discoLocStatus() === 'loading' ? '…' : s('discoLocBtn') }}
+                </button>
+                @if (discoLocStatus() === 'denied') { <p class="ob-error">{{ s('discoLocDenied') }}</p> }
+              </div>
             } @else if (discoLoading()) {
               <div class="shell-teaser"><div class="disco-spin"></div><p>{{ s('discoLoading') }}</p></div>
             } @else if (currentProfile(); as p) {
