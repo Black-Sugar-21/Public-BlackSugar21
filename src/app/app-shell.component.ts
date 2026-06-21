@@ -386,9 +386,28 @@ export class AppShellComponent implements OnDestroy {
     this.chatMsgs.set([]);
     this.chatError.set('');
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
-    this.unsubMsgs = this.firebase.listenMessages(match.id, (msgs) => this.chatMsgs.set(msgs));
+    // iOS ChatView parity: mark read + set this as the active chat (suppresses the recipient's push).
+    this.firebase.markMatchRead(match.id);
+    this.firebase.setActiveChat(match.id);
+    this.unsubMsgs = this.firebase.listenMessages(match.id, (msgs) => {
+      this.chatMsgs.set(msgs);
+      // Mark read when a new message arrives from the other user while the chat is open.
+      const last = msgs[msgs.length - 1];
+      if (last && last.senderId && last.senderId !== this.myUid()) this.firebase.markMatchRead(match.id);
+    });
   }
-  backToList() { this.selectedMatch.set(null); if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; } }
+  backToList() {
+    this.selectedMatch.set(null);
+    if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
+    this.firebase.setActiveChat(null);  // no longer viewing → push resumes
+  }
+  /** Unread = the last message is from the other user and newer than my lastSeen (iOS unread parity). */
+  isUnread(m: any): boolean {
+    if (!m || !m.lastMessageSenderId || m.lastMessageSenderId === this.myUid()) return false;
+    const lastMs = m.lastMessageTimestamp?.toMillis?.() || m.lastMessageTime || 0;
+    const seenMs = m.lastSeenTimestamps?.[this.myUid()]?.toMillis?.() || 0;
+    return lastMs > seenMs;
+  }
   myUid(): string { return this.firebase.currentUser()?.uid || ''; }
   /** WhatsApp-style per-bubble time (parity with iOS ContentMessageView). */
   fmtTime(ms: number): string {
@@ -653,5 +672,5 @@ export class AppShellComponent implements OnDestroy {
     finally { this.obSaving.set(false); }
   }
 
-  ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); }
+  ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); if (this.firebase.currentUser()) this.firebase.setActiveChat(null); }
 }

@@ -126,12 +126,13 @@
                   <div class="shell-teaser"><div class="shell-teaser-ic">💬</div><p>{{ s('chatsEmpty') }}</p></div>
                 } @else {
                   @for (mt of matches(); track mt.id) {
-                    <button class="chat-row" (click)="openChat(mt)">
+                    <button class="chat-row" [class.unread]="isUnread(mt)" (click)="openChat(mt)">
                       <span class="chat-av">{{ (matchName(mt.otherUid).charAt(0) || '?').toUpperCase() }}</span>
                       <span class="chat-row-main">
                         <b>{{ matchName(mt.otherUid) }}</b>
                         @if (mt.lastMessage) { <span class="chat-row-last">{{ mt.lastMessage }}</span> }
                       </span>
+                      @if (isUnread(mt)) { <span class="chat-unread-dot" aria-hidden="true"></span> }
                     </button>
                   }
                 }

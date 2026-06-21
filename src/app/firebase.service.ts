@@ -641,6 +641,21 @@ export class FirebaseService {
       cb(rows);
     }, () => cb([]));
   }
+  /** Mark a match as read (iOS markMessagesAsRead parity) — sets lastSeenTimestamps.{uid}=now so the
+   *  unread badge clears and the other user sees it as read. */
+  async markMatchRead(matchId: string): Promise<void> {
+    const u = this.currentUser();
+    if (!u || !matchId) return;
+    try { await updateDoc(doc(this.db, 'matches', matchId), { [`lastSeenTimestamps.${u.uid}`]: serverTimestamp() }); } catch { /* best-effort */ }
+  }
+  /** Set/clear the user's active chat (iOS activeChat parity) — the new-message push is suppressed
+   *  server-side while the recipient is actively viewing that match. */
+  async setActiveChat(matchId: string | null): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    try { await updateDoc(doc(this.db, 'users', u.uid), { activeChat: matchId || '' }); } catch { /* best-effort */ }
+  }
+
   /** Basic profile (name) for a match row — photos need signed URLs, so we use initials in the UI. */
   async getUserBasic(uid: string): Promise<{ name: string } | null> {
     try { const s = await getDoc(doc(this.db, 'users', uid)); return s.exists() ? { name: (s.data() as any).name || '' } : null; }
