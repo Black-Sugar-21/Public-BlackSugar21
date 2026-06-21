@@ -271,6 +271,12 @@ export class FirebaseService {
     await signOut(this.auth);
   }
 
+  // Locale / timezone helpers (parity with iOS/Android signup fields; used by coach lang + nudges).
+  private deviceLang(): string { try { return (navigator.language || 'en').split('-')[0].toLowerCase(); } catch { return 'en'; } }
+  private tz(): string { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } }
+  private tzOffsetMinutes(): number { try { return -new Date().getTimezoneOffset(); } catch { return 0; } }
+  private tzOffsetHours(): number { try { return -new Date().getTimezoneOffset() / 60; } catch { return 0; } }
+
   // Firestore Methods
   private async createUserProfile(profile: UserProfile): Promise<void> {
     const userRef = doc(this.db, 'users', profile.uid);
@@ -296,6 +302,11 @@ export class FirebaseService {
       lastLikeResetDate: serverTimestamp(),
       lastSuperLikeResetDate: serverTimestamp(),
       lastCoachResetDate: serverTimestamp(),
+      // Locale/timezone for coach language + scheduled nudges (parity with iOS/Android signup).
+      deviceLanguage: this.deviceLang(),
+      timezone: this.tz(),
+      timezoneOffset: this.tzOffsetHours(),
+      timezoneOffsetMinutes: this.tzOffsetMinutes(),
     });
     this.userProfile.set(profile);
   }
@@ -459,10 +470,10 @@ export class FirebaseService {
       const gh = this.encodeGeohash(d.latitude, d.longitude);
       data['g'] = gh; data['geohash'] = gh;
     }
-    try {
-      data['timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-      data['timezoneOffsetMinutes'] = -new Date().getTimezoneOffset();
-    } catch { /* timezone is best-effort (used by scheduled nudges) */ }
+    data['timezone'] = this.tz();
+    data['timezoneOffset'] = this.tzOffsetHours();
+    data['timezoneOffsetMinutes'] = this.tzOffsetMinutes();
+    data['deviceLanguage'] = this.deviceLang();
     await updateDoc(doc(this.db, 'users', u.uid), data);
     await this.refreshProfile();
   }
@@ -624,6 +635,8 @@ export class FirebaseService {
         lastMessageTime: serverTimestamp(),
         lastMessageTimestamp: serverTimestamp(),
         timestamp: serverTimestamp(),
+        lastMessageSenderId: u.uid,           // app parity (match-list sender preview)
+        lastMessageSeq: increment(1),          // app parity (iOS deterministic message ordering)
         messageCount: increment(1),
       });
     } catch { /* match-doc update is best-effort */ }

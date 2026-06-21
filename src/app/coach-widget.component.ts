@@ -474,6 +474,9 @@ export class CoachWidgetComponent {
   async send(text: string) {
     const msg = (text || '').trim();
     if (!msg || this.busy()) return;
+    // Demo soft gate: unauthenticated visitors get FREE_TASTE free questions, then the login sheet
+    // (signed-in users are limited server-side to coach_daily_credits/day via dateCoachChat).
+    if (!this.firebase.currentUser() && this.coachReplies() >= FREE_TASTE) { this.openLogin(true); return; }
     this.draft = '';
     this.lastUserMsg = msg;
     this.messages.update((m) => [...m, { role: 'user', text: msg }]);
