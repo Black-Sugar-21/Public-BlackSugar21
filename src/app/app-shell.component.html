@@ -72,8 +72,8 @@
               </div>
             } @else {
               <div class="shell-teaser">
-                <div class="shell-teaser-ic">🔥</div>
-                <p>{{ s('discoEmpty') }}</p>
+                <div class="shell-teaser-ic">{{ discoError() ? '⚠️' : '🔥' }}</div>
+                <p>{{ discoError() ? s('discoError') : s('discoEmpty') }}</p>
                 <button class="shell-cta" (click)="discoLoaded.set(false); loadDiscovery()">{{ s('discoRetry') }}</button>
                 <a class="shell-cta-2" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
               </div>
@@ -100,6 +100,7 @@
                     <div class="chat-bubble" [class.mine]="msg.senderId === myUid()">{{ msg.message }}@if (fmtTime(msg.ts)) { <span class="chat-time">{{ fmtTime(msg.ts) }}</span> }</div>
                   }
                 </div>
+                @if (chatError()) { <div class="chat-err">{{ chatError() }}</div> }
                 <form class="chat-input" (submit)="$event.preventDefault(); sendChat()">
                   <input [(ngModel)]="chatText" name="ct" [placeholder]="s('chatPlaceholder')" autocomplete="off" maxlength="4000" />
                   <button type="submit" [disabled]="!chatText.trim()">↑</button>

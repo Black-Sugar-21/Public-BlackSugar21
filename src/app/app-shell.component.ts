@@ -28,6 +28,8 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoLoading: {"es":"Buscando personas compatibles…","en":"Finding compatible people…","pt":"Buscando pessoas compatíveis…","fr":"Recherche de personnes compatibles…","de":"Suche passende Menschen…","it":"Ricerca di persone compatibili…","zh":"正在寻找合拍的人…","ja":"相性の良い人を検索中…","ko":"잘 맞는 사람을 찾는 중…","ru":"Ищем подходящих людей…","ar":"جارٍ البحث عن أشخاص متوافقين…","id":"Mencari orang yang cocok…","tr":"Uyumlu kişiler aranıyor…"},
   discoEmpty: {"es":"No hay más perfiles por ahora. Vuelve más tarde.","en":"No more profiles right now. Check back later.","pt":"Sem mais perfis por agora. Volte mais tarde.","fr":"Plus de profils pour l'instant. Reviens plus tard.","de":"Vorerst keine weiteren Profile. Schau später vorbei.","it":"Nessun altro profilo per ora. Torna più tardi.","zh":"暂时没有更多人了，稍后再来。","ja":"今はこれ以上いません。あとでまた見てね。","ko":"지금은 더 없어요. 나중에 다시 확인해요.","ru":"Пока больше нет анкет. Загляните позже.","ar":"لا مزيد من الملفات الآن. عُد لاحقاً.","id":"Tidak ada profil lagi. Cek lagi nanti.","tr":"Şimdilik başka profil yok. Sonra tekrar bak."},
   discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
+  discoError: {"es":"No se pudo cargar el feed. Revisa tu conexión e inténtalo de nuevo.","en":"Couldn't load the feed. Check your connection and try again.","pt":"Não foi possível carregar o feed. Verifique a conexão e tente de novo.","fr":"Échec du chargement. Vérifie ta connexion et réessaie.","de":"Feed konnte nicht geladen werden. Prüfe deine Verbindung und versuch es erneut.","it":"Impossibile caricare il feed. Controlla la connessione e riprova.","zh":"无法加载，请检查网络后重试。","ja":"読み込めませんでした。接続を確認して再試行してください。","ko":"불러오지 못했어요. 연결을 확인하고 다시 시도하세요.","ru":"Не удалось загрузить. Проверьте соединение и повторите.","ar":"تعذّر تحميل القائمة. تحقّق من اتصالك وحاول مجدداً.","id":"Tidak bisa memuat. Periksa koneksi dan coba lagi.","tr":"Akış yüklenemedi. Bağlantını kontrol edip tekrar dene."},
+  chatSendErr: {"es":"No se pudo enviar el mensaje. Inténtalo de nuevo.","en":"Couldn't send the message. Try again.","pt":"Não foi possível enviar. Tente de novo.","fr":"Échec de l'envoi. Réessaie.","de":"Nachricht konnte nicht gesendet werden. Versuch es erneut.","it":"Invio non riuscito. Riprova.","zh":"消息发送失败，请重试。","ja":"送信できませんでした。もう一度お試しください。","ko":"메시지를 보내지 못했어요. 다시 시도하세요.","ru":"Не удалось отправить. Повторите.","ar":"تعذّر إرسال الرسالة. حاول مجدداً.","id":"Gagal mengirim pesan. Coba lagi.","tr":"Mesaj gönderilemedi. Tekrar dene."},
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
   chemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契","ja":"相性","ko":"케미","ru":"Химия","ar":"كيمياء","id":"Kimia","tr":"Kimya"},
   near: {"es":"Cerca","en":"Near","pt":"Perto","fr":"Proche","de":"In der Nähe","it":"Vicino","zh":"附近","ja":"近く","ko":"근처","ru":"Рядом","ar":"قريب","id":"Dekat","tr":"Yakın"},
@@ -183,6 +185,8 @@ export class AppShellComponent implements OnDestroy {
   readonly discoIdx = signal(0);
   readonly discoLoading = signal(false);
   readonly discoLoaded = signal(false);
+  readonly discoError = signal(false);
+  readonly chatError = signal('');
   readonly photoIdx = signal(0);
   readonly swiping = signal<'like' | 'pass' | null>(null);
   // Drag-to-swipe (replicates the native Tinder feel: card follows finger, rotates, springs back
@@ -269,13 +273,14 @@ export class AppShellComponent implements OnDestroy {
   async loadDiscovery() {
     if (this.discoLoading()) return;
     this.discoLoading.set(true);
+    this.discoError.set(false);
     try {
       const profiles = await this.firebase.getDiscoveryFeed(20);
       this.discoProfiles.set(Array.isArray(profiles) ? profiles : []);
       this.discoIdx.set(0);
       this.photoIdx.set(0);
       this.discoLoaded.set(true);
-    } catch { this.discoProfiles.set([]); this.discoLoaded.set(true); }
+    } catch { this.discoProfiles.set([]); this.discoLoaded.set(true); this.discoError.set(true); }  // distinguish error from empty (iOS parity)
     finally { this.discoLoading.set(false); }
   }
   currentProfile(): any | null {
@@ -345,6 +350,7 @@ export class AppShellComponent implements OnDestroy {
   openChat(match: any) {
     this.selectedMatch.set(match);
     this.chatMsgs.set([]);
+    this.chatError.set('');
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, (msgs) => this.chatMsgs.set(msgs));
   }
@@ -368,7 +374,9 @@ export class AppShellComponent implements OnDestroy {
     const t = this.chatText.trim();
     if (!m || !t) return;
     this.chatText = '';
-    try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; /* restore on failure (e.g., first-message gate) */ }
+    this.chatError.set('');
+    // Surface send failures (e.g. first-message gate) instead of silently restoring — iOS parity.
+    try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; this.chatError.set(this.s('chatSendErr')); }
   }
 
   // ── Profile + onboarding ─────────────────────────────────────────────────────
