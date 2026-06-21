@@ -354,6 +354,36 @@ export class FirebaseService {
     return res.data;
   }
 
+  // ── Profile / onboarding (web) — same users/{uid} schema as iOS/Android ──────
+  /** Re-read the current user's profile doc into the userProfile signal. */
+  async refreshProfile(): Promise<void> { const u = this.currentUser(); if (u) await this.loadUserProfile(u.uid); }
+  /** A profile is "complete" (discovery-eligible) once it has a userType + birthDate, like the apps. */
+  isProfileComplete(): boolean {
+    const p: any = this.userProfile();
+    return !!(p && p.userType && p.birthDate);
+  }
+  /** Persist onboarding — writes the exact discovery-valid schema the apps read. */
+  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[] }): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    const data: Record<string, unknown> = {
+      name: d.name,
+      birthDate: Timestamp.fromDate(d.birthDate),
+      male: d.male,
+      userType: d.userType,           // SUGAR_DADDY | SUGAR_MOMMY | SUGAR_BABY
+      orientation: d.orientation,     // men | women | both
+      onboardingCompleted: true,
+      accountStatus: 'active',
+    };
+    if (d.bio) data['bio'] = d.bio;
+    if (Array.isArray(d.interests)) data['interests'] = d.interests;
+    if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
+      data['latitude'] = d.latitude; data['longitude'] = d.longitude;
+    }
+    await updateDoc(doc(this.db, 'users', u.uid), data);
+    await this.refreshProfile();
+  }
+
   // Discovery feed (web) — SAME getDiscoveryFeed callable the apps use (V2 ranking, signed photo URLs).
   async getDiscoveryFeed(limit = 20): Promise<any[]> {
     const fn = httpsCallable(this.functions, 'getDiscoveryFeed');

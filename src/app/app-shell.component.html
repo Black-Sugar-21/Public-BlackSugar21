@@ -118,20 +118,83 @@
             }
           }
           @case ('profile') {
-            <div class="shell-profile">
-              @if (firebase.currentUser(); as u) {
-                @if (u.photoURL) { <img class="shell-pf-av" [src]="u.photoURL" alt="" referrerpolicy="no-referrer" /> }
-                @else { <span class="shell-pf-av initial">{{ initial(u) }}</span> }
-                <h2>{{ u.displayName || u.email }}</h2>
-                @if (u.email) { <p class="shell-pf-mail">{{ u.email }}</p> }
-                <a class="shell-cta" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
-                <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
-              } @else {
+            @if (!firebase.currentUser()) {
+              <div class="shell-teaser">
                 <div class="shell-teaser-ic">👤</div>
                 <p>{{ s('signIn') }}</p>
                 <a routerLink="/" class="shell-cta">{{ s('backHome') }}</a>
-              }
-            </div>
+              </div>
+            } @else if (profileComplete()) {
+              <!-- Existing complete profile → view -->
+              <div class="shell-profile">
+                @if (firebase.currentUser()?.photoURL) { <img class="shell-pf-av" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
+                @else { <span class="shell-pf-av initial">{{ initial(firebase.currentUser()) }}</span> }
+                <h2>{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
+                @if (profileTypeLabel()) { <span class="pf-type">{{ profileTypeLabel() }}</span> }
+                @if ($any(firebase.userProfile())?.bio) { <p class="pf-bio">{{ $any(firebase.userProfile()).bio }}</p> }
+                @if (profileInterests().length) {
+                  <div class="pf-interests">
+                    @for (it of profileInterests(); track it) { <span class="pf-chip">{{ it }}</span> }
+                  </div>
+                }
+                <a class="shell-cta" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('editInApp') }}</a>
+                <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
+              </div>
+            } @else {
+              <!-- No profile yet → elegant onboarding wizard (iOS-style) -->
+              <div class="ob-wrap">
+                <div class="ob-progress"><span [style.width.%]="(obStep()+1) / 6 * 100"></span></div>
+                <div class="ob-step">
+                  @switch (obStep()) {
+                    @case (0) {
+                      <h2 class="ob-title">{{ s('obName') }}</h2>
+                      <input class="ob-input" [(ngModel)]="ob.name" [placeholder]="s('obNamePh')" maxlength="40" autocomplete="given-name" />
+                    }
+                    @case (1) {
+                      <h2 class="ob-title">{{ s('obBirthday') }}</h2>
+                      <div class="ob-bday">
+                        <input class="ob-input sm" [(ngModel)]="ob.day" [placeholder]="s('obDay')" inputmode="numeric" maxlength="2" />
+                        <input class="ob-input sm" [(ngModel)]="ob.month" [placeholder]="s('obMonth')" inputmode="numeric" maxlength="2" />
+                        <input class="ob-input sm" [(ngModel)]="ob.year" [placeholder]="s('obYear')" inputmode="numeric" maxlength="4" />
+                      </div>
+                    }
+                    @case (2) {
+                      <h2 class="ob-title">{{ s('obGender') }}</h2>
+                      <div class="ob-opts">
+                        <button class="ob-opt" [class.on]="ob.male === true" (click)="ob.male = true">{{ s('obMale') }}</button>
+                        <button class="ob-opt" [class.on]="ob.male === false" (click)="ob.male = false">{{ s('obFemale') }}</button>
+                      </div>
+                    }
+                    @case (3) {
+                      <h2 class="ob-title">{{ s('obType') }}</h2>
+                      <div class="ob-opts col">
+                        <button class="ob-opt big" [class.on]="ob.type === 'elite'" (click)="ob.type = 'elite'"><b>{{ s('obElite') }}</b><span>{{ s('obEliteDesc') }}</span></button>
+                        <button class="ob-opt big" [class.on]="ob.type === 'prime'" (click)="ob.type = 'prime'"><b>{{ s('obPrime') }}</b><span>{{ s('obPrimeDesc') }}</span></button>
+                      </div>
+                    }
+                    @case (4) {
+                      <h2 class="ob-title">{{ s('obOrientation') }}</h2>
+                      <div class="ob-opts col">
+                        <button class="ob-opt" [class.on]="ob.orientation === 'men'" (click)="ob.orientation = 'men'">{{ s('obMen') }}</button>
+                        <button class="ob-opt" [class.on]="ob.orientation === 'women'" (click)="ob.orientation = 'women'">{{ s('obWomen') }}</button>
+                        <button class="ob-opt" [class.on]="ob.orientation === 'both'" (click)="ob.orientation = 'both'">{{ s('obBoth') }}</button>
+                      </div>
+                    }
+                    @case (5) {
+                      <h2 class="ob-title">{{ s('obBio') }}</h2>
+                      <textarea class="ob-input ta" [(ngModel)]="ob.bio" [placeholder]="s('obBioPh')" maxlength="400" rows="4"></textarea>
+                    }
+                  }
+                  @if (obError()) { <p class="ob-error">{{ obError() }}</p> }
+                </div>
+                <div class="ob-nav">
+                  @if (obStep() > 0) { <button class="ob-back" (click)="obBack()">{{ s('obBack') }}</button> }
+                  <button class="ob-next" (click)="obNext()" [disabled]="obSaving()">
+                    {{ obSaving() ? '…' : (obStep() === 5 ? s('obFinish') : s('obNext')) }}
+                  </button>
+                </div>
+              </div>
+            }
           }
         }
       </main>

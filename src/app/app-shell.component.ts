@@ -34,6 +34,27 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
+  // Onboarding (es/en — falls back to en for other languages; extend to 13 on request)
+  obWelcome: {"es":"Completa tu perfil","en":"Complete your profile"},
+  obWelcomeSub: {"es":"Unos pasos para que el Coach y tus matches te conozcan.","en":"A few steps so the Coach and your matches know you."},
+  obName: {"es":"¿Cómo te llamas?","en":"What's your name?"},
+  obNamePh: {"es":"Tu nombre","en":"Your name"},
+  obBirthday: {"es":"Tu fecha de nacimiento","en":"Your birthday"},
+  obDay: {"es":"Día","en":"Day"}, obMonth: {"es":"Mes","en":"Month"}, obYear: {"es":"Año","en":"Year"},
+  obGender: {"es":"Tu género","en":"Your gender"},
+  obMale: {"es":"Hombre","en":"Man"}, obFemale: {"es":"Mujer","en":"Woman"},
+  obType: {"es":"Tipo de perfil","en":"Profile type"},
+  obElite: {"es":"💎 Elite","en":"💎 Elite"}, obEliteDesc: {"es":"Ofrezco experiencias y mentoría","en":"I offer experiences and mentorship"},
+  obPrime: {"es":"🌟 Prime","en":"🌟 Prime"}, obPrimeDesc: {"es":"Busco conexiones auténticas","en":"I'm looking for authentic connections"},
+  obOrientation: {"es":"Me interesan","en":"I'm interested in"},
+  obMen: {"es":"Hombres","en":"Men"}, obWomen: {"es":"Mujeres","en":"Women"}, obBoth: {"es":"Todos","en":"Everyone"},
+  obBio: {"es":"Sobre ti (opcional)","en":"About you (optional)"},
+  obBioPh: {"es":"Cuéntanos algo de ti…","en":"Tell us about you…"},
+  obNext: {"es":"Continuar","en":"Continue"}, obBack: {"es":"Atrás","en":"Back"}, obFinish: {"es":"Finalizar","en":"Finish"},
+  obAge18: {"es":"Debes tener al menos 18 años.","en":"You must be at least 18."},
+  obRequired: {"es":"Completa este paso para continuar.","en":"Complete this step to continue."},
+  obSaveErr: {"es":"No se pudo guardar. Inténtalo de nuevo.","en":"Couldn't save. Please try again."},
+  editInApp: {"es":"Editar perfil en la app","en":"Edit profile in the app"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -192,6 +213,78 @@ export class AppShellComponent implements OnDestroy {
     if (!m || !t) return;
     this.chatText = '';
     try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; /* restore on failure (e.g., first-message gate) */ }
+  }
+
+  // ── Profile + onboarding ─────────────────────────────────────────────────────
+  profileComplete(): boolean { return this.firebase.isProfileComplete(); }
+  profileAge(): number | null {
+    const p: any = this.firebase.userProfile();
+    const ms = p?.birthDate?.toMillis?.();
+    if (!ms) return null;
+    return Math.floor((Date.now() - ms) / (365.25 * 86400000));
+  }
+  profileInterests(): string[] { const p: any = this.firebase.userProfile(); return Array.isArray(p?.interests) ? p.interests : []; }
+  profileTypeLabel(): string {
+    const t = (this.firebase.userProfile() as any)?.userType || '';
+    if (t === 'SUGAR_BABY') return '🌟';
+    if (t === 'SUGAR_DADDY' || t === 'SUGAR_MOMMY') return '💎';
+    return '';
+  }
+
+  // Onboarding wizard (creates a discovery-valid profile with the apps' schema).
+  readonly obStep = signal(0);
+  readonly obSaving = signal(false);
+  readonly obError = signal('');
+  ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', bio: '' };
+  private readonly OB_LAST = 5;
+  obCanProceed(): boolean {
+    switch (this.obStep()) {
+      case 0: return this.ob.name.trim().length >= 2;
+      case 1: { const a = this.obBirthAge(); return a !== null && a >= 18; }
+      case 2: return this.ob.male !== null;
+      case 3: return this.ob.type !== '';
+      case 4: return this.ob.orientation !== '';
+      case 5: return true; // bio optional
+      default: return true;
+    }
+  }
+  private obBirthAge(): number | null {
+    const d = parseInt(this.ob.day, 10), m = parseInt(this.ob.month, 10), y = parseInt(this.ob.year, 10);
+    if (!d || !m || !y || y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const bd = new Date(y, m - 1, d);
+    if (bd.getFullYear() !== y || bd.getMonth() !== m - 1) return null;
+    return Math.floor((Date.now() - bd.getTime()) / (365.25 * 86400000));
+  }
+  obNext() {
+    this.obError.set('');
+    if (!this.obCanProceed()) { this.obError.set(this.obStep() === 1 ? this.s('obAge18') : this.s('obRequired')); return; }
+    if (this.obStep() < this.OB_LAST) this.obStep.update((v) => v + 1);
+    else this.obSave();
+  }
+  obBack() { this.obError.set(''); if (this.obStep() > 0) this.obStep.update((v) => v - 1); }
+  private getGeo(): Promise<{ lat: number; lng: number } | null> {
+    return new Promise((res) => {
+      if (!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition(
+        (p) => res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => res(null), { timeout: 8000, maximumAge: 600000 });
+    });
+  }
+  async obSave() {
+    if (this.obSaving()) return;
+    this.obSaving.set(true);
+    try {
+      const male = !!this.ob.male;
+      const userType = this.ob.type === 'elite' ? (male ? 'SUGAR_DADDY' : 'SUGAR_MOMMY') : 'SUGAR_BABY';
+      const bd = new Date(parseInt(this.ob.year, 10), parseInt(this.ob.month, 10) - 1, parseInt(this.ob.day, 10));
+      const geo = await this.getGeo();
+      await this.firebase.saveOnboarding({
+        name: this.ob.name.trim(), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
+        bio: this.ob.bio.trim() || undefined, latitude: geo?.lat, longitude: geo?.lng,
+      });
+      this.obStep.set(0);
+    } catch { this.obError.set(this.s('obSaveErr')); }
+    finally { this.obSaving.set(false); }
   }
 
   ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); }
