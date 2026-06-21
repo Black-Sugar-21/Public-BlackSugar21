@@ -52,6 +52,13 @@
     .ob-opt.on { border-color:var(--gold); background:rgba(212,175,55,.12); color:var(--gold); }
     .ob-opt.on span { color:var(--gold); opacity:.85; }
     .ob-error { color:var(--app-red); font-size:13px; margin:0; }
+    .ob-photohint { color:var(--text-muted); font-size:13px; margin:-6px 0 0; }
+    .ob-photos { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .ob-photo { position:relative; aspect-ratio:3/4; border-radius:12px; overflow:hidden; }
+    .ob-photo img { width:100%; height:100%; object-fit:cover; }
+    .ob-photo-x { position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(10,10,10,.7); color:#fff; font-size:11px; cursor:pointer; }
+    .ob-photo-add { display:flex; align-items:center; justify-content:center; aspect-ratio:3/4; border-radius:12px; border:1.5px dashed rgba(212,175,55,.5); color:var(--gold); font-size:13px; font-weight:600; cursor:pointer; text-align:center; padding:6px; }
+    .ob-photo-add.busy { opacity:.6; cursor:default; }
     .ob-nav { display:flex; gap:12px; margin-top:24px; }
     .ob-back { flex:0 0 auto; background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:13px 22px; font-family:inherit; font-weight:600; cursor:pointer; }
     .ob-next { flex:1; background:var(--gradient-gold); border:none; color:var(--bg-dark); border-radius:999px; padding:13px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; }
@@ -121,9 +128,39 @@
     @media (max-width: 860px) {
       .shell-side { display:none; }
       .shell { flex-direction:column; }
-      .shell-main { padding-bottom:64px; }
-      .shell-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:60px; background:var(--bg-sidebar); border-top:1px solid rgba(255,255,255,.1); z-index:50; }
-      .shell-tab { flex:1; background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; }
+      /* Bottom-nav height + iOS home-indicator safe area so content never sits under the bar. */
+      .shell-main { padding-bottom:calc(60px + env(safe-area-inset-bottom, 0px)); }
+      .shell-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:60px; padding-bottom:env(safe-area-inset-bottom, 0px);
+        background:var(--bg-sidebar); border-top:1px solid rgba(255,255,255,.1); z-index:50; }
+      .shell-tab { flex:1; background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; min-width:0; }
       .shell-tab.active { color:var(--gold); }
+    }
+    /* ── Edge cases across device sizes ─────────────────────────────────────── */
+    /* Onboarding + profile + teasers scroll on short screens (landscape phones, small tablets). */
+    .ob-wrap, .shell-profile, .shell-teaser { overflow-y:auto; }
+    .shell-profile { padding:24px 18px; }
+    /* Short viewports (landscape phones): trim the discovery overlay so name + heart stay visible. */
+    @media (max-height: 560px) {
+      .disco-grad { padding:60px 18px 14px; }
+      .disco-name { font-size:26px; }
+      .disco-meta { font-size:13px; margin-top:4px; }
+      .disco-like { width:52px; height:52px; bottom:14px; right:14px; }
+      .disco-heart { width:26px; height:26px; }
+      .ob-progress { margin-bottom:18px; }
+      .ob-step { gap:12px; }
+      .ob-title { font-size:22px; }
+    }
+    /* Narrow phones (≤360px): keep the birthday inputs + options comfortable. */
+    @media (max-width: 380px) {
+      .ob-wrap { padding:18px 16px; }
+      .ob-bday { gap:7px; }
+      .ob-bday .ob-input.sm { padding:14px 8px; font-size:15px; }
+      .disco-name { font-size:28px; }
+      .shell-tab { font-size:20px; }
+    }
+    /* Large desktops: cap the immersive Discovery photo height so it stays portrait, not a giant. */
+    @media (min-width: 1100px) {
+      .disco-wrap { padding:18px 0; }
+      .disco-card { max-height:760px; align-self:center; border-radius:20px; }
     }
   

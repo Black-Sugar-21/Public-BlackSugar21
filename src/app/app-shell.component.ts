@@ -34,27 +34,40 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
-  // Onboarding (es/en — falls back to en for other languages; extend to 13 on request)
-  obWelcome: {"es":"Completa tu perfil","en":"Complete your profile"},
-  obWelcomeSub: {"es":"Unos pasos para que el Coach y tus matches te conozcan.","en":"A few steps so the Coach and your matches know you."},
-  obName: {"es":"¿Cómo te llamas?","en":"What's your name?"},
-  obNamePh: {"es":"Tu nombre","en":"Your name"},
-  obBirthday: {"es":"Tu fecha de nacimiento","en":"Your birthday"},
-  obDay: {"es":"Día","en":"Day"}, obMonth: {"es":"Mes","en":"Month"}, obYear: {"es":"Año","en":"Year"},
-  obGender: {"es":"Tu género","en":"Your gender"},
-  obMale: {"es":"Hombre","en":"Man"}, obFemale: {"es":"Mujer","en":"Woman"},
-  obType: {"es":"Tipo de perfil","en":"Profile type"},
-  obElite: {"es":"💎 Elite","en":"💎 Elite"}, obEliteDesc: {"es":"Ofrezco experiencias y mentoría","en":"I offer experiences and mentorship"},
-  obPrime: {"es":"🌟 Prime","en":"🌟 Prime"}, obPrimeDesc: {"es":"Busco conexiones auténticas","en":"I'm looking for authentic connections"},
-  obOrientation: {"es":"Me interesan","en":"I'm interested in"},
-  obMen: {"es":"Hombres","en":"Men"}, obWomen: {"es":"Mujeres","en":"Women"}, obBoth: {"es":"Todos","en":"Everyone"},
-  obBio: {"es":"Sobre ti (opcional)","en":"About you (optional)"},
-  obBioPh: {"es":"Cuéntanos algo de ti…","en":"Tell us about you…"},
-  obNext: {"es":"Continuar","en":"Continue"}, obBack: {"es":"Atrás","en":"Back"}, obFinish: {"es":"Finalizar","en":"Finish"},
-  obAge18: {"es":"Debes tener al menos 18 años.","en":"You must be at least 18."},
-  obRequired: {"es":"Completa este paso para continuar.","en":"Complete this step to continue."},
-  obSaveErr: {"es":"No se pudo guardar. Inténtalo de nuevo.","en":"Couldn't save. Please try again."},
-  editInApp: {"es":"Editar perfil en la app","en":"Edit profile in the app"},
+  // Onboarding (13 languages)
+  obWelcome: {"es":"Completa tu perfil","en":"Complete your profile","pt":"Complete seu perfil","fr":"Complète ton profil","de":"Profil vervollständigen","it":"Completa il profilo","zh":"完善你的资料","ja":"プロフィールを完成","ko":"프로필 완성","ru":"Заполните профиль","ar":"أكمل ملفك","id":"Lengkapi profilmu","tr":"Profilini tamamla"},
+  obWelcomeSub: {"es":"Unos pasos para que el Coach y tus matches te conozcan.","en":"A few steps so the Coach and your matches know you.","pt":"Alguns passos para o Coach e seus matches te conhecerem.","fr":"Quelques étapes pour que le Coach et tes matchs te connaissent.","de":"Ein paar Schritte, damit Coach und Matches dich kennen.","it":"Pochi passi per farti conoscere dal Coach e dai match.","zh":"几步让教练和匹配的人了解你。","ja":"コーチとマッチがあなたを知るための数ステップ。","ko":"코치와 매치가 당신을 알 수 있도록 몇 단계.","ru":"Несколько шагов, чтобы коуч и совпадения узнали вас.","ar":"خطوات قليلة ليتعرّف عليك المدرّب ومطابقاتك.","id":"Beberapa langkah agar Coach dan match mengenalmu.","tr":"Koç ve eşleşmelerin seni tanıması için birkaç adım."},
+  obName: {"es":"¿Cómo te llamas?","en":"What's your name?","pt":"Como você se chama?","fr":"Comment t'appelles-tu ?","de":"Wie heißt du?","it":"Come ti chiami?","zh":"你叫什么名字？","ja":"お名前は？","ko":"이름이 뭐예요?","ru":"Как вас зовут?","ar":"ما اسمك؟","id":"Siapa namamu?","tr":"Adın ne?"},
+  obNamePh: {"es":"Tu nombre","en":"Your name","pt":"Seu nome","fr":"Ton nom","de":"Dein Name","it":"Il tuo nome","zh":"你的名字","ja":"あなたの名前","ko":"이름","ru":"Ваше имя","ar":"اسمك","id":"Namamu","tr":"Adın"},
+  obBirthday: {"es":"Tu fecha de nacimiento","en":"Your birthday","pt":"Sua data de nascimento","fr":"Ta date de naissance","de":"Dein Geburtsdatum","it":"La tua data di nascita","zh":"你的生日","ja":"生年月日","ko":"생년월일","ru":"Дата рождения","ar":"تاريخ ميلادك","id":"Tanggal lahirmu","tr":"Doğum tarihin"},
+  obDay: {"es":"Día","en":"Day","pt":"Dia","fr":"Jour","de":"Tag","it":"Giorno","zh":"日","ja":"日","ko":"일","ru":"День","ar":"يوم","id":"Hari","tr":"Gün"},
+  obMonth: {"es":"Mes","en":"Month","pt":"Mês","fr":"Mois","de":"Monat","it":"Mese","zh":"月","ja":"月","ko":"월","ru":"Месяц","ar":"شهر","id":"Bulan","tr":"Ay"},
+  obYear: {"es":"Año","en":"Year","pt":"Ano","fr":"Année","de":"Jahr","it":"Anno","zh":"年","ja":"年","ko":"년","ru":"Год","ar":"سنة","id":"Tahun","tr":"Yıl"},
+  obGender: {"es":"Tu género","en":"Your gender","pt":"Seu gênero","fr":"Ton genre","de":"Dein Geschlecht","it":"Il tuo genere","zh":"你的性别","ja":"性別","ko":"성별","ru":"Ваш пол","ar":"جنسك","id":"Jenis kelaminmu","tr":"Cinsiyetin"},
+  obMale: {"es":"Hombre","en":"Man","pt":"Homem","fr":"Homme","de":"Mann","it":"Uomo","zh":"男","ja":"男性","ko":"남성","ru":"Мужчина","ar":"رجل","id":"Pria","tr":"Erkek"},
+  obFemale: {"es":"Mujer","en":"Woman","pt":"Mulher","fr":"Femme","de":"Frau","it":"Donna","zh":"女","ja":"女性","ko":"여성","ru":"Женщина","ar":"امرأة","id":"Wanita","tr":"Kadın"},
+  obType: {"es":"Tipo de perfil","en":"Profile type","pt":"Tipo de perfil","fr":"Type de profil","de":"Profiltyp","it":"Tipo di profilo","zh":"资料类型","ja":"プロフィールタイプ","ko":"프로필 유형","ru":"Тип профиля","ar":"نوع الملف","id":"Tipe profil","tr":"Profil türü"},
+  obElite: {"es":"💎 Elite","en":"💎 Elite","pt":"💎 Elite","fr":"💎 Elite","de":"💎 Elite","it":"💎 Elite","zh":"💎 Elite","ja":"💎 Elite","ko":"💎 Elite","ru":"💎 Elite","ar":"💎 إيليت","id":"💎 Elite","tr":"💎 Elite"},
+  obEliteDesc: {"es":"Ofrezco experiencias y mentoría","en":"I offer experiences and mentorship","pt":"Ofereço experiências e mentoria","fr":"J'offre des expériences et du mentorat","de":"Ich biete Erlebnisse und Mentoring","it":"Offro esperienze e mentorship","zh":"我提供体验与指导","ja":"経験とメンターシップを提供","ko":"경험과 멘토십을 제공","ru":"Предлагаю опыт и наставничество","ar":"أقدّم تجارب وإرشاداً","id":"Saya menawarkan pengalaman & bimbingan","tr":"Deneyim ve mentorluk sunuyorum"},
+  obPrime: {"es":"🌟 Prime","en":"🌟 Prime","pt":"🌟 Prime","fr":"🌟 Prime","de":"🌟 Prime","it":"🌟 Prime","zh":"🌟 Prime","ja":"🌟 Prime","ko":"🌟 Prime","ru":"🌟 Prime","ar":"🌟 برايم","id":"🌟 Prime","tr":"🌟 Prime"},
+  obPrimeDesc: {"es":"Busco conexiones auténticas","en":"I'm looking for authentic connections","pt":"Busco conexões autênticas","fr":"Je cherche des connexions authentiques","de":"Ich suche echte Verbindungen","it":"Cerco connessioni autentiche","zh":"我在寻找真诚的连接","ja":"本物のつながりを探しています","ko":"진정한 인연을 찾고 있어요","ru":"Ищу настоящие связи","ar":"أبحث عن روابط حقيقية","id":"Mencari koneksi yang tulus","tr":"Gerçek bağlar arıyorum"},
+  obOrientation: {"es":"Me interesan","en":"I'm interested in","pt":"Tenho interesse em","fr":"Je m'intéresse à","de":"Ich interessiere mich für","it":"Mi interessano","zh":"我感兴趣的是","ja":"興味があるのは","ko":"관심 대상","ru":"Мне интересны","ar":"يهمّني","id":"Aku tertarik pada","tr":"İlgilendiğim"},
+  obMen: {"es":"Hombres","en":"Men","pt":"Homens","fr":"Hommes","de":"Männer","it":"Uomini","zh":"男性","ja":"男性","ko":"남성","ru":"Мужчины","ar":"رجال","id":"Pria","tr":"Erkekler"},
+  obWomen: {"es":"Mujeres","en":"Women","pt":"Mulheres","fr":"Femmes","de":"Frauen","it":"Donne","zh":"女性","ja":"女性","ko":"여성","ru":"Женщины","ar":"نساء","id":"Wanita","tr":"Kadınlar"},
+  obBoth: {"es":"Todos","en":"Everyone","pt":"Todos","fr":"Tout le monde","de":"Alle","it":"Tutti","zh":"所有人","ja":"すべて","ko":"모두","ru":"Все","ar":"الجميع","id":"Semua","tr":"Herkes"},
+  obBio: {"es":"Sobre ti (opcional)","en":"About you (optional)","pt":"Sobre você (opcional)","fr":"À propos de toi (facultatif)","de":"Über dich (optional)","it":"Su di te (facoltativo)","zh":"关于你（可选）","ja":"あなたについて（任意）","ko":"소개 (선택)","ru":"О себе (необязательно)","ar":"عنك (اختياري)","id":"Tentang kamu (opsional)","tr":"Hakkında (isteğe bağlı)"},
+  obBioPh: {"es":"Cuéntanos algo de ti…","en":"Tell us about you…","pt":"Conte algo sobre você…","fr":"Parle-nous de toi…","de":"Erzähl uns von dir…","it":"Raccontaci di te…","zh":"介绍一下你自己…","ja":"あなたについて教えて…","ko":"당신에 대해 알려주세요…","ru":"Расскажите о себе…","ar":"أخبرنا عنك…","id":"Ceritakan tentangmu…","tr":"Kendinden bahset…"},
+  obNext: {"es":"Continuar","en":"Continue","pt":"Continuar","fr":"Continuer","de":"Weiter","it":"Continua","zh":"继续","ja":"続ける","ko":"계속","ru":"Далее","ar":"متابعة","id":"Lanjut","tr":"Devam"},
+  obBack: {"es":"Atrás","en":"Back","pt":"Voltar","fr":"Retour","de":"Zurück","it":"Indietro","zh":"返回","ja":"戻る","ko":"뒤로","ru":"Назад","ar":"رجوع","id":"Kembali","tr":"Geri"},
+  obFinish: {"es":"Finalizar","en":"Finish","pt":"Concluir","fr":"Terminer","de":"Fertig","it":"Fine","zh":"完成","ja":"完了","ko":"완료","ru":"Готово","ar":"إنهاء","id":"Selesai","tr":"Bitir"},
+  obAge18: {"es":"Debes tener al menos 18 años.","en":"You must be at least 18.","pt":"Você deve ter pelo menos 18 anos.","fr":"Tu dois avoir au moins 18 ans.","de":"Du musst mindestens 18 sein.","it":"Devi avere almeno 18 anni.","zh":"你必须年满 18 岁。","ja":"18歳以上である必要があります。","ko":"만 18세 이상이어야 해요.","ru":"Вам должно быть не менее 18 лет.","ar":"يجب أن يكون عمرك 18 عاماً على الأقل.","id":"Kamu harus berusia minimal 18.","tr":"En az 18 yaşında olmalısın."},
+  obRequired: {"es":"Completa este paso para continuar.","en":"Complete this step to continue.","pt":"Conclua este passo para continuar.","fr":"Complète cette étape pour continuer.","de":"Schließe diesen Schritt ab, um fortzufahren.","it":"Completa questo passaggio per continuare.","zh":"完成此步骤以继续。","ja":"続けるにはこのステップを完了してください。","ko":"계속하려면 이 단계를 완료하세요.","ru":"Завершите этот шаг, чтобы продолжить.","ar":"أكمل هذه الخطوة للمتابعة.","id":"Selesaikan langkah ini untuk lanjut.","tr":"Devam etmek için bu adımı tamamla."},
+  obSaveErr: {"es":"No se pudo guardar. Inténtalo de nuevo.","en":"Couldn't save. Please try again.","pt":"Não foi possível salvar. Tente de novo.","fr":"Échec de l'enregistrement. Réessaie.","de":"Speichern fehlgeschlagen. Versuch es erneut.","it":"Salvataggio non riuscito. Riprova.","zh":"保存失败，请重试。","ja":"保存できませんでした。再試行してください。","ko":"저장하지 못했어요. 다시 시도하세요.","ru":"Не удалось сохранить. Повторите.","ar":"تعذّر الحفظ. حاول مجدداً.","id":"Gagal menyimpan. Coba lagi.","tr":"Kaydedilemedi. Tekrar dene."},
+  obPhotos: {"es":"Tus fotos","en":"Your photos","pt":"Suas fotos","fr":"Tes photos","de":"Deine Fotos","it":"Le tue foto","zh":"你的照片","ja":"あなたの写真","ko":"사진","ru":"Ваши фото","ar":"صورك","id":"Fotomu","tr":"Fotoğrafların"},
+  obPhotoHint: {"es":"Agrega al menos 1 (hasta 6). La 1ª es tu principal.","en":"Add at least 1 (up to 6). The 1st is your main.","pt":"Adicione ao menos 1 (até 6). A 1ª é a principal.","fr":"Ajoute au moins 1 (jusqu'à 6). La 1ʳᵉ est principale.","de":"Mind. 1 (bis 6). Das 1. ist dein Hauptfoto.","it":"Aggiungi almeno 1 (fino a 6). La 1ª è principale.","zh":"至少添加 1 张（最多 6）。第 1 张为主图。","ja":"1枚以上（最大6）。1枚目がメイン。","ko":"최소 1장(최대 6). 첫 번째가 대표.","ru":"Минимум 1 (до 6). Первое — главное.","ar":"أضف صورة واحدة على الأقل (حتى 6). الأولى رئيسية.","id":"Tambah min. 1 (maks 6). Foto ke-1 utama.","tr":"En az 1 (en çok 6). 1.'si ana fotoğraf."},
+  obAddPhoto: {"es":"＋ Agregar foto","en":"＋ Add photo","pt":"＋ Adicionar foto","fr":"＋ Ajouter une photo","de":"＋ Foto hinzufügen","it":"＋ Aggiungi foto","zh":"＋ 添加照片","ja":"＋ 写真を追加","ko":"＋ 사진 추가","ru":"＋ Добавить фото","ar":"＋ أضف صورة","id":"＋ Tambah foto","tr":"＋ Fotoğraf ekle"},
+  obPhotoErr: {"es":"No se pudo subir la foto. Inténtalo de nuevo.","en":"Couldn't upload the photo. Try again.","pt":"Não foi possível enviar a foto. Tente de novo.","fr":"Échec de l'envoi de la photo. Réessaie.","de":"Foto-Upload fehlgeschlagen. Versuch es erneut.","it":"Caricamento foto non riuscito. Riprova.","zh":"照片上传失败，请重试。","ja":"写真をアップロードできませんでした。","ko":"사진 업로드 실패. 다시 시도.","ru":"Не удалось загрузить фото. Повторите.","ar":"تعذّر رفع الصورة. حاول مجدداً.","id":"Gagal mengunggah foto. Coba lagi.","tr":"Fotoğraf yüklenemedi. Tekrar dene."},
+  editInApp: {"es":"Editar perfil en la app","en":"Edit profile in the app","pt":"Editar perfil no app","fr":"Modifier le profil dans l'app","de":"Profil in der App bearbeiten","it":"Modifica profilo nell'app","zh":"在 App 中编辑资料","ja":"アプリでプロフィール編集","ko":"앱에서 프로필 편집","ru":"Изменить профиль в приложении","ar":"عدّل الملف في التطبيق","id":"Edit profil di aplikasi","tr":"Profili uygulamada düzenle"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -236,7 +249,9 @@ export class AppShellComponent implements OnDestroy {
   readonly obSaving = signal(false);
   readonly obError = signal('');
   ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', bio: '' };
-  private readonly OB_LAST = 5;
+  readonly obPhotos = signal<Array<{ name: string; url: string }>>([]);
+  readonly obUploading = signal(false);
+  private readonly OB_LAST = 6;
   obCanProceed(): boolean {
     switch (this.obStep()) {
       case 0: return this.ob.name.trim().length >= 2;
@@ -245,9 +260,25 @@ export class AppShellComponent implements OnDestroy {
       case 3: return this.ob.type !== '';
       case 4: return this.ob.orientation !== '';
       case 5: return true; // bio optional
+      case 6: return this.obPhotos().length >= 1; // at least one photo
       default: return true;
     }
   }
+  async obAddPhotos(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const files = Array.from(input.files || []).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    this.obUploading.set(true); this.obError.set('');
+    try {
+      for (const f of files.slice(0, 6 - this.obPhotos().length)) {
+        if (f.size > 10 * 1024 * 1024) continue; // 10MB cap
+        const name = await this.firebase.uploadProfilePhoto(f);
+        this.obPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]);
+      }
+    } catch { this.obError.set(this.s('obPhotoErr')); }
+    finally { this.obUploading.set(false); input.value = ''; }
+  }
+  obRemovePhoto(i: number) { this.obPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
   private obBirthAge(): number | null {
     const d = parseInt(this.ob.day, 10), m = parseInt(this.ob.month, 10), y = parseInt(this.ob.year, 10);
     if (!d || !m || !y || y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return null;
@@ -281,6 +312,7 @@ export class AppShellComponent implements OnDestroy {
       await this.firebase.saveOnboarding({
         name: this.ob.name.trim(), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
         bio: this.ob.bio.trim() || undefined, latitude: geo?.lat, longitude: geo?.lng,
+        pictures: this.obPhotos().map((p) => p.name),
       });
       this.obStep.set(0);
     } catch { this.obError.set(this.s('obSaveErr')); }

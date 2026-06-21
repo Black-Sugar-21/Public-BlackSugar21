@@ -51,6 +51,12 @@ import {
   Analytics
 } from 'firebase/analytics';
 import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
+import {
   getFunctions,
   httpsCallable,
   Functions
@@ -81,6 +87,7 @@ export class FirebaseService {
   private remoteConfig: RemoteConfig;
   private analytics: Analytics;
   private functions: Functions;
+  private storage!: ReturnType<typeof getStorage>;
 
   currentUser = signal<User | null>(null);
   userProfile = signal<UserProfile | null>(null);
@@ -92,6 +99,7 @@ export class FirebaseService {
     this.remoteConfig = getRemoteConfig(this.app);
     this.analytics = getAnalytics(this.app);
     this.functions = getFunctions(this.app, 'us-central1');
+    this.storage = getStorage(this.app);
 
     // Configurar intervalo de actualización (en desarrollo puede ser bajo)
     this.remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hora
@@ -362,8 +370,27 @@ export class FirebaseService {
     const p: any = this.userProfile();
     return !!(p && p.userType && p.birthDate);
   }
+  /** Upload one profile photo to Storage (users/{uid}/{file}) — returns the stored filename. The
+   *  discovery feed signs these names server-side, same as photos uploaded from the apps. */
+  async uploadProfilePhoto(file: File): Promise<string> {
+    const u = this.currentUser();
+    if (!u) throw new Error('not-authenticated');
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const fileName = `web_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    await uploadBytes(storageRef(this.storage, `users/${u.uid}/${fileName}`), file, { contentType: file.type || 'image/jpeg' });
+    return fileName;
+  }
+  /** Resolve the current user's own photo filenames to displayable URLs (for the profile view). */
+  async getOwnPhotoUrls(names: string[]): Promise<string[]> {
+    const u = this.currentUser();
+    if (!u || !Array.isArray(names)) return [];
+    const out = await Promise.all(names.slice(0, 6).map(async (n) => {
+      try { return await getDownloadURL(storageRef(this.storage, `users/${u.uid}/${n}`)); } catch { return ''; }
+    }));
+    return out.filter(Boolean);
+  }
   /** Persist onboarding — writes the exact discovery-valid schema the apps read. */
-  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[] }): Promise<void> {
+  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[]; pictures?: string[] }): Promise<void> {
     const u = this.currentUser();
     if (!u) return;
     const data: Record<string, unknown> = {
@@ -377,6 +404,7 @@ export class FirebaseService {
     };
     if (d.bio) data['bio'] = d.bio;
     if (Array.isArray(d.interests)) data['interests'] = d.interests;
+    if (Array.isArray(d.pictures) && d.pictures.length) data['pictures'] = d.pictures;
     if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
       data['latitude'] = d.latitude; data['longitude'] = d.longitude;
     }

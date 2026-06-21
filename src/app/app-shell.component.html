@@ -143,7 +143,7 @@
             } @else {
               <!-- No profile yet → elegant onboarding wizard (iOS-style) -->
               <div class="ob-wrap">
-                <div class="ob-progress"><span [style.width.%]="(obStep()+1) / 6 * 100"></span></div>
+                <div class="ob-progress"><span [style.width.%]="(obStep()+1) / 7 * 100"></span></div>
                 <div class="ob-step">
                   @switch (obStep()) {
                     @case (0) {
@@ -184,13 +184,28 @@
                       <h2 class="ob-title">{{ s('obBio') }}</h2>
                       <textarea class="ob-input ta" [(ngModel)]="ob.bio" [placeholder]="s('obBioPh')" maxlength="400" rows="4"></textarea>
                     }
+                    @case (6) {
+                      <h2 class="ob-title">{{ s('obPhotos') }}</h2>
+                      <p class="ob-photohint">{{ s('obPhotoHint') }}</p>
+                      <div class="ob-photos">
+                        @for (ph of obPhotos(); track ph.name) {
+                          <div class="ob-photo"><img [src]="ph.url" alt="" /><button class="ob-photo-x" (click)="obRemovePhoto($index)" aria-label="✕">✕</button></div>
+                        }
+                        @if (obPhotos().length < 6) {
+                          <label class="ob-photo-add" [class.busy]="obUploading()">
+                            {{ obUploading() ? '…' : s('obAddPhoto') }}
+                            <input type="file" accept="image/*" multiple (change)="obAddPhotos($event)" hidden [disabled]="obUploading()" />
+                          </label>
+                        }
+                      </div>
+                    }
                   }
                   @if (obError()) { <p class="ob-error">{{ obError() }}</p> }
                 </div>
                 <div class="ob-nav">
                   @if (obStep() > 0) { <button class="ob-back" (click)="obBack()">{{ s('obBack') }}</button> }
-                  <button class="ob-next" (click)="obNext()" [disabled]="obSaving()">
-                    {{ obSaving() ? '…' : (obStep() === 5 ? s('obFinish') : s('obNext')) }}
+                  <button class="ob-next" (click)="obNext()" [disabled]="obSaving() || obUploading()">
+                    {{ obSaving() ? '…' : (obStep() === 6 ? s('obFinish') : s('obNext')) }}
                   </button>
                 </div>
               </div>
