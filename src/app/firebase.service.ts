@@ -55,7 +55,7 @@ import {
   httpsCallable,
   Functions
 } from 'firebase/functions';
-import { firebaseConfig, recaptchaSiteKey } from './firebase.config';
+import { firebaseConfig, recaptchaSiteKey, appCheckEnabled } from './firebase.config';
 import { signal } from '@angular/core';
 
 export interface UserProfile {
@@ -103,8 +103,8 @@ export class FirebaseService {
       minimum_age_by_country: JSON.stringify({ "default": 18 })
     };
 
-    // Inicializar App Check con reCAPTCHA v3
-    if (recaptchaSiteKey) {
+    // Inicializar App Check con reCAPTCHA v3 (desactivado por defecto — ver appCheckEnabled).
+    if (appCheckEnabled && recaptchaSiteKey) {
       try {
         // En desarrollo, usar modo debug para evitar errores 403
         const isLocalhost = window.location.hostname === 'localhost' ||

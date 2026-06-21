@@ -29,6 +29,7 @@ const FREE_TASTE = 2; // free coach replies shown as a "taste" before the (non-b
 const LOGIN_I18N: Record<string, Record<string, string>> = {
   headerSignIn: {"es":"Iniciar sesión","en":"Sign in","pt":"Entrar","fr":"Se connecter","de":"Anmelden","it":"Accedi","zh":"登录","ja":"ログイン","ko":"로그인","ru":"Войти","ar":"تسجيل الدخول","id":"Masuk","tr":"Giriş yap"},
   connected: {"es":"Conectado","en":"Connected","pt":"Conectado","fr":"Connecté","de":"Verbunden","it":"Connesso","zh":"已连接","ja":"接続済み","ko":"연결됨","ru":"Подключено","ar":"متصل","id":"Terhubung","tr":"Bağlandı"},
+  signingIn: {"es":"Iniciando sesión…","en":"Signing you in…","pt":"Entrando…","fr":"Connexion…","de":"Anmeldung läuft…","it":"Accesso in corso…","zh":"正在登录…","ja":"サインイン中…","ko":"로그인 중…","ru":"Вход…","ar":"جارٍ تسجيل الدخول…","id":"Sedang masuk…","tr":"Giriş yapılıyor…"},
   signOut: {"es":"Cerrar sesión","en":"Sign out","pt":"Sair","fr":"Se déconnecter","de":"Abmelden","it":"Esci","zh":"退出登录","ja":"ログアウト","ko":"로그아웃","ru":"Выйти","ar":"تسجيل الخروج","id":"Keluar","tr":"Çıkış yap"},
   signOutConfirm: {"es":"¿Cerrar sesión?","en":"Sign out?","pt":"Sair?","fr":"Se déconnecter ?","de":"Abmelden?","it":"Uscire?","zh":"退出登录？","ja":"ログアウトしますか？","ko":"로그아웃할까요?","ru":"Выйти?","ar":"تسجيل الخروج؟","id":"Keluar?","tr":"Çıkış yapılsın mı?"},
   signOutBody: {"es":"Tendrás que iniciar sesión de nuevo.","en":"You'll need to sign in again.","pt":"Você precisará entrar de novo.","fr":"Tu devras te reconnecter.","de":"Du musst dich erneut anmelden.","it":"Dovrai accedere di nuovo.","zh":"你需要重新登录。","ja":"再度ログインが必要です。","ko":"다시 로그인해야 해요.","ru":"Нужно будет войти снова.","ar":"ستحتاج لتسجيل الدخول مجدداً.","id":"Kamu perlu masuk lagi.","tr":"Tekrar giriş yapman gerekir."},
@@ -574,6 +575,7 @@ export class CoachWidgetComponent {
   readonly loginOpen = signal(false);
   readonly loginGate = signal(false); // true → opened because the free-taste limit was hit
   readonly loginStep = signal<'choose' | 'phone' | 'code'>('choose');
+  readonly signingIn = signal(false); // elegant "signing in…" state after picking a Google/Apple account
   readonly phoneBusy = signal(false);
   readonly phoneErr = signal('');
   phoneInput = '';
@@ -592,8 +594,8 @@ export class CoachWidgetComponent {
     this.closeLogin();
     if (this.pendingAsk) { const p = this.pendingAsk; this.pendingAsk = null; this.ask(p); }
   }
-  async signInGoogle() { try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } }
-  async signInApple() { try { await this.firebase.signInWithApple(); this.afterSignIn(); } catch { /* cancelled */ } }
+  async signInGoogle() { this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch { /* cancelled */ } finally { this.signingIn.set(false); } }
+  async signInApple() { this.signingIn.set(true); try { await this.firebase.signInWithApple(); this.afterSignIn(); } catch { /* cancelled */ } finally { this.signingIn.set(false); } }
   async signOut() { this.confirmSignOut.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   // Phone OTP (2 steps): enter number → SMS code → verify.
   async sendCode() {

@@ -26,6 +26,13 @@
         @if (loginOpen()) {
           <div class="cw-login-ov" (click)="closeLogin()"></div>
           <div class="cw-login" role="dialog" aria-modal="true">
+            @if (signingIn()) {
+              <!-- Elegant "signing you in…" state after the user picks their Google/Apple account. -->
+              <div class="cw-signin-ov">
+                <span class="cw-spin cw-spin-lg"></span>
+                <p class="cw-signin-t">{{ li('signingIn') }}</p>
+              </div>
+            }
             <button class="cw-login-x" (click)="closeLogin()" aria-label="Cerrar">✕</button>
             <h3 class="cw-login-t">{{ li('title') }}</h3>
             @if (loginGate()) {

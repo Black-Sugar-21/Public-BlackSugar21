@@ -18,3 +18,9 @@ export const firebaseConfig = {
 // Generada desde: https://www.google.com/recaptcha/admin
 // Configurada para: black-sugar21.web.app, black-sugar21.firebaseapp.com, blacksugar21.com, localhost
 export const recaptchaSiteKey = "6LclACstAAAAAARe8FttbxT6VojKjGboqaskm_LK";
+
+// App Check DISABLED on web: the reCAPTCHA v3 key isn't registered/matching in Firebase App Check,
+// so exchangeRecaptchaV3Token returns 400 (noisy console errors). App Check is NOT enforced on any
+// API, so the app works without it. Re-enable (set true) ONLY after registering the key pair in
+// Firebase Console → App Check for this web app (site key + secret) + reCAPTCHA admin domains.
+export const appCheckEnabled = false;
