@@ -283,6 +283,11 @@ export class FirebaseService {
       createdAt: Timestamp.fromDate(profile.createdAt),
       lastLogin: Timestamp.fromDate(profile.lastLogin),
       accountStatus: 'active',
+      // CRITICAL cross-platform: Android discovery queries whereEqualTo('paused', false), which
+      // EXCLUDES docs missing the field → a web profile without `paused` is invisible on Android.
+      // Seed it (+ visibilityReduced) at create, exactly like iOS/Android signup.
+      paused: false,
+      visibilityReduced: false,
       dailyLikesRemaining: limits.dailyLikesLimit,
       dailyLikesLimit: limits.dailyLikesLimit,
       superLikesRemaining: limits.superLikesLimit,

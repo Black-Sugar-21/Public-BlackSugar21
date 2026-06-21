@@ -423,8 +423,10 @@ export class AppShellComponent implements OnDestroy {
   /** Localize an interest ID (interest_*, prefixed or not) → label; free-text legacy values pass through. */
   interestLabel(id: string): string {
     const it = INTEREST_CATALOG.find((x) => x.id === id || x.id === 'interest_' + id);
-    if (!it) return id;
-    return this.lang() === 'es' ? it.es : it.en;
+    if (it) return this.lang() === 'es' ? it.es : it.en;
+    // Unknown id (Android-only extras / future server catalog) → prettify so we never show a raw key.
+    const s = String(id || '').replace(/^interest_/, '').replace(/_/g, ' ').trim();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : id;
   }
   async epUpdateLocation() {
     if (this.epLocStatus() === 'loading') return;
