@@ -12,26 +12,32 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   styles: [`:host{display:inline-flex;align-items:center;justify-content:center;line-height:0;width:100%;height:100%}svg{width:100%;height:100%;display:block}`],
   template: `@switch (name()) {
     @case ('coach') {
+      <!-- SF "sparkles": big 4-point sparkle + 2 small (filled, like iOS) -->
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2.6l1.7 4.6 4.6 1.7-4.6 1.7L12 15.2l-1.7-4.6L5.7 8.9l4.6-1.7L12 2.6z"/>
-        <path d="M18.5 13.2l.85 2.25 2.25.85-2.25.85-.85 2.25-.85-2.25L15.4 16.3l2.25-.85.85-2.25z"/>
-        <path d="M5.7 14.4l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6L3.5 17.2l1.6-.6.6-1.6z"/>
+        <path d="M11 3.4c.5 3 1.5 4 4.5 4.5-3 .5-4 1.5-4.5 4.5-.5-3-1.5-4-4.5-4.5 3-.5 4-1.5 4.5-4.5z"/>
+        <path d="M18 12.4c.28 1.6.83 2.15 2.4 2.4-1.57.25-2.12.8-2.4 2.4-.28-1.6-.83-2.15-2.4-2.4 1.57-.25 2.12-.8 2.4-2.4z"/>
+        <path d="M7 14.2c.22 1.25.62 1.65 1.9 1.9-1.28.25-1.68.65-1.9 1.9-.22-1.25-.62-1.65-1.9-1.9 1.28-.25 1.68-.65 1.9-1.9z"/>
       </svg>
     }
     @case ('discovery') {
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2.4L21.6 12 12 21.6 2.4 12 12 2.4z"/>
+      <!-- Brilliant-cut diamond/gem (outline + facets), homologated to iOS "diamond-icon" -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 4h12l3 4.4L12 20.5 3 8.4 6 4z"/>
+        <path d="M3 8.4h18"/>
+        <path d="M9.2 4 7.6 8.4 12 20.5 16.4 8.4 14.8 4"/>
       </svg>
     }
     @case ('chats') {
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M5 4h14a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 19 17H9.8L5 20.8a.6.6 0 0 1-1-.47V6.5A2.5 2.5 0 0 1 5 4z"/>
+      <!-- Rounded/oval speech bubble with tail (outline), like iOS "chat" -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 11.4C4 7.85 7.6 5 12 5s8 2.85 8 6.4-3.6 6.4-8 6.4c-.97 0-1.9-.13-2.77-.38-1 .7-2.3 1.2-3.63 1.4.6-.82 1.02-1.86 1.02-2.77C5.05 15.27 4 13.45 4 11.4z"/>
       </svg>
     }
     @case ('profile') {
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2z"/>
-        <path d="M12 14c-4.5 0-8.1 2.5-8.1 5.6V21h16.2v-1.4c0-3.1-3.6-5.6-8.1-5.6z"/>
+      <!-- Person (outline): head + shoulders, like iOS "account" -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.7"/>
+        <path d="M5.4 19.6c0-3.25 2.95-5.7 6.6-5.7s6.6 2.45 6.6 5.7"/>
       </svg>
     }
   }`,
