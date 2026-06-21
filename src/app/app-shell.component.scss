@@ -27,6 +27,9 @@
     .shell-cta-2 { color:var(--text-muted); font-size:0.85rem; text-decoration:none; margin-top:4px; }
     .shell-cta-2:hover { color:var(--gold); }
     /* Profile view extras */
+    .shell-pf-av.photo { width:120px; height:120px; }
+    .pf-gallery { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+    .pf-gallery img { width:58px; height:58px; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,.12); }
     .pf-age { font-weight:400; color:var(--text-secondary); }
     .pf-type { font-size:26px; margin-top:-4px; }
     .pf-bio { color:var(--text-secondary); font-size:15px; line-height:1.55; max-width:48ch; }

@@ -128,6 +128,14 @@ export class AppShellComponent implements OnDestroy {
     this.section.set(sec);
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
+    if (sec === 'profile' && this.profileComplete() && !this.profilePhotos().length) this.loadProfilePhotos();
+  }
+  readonly profilePhotos = signal<string[]>([]);
+  private async loadProfilePhotos() {
+    const p: any = this.firebase.userProfile();
+    const names = Array.isArray(p?.pictures) ? p.pictures : (Array.isArray(p?.pictureNames) ? p.pictureNames : []);
+    if (!names.length) return;
+    try { this.profilePhotos.set(await this.firebase.getOwnPhotoUrls(names)); } catch { /* keep avatar fallback */ }
   }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();

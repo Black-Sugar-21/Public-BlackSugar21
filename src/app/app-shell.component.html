@@ -127,8 +127,14 @@
             } @else if (profileComplete()) {
               <!-- Existing complete profile → view -->
               <div class="shell-profile">
-                @if (firebase.currentUser()?.photoURL) { <img class="shell-pf-av" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
+                @if (profilePhotos().length) { <img class="shell-pf-av photo" [src]="profilePhotos()[0]" alt="" /> }
+                @else if (firebase.currentUser()?.photoURL) { <img class="shell-pf-av" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
                 @else { <span class="shell-pf-av initial">{{ initial(firebase.currentUser()) }}</span> }
+                @if (profilePhotos().length > 1) {
+                  <div class="pf-gallery">
+                    @for (ph of profilePhotos().slice(1, 6); track ph) { <img [src]="ph" alt="" /> }
+                  </div>
+                }
                 <h2>{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
                 @if (profileTypeLabel()) { <span class="pf-type">{{ profileTypeLabel() }}</span> }
                 @if ($any(firebase.userProfile())?.bio) { <p class="pf-bio">{{ $any(firebase.userProfile()).bio }}</p> }
