@@ -392,8 +392,10 @@ export class AppShellComponent implements OnDestroy {
     if (geo) { this.ep.lat = geo.lat; this.ep.lng = geo.lng; this.epLocStatus.set('done'); }
     else this.epLocStatus.set('error');
   }
-  readonly epPhotos = signal<Array<{ name: string; url: string }>>([]);
+  readonly epPhotos = signal<Array<{ name: string; url: string; loaded?: boolean }>>([]);
   readonly grid9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  /** Mark a grid photo as painted → removes its skeleton (skeleton stays until the image loads). */
+  epImgLoaded(i: number) { this.epPhotos.update((a) => a.map((p, idx) => (idx === i ? { ...p, loaded: true } : p))); }
   // Bio AI suggestions (getBioCoaching, iOS parity) + static fallback
   readonly epBioLoading = signal(false);
   readonly epBioSuggestions = signal<string[]>([]);
@@ -433,7 +435,7 @@ export class AppShellComponent implements OnDestroy {
     const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
     // Show the editor immediately with SKELETON photo cells (url:'') while the backend signs the URLs
     // — same UX intent as iOS .showLoading(isLoading) on EditProfileView.
-    this.epPhotos.set(names.map((n) => ({ name: n, url: '' })));
+    this.epPhotos.set(names.map((n) => ({ name: n, url: '', loaded: false })));
     this.epBioSuggestions.set([]);
     this.epPhotoCoach.set(null);
     this.epError.set('');
@@ -442,7 +444,7 @@ export class AppShellComponent implements OnDestroy {
     try {
       if (!this.profilePhotos().length) await this.loadProfilePhotos();
       const urls = this.profilePhotos();
-      this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '' })));
+      this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '', loaded: false })));
     } finally { this.epLoading.set(false); }
   }
   closeEditProfile() { this.epEditing.set(false); this.epError.set(''); }
@@ -451,7 +453,7 @@ export class AppShellComponent implements OnDestroy {
     const files = Array.from(input.files || []);
     input.value = '';
     for (const f of files.slice(0, 9 - this.epPhotos().length)) {
-      try { const name = await this.firebase.uploadProfilePhoto(f); this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]); }
+      try { const name = await this.firebase.uploadProfilePhoto(f); this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f), loaded: false }]); }
       catch { this.epError.set(this.s('obPhotoErr')); }
     }
   }

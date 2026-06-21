@@ -144,8 +144,11 @@
                   <div class="ep-grid">
                     @for (i of grid9; track i) {
                       @if (i < epPhotos().length) {
-                        <div class="ep-cell filled" [class.skel]="!epPhotos()[i].url" [style.background-image]="epPhotos()[i].url ? 'url(' + epPhotos()[i].url + ')' : null">
-                          @if (epPhotos()[i].url) { <button class="ep-cell-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button> }
+                        <div class="ep-cell filled" [class.skel]="!epPhotos()[i].loaded">
+                          @if (epPhotos()[i].url) {
+                            <img class="ep-cell-img" [src]="epPhotos()[i].url" (load)="epImgLoaded(i)" (error)="epImgLoaded(i)" alt="" />
+                            <button class="ep-cell-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button>
+                          }
                         </div>
                       } @else {
                         <label class="ep-cell empty">
