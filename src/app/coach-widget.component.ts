@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
-interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; }
+interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
@@ -102,7 +102,7 @@ const I18N: Record<string, any> = {
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
     footer: 'Generado por IA · versión beta',
-    useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa',
+    useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa', webSite: 'Sitio web',
     simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
     simAnalyzing: 'Analizando enfoques…', simThinking: '5 perspectivas pensando…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona', simBest: 'Recomendada',
     // two simulations + simple explanation of the difference
@@ -134,7 +134,7 @@ const I18N: Record<string, any> = {
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
     footer: 'AI-generated · beta version',
-    useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map',
+    useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map', webSite: 'Website',
     simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
     simAnalyzing: 'Analyzing approaches…', simThinking: '5 perspectives thinking…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works', simBest: 'Recommended',
     simTitle: '🔮 Simulate a situation', simDesc: 'What to say RIGHT NOW in a specific moment · 5 perspectives give you ready phrases.',
@@ -165,7 +165,7 @@ const I18N: Record<string, any> = {
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
     footer: 'Gerado por IA · versão beta',
-    useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver no mapa',
+    useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver no mapa', webSite: 'Site',
     simChip: '🔮 Simular uma situação', simHint: 'Descreva sua situação e minhas 5 perspectivas a analisam',
     simAnalyzing: 'Analisando abordagens…', simThinking: '5 perspectivas pensando…', simBy: 'Analisado por', simStage: 'Etapa', simWhy: 'Por que funciona', simBest: 'Recomendada',
     simTitle: '🔮 Simular uma situação', simDesc: 'O que dizer AGORA num momento específico · 5 perspectivas te dão frases prontas.',
@@ -485,6 +485,18 @@ export class CoachWidgetComponent {
       } catch { /* noop */ }
     }
   }
+  /** Card tap → open Google Maps (logs the click). IG/website tags handle their own nav + stopPropagation. */
+  openPlace(p: PlaceCard, rank: number) {
+    this.placeClick(p, rank);
+    if (this.isBrowser && p.mapsUrl) window.open(p.mapsUrl, '_blank', 'noopener');
+  }
+  /** Normalize an Instagram value (handle or URL) → full profile URL. */
+  igUrl(p: PlaceCard): string | null {
+    const raw = (p.instagram || p.instagramHandle || '').trim();
+    if (!raw) return null;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return 'https://instagram.com/' + raw.replace(/^@/, '');
+  }
   inputPlaceholder() {
     if (this.simMode() === 'multiverse') return this.t().mvHint;
     if (this.simMode() === 'situation') return this.t().simHint;
@@ -686,6 +698,7 @@ export class CoachWidgetComponent {
       mapsUrl: a.googleMapsUrl || '', why: a.psychWhy || null,
       perspectives: Array.isArray(a.psychPerspectives) ? a.psychPerspectives : [],
       score: typeof a.psychFit === 'number' ? a.psychFit : null, tip: a.psychTip || null,
+      website: a.website || null, instagram: a.instagram || null, instagramHandle: a.instagramHandle || null,
     })).filter((p: any) => p.name);
     const suggestions = Array.isArray(r?.suggestions) ? r.suggestions.filter((s: any) => typeof s === 'string' && s.trim()) : [];
     return {
