@@ -88,6 +88,25 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epDistance: {"es":"Distancia máxima","en":"Maximum distance","pt":"Distância máxima","fr":"Distance maximale","de":"Maximale Entfernung","it":"Distanza massima","zh":"最大距离","ja":"最大距離","ko":"최대 거리","ru":"Макс. расстояние","ar":"أقصى مسافة","id":"Jarak maksimum","tr":"En fazla mesafe"},
   epSave: {"es":"Guardar","en":"Save","pt":"Salvar","fr":"Enregistrer","de":"Speichern","it":"Salva","zh":"保存","ja":"保存","ko":"저장","ru":"Сохранить","ar":"حفظ","id":"Simpan","tr":"Kaydet"},
   epCancel: {"es":"Cancelar","en":"Cancel","pt":"Cancelar","fr":"Annuler","de":"Abbrechen","it":"Annulla","zh":"取消","ja":"キャンセル","ko":"취소","ru":"Отмена","ar":"إلغاء","id":"Batal","tr":"İptal"},
+  epDone: {"es":"Listo","en":"Done","pt":"Concluído","fr":"Terminé","de":"Fertig","it":"Fatto","zh":"完成","ja":"完了","ko":"완료","ru":"Готово","ar":"تم","id":"Selesai","tr":"Bitti"},
+  epAiSuggest: {"es":"Sugerencias IA","en":"AI suggestions","pt":"Sugestões IA","fr":"Suggestions IA","de":"KI-Vorschläge","it":"Suggerimenti IA","zh":"AI 建议","ja":"AI 提案","ko":"AI 제안","ru":"ИИ-подсказки","ar":"اقتراحات الذكاء","id":"Saran AI","tr":"AI önerileri"},
+  epTapSuggestion: {"es":"Toca una para usarla","en":"Tap one to use it","pt":"Toque para usar","fr":"Touche pour l'utiliser","de":"Zum Übernehmen tippen","it":"Tocca per usarla","zh":"点击使用","ja":"タップして使用","ko":"탭하여 사용","ru":"Нажмите, чтобы применить","ar":"اضغط للاستخدام","id":"Ketuk untuk pakai","tr":"Kullanmak için dokun"},
+  epPhotoCoach: {"es":"Coach IA de Fotos","en":"AI Photo Coach","pt":"Coach IA de Fotos","fr":"Coach Photo IA","de":"KI-Foto-Coach","it":"Coach Foto IA","zh":"AI 照片教练","ja":"AI フォトコーチ","ko":"AI 사진 코치","ru":"ИИ фото-коуч","ar":"مدرب الصور","id":"Pelatih Foto AI","tr":"AI Foto Koçu"},
+  epPhotoScore: {"es":"Puntaje del perfil","en":"Profile score","pt":"Pontuação do perfil","fr":"Score du profil","de":"Profil-Score","it":"Punteggio profilo","zh":"资料评分","ja":"プロフィールスコア","ko":"프로필 점수","ru":"Оценка профиля","ar":"تقييم الملف","id":"Skor profil","tr":"Profil puanı"},
+};
+
+// Static bio examples — fallback when getBioCoaching is unavailable (parity with iOS staticBioFallback).
+const BIO_FALLBACK: Record<string, string[]> = {
+  es: [
+    'Amante de los buenos cafés, los viajes espontáneos y las conversaciones que valen la pena. Busco algo auténtico.',
+    'Curioso por naturaleza: gastronomía, música en vivo y planes al aire libre. Si te ríes fácil, encajamos.',
+    'Equilibrio entre ambición y calma. Me encanta descubrir lugares nuevos y compartir experiencias memorables.',
+  ],
+  en: [
+    'Lover of good coffee, spontaneous trips and conversations that matter. Looking for something genuine.',
+    'Curious by nature: food, live music and outdoor plans. If you laugh easily, we\'ll get along.',
+    'A balance of ambition and calm. I love discovering new places and sharing memorable experiences.',
+  ],
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -309,6 +328,30 @@ export class AppShellComponent implements OnDestroy {
   ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, interestInput: '' };
   readonly epInterests = signal<string[]>([]);
   readonly epPhotos = signal<Array<{ name: string; url: string }>>([]);
+  readonly grid9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  // Bio AI suggestions (getBioCoaching, iOS parity) + static fallback
+  readonly epBioLoading = signal(false);
+  readonly epBioSuggestions = signal<string[]>([]);
+  // Photo Coach (getPhotoCoachAnalysis, iOS parity)
+  readonly epPhotoCoachLoading = signal(false);
+  readonly epPhotoCoach = signal<{ overallScore: number; recommendations: string[] } | null>(null);
+  async epBioSuggest() {
+    if (this.epBioLoading()) return;
+    this.epBioLoading.set(true);
+    try {
+      let sug = await this.firebase.getBioCoaching(this.ep.bio, this.lang());
+      if (!sug.length) { const m = BIO_FALLBACK[this.lang()] || BIO_FALLBACK['en']; sug = m; }
+      this.epBioSuggestions.set(sug);
+    } finally { this.epBioLoading.set(false); }
+  }
+  applyBioSuggestion(t: string) { this.ep.bio = (t || '').slice(0, 500); this.epBioSuggestions.set([]); }
+  async runPhotoCoach() {
+    if (this.epPhotoCoachLoading()) return;
+    this.epPhotoCoach.set(null);
+    this.epPhotoCoachLoading.set(true);
+    try { this.epPhotoCoach.set(await this.firebase.getPhotoCoachAnalysis(this.lang())); }
+    finally { this.epPhotoCoachLoading.set(false); }
+  }
   async openEditProfile() {
     const p: any = this.firebase.userProfile() || {};
     const t = p.userType;
@@ -326,6 +369,8 @@ export class AppShellComponent implements OnDestroy {
     const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
     const urls = this.profilePhotos();
     this.epPhotos.set(names.map((n, i) => ({ name: n, url: urls[i] || '' })));
+    this.epBioSuggestions.set([]);
+    this.epPhotoCoach.set(null);
     this.epError.set('');
     this.epEditing.set(true);
   }
@@ -334,7 +379,7 @@ export class AppShellComponent implements OnDestroy {
     const input = ev.target as HTMLInputElement;
     const files = Array.from(input.files || []);
     input.value = '';
-    for (const f of files.slice(0, 6 - this.epPhotos().length)) {
+    for (const f of files.slice(0, 9 - this.epPhotos().length)) {
       try { const name = await this.firebase.uploadProfilePhoto(f); this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]); }
       catch { this.epError.set(this.s('obPhotoErr')); }
     }

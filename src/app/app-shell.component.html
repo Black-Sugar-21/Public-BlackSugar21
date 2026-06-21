@@ -134,33 +134,53 @@
             } @else if (profileComplete() && epEditing()) {
               <!-- Edit profile (in-web) — réplica del EditProfileView de iOS -->
               <div class="ep-form">
-                <div class="ep-head">
-                  <button class="chat-back" (click)="closeEditProfile()" aria-label="←">‹</button>
-                  <b>{{ s('epEdit') }}</b>
+                <div class="ep-topbar">
+                  <button class="ep-back-circle" (click)="closeEditProfile()" aria-label="‹">‹</button>
+                  <b class="ep-title">{{ ep.name || firebase.userProfile()?.displayName || s('epEdit') }}</b>
+                  <button class="ep-done" [class.changed]="true" [disabled]="epSaving()" (click)="epSave()">{{ epSaving() ? '…' : s('epDone') }}</button>
                 </div>
                 <div class="ep-body">
-                  <!-- Fotos -->
-                  <div class="ep-sec">
-                    <label class="ep-label">{{ s('obPhotos') }}</label>
-                    <div class="ob-photos">
-                      @for (ph of epPhotos(); track ph.name; let i = $index) {
-                        <div class="ob-photo" [style.background-image]="ph.url ? 'url(' + ph.url + ')' : null">
-                          <button class="ob-photo-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button>
+                  <!-- Grid de fotos 3×3 (iOS PictureGridView) -->
+                  <div class="ep-grid">
+                    @for (i of grid9; track i) {
+                      @if (i < epPhotos().length) {
+                        <div class="ep-cell filled" [style.background-image]="epPhotos()[i].url ? 'url(' + epPhotos()[i].url + ')' : null">
+                          <button class="ep-cell-x" (click)="epRemovePhoto(i)" aria-label="✕">✕</button>
                         </div>
-                      }
-                      @if (epPhotos().length < 6) {
-                        <label class="ob-photo ob-photo-add">
+                      } @else {
+                        <label class="ep-cell empty">
                           <input type="file" accept="image/*" multiple hidden (change)="epAddPhotos($event)" />
-                          <span>{{ s('obAddPhoto') }}</span>
+                          <span class="ep-cell-plus">＋</span>
                         </label>
                       }
-                    </div>
+                    }
                   </div>
-                  <!-- Bio -->
+                  <!-- Coach IA de Fotos -->
+                  <button class="ep-photocoach" [disabled]="epPhotoCoachLoading()" (click)="runPhotoCoach()">
+                    <span class="ep-pc-ic">◉</span> {{ epPhotoCoachLoading() ? '…' : s('epPhotoCoach') }}
+                  </button>
+                  @if (epPhotoCoach(); as pc) {
+                    <div class="ep-pc-result">
+                      <div class="ep-pc-score"><b>{{ pc.overallScore }}</b><span>/ 100 · {{ s('epPhotoScore') }}</span></div>
+                      @for (rec of pc.recommendations; track rec) { <div class="ep-pc-tip">• {{ rec }}</div> }
+                    </div>
+                  }
+                  <!-- Bio + Sugerencias IA -->
                   <div class="ep-sec">
-                    <label class="ep-label">{{ s('epAbout') }}</label>
+                    <div class="ep-label-row">
+                      <label class="ep-label">{{ s('epAbout') }}</label>
+                      <button class="ep-ai-pill" [disabled]="epBioLoading()" (click)="epBioSuggest()">✦ {{ epBioLoading() ? '…' : s('epAiSuggest') }}</button>
+                    </div>
                     <textarea class="ep-textarea" maxlength="500" [(ngModel)]="ep.bio" [placeholder]="s('obBioPh')"></textarea>
                     <div class="ep-count">{{ ep.bio.length }}/500</div>
+                    @if (epBioSuggestions().length) {
+                      <div class="ep-bio-sugs">
+                        <div class="ep-bio-sugs-hint">{{ s('epTapSuggestion') }}</div>
+                        @for (sug of epBioSuggestions(); track sug) {
+                          <button class="ep-bio-sug" (click)="applyBioSuggestion(sug)">{{ sug }}</button>
+                        }
+                      </div>
+                    }
                   </div>
                   <!-- Género -->
                   <div class="ep-sec">
@@ -217,10 +237,6 @@
                     <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ep.maxDistance" (ngModelChange)="ep.maxDistance = +$event" />
                   </div>
                   @if (epError()) { <div class="ob-error">{{ epError() }}</div> }
-                </div>
-                <div class="ep-actions">
-                  <button class="shell-signout" (click)="closeEditProfile()">{{ s('epCancel') }}</button>
-                  <button class="shell-cta" [disabled]="epSaving()" (click)="epSave()">{{ epSaving() ? '…' : s('epSave') }}</button>
                 </div>
               </div>
             } @else if (profileComplete()) {

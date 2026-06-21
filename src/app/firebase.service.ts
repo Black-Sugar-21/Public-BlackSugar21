@@ -483,6 +483,33 @@ export class FirebaseService {
     await this.refreshProfile();
   }
 
+  /** Bio coaching — SAME getBioCoaching callable iOS uses (rewrites the bio into ready options).
+   *  Returns [] on error so the caller can fall back to static examples (parity with iOS). */
+  async getBioCoaching(bio: string, lang: string): Promise<string[]> {
+    try {
+      const fn = httpsCallable(this.functions, 'getBioCoaching');
+      const res: any = await fn({ userLanguage: lang || 'en', bio: (bio || '').slice(0, 1200) });
+      const rewrites = res?.data?.rewrites;
+      if (Array.isArray(rewrites)) return rewrites.map((r: any) => r?.text).filter((t: any) => typeof t === 'string' && t.trim());
+    } catch { /* caller falls back to static examples */ }
+    return [];
+  }
+
+  /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
+   *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
+  async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {
+    try {
+      const fn = httpsCallable(this.functions, 'getPhotoCoachAnalysis');
+      const res: any = await fn({ userLanguage: lang || 'en' });
+      const d = res?.data || {};
+      if (d.success === false) return null;
+      return {
+        overallScore: Number(d.overallScore) || 0,
+        recommendations: Array.isArray(d.recommendations) ? d.recommendations.filter((x: any) => typeof x === 'string') : [],
+      };
+    } catch { return null; }
+  }
+
   // Discovery feed (web) — SAME getDiscoveryFeed callable the apps use (V2 ranking, signed photo URLs).
   async getDiscoveryFeed(limit = 20): Promise<any[]> {
     const fn = httpsCallable(this.functions, 'getDiscoveryFeed');
