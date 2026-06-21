@@ -104,35 +104,49 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epLocError: {"es":"No se pudo obtener la ubicación","en":"Couldn't get your location","pt":"Não foi possível obter a localização","fr":"Impossible d'obtenir la position","de":"Standort konnte nicht ermittelt werden","it":"Impossibile ottenere la posizione","zh":"无法获取位置","ja":"位置を取得できませんでした","ko":"위치를 가져올 수 없습니다","ru":"Не удалось определить местоположение","ar":"تعذّر تحديد الموقع","id":"Tidak bisa mendapatkan lokasi","tr":"Konum alınamadı"},
 };
 
-// Curated interest catalog — IDENTICAL ids to iOS UserInterest.swift (interest_*), so interests are
-// cross-platform consistent + localized everywhere. t: 'prime' | 'elite' | 'both' (applicableUserTypes).
-const INTEREST_CATALOG: Array<{ id: string; t: 'prime' | 'elite' | 'both'; es: string; en: string }> = [
-  { id: 'interest_travel_adventures', t: 'prime', es: 'Viajes y Aventuras ✈️', en: 'Travel & Adventures ✈️' },
-  { id: 'interest_shopping_fashion', t: 'prime', es: 'Compras y Moda 🛍️', en: 'Shopping & Fashion 🛍️' },
-  { id: 'interest_fine_dining', t: 'prime', es: 'Alta Gastronomía 🍷', en: 'Fine Dining 🍷' },
-  { id: 'interest_art_culture', t: 'prime', es: 'Arte y Cultura 🎭', en: 'Art & Culture 🎭' },
-  { id: 'interest_fitness_wellness', t: 'prime', es: 'Fitness y Bienestar 💪', en: 'Fitness & Wellness 💪' },
-  { id: 'interest_education_growth', t: 'prime', es: 'Educación y Crecimiento 📖', en: 'Education & Growth 📖' },
-  { id: 'interest_exclusive_events', t: 'prime', es: 'Eventos Exclusivos ✨', en: 'Exclusive Events ✨' },
-  { id: 'interest_spa_relaxation', t: 'prime', es: 'Spa y Relajación 🧖‍♀️', en: 'Spa & Relaxation 🧖‍♀️' },
-  { id: 'interest_music_concerts', t: 'prime', es: 'Música y Conciertos 🎵', en: 'Music & Concerts 🎵' },
-  { id: 'interest_beach_vacation', t: 'prime', es: 'Vacaciones en la Playa 🏖️', en: 'Beach Vacation 🏖️' },
-  { id: 'interest_mentorship_business', t: 'elite', es: 'Mentoría y Negocios 💼', en: 'Mentorship & Business 💼' },
-  { id: 'interest_luxury_experiences', t: 'elite', es: 'Experiencias Únicas 💎', en: 'Unique Experiences 💎' },
-  { id: 'interest_international_travel', t: 'elite', es: 'Viajes Internacionales 🌍', en: 'International Travel 🌍' },
-  { id: 'interest_gourmet_cuisine', t: 'elite', es: 'Cocina Gourmet 🍽️', en: 'Gourmet Cuisine 🍽️' },
-  { id: 'interest_art_collecting', t: 'elite', es: 'Arte y Coleccionismo 🎨', en: 'Art & Collecting 🎨' },
-  { id: 'interest_golf_premium_sports', t: 'elite', es: 'Golf y Deportes Premium ⛳', en: 'Golf & Premium Sports ⛳' },
-  { id: 'interest_vip_events', t: 'elite', es: 'Eventos VIP 🎉', en: 'VIP Events 🎉' },
-  { id: 'interest_philanthropy', t: 'elite', es: 'Filantropía ❤️', en: 'Philanthropy ❤️' },
-  { id: 'interest_wine_spirits', t: 'elite', es: 'Vinos y Licores 🥃', en: 'Wine & Spirits 🥃' },
-  { id: 'interest_sailing_yachting', t: 'elite', es: 'Navegación y Yates ⛵', en: 'Sailing & Yachting ⛵' },
-  { id: 'interest_movies_theater', t: 'both', es: 'Cine y Teatro 🎬', en: 'Movies & Theater 🎬' },
-  { id: 'interest_photography', t: 'both', es: 'Fotografía 📸', en: 'Photography 📸' },
-  { id: 'interest_books_reading', t: 'both', es: 'Libros y Lectura 📚', en: 'Books & Reading 📚' },
-  { id: 'interest_cooking', t: 'both', es: 'Cocina 👨‍🍳', en: 'Cooking 👨‍🍳' },
-  { id: 'interest_yoga_meditation', t: 'both', es: 'Yoga y Meditación 🧘', en: 'Yoga & Meditation 🧘' },
-  { id: 'interest_nature_outdoors', t: 'both', es: 'Naturaleza y Aire Libre 🌿', en: 'Nature & Outdoors 🌿' },
+// Curated interest catalog — IDENTICAL ids + categories to iOS UserInterest.swift (interest_*), so
+// interests are cross-platform consistent + localized. t: applicableUserTypes; cat: InterestCategory.
+const INTEREST_CATALOG: Array<{ id: string; t: 'prime' | 'elite' | 'both'; cat: string; es: string; en: string }> = [
+  { id: 'interest_travel_adventures', t: 'prime', cat: 'lifestyle', es: 'Viajes y Aventuras ✈️', en: 'Travel & Adventures ✈️' },
+  { id: 'interest_shopping_fashion', t: 'prime', cat: 'lifestyle', es: 'Compras y Moda 🛍️', en: 'Shopping & Fashion 🛍️' },
+  { id: 'interest_luxury_experiences', t: 'elite', cat: 'lifestyle', es: 'Experiencias Únicas 💎', en: 'Unique Experiences 💎' },
+  { id: 'interest_international_travel', t: 'elite', cat: 'lifestyle', es: 'Viajes Internacionales 🌍', en: 'International Travel 🌍' },
+  { id: 'interest_beach_vacation', t: 'prime', cat: 'lifestyle', es: 'Vacaciones en la Playa 🏖️', en: 'Beach Vacation 🏖️' },
+  { id: 'interest_fine_dining', t: 'prime', cat: 'gastronomy', es: 'Alta Gastronomía 🍷', en: 'Fine Dining 🍷' },
+  { id: 'interest_gourmet_cuisine', t: 'elite', cat: 'gastronomy', es: 'Cocina Gourmet 🍽️', en: 'Gourmet Cuisine 🍽️' },
+  { id: 'interest_wine_spirits', t: 'elite', cat: 'gastronomy', es: 'Vinos y Licores 🥃', en: 'Wine & Spirits 🥃' },
+  { id: 'interest_cooking', t: 'both', cat: 'gastronomy', es: 'Cocina 👨‍🍳', en: 'Cooking 👨‍🍳' },
+  { id: 'interest_art_culture', t: 'prime', cat: 'culture', es: 'Arte y Cultura 🎭', en: 'Art & Culture 🎭' },
+  { id: 'interest_art_collecting', t: 'elite', cat: 'culture', es: 'Arte y Coleccionismo 🎨', en: 'Art & Collecting 🎨' },
+  { id: 'interest_books_reading', t: 'both', cat: 'culture', es: 'Libros y Lectura 📚', en: 'Books & Reading 📚' },
+  { id: 'interest_fitness_wellness', t: 'prime', cat: 'wellness', es: 'Fitness y Bienestar 💪', en: 'Fitness & Wellness 💪' },
+  { id: 'interest_spa_relaxation', t: 'prime', cat: 'wellness', es: 'Spa y Relajación 🧖‍♀️', en: 'Spa & Relaxation 🧖‍♀️' },
+  { id: 'interest_yoga_meditation', t: 'both', cat: 'wellness', es: 'Yoga y Meditación 🧘', en: 'Yoga & Meditation 🧘' },
+  { id: 'interest_education_growth', t: 'prime', cat: 'personal_growth', es: 'Educación y Crecimiento 📖', en: 'Education & Growth 📖' },
+  { id: 'interest_exclusive_events', t: 'prime', cat: 'social', es: 'Eventos Exclusivos ✨', en: 'Exclusive Events ✨' },
+  { id: 'interest_vip_events', t: 'elite', cat: 'social', es: 'Eventos VIP 🎉', en: 'VIP Events 🎉' },
+  { id: 'interest_philanthropy', t: 'elite', cat: 'social', es: 'Filantropía ❤️', en: 'Philanthropy ❤️' },
+  { id: 'interest_music_concerts', t: 'prime', cat: 'entertainment', es: 'Música y Conciertos 🎵', en: 'Music & Concerts 🎵' },
+  { id: 'interest_movies_theater', t: 'both', cat: 'entertainment', es: 'Cine y Teatro 🎬', en: 'Movies & Theater 🎬' },
+  { id: 'interest_mentorship_business', t: 'elite', cat: 'professional', es: 'Mentoría y Negocios 💼', en: 'Mentorship & Business 💼' },
+  { id: 'interest_golf_premium_sports', t: 'elite', cat: 'sports', es: 'Golf y Deportes Premium ⛳', en: 'Golf & Premium Sports ⛳' },
+  { id: 'interest_sailing_yachting', t: 'elite', cat: 'sports', es: 'Navegación y Yates ⛵', en: 'Sailing & Yachting ⛵' },
+  { id: 'interest_nature_outdoors', t: 'both', cat: 'sports', es: 'Naturaleza y Aire Libre 🌿', en: 'Nature & Outdoors 🌿' },
+  { id: 'interest_photography', t: 'both', cat: 'hobbies', es: 'Fotografía 📸', en: 'Photography 📸' },
+];
+
+// Category order + labels (iOS InterestCategory). Grouping homologated with EnhancedInterestsSelectionSheet.
+const INTEREST_CATEGORIES: Array<{ key: string; es: string; en: string }> = [
+  { key: 'lifestyle', es: 'Estilo de Vida ✨', en: 'Lifestyle ✨' },
+  { key: 'gastronomy', es: 'Gastronomía 🍽️', en: 'Gastronomy 🍽️' },
+  { key: 'culture', es: 'Cultura 🎨', en: 'Culture 🎨' },
+  { key: 'wellness', es: 'Bienestar 💆', en: 'Wellness 💆' },
+  { key: 'personal_growth', es: 'Crecimiento Personal 🧠', en: 'Personal Growth 🧠' },
+  { key: 'social', es: 'Social 👥', en: 'Social 👥' },
+  { key: 'entertainment', es: 'Entretenimiento 🎬', en: 'Entertainment 🎬' },
+  { key: 'professional', es: 'Profesional 💼', en: 'Professional 💼' },
+  { key: 'sports', es: 'Deportes ⚽', en: 'Sports ⚽' },
+  { key: 'hobbies', es: 'Pasatiempos 🎯', en: 'Hobbies 🎯' },
 ];
 
 // Static bio examples — fallback when getBioCoaching is unavailable (parity with iOS staticBioFallback).
@@ -374,21 +388,32 @@ export class AppShellComponent implements OnDestroy {
   readonly epInterests = signal<string[]>([]);
   readonly epLoading = signal(false);
   readonly epLocStatus = signal<'idle' | 'loading' | 'done' | 'error'>('idle');
-  /** Curated interest catalog filtered by the chosen type (parity with iOS UserInterest). */
-  interestsForType(): Array<{ id: string; t: string; es: string; en: string }> {
-    const ty = this.ep.type; if (!ty) return [];
-    return INTEREST_CATALOG.filter((x) => x.t === 'both' || x.t === ty);
+  /** Normalize a stored interest to its catalog ID (backend may store with/without the `interest_`
+   *  prefix — iOS does the same normalization). Keeps unknown/legacy values as-is. */
+  private normInterest(x: string): string {
+    const s = String(x || '');
+    if (INTEREST_CATALOG.some((c) => c.id === s)) return s;
+    if (INTEREST_CATALOG.some((c) => c.id === 'interest_' + s)) return 'interest_' + s;
+    return s;
   }
+  /** Interests grouped by category and filtered by the chosen type (iOS EnhancedInterestsSelectionSheet). */
+  interestGroups(): Array<{ key: string; es: string; en: string; items: typeof INTEREST_CATALOG }> {
+    const ty = this.ep.type; if (!ty) return [];
+    return INTEREST_CATEGORIES
+      .map((c) => ({ ...c, items: INTEREST_CATALOG.filter((x) => x.cat === c.key && (x.t === 'both' || x.t === ty)) }))
+      .filter((g) => g.items.length > 0);
+  }
+  isInterestSelected(id: string): boolean { return this.epInterests().includes(id); }
   epToggleInterest(id: string) {
     const cur = this.epInterests();
     if (cur.includes(id)) this.epInterests.set(cur.filter((x) => x !== id));
     else if (cur.length < 5) this.epInterests.set([...cur, id]);
   }
-  /** Interests stored as IDs but the user previously had free-text/legacy ones (shown as removable). */
+  /** Legacy free-text interests not in the catalog (shown as removable chips so data isn't lost). */
   epCustomInterests(): string[] { return this.epInterests().filter((id) => !INTEREST_CATALOG.some((x) => x.id === id)); }
-  /** Localize an interest ID (interest_*) → label; free-text legacy values pass through. */
+  /** Localize an interest ID (interest_*, prefixed or not) → label; free-text legacy values pass through. */
   interestLabel(id: string): string {
-    const it = INTEREST_CATALOG.find((x) => x.id === id);
+    const it = INTEREST_CATALOG.find((x) => x.id === id || x.id === 'interest_' + id);
     if (!it) return id;
     return this.lang() === 'es' ? it.es : it.en;
   }
@@ -444,7 +469,8 @@ export class AppShellComponent implements OnDestroy {
     this.ep.maxAge = typeof p.maxAge === 'number' ? p.maxAge : 50;
     this.ep.maxDistance = typeof p.maxDistance === 'number' ? p.maxDistance : 50;
     this.ep.lat = null; this.ep.lng = null; this.epLocStatus.set('idle');
-    this.epInterests.set(Array.isArray(p.interests) ? [...p.interests] : []);
+    // Normalize stored interests → catalog IDs so backend-saved selections appear selected.
+    this.epInterests.set(Array.isArray(p.interests) ? p.interests.map((x: string) => this.normInterest(x)) : []);
     const names: string[] = Array.isArray(p.pictures) ? p.pictures : [];
     // Show the editor immediately with SKELETON photo cells (url:'') while the backend signs the URLs
     // — same UX intent as iOS .showLoading(isLoading) on EditProfileView.
