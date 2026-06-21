@@ -54,13 +54,24 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
   errCode: {"es":"Ingresa el código de 6 dígitos.","en":"Enter the 6-digit code.","pt":"Digite o código de 6 dígitos.","fr":"Saisissez le code à 6 chiffres.","de":"Gib den 6-stelligen Code ein.","it":"Inserisci il codice di 6 cifre.","zh":"请输入 6 位验证码。","ja":"6 桁のコードを入力してください。","ko":"6자리 코드를 입력하세요.","ru":"Введите 6-значный код.","ar":"أدخل الرمز المكوّن من 6 أرقام.","id":"Masukkan kode 6 digit.","tr":"6 haneli kodu gir."},
   errWrong: {"es":"Código incorrecto o expirado.","en":"Wrong or expired code.","pt":"Código incorreto ou expirado.","fr":"Code incorrect ou expiré.","de":"Falscher oder abgelaufener Code.","it":"Codice errato o scaduto.","zh":"验证码错误或已过期。","ja":"コードが間違っているか期限切れです。","ko":"잘못되었거나 만료된 코드예요.","ru":"Неверный или истёкший код.","ar":"رمز غير صحيح أو منتهي الصلاحية.","id":"Kode salah atau kedaluwarsa.","tr":"Hatalı veya süresi dolmuş kod."},
 };
+// 13-language UI strings for the newer widget chrome (greeting, conversation history, discover hint).
+// Kept here (not in the 3-lang content I18N) so these features are localized for ALL supported languages.
+const UI_I18N: Record<string, Record<string, string>> = {
+  morning: {"es":"Buenos días","en":"Good morning","pt":"Bom dia","fr":"Bonjour","de":"Guten Morgen","it":"Buongiorno","zh":"早上好","ja":"おはよう","ko":"좋은 아침","ru":"Доброе утро","ar":"صباح الخير","id":"Selamat pagi","tr":"Günaydın"},
+  afternoon: {"es":"Buenas tardes","en":"Good afternoon","pt":"Boa tarde","fr":"Bon après-midi","de":"Guten Tag","it":"Buon pomeriggio","zh":"下午好","ja":"こんにちは","ko":"좋은 오후","ru":"Добрый день","ar":"مساء الخير","id":"Selamat siang","tr":"İyi günler"},
+  evening: {"es":"Buenas noches","en":"Good evening","pt":"Boa noite","fr":"Bonsoir","de":"Guten Abend","it":"Buonasera","zh":"晚上好","ja":"こんばんは","ko":"좋은 저녁","ru":"Добрый вечер","ar":"مساء الخير","id":"Selamat malam","tr":"İyi akşamlar"},
+  newChat: {"es":"Nueva conversación","en":"New conversation","pt":"Nova conversa","fr":"Nouvelle conversation","de":"Neue Unterhaltung","it":"Nuova conversazione","zh":"新对话","ja":"新しい会話","ko":"새 대화","ru":"Новый разговор","ar":"محادثة جديدة","id":"Percakapan baru","tr":"Yeni sohbet"},
+  historyTitle: {"es":"Tus conversaciones","en":"Your conversations","pt":"Suas conversas","fr":"Tes conversations","de":"Deine Unterhaltungen","it":"Le tue conversazioni","zh":"你的对话","ja":"会話履歴","ko":"대화 목록","ru":"Ваши разговоры","ar":"محادثاتك","id":"Percakapanmu","tr":"Sohbetlerin"},
+  historyEmpty: {"es":"Aún no tienes conversaciones guardadas.","en":"No saved conversations yet.","pt":"Ainda não há conversas salvas.","fr":"Aucune conversation enregistrée.","de":"Noch keine gespeicherten Unterhaltungen.","it":"Nessuna conversazione salvata.","zh":"还没有保存的对话。","ja":"保存された会話はまだありません。","ko":"저장된 대화가 아직 없어요.","ru":"Пока нет сохранённых разговоров.","ar":"لا توجد محادثات محفوظة بعد.","id":"Belum ada percakapan tersimpan.","tr":"Henüz kayıtlı sohbet yok."},
+  discoverHint: {"es":"✨ En la app: descubre personas compatibles","en":"✨ In the app: discover compatible people","pt":"✨ No app: descubra pessoas compatíveis","fr":"✨ Dans l'app : découvre des personnes compatibles","de":"✨ In der App: entdecke passende Menschen","it":"✨ Nell'app: scopri persone compatibili","zh":"✨ 在应用中：发现合拍的人","ja":"✨ アプリで相性の良い人を見つけよう","ko":"✨ 앱에서 잘 맞는 사람을 만나보세요","ru":"✨ В приложении: знакомься с подходящими людьми","ar":"✨ في التطبيق: اكتشف أشخاصاً متوافقين","id":"✨ Di app: temukan orang yang cocok","tr":"✨ Uygulamada: uyumlu kişileri keşfet"},
+};
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', historyTitle: 'Tus conversaciones', historyEmpty: 'Aún no tienes conversaciones guardadas.', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', historyTitle: 'Tus conversaciones', historyEmpty: 'Aún no tienes conversaciones guardadas.', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', discoverHint: '✨ En la app: descubre personas compatibles',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
@@ -92,7 +103,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
-    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', historyTitle: 'Your conversations', historyEmpty: 'No saved conversations yet.', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
+    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', historyTitle: 'Your conversations', historyEmpty: 'No saved conversations yet.', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', discoverHint: '✨ In the app: discover compatible people',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
@@ -123,7 +134,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', historyTitle: 'Suas conversas', historyEmpty: 'Ainda não há conversas salvas.', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', historyTitle: 'Suas conversas', historyEmpty: 'Ainda não há conversas salvas.', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite', discoverHint: '✨ No app: descubra pessoas compatíveis',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
@@ -173,9 +184,9 @@ const I18N: Record<string, any> = {
             <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
             <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
-            <button class="cw-new" (click)="openHistory()" [title]="t().historyTitle" [attr.aria-label]="t().historyTitle">🕘</button>
+            <button class="cw-new" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">🕘</button>
             <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
-            <button class="cw-new" (click)="newConversation()" [title]="t().newChat" [attr.aria-label]="t().newChat">✎</button>
+            <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎</button>
             @if (user(); as u) {
               <button class="cw-avatar" (click)="signOut()" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
@@ -247,8 +258,8 @@ const I18N: Record<string, any> = {
           <div class="cw-login-ov" (click)="closeHistory()"></div>
           <div class="cw-history" role="dialog" aria-modal="true">
             <button class="cw-login-x" (click)="closeHistory()" aria-label="Cerrar">✕</button>
-            <h3 class="cw-login-t">{{ t().historyTitle }}</h3>
-            <button class="cw-hist-new" (click)="newConversation()">＋ {{ t().newChat }}</button>
+            <h3 class="cw-login-t">{{ ui('historyTitle') }}</h3>
+            <button class="cw-hist-new" (click)="newConversation()">＋ {{ ui('newChat') }}</button>
             @for (c of convoList(); track c.id) {
               <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
                 <span class="cw-hist-title">{{ c.title }}</span>
@@ -256,7 +267,7 @@ const I18N: Record<string, any> = {
                 <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" aria-label="Eliminar">🗑</span>
               </button>
             }
-            @if (convoList().length === 0) { <p class="cw-hist-empty">{{ t().historyEmpty }}</p> }
+            @if (convoList().length === 0) { <p class="cw-hist-empty">{{ ui('historyEmpty') }}</p> }
           </div>
         }
 
@@ -503,6 +514,10 @@ const I18N: Record<string, any> = {
             @if (busy()) { <span class="cw-spin"></span> } @else { ↑ }
           </button>
         </form>
+        @if (isWelcome()) {
+          <!-- Subtle mention that the native app has Discovery (don't overload the screen). -->
+          <a class="cw-discover-hint" [href]="storeLink" target="_blank" rel="noopener">{{ ui('discoverHint') }}</a>
+        }
         <div class="cw-foot">{{ t().footer }}</div>
       </section>
     }
@@ -751,6 +766,8 @@ const I18N: Record<string, any> = {
     .cw-fb-btn { background:none; border:1px solid var(--cw-border); border-radius:8px; width:30px; height:28px; font-size:14px; cursor:pointer; transition:border-color .15s, transform .15s; }
     .cw-fb-btn:hover { border-color:var(--cw-gold-d); transform:translateY(-1px); }
     .cw-fb-thx { font-size:12px; color:var(--cw-gold); }
+    .cw-discover-hint { display:block; text-align:center; font-size:11.5px; color:var(--cw-purple-l,#9c59ea); text-decoration:none; padding:6px 0 2px; opacity:.85; }
+    .cw-discover-hint:hover { opacity:1; text-decoration:underline; }
     .cw-foot { text-align:center; font-size:10.5px; color:var(--cw-muted); padding:0 0 9px; }
     .cw-spin { display:inline-block; width:15px; height:15px; border:2px solid rgba(26,18,6,.4); border-top-color:#1A1206; border-radius:50%; animation:cwSpin .7s linear infinite; }
     @keyframes cwSpin { to{transform:rotate(360deg)} }
@@ -946,7 +963,7 @@ export class CoachWidgetComponent {
   }
   private convoTitle(msgs: Msg[]): string {
     const u = (msgs || []).find((m) => m.role === 'user' && m.text);
-    return u ? (u.text.length > 42 ? u.text.slice(0, 42) + '…' : u.text) : this.t().newChat;
+    return u ? (u.text.length > 42 ? u.text.slice(0, 42) + '…' : u.text) : this.ui('newChat');
   }
   /** Relative time label for the history list (compact, locale-light). */
   convoTime(ts: number): string {
@@ -1154,6 +1171,8 @@ export class CoachWidgetComponent {
   appleDevice = false;
   /** Localized login string (13 langs) — en fallback. */
   li(key: string): string { const m = LOGIN_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
+  /** 13-language UI string (greeting / history / discover) — falls back to English. */
+  ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   openLogin(gated = false) { this.phoneErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
   // After any successful sign-in, resume the question the visitor was trying to ask.
@@ -1195,7 +1214,7 @@ export class CoachWidgetComponent {
   greetingTime(): string {
     const h = this.isBrowser ? new Date().getHours() : 12;
     const key = h < 12 ? 'morning' : (h < 19 ? 'afternoon' : 'evening');
-    return (this.t() as any)[key] || '';
+    return this.ui(key);
   }
   /** Map the authenticated dateCoachChat response into the widget's render model (places/phrases). */
   private mapAuthCoachResponse(r: any): any {
