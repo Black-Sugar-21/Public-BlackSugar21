@@ -49,6 +49,23 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
   toggleLangMenu(): void { this.langMenuOpen.update((v) => !v); }
   closeLangMenu(): void { this.langMenuOpen.set(false); }
+
+  // Account menu (shown in the toolbar when logged in — Firebase persists the session across visits).
+  accountMenuOpen = signal(false);
+  showProfileModal = signal(false);
+  toggleAccountMenu(): void { this.accountMenuOpen.update((v) => !v); }
+  closeAccountMenu(): void { this.accountMenuOpen.set(false); }
+  openProfile(): void { this.accountMenuOpen.set(false); this.showProfileModal.set(true); }
+  /** First initial for the avatar fallback. */
+  userInitial(u: { displayName?: string | null; email?: string | null } | null): string {
+    const n = (u?.displayName || u?.email || '?').trim();
+    return (n.charAt(0) || '?').toUpperCase();
+  }
+  async signOut(): Promise<void> {
+    this.accountMenuOpen.set(false);
+    this.showProfileModal.set(false);
+    try { await this.firebase.signOutUser(); } catch (e) { console.error('signOut failed', e); }
+  }
   toggleGateLangMenu(): void { this.gateLangMenuOpen.update((v) => !v); }
   closeGateLangMenu(): void { this.gateLangMenuOpen.set(false); }
 
