@@ -60,7 +60,7 @@ const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', historyTitle: 'Tus conversaciones', historyEmpty: 'Aún no tienes conversaciones guardadas.', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
@@ -92,7 +92,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
-    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
+    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', historyTitle: 'Your conversations', historyEmpty: 'No saved conversations yet.', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
@@ -123,7 +123,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', historyTitle: 'Suas conversas', historyEmpty: 'Ainda não há conversas salvas.', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
@@ -172,7 +172,9 @@ const I18N: Record<string, any> = {
           <div class="cw-id"><span class="cw-spark">✦</span>
             <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
-            <!-- Nueva conversación: clears the screen without losing the prior chat (archived). -->
+            <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
+            <button class="cw-new" (click)="openHistory()" [title]="t().historyTitle" [attr.aria-label]="t().historyTitle">🕘</button>
+            <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
             <button class="cw-new" (click)="newConversation()" [title]="t().newChat" [attr.aria-label]="t().newChat">✎</button>
             @if (user(); as u) {
               <button class="cw-avatar" (click)="signOut()" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
@@ -240,10 +242,25 @@ const I18N: Record<string, any> = {
           </div>
         }
 
+        <!-- Conversation history picker — select a previous session and continue it. -->
+        @if (historyOpen()) {
+          <div class="cw-login-ov" (click)="closeHistory()"></div>
+          <div class="cw-history" role="dialog" aria-modal="true">
+            <button class="cw-login-x" (click)="closeHistory()" aria-label="Cerrar">✕</button>
+            <h3 class="cw-login-t">{{ t().historyTitle }}</h3>
+            <button class="cw-hist-new" (click)="newConversation()">＋ {{ t().newChat }}</button>
+            @for (c of convoList(); track c.id) {
+              <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
+                <span class="cw-hist-title">{{ c.title }}</span>
+                <span class="cw-hist-time">{{ convoTime(c.updatedAt) }}</span>
+                <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" aria-label="Eliminar">🗑</span>
+              </button>
+            }
+            @if (convoList().length === 0) { <p class="cw-hist-empty">{{ t().historyEmpty }}</p> }
+          </div>
+        }
+
         <div class="cw-body" #body>
-          @if (hasArchive()) {
-            <button class="cw-show-prev" (click)="showPrevious()">⌃ {{ t().showPrev }}</button>
-          }
           @if (isWelcome()) {
             <div class="cw-welcome">
               <div class="cw-welcome-spark">✦</div>
@@ -563,8 +580,17 @@ const I18N: Record<string, any> = {
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-new { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; padding:0 2px; line-height:1; }
     .cw-new:hover { color:var(--cw-gold); }
-    .cw-show-prev { align-self:center; background:rgba(156,89,234,.08); border:1px solid rgba(156,89,234,.3); color:var(--cw-purple-l,#9c59ea); font-size:12px; font-weight:600; border-radius:999px; padding:6px 12px; cursor:pointer; margin-bottom:4px; }
-    .cw-show-prev:hover { background:rgba(156,89,234,.16); }
+    .cw-history { position:absolute; top:14px; left:14px; right:14px; max-height:calc(100% - 28px); overflow-y:auto; z-index:30; background:var(--cw-card); border:1px solid var(--cw-border); border-radius:18px; padding:18px 16px; box-shadow:0 18px 50px rgba(0,0,0,.55); }
+    .cw-hist-new { width:100%; text-align:left; background:rgba(212,175,55,.10); border:1px solid rgba(212,175,55,.3); color:var(--cw-gold); font-size:13px; font-weight:600; border-radius:12px; padding:11px 12px; cursor:pointer; margin:6px 0 12px; }
+    .cw-hist-new:hover { background:rgba(212,175,55,.18); }
+    .cw-hist-row { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none; border-radius:12px; padding:11px 10px; cursor:pointer; color:var(--cw-text); }
+    .cw-hist-row:hover { background:rgba(255,255,255,.05); }
+    .cw-hist-row.active { background:rgba(156,89,234,.12); }
+    .cw-hist-title { flex:1; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cw-hist-time { font-size:11px; color:var(--cw-muted); flex:none; }
+    .cw-hist-del { font-size:12px; opacity:.5; flex:none; padding:0 2px; }
+    .cw-hist-del:hover { opacity:1; }
+    .cw-hist-empty { color:var(--cw-muted); font-size:12.5px; text-align:center; padding:14px 0; }
     .cw-body { flex:1; overflow-y:auto; padding:22px 22px 16px; display:flex; flex-direction:column; gap:13px; }
     .cw-msg { display:flex; } .cw-msg.user { justify-content:flex-end; }
     .cw-bubble { max-width:80%; padding:12px 16px; border-radius:15px; font-size:14.5px; line-height:1.55; color:var(--cw-text);
@@ -735,11 +761,14 @@ export class CoachWidgetComponent {
   readonly isBrowser: boolean;
   readonly open = signal(false);
   readonly messages = signal<Msg[]>([]);
-  // "Nueva conversación": archive the current chat to localStorage so clearing never loses it
-  // (restorable via "Ver conversación anterior"). hasArchive = there is a recoverable prior chat.
-  readonly hasArchive = signal(false);
-  private static readonly LS_MSGS = 'bs21_coach_msgs';
-  private static readonly LS_ARCHIVE = 'bs21_coach_archive';
+  // Multi-conversation (ChatGPT-style): every chat is saved to localStorage so nothing is lost and
+  // the user can SELECT a previous session and continue it. The active conversation's messages live
+  // in `messages`; the full list lives in localStorage and is surfaced via the history picker.
+  readonly historyOpen = signal(false);
+  readonly convoList = signal<Array<{ id: string; title: string; updatedAt: number; active: boolean }>>([]);
+  private activeId = '';
+  private static readonly LS_CONVOS = 'bs21_coach_convos';
+  private static readonly LS_ACTIVE = 'bs21_coach_active';
   readonly busy = signal(false);
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
@@ -853,18 +882,29 @@ export class CoachWidgetComponent {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
-      // Restore a persisted session so a refresh / "clear" never loses prior requests.
+      // Restore the active conversation (or the most recent) so nothing is lost across visits.
       try {
-        const saved = localStorage.getItem(CoachWidgetComponent.LS_MSGS);
-        if (saved) { const arr = JSON.parse(saved); if (Array.isArray(arr) && arr.length) this.messages.set(arr); }
-        this.hasArchive.set(!!localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE));
+        this.activeId = localStorage.getItem(CoachWidgetComponent.LS_ACTIVE) || '';
+        const convos = this.loadConvos().sort((a, b) => b.updatedAt - a.updatedAt);
+        const active = convos.find((c) => c.id === this.activeId) || convos[0];
+        if (active) {
+          this.activeId = active.id;
+          if (Array.isArray(active.msgs) && active.msgs.length) this.messages.set(active.msgs);
+        } else {
+          this.activeId = this.newConvoId();
+        }
+        localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId);
       } catch { /* noop */ }
-      // Persist the live conversation on every change (drops transient typing bubbles).
+      // Persist the active conversation on every change (skips greeting-only / transient typing).
       effect(() => {
         const m = this.messages().filter((x) => !x.typing);
+        if (!this.activeId || !m.some((x) => x.role === 'user')) return;
         try {
-          if (m.length) localStorage.setItem(CoachWidgetComponent.LS_MSGS, JSON.stringify(m));
-          else localStorage.removeItem(CoachWidgetComponent.LS_MSGS);
+          const list = this.loadConvos();
+          const idx = list.findIndex((c) => c.id === this.activeId);
+          const entry = { id: this.activeId, msgs: m, updatedAt: Date.now() };
+          if (idx >= 0) list[idx] = entry; else list.push(entry);
+          localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(list));
         } catch { /* quota / private mode */ }
       });
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
@@ -898,35 +938,63 @@ export class CoachWidgetComponent {
     }
   }
 
-  /** "Nueva conversación": clear the screen to the greeting without losing anything — the current
-   *  chat is appended to the localStorage archive (restorable via showPrevious). */
+  // ── Multi-conversation: save / pick / continue prior sessions (nothing is lost) ──────────
+  private newConvoId(): string { return 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+  private loadConvos(): Array<{ id: string; msgs: Msg[]; updatedAt: number }> {
+    try { const r = localStorage.getItem(CoachWidgetComponent.LS_CONVOS); const a = r ? JSON.parse(r) : []; return Array.isArray(a) ? a : []; }
+    catch { return []; }
+  }
+  private convoTitle(msgs: Msg[]): string {
+    const u = (msgs || []).find((m) => m.role === 'user' && m.text);
+    return u ? (u.text.length > 42 ? u.text.slice(0, 42) + '…' : u.text) : this.t().newChat;
+  }
+  /** Relative time label for the history list (compact, locale-light). */
+  convoTime(ts: number): string {
+    const mins = Math.floor((Date.now() - ts) / 60000);
+    if (mins < 1) return this.lang() === 'es' ? 'ahora' : (this.lang() === 'pt' ? 'agora' : 'now');
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
+  }
+
+  /** "Nueva conversación": the current chat is already saved — just start a fresh active session. */
   newConversation() {
-    const cur = this.messages().filter((x) => !x.typing && !(x.role === 'coach' && x.text === this.t().greeting));
-    if (cur.length) {
-      try {
-        const prev = localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE);
-        const prevArr = prev ? (JSON.parse(prev) || []) : [];
-        localStorage.setItem(CoachWidgetComponent.LS_ARCHIVE, JSON.stringify([...prevArr, ...cur]));
-        this.hasArchive.set(true);
-      } catch { /* noop */ }
-    }
+    this.activeId = this.newConvoId();
+    try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ }
     this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+    this.historyOpen.set(false);
     this.ga('coach_demo_new_conversation');
   }
 
-  /** Restore the previously-cleared conversation (prepends the archived messages, then empties it). */
-  showPrevious() {
-    try {
-      const arch = localStorage.getItem(CoachWidgetComponent.LS_ARCHIVE);
-      if (arch) {
-        const arr = JSON.parse(arch);
-        if (Array.isArray(arr) && arr.length) {
-          this.messages.update((m) => [...arr, ...m.filter((x) => !x.typing)]);
-        }
-      }
-      localStorage.removeItem(CoachWidgetComponent.LS_ARCHIVE);
-    } catch { /* noop */ }
-    this.hasArchive.set(false);
+  /** Open the conversation picker (most-recent first; current highlighted). */
+  openHistory() {
+    const list = this.loadConvos()
+      .filter((c) => Array.isArray(c.msgs) && c.msgs.some((m) => m.role === 'user'))
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((c) => ({ id: c.id, title: this.convoTitle(c.msgs), updatedAt: c.updatedAt, active: c.id === this.activeId }));
+    this.convoList.set(list);
+    this.historyOpen.set(true);
+    this.ga('coach_demo_history_open');
+  }
+  closeHistory() { this.historyOpen.set(false); }
+
+  /** Select a previous session and continue it (restores its full message context). */
+  selectConversation(id: string) {
+    const c = this.loadConvos().find((x) => x.id === id);
+    if (c) {
+      this.activeId = id;
+      try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, id); } catch { /* noop */ }
+      this.messages.set(Array.isArray(c.msgs) && c.msgs.length ? c.msgs : [{ role: 'coach', text: this.t().greeting }]);
+    }
+    this.historyOpen.set(false);
+  }
+
+  /** Delete a stored conversation from the picker. */
+  deleteConversation(id: string, ev: Event) {
+    ev.stopPropagation();
+    try { localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(this.loadConvos().filter((c) => c.id !== id))); } catch { /* noop */ }
+    this.convoList.update((l) => l.filter((c) => c.id !== id));
+    if (id === this.activeId) this.newConversation();
   }
 
   loadEmojis() { return this.loadingMode() === 'multiverse' ? ['🌟', '💬', '💕', '⚡', '🚀'] : ['💬', '😏', '💕', '🌱']; }
@@ -1227,6 +1295,21 @@ export class CoachWidgetComponent {
   /** Shared geolocation read. On success → fetch places. On ANY failure (denied/blocked/timeout/
    *  unavailable) → show the city input RIGHT HERE (needLocation block) so the user can always get
    *  places by typing a city — instant, no round-trip, never a dead-end. */
+  /** True if the chat already shows an unanswered "need your city/location" prompt. */
+  private hasPendingLocationPrompt(): boolean {
+    const m = this.messages();
+    const last = m[m.length - 1];
+    return !!(last && last.role === 'coach' && (last as any).needLocation);
+  }
+  /** Show ONE location prompt — never stack a second card (refreshes the existing one instead). */
+  private addLocationPrompt(text: string) {
+    if (this.hasPendingLocationPrompt()) {
+      this.messages.update((m) => m.map((x, i) => (i === m.length - 1 ? { ...x, text } : x)));
+    } else {
+      this.messages.update((m) => [...m, { role: 'coach', text, needLocation: true }]);
+    }
+  }
+
   private requestGeolocation(q: string) {
     this.busy.set(true);
     navigator.geolocation.getCurrentPosition(
@@ -1235,7 +1318,7 @@ export class CoachWidgetComponent {
         this.busy.set(false);
         this.thinking.set(false);
         const blocked = !!(err && err.code === err.PERMISSION_DENIED);
-        this.messages.update((m) => [...m, { role: 'coach', text: blocked ? this.t().locBlocked : this.t().needCity, needLocation: true }]);
+        this.addLocationPrompt(blocked ? this.t().locBlocked : this.t().needCity);
         this.scroll();
       },
       { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
@@ -1251,20 +1334,22 @@ export class CoachWidgetComponent {
    */
   async askPlaces(query?: string, label?: string) {
     if (this.busy()) return;
+    // Don't stack another prompt if one is already waiting for the user's city/location.
+    if (this.hasPendingLocationPrompt()) { this.scroll(); return; }
     const q = query || this.t().placeQuery;
     this.lastUserMsg = q;
     this.messages.update((m) => [...m, { role: 'user', text: label || this.t().placeChip }]);
     this.ga('coach_demo_place_chip', { lang: this.coachLang(), cat: label ? 'category' : 'general' });
 
     if (!this.isBrowser || !navigator.geolocation) {
-      this.messages.update((m) => [...m, { role: 'coach', text: this.t().needCity, needLocation: true }]);
+      this.addLocationPrompt(this.t().needCity);
       this.scroll();
       return;
     }
     const state = await this.geoPermissionState();
     if (state === 'denied') {
       // Blocked at the browser level — a prompt can't appear → let them type a city.
-      this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked, needLocation: true }]);
+      this.addLocationPrompt(this.t().locBlocked);
       this.scroll();
       return;
     }
