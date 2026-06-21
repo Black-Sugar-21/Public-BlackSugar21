@@ -24,6 +24,31 @@
     .shell-pf-av.initial { display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; font-size:2rem; }
     .shell-pf-mail { color:var(--text-muted); }
     .shell-signout { background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:11px 24px; font-family:inherit; cursor:pointer; }
+    .shell-cta-2 { color:var(--text-muted); font-size:0.85rem; text-decoration:none; margin-top:4px; }
+    .shell-cta-2:hover { color:var(--gold); }
+    /* Discovery — Tinder-style card, aligned with the native app aesthetic (dark + gold + green/red). */
+    .disco-spin { width:30px; height:30px; border-radius:50%; border:3px solid rgba(212,175,55,.25); border-top-color:var(--gold); animation:disco-rot .8s linear infinite; }
+    @keyframes disco-rot { to { transform:rotate(360deg); } }
+    .disco-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:24px 16px; width:100%; }
+    .disco-card { width:100%; max-width:420px; aspect-ratio:3/4.2; border-radius:22px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.55); transition:transform .22s ease, opacity .22s ease; }
+    .disco-card.swipe-like { transform:translateX(40px) rotate(6deg); opacity:0; }
+    .disco-card.swipe-pass { transform:translateX(-40px) rotate(-6deg); opacity:0; }
+    .disco-photo { position:relative; width:100%; height:100%; background-size:cover; background-position:center; background-color:var(--bg-card); cursor:pointer; }
+    .disco-nophoto { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:60px; color:var(--gold); opacity:.5; }
+    .disco-dots { position:absolute; top:10px; left:10px; right:10px; display:flex; gap:4px; }
+    .disco-dots span { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.35); }
+    .disco-dots span.on { background:#fff; }
+    .disco-compat { position:absolute; top:18px; right:14px; background:rgba(10,10,10,.6); backdrop-filter:blur(6px); color:var(--gold); font-weight:700; font-size:13px; padding:6px 11px; border-radius:999px; border:1px solid rgba(212,175,55,.4); }
+    .disco-grad { position:absolute; left:0; right:0; bottom:0; padding:46px 18px 18px; background:linear-gradient(to top, rgba(0,0,0,.85), transparent); }
+    .disco-name { font-size:24px; font-weight:700; color:#fff; } .disco-name span { font-weight:400; }
+    .disco-bio { color:rgba(255,255,255,.85); font-size:13.5px; line-height:1.4; margin:6px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .disco-actions { display:flex; gap:22px; }
+    .disco-act { width:60px; height:60px; border-radius:50%; border:none; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .15s ease, box-shadow .15s ease; }
+    .disco-act:hover { transform:scale(1.08); }
+    .disco-act.pass { background:var(--bg-card); color:var(--dislike-red2); border:1px solid rgba(248,55,112,.4); }
+    .disco-act.pass:hover { box-shadow:0 8px 22px rgba(248,55,112,.3); }
+    .disco-act.like { background:var(--bg-card); color:var(--like-green2); border:1px solid rgba(22,219,161,.45); }
+    .disco-act.like:hover { box-shadow:0 8px 22px rgba(22,219,161,.3); }
     .shell-confirm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:24px; }
     .shell-confirm { background:var(--bg-card); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:28px 24px; max-width:360px; text-align:center; }
     .shell-confirm-ic { font-size:42px; }

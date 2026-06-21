@@ -26,12 +26,44 @@
             <div class="shell-coach"><app-coach-widget [embedded]="true"></app-coach-widget></div>
           }
           @case ('discovery') {
-            <div class="shell-teaser">
-              <div class="shell-teaser-ic">🔥</div>
-              <h2>{{ s('inAppTitle') }}</h2>
-              <p>{{ s('discoveryBody') }}</p>
-              <a class="shell-cta" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
-            </div>
+            @if (!firebase.currentUser()) {
+              <div class="shell-teaser">
+                <div class="shell-teaser-ic">🔥</div>
+                <p>{{ s('discoSignIn') }}</p>
+                <a routerLink="/" class="shell-cta">{{ s('backHome') }}</a>
+              </div>
+            } @else if (discoLoading()) {
+              <div class="shell-teaser"><div class="disco-spin"></div><p>{{ s('discoLoading') }}</p></div>
+            } @else if (currentProfile(); as p) {
+              <div class="disco-wrap">
+                <div class="disco-card" [class.swipe-like]="swiping()==='like'" [class.swipe-pass]="swiping()==='pass'">
+                  <div class="disco-photo" (click)="nextPhoto()" [style.background-image]="profilePhoto() ? 'url(' + profilePhoto() + ')' : null">
+                    @if (!profilePhoto()) { <div class="disco-nophoto">✦</div> }
+                    @if (p.pictures?.length > 1) {
+                      <div class="disco-dots">
+                        @for (pic of p.pictures; track $index) { <span [class.on]="$index === photoIdx()"></span> }
+                      </div>
+                    }
+                    @if (p.compatibilityScore != null) { <div class="disco-compat">{{ p.compatibilityScore }}% ✦</div> }
+                    <div class="disco-grad">
+                      <div class="disco-name">{{ p.name }}@if (p.age) { <span>, {{ p.age }}</span> }</div>
+                      @if (p.bio) { <p class="disco-bio">{{ p.bio }}</p> }
+                    </div>
+                  </div>
+                </div>
+                <div class="disco-actions">
+                  <button class="disco-act pass" (click)="swipe('pass')" [attr.aria-label]="s('pass')">✕</button>
+                  <button class="disco-act like" (click)="swipe('like')" [attr.aria-label]="s('like')">♥</button>
+                </div>
+              </div>
+            } @else {
+              <div class="shell-teaser">
+                <div class="shell-teaser-ic">🔥</div>
+                <p>{{ s('discoEmpty') }}</p>
+                <button class="shell-cta" (click)="discoLoaded.set(false); loadDiscovery()">{{ s('discoRetry') }}</button>
+                <a class="shell-cta-2" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
+              </div>
+            }
           }
           @case ('chats') {
             <div class="shell-teaser">

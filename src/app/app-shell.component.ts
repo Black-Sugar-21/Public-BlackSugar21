@@ -23,6 +23,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   confirmTitle: {"es":"¿Cerrar sesión?","en":"Sign out?","pt":"Sair?","fr":"Se déconnecter ?","de":"Abmelden?","it":"Uscire?","zh":"退出登录？","ja":"ログアウトしますか？","ko":"로그아웃할까요?","ru":"Выйти?","ar":"تسجيل الخروج؟","id":"Keluar?","tr":"Çıkış yapılsın mı?"},
   confirmBody: {"es":"Tendrás que iniciar sesión de nuevo para volver a tu cuenta.","en":"You'll need to sign in again to get back to your account.","pt":"Você precisará entrar de novo para voltar à sua conta.","fr":"Tu devras te reconnecter pour retrouver ton compte.","de":"Du musst dich erneut anmelden, um zurückzukehren.","it":"Dovrai accedere di nuovo per tornare al tuo account.","zh":"你需要重新登录才能回到账户。","ja":"アカウントに戻るには再度ログインが必要です。","ko":"계정으로 돌아가려면 다시 로그인해야 해요.","ru":"Чтобы вернуться, нужно будет войти снова.","ar":"ستحتاج لتسجيل الدخول مجدداً للعودة لحسابك.","id":"Kamu perlu masuk lagi untuk kembali ke akun.","tr":"Hesabına dönmek için tekrar giriş yapman gerekir."},
   cancel: {"es":"Cancelar","en":"Cancel","pt":"Cancelar","fr":"Annuler","de":"Abbrechen","it":"Annulla","zh":"取消","ja":"キャンセル","ko":"취소","ru":"Отмена","ar":"إلغاء","id":"Batal","tr":"İptal"},
+  discoLoading: {"es":"Buscando personas compatibles…","en":"Finding compatible people…","pt":"Buscando pessoas compatíveis…","fr":"Recherche de personnes compatibles…","de":"Suche passende Menschen…","it":"Ricerca di persone compatibili…","zh":"正在寻找合拍的人…","ja":"相性の良い人を検索中…","ko":"잘 맞는 사람을 찾는 중…","ru":"Ищем подходящих людей…","ar":"جارٍ البحث عن أشخاص متوافقين…","id":"Mencari orang yang cocok…","tr":"Uyumlu kişiler aranıyor…"},
+  discoEmpty: {"es":"No hay más perfiles por ahora. Vuelve más tarde.","en":"No more profiles right now. Check back later.","pt":"Sem mais perfis por agora. Volte mais tarde.","fr":"Plus de profils pour l'instant. Reviens plus tard.","de":"Vorerst keine weiteren Profile. Schau später vorbei.","it":"Nessun altro profilo per ora. Torna più tardi.","zh":"暂时没有更多人了，稍后再来。","ja":"今はこれ以上いません。あとでまた見てね。","ko":"지금은 더 없어요. 나중에 다시 확인해요.","ru":"Пока больше нет анкет. Загляните позже.","ar":"لا مزيد من الملفات الآن. عُد لاحقاً.","id":"Tidak ada profil lagi. Cek lagi nanti.","tr":"Şimdilik başka profil yok. Sonra tekrar bak."},
+  discoRetry: {"es":"Recargar","en":"Reload","pt":"Recarregar","fr":"Recharger","de":"Neu laden","it":"Ricarica","zh":"重新加载","ja":"再読み込み","ko":"새로고침","ru":"Обновить","ar":"إعادة التحميل","id":"Muat ulang","tr":"Yenile"},
+  discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
 };
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
@@ -38,6 +42,13 @@ export class AppShellComponent {
   private isBrowser: boolean;
   readonly section = signal<Section>('coach');
   readonly showConfirm = signal(false);
+  // Discovery feed state (real feed via getDiscoveryFeed, like/pass via recordSwipe)
+  readonly discoProfiles = signal<any[]>([]);
+  readonly discoIdx = signal(0);
+  readonly discoLoading = signal(false);
+  readonly discoLoaded = signal(false);
+  readonly photoIdx = signal(0);
+  readonly swiping = signal<'like' | 'pass' | null>(null);
   readonly navItems: Array<{ key: Section; icon: string }> = [
     { key: 'discovery', icon: '🔥' },
     { key: 'coach', icon: '✦' },
@@ -55,10 +66,51 @@ export class AppShellComponent {
 
   lang(): Language { return this.translate.currentLanguage(); }
   s(key: string): string { const m = SHELL_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
-  go(sec: Section) { this.section.set(sec); }
+  go(sec: Section) {
+    this.section.set(sec);
+    if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser()) this.loadDiscovery();
+  }
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();
   }
   async signOut() { this.showConfirm.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } this.router.navigate(['/']); }
+
+  // ── Discovery ──────────────────────────────────────────────────────────────
+  async loadDiscovery() {
+    if (this.discoLoading()) return;
+    this.discoLoading.set(true);
+    try {
+      const profiles = await this.firebase.getDiscoveryFeed(20);
+      this.discoProfiles.set(Array.isArray(profiles) ? profiles : []);
+      this.discoIdx.set(0);
+      this.photoIdx.set(0);
+      this.discoLoaded.set(true);
+    } catch { this.discoProfiles.set([]); this.discoLoaded.set(true); }
+    finally { this.discoLoading.set(false); }
+  }
+  currentProfile(): any | null {
+    const list = this.discoProfiles();
+    const i = this.discoIdx();
+    return i < list.length ? list[i] : null;
+  }
+  profilePhoto(): string | null {
+    const p = this.currentProfile();
+    if (!p || !Array.isArray(p.pictures) || !p.pictures.length) return null;
+    const pi = Math.min(this.photoIdx(), p.pictures.length - 1);
+    return p.pictures[pi]?.url || null;
+  }
+  nextPhoto() {
+    const p = this.currentProfile();
+    if (!p || !Array.isArray(p.pictures) || p.pictures.length < 2) return;
+    this.photoIdx.update((v) => (v + 1) % p.pictures.length);
+  }
+  private advance() { this.photoIdx.set(0); this.discoIdx.update((v) => v + 1); this.swiping.set(null); }
+  swipe(action: 'like' | 'pass' | 'superlike') {
+    const p = this.currentProfile();
+    if (!p) return;
+    this.swiping.set(action === 'pass' ? 'pass' : 'like');
+    this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
+    setTimeout(() => this.advance(), 220);
+  }
 }

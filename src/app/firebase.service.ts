@@ -23,6 +23,8 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  arrayUnion,
+  serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
 import {
@@ -342,6 +344,27 @@ export class FirebaseService {
     const fn = httpsCallable(this.functions, 'dateCoachChat');
     const res = await fn(data);
     return res.data;
+  }
+
+  // Discovery feed (web) — SAME getDiscoveryFeed callable the apps use (V2 ranking, signed photo URLs).
+  async getDiscoveryFeed(limit = 20): Promise<any[]> {
+    const fn = httpsCallable(this.functions, 'getDiscoveryFeed');
+    const res: any = await fn({ limit });
+    return (res?.data?.profiles) || [];
+  }
+
+  // Record a swipe — mirrors the apps: a swipes/{targetUid} doc excludes the profile from future
+  // feeds, and a LIKE also adds the target to the `liked` array (the backend forms mutual matches).
+  async recordSwipe(targetUid: string, action: 'like' | 'pass' | 'superlike'): Promise<void> {
+    const u = this.currentUser();
+    if (!u || !targetUid) return;
+    await setDoc(doc(this.db, 'users', u.uid, 'swipes', targetUid), { action, timestamp: serverTimestamp() });
+    if (action === 'like' || action === 'superlike') {
+      await updateDoc(doc(this.db, 'users', u.uid), {
+        liked: arrayUnion(targetUid),
+        ...(action === 'superlike' ? { superLiked: arrayUnion(targetUid) } : {}),
+      });
+    }
   }
 
   // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
