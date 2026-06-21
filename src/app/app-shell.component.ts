@@ -94,6 +94,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epTapSuggestion: {"es":"Toca una para usarla","en":"Tap one to use it","pt":"Toque para usar","fr":"Touche pour l'utiliser","de":"Zum Übernehmen tippen","it":"Tocca per usarla","zh":"点击使用","ja":"タップして使用","ko":"탭하여 사용","ru":"Нажмите, чтобы применить","ar":"اضغط للاستخدام","id":"Ketuk untuk pakai","tr":"Kullanmak için dokun"},
   epPhotoCoach: {"es":"Coach IA de Fotos","en":"AI Photo Coach","pt":"Coach IA de Fotos","fr":"Coach Photo IA","de":"KI-Foto-Coach","it":"Coach Foto IA","zh":"AI 照片教练","ja":"AI フォトコーチ","ko":"AI 사진 코치","ru":"ИИ фото-коуч","ar":"مدرب الصور","id":"Pelatih Foto AI","tr":"AI Foto Koçu"},
   epPhotoScore: {"es":"Puntaje del perfil","en":"Profile score","pt":"Pontuação do perfil","fr":"Score du profil","de":"Profil-Score","it":"Punteggio profilo","zh":"资料评分","ja":"プロフィールスコア","ko":"프로필 점수","ru":"Оценка профиля","ar":"تقييم الملف","id":"Skor profil","tr":"Profil puanı"},
+  epAnalyzing: {"es":"Analizando…","en":"Analyzing…","pt":"Analisando…","fr":"Analyse…","de":"Analysiere…","it":"Analisi…","zh":"分析中…","ja":"分析中…","ko":"분석 중…","ru":"Анализ…","ar":"جارٍ التحليل…","id":"Menganalisis…","tr":"Analiz ediliyor…"},
+  epAnalyzingSub: {"es":"Analizando tus fotos con IA, dame unos segundos…","en":"Analyzing your photos with AI, just a few seconds…","pt":"Analisando suas fotos com IA, alguns segundos…","fr":"Analyse de tes photos par l'IA, quelques secondes…","de":"Deine Fotos werden per KI analysiert, einen Moment…","it":"Analisi delle tue foto con l'IA, qualche secondo…","zh":"AI 正在分析你的照片，请稍候…","ja":"AIが写真を分析中です。少々お待ちください…","ko":"AI가 사진을 분석 중이에요. 잠시만요…","ru":"ИИ анализирует ваши фото, несколько секунд…","ar":"يحلّل الذكاء صورك، بضع ثوانٍ…","id":"AI menganalisis fotomu, beberapa detik…","tr":"Yapay zeka fotoğraflarını analiz ediyor, birkaç saniye…"},
+  epGenerating: {"es":"Generando…","en":"Generating…","pt":"Gerando…","fr":"Génération…","de":"Erstelle…","it":"Generazione…","zh":"生成中…","ja":"生成中…","ko":"생성 중…","ru":"Генерация…","ar":"جارٍ الإنشاء…","id":"Membuat…","tr":"Oluşturuluyor…"},
+  epCoachError: {"es":"No se pudo analizar ahora. Inténtalo de nuevo en un momento.","en":"Couldn't analyze right now. Try again in a moment.","pt":"Não foi possível analisar agora. Tente de novo em instantes.","fr":"Analyse impossible pour le moment. Réessaie bientôt.","de":"Analyse momentan nicht möglich. Versuch es gleich erneut.","it":"Analisi non riuscita ora. Riprova tra poco.","zh":"暂时无法分析，请稍后再试。","ja":"今は分析できませんでした。少し後でもう一度お試しください。","ko":"지금은 분석할 수 없어요. 잠시 후 다시 시도하세요.","ru":"Сейчас не удалось проанализировать. Повторите чуть позже.","ar":"تعذّر التحليل الآن. حاول مجدداً بعد قليل.","id":"Tidak bisa menganalisis sekarang. Coba lagi sebentar.","tr":"Şu anda analiz edilemedi. Birazdan tekrar dene."},
   epLocation: {"es":"Ubicación","en":"Location","pt":"Localização","fr":"Localisation","de":"Standort","it":"Posizione","zh":"位置","ja":"位置","ko":"위치","ru":"Местоположение","ar":"الموقع","id":"Lokasi","tr":"Konum"},
   epUpdateLocation: {"es":"Actualizar ubicación","en":"Update location","pt":"Atualizar localização","fr":"Mettre à jour la position","de":"Standort aktualisieren","it":"Aggiorna posizione","zh":"更新位置","ja":"位置を更新","ko":"위치 업데이트","ru":"Обновить местоположение","ar":"تحديث الموقع","id":"Perbarui lokasi","tr":"Konumu güncelle"},
   epLocDone: {"es":"Ubicación actualizada","en":"Location updated","pt":"Localização atualizada","fr":"Position mise à jour","de":"Standort aktualisiert","it":"Posizione aggiornata","zh":"位置已更新","ja":"位置を更新しました","ko":"위치가 업데이트됨","ru":"Местоположение обновлено","ar":"تم تحديث الموقع","id":"Lokasi diperbarui","tr":"Konum güncellendi"},
@@ -230,11 +234,13 @@ export class AppShellComponent implements OnDestroy {
   }
   readonly profilePhotos = signal<string[]>([]);
   readonly photosLoading = signal(false);
+  readonly pfAvatarLoaded = signal(false);   // skeleton on the profile avatar until the image paints
   private async loadProfilePhotos() {
     const p: any = this.firebase.userProfile();
     const names = Array.isArray(p?.pictures) ? p.pictures : (Array.isArray(p?.pictureNames) ? p.pictureNames : []);
     if (!names.length) return;
     this.photosLoading.set(true);
+    this.pfAvatarLoaded.set(false);
     try { this.profilePhotos.set(await this.firebase.getOwnPhotoUrls(names)); } catch { /* keep avatar fallback */ }
     finally { this.photosLoading.set(false); }
   }
@@ -403,6 +409,7 @@ export class AppShellComponent implements OnDestroy {
   // Photo Coach (getPhotoCoachAnalysis, iOS parity)
   readonly epPhotoCoachLoading = signal(false);
   readonly epPhotoCoach = signal<{ overallScore: number; recommendations: string[] } | null>(null);
+  readonly epPhotoCoachErr = signal(false);
   async epBioSuggest() {
     if (this.epBioLoading()) return;
     this.epBioLoading.set(true);
@@ -416,8 +423,13 @@ export class AppShellComponent implements OnDestroy {
   async runPhotoCoach() {
     if (this.epPhotoCoachLoading()) return;
     this.epPhotoCoach.set(null);
+    this.epPhotoCoachErr.set(false);
     this.epPhotoCoachLoading.set(true);
-    try { this.epPhotoCoach.set(await this.firebase.getPhotoCoachAnalysis(this.lang())); }
+    try {
+      const r = await this.firebase.getPhotoCoachAnalysis(this.lang());
+      this.epPhotoCoach.set(r);
+      if (!r) this.epPhotoCoachErr.set(true);   // never leave the user with no feedback
+    } catch { this.epPhotoCoachErr.set(true); }
     finally { this.epPhotoCoachLoading.set(false); }
   }
   async openEditProfile() {
@@ -439,6 +451,7 @@ export class AppShellComponent implements OnDestroy {
     this.epPhotos.set(names.map((n) => ({ name: n, url: '', loaded: false })));
     this.epBioSuggestions.set([]);
     this.epPhotoCoach.set(null);
+    this.epPhotoCoachErr.set(false);
     this.epError.set('');
     this.epEditing.set(true);
     this.epLoading.set(true);

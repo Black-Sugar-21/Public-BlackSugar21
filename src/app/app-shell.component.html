@@ -159,24 +159,39 @@
                     }
                   </div>
                   <!-- Coach IA de Fotos -->
-                  <button class="ep-photocoach" [disabled]="epPhotoCoachLoading()" (click)="runPhotoCoach()">
-                    <span class="ep-pc-ic">◉</span> {{ epPhotoCoachLoading() ? '…' : s('epPhotoCoach') }}
+                  <button class="ep-photocoach" [class.loading]="epPhotoCoachLoading()" [disabled]="epPhotoCoachLoading()" (click)="runPhotoCoach()">
+                    @if (epPhotoCoachLoading()) { <span class="ep-spin"></span> {{ s('epAnalyzing') }} }
+                    @else { <span class="ep-pc-ic">◉</span> {{ s('epPhotoCoach') }} }
                   </button>
-                  @if (epPhotoCoach(); as pc) {
+                  @if (epPhotoCoachLoading()) {
+                    <div class="ep-pc-result ep-pc-loading">
+                      <span class="ep-spin ep-spin-lg"></span>
+                      <div class="ep-pc-loadtxt">{{ s('epAnalyzingSub') }}</div>
+                    </div>
+                  } @else if (epPhotoCoach(); as pc) {
                     <div class="ep-pc-result">
                       <div class="ep-pc-score"><b>{{ pc.overallScore }}</b><span>/ 100 · {{ s('epPhotoScore') }}</span></div>
                       @for (rec of pc.recommendations; track rec) { <div class="ep-pc-tip">• {{ rec }}</div> }
                     </div>
+                  } @else if (epPhotoCoachErr()) {
+                    <div class="ep-pc-result ep-pc-err">{{ s('epCoachError') }}</div>
                   }
                   <!-- Bio + Sugerencias IA -->
                   <div class="ep-sec">
                     <div class="ep-label-row">
                       <label class="ep-label">{{ s('epAbout') }}</label>
-                      <button class="ep-ai-pill" [disabled]="epBioLoading()" (click)="epBioSuggest()">✦ {{ epBioLoading() ? '…' : s('epAiSuggest') }}</button>
+                      <button class="ep-ai-pill" [class.loading]="epBioLoading()" [disabled]="epBioLoading()" (click)="epBioSuggest()">
+                        @if (epBioLoading()) { <span class="ep-spin ep-spin-sm"></span> {{ s('epGenerating') }} }
+                        @else { ✦ {{ s('epAiSuggest') }} }
+                      </button>
                     </div>
                     <textarea class="ep-textarea" maxlength="500" [(ngModel)]="ep.bio" [placeholder]="s('obBioPh')"></textarea>
                     <div class="ep-count">{{ ep.bio.length }}/500</div>
-                    @if (epBioSuggestions().length) {
+                    @if (epBioLoading()) {
+                      <div class="ep-bio-sugs">
+                        @for (i of [1,2,3]; track i) { <div class="ep-bio-sug skel">&nbsp;</div> }
+                      </div>
+                    } @else if (epBioSuggestions().length) {
                       <div class="ep-bio-sugs">
                         <div class="ep-bio-sugs-hint">{{ s('epTapSuggestion') }}</div>
                         @for (sug of epBioSuggestions(); track sug) {
@@ -254,9 +269,9 @@
                 <!-- Cabecera: avatar (anillo dorado) + nombre/edad + botón editar -->
                 <div class="pf-head">
                   <div class="pf-avatar-ring">
-                    @if (profilePhotos().length) { <img class="pf-avatar" [src]="profilePhotos()[0]" alt="" /> }
+                    @if (profilePhotos().length) { <img class="pf-avatar" [class.skel]="!pfAvatarLoaded()" [src]="profilePhotos()[0]" (load)="pfAvatarLoaded.set(true)" (error)="pfAvatarLoaded.set(true)" alt="" /> }
                     @else if (photosLoading()) { <span class="pf-avatar skel"></span> }
-                    @else if (firebase.currentUser()?.photoURL) { <img class="pf-avatar" [src]="firebase.currentUser()?.photoURL" alt="" referrerpolicy="no-referrer" /> }
+                    @else if (firebase.currentUser()?.photoURL) { <img class="pf-avatar" [class.skel]="!pfAvatarLoaded()" [src]="firebase.currentUser()?.photoURL" (load)="pfAvatarLoaded.set(true)" (error)="pfAvatarLoaded.set(true)" alt="" referrerpolicy="no-referrer" /> }
                     @else { <span class="pf-avatar initial">{{ initial(firebase.currentUser()) }}</span> }
                   </div>
                   <div class="pf-head-col">
