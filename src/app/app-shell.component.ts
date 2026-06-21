@@ -55,6 +55,14 @@ export class AppShellComponent implements OnDestroy {
   readonly discoLoaded = signal(false);
   readonly photoIdx = signal(0);
   readonly swiping = signal<'like' | 'pass' | null>(null);
+  // Drag-to-swipe (replicates the native Tinder feel: card follows finger, rotates, springs back
+  // under 1/3-width threshold, flies out on release past it — tween ~400ms).
+  readonly dragX = signal(0);
+  readonly dragY = signal(0);
+  readonly dragging = signal(false);
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private readonly SWIPE_THRESHOLD = 110;
   // Chat state
   readonly matches = signal<any[]>([]);
   readonly matchNames = signal<Record<string, string>>({});
@@ -120,13 +128,37 @@ export class AppShellComponent implements OnDestroy {
     if (!p || !Array.isArray(p.pictures) || p.pictures.length < 2) return;
     this.photoIdx.update((v) => (v + 1) % p.pictures.length);
   }
-  private advance() { this.photoIdx.set(0); this.discoIdx.update((v) => v + 1); this.swiping.set(null); }
+  private advance() { this.photoIdx.set(0); this.dragX.set(0); this.dragY.set(0); this.swiping.set(null); this.discoIdx.update((v) => v + 1); }
+  /** Live rotation while dragging — mirrors the native rotationZ = offsetX/N, capped. */
+  cardRotation(): number { return Math.max(-16, Math.min(16, this.dragX() / 18)); }
+
+  onCardDown(e: PointerEvent) {
+    if (!this.currentProfile()) return;
+    this.dragging.set(true);
+    this.dragStartX = e.clientX; this.dragStartY = e.clientY;
+    try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+  }
+  onCardMove(e: PointerEvent) {
+    if (!this.dragging()) return;
+    this.dragX.set(e.clientX - this.dragStartX);
+    this.dragY.set((e.clientY - this.dragStartY) * 0.35); // dampen vertical, horizontal-led like the apps
+  }
+  onCardUp() {
+    if (!this.dragging()) return;
+    this.dragging.set(false);
+    const x = this.dragX();
+    if (Math.abs(x) > this.SWIPE_THRESHOLD) this.swipe(x > 0 ? 'like' : 'pass');
+    else { this.dragX.set(0); this.dragY.set(0); } // springs back (CSS transition)
+  }
   swipe(action: 'like' | 'pass' | 'superlike') {
     const p = this.currentProfile();
     if (!p) return;
-    this.swiping.set(action === 'pass' ? 'pass' : 'like');
+    // Fly the card off-screen in the swipe direction, then advance (≈400ms, matches tween).
+    const dir = action === 'pass' ? 'pass' : 'like';
+    this.swiping.set(dir);
+    this.dragX.set(dir === 'like' ? 1000 : -1000);
     this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
-    setTimeout(() => this.advance(), 220);
+    setTimeout(() => this.advance(), 380);
   }
 
   // ── Chat ─────────────────────────────────────────────────────────────────────
