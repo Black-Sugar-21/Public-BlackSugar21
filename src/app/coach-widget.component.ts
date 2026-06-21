@@ -311,17 +311,17 @@ export class CoachWidgetComponent {
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
       // Restore the active conversation (or the most recent) so nothing is lost across visits.
       try {
-        this.activeId = localStorage.getItem(CoachWidgetComponent.LS_ACTIVE) || '';
+        const saved = localStorage.getItem(CoachWidgetComponent.LS_ACTIVE) || '';
         const convos = this.loadConvos().sort((a, b) => b.updatedAt - a.updatedAt);
-        const active = convos.find((c) => c.id === this.activeId) || convos[0];
+        const active = convos.find((c) => c.id === saved) || convos[0];
         if (active) {
           this.activeId = active.id;
           if (Array.isArray(active.msgs) && active.msgs.length) this.messages.set(active.msgs);
-        } else {
-          this.activeId = this.newConvoId();
         }
-        localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId);
       } catch { /* noop */ }
+      // ALWAYS have an active id (even if the read above threw) so persistence can't silently break.
+      if (!this.activeId) this.activeId = this.newConvoId();
+      try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ }
       // Persist the active conversation on every change (skips greeting-only / transient typing).
       effect(() => {
         const m = this.messages().filter((x) => !x.typing);
@@ -331,7 +331,9 @@ export class CoachWidgetComponent {
           const idx = list.findIndex((c) => c.id === this.activeId);
           const entry = { id: this.activeId, msgs: m, updatedAt: Date.now() };
           if (idx >= 0) list[idx] = entry; else list.push(entry);
-          localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(list));
+          // Keep the 40 most-recent conversations (bounded localStorage, no unbounded growth).
+          const trimmed = list.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40);
+          localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(trimmed));
         } catch { /* quota / private mode */ }
       });
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
