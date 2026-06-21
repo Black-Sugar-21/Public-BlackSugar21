@@ -60,7 +60,7 @@ const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
@@ -92,7 +92,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
-    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation',
+    fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
@@ -123,7 +123,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
-    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior',
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
@@ -247,8 +247,13 @@ const I18N: Record<string, any> = {
           @if (isWelcome()) {
             <div class="cw-welcome">
               <div class="cw-welcome-spark">✦</div>
-              <h2 class="cw-welcome-title">{{ t().title }}</h2>
-              <p class="cw-welcome-sub">{{ t().greeting }}</p>
+              @if (user() && firstName) {
+                <!-- Claude.ai-style personalized, time-aware greeting when signed in. -->
+                <h2 class="cw-welcome-title">{{ greetingTime() }}, {{ firstName }}</h2>
+              } @else {
+                <h2 class="cw-welcome-title">{{ t().title }}</h2>
+                <p class="cw-welcome-sub">{{ t().greeting }}</p>
+              }
             </div>
           } @else {
           @for (m of messages(); track mi; let mi = $index) {
@@ -1111,6 +1116,18 @@ export class CoachWidgetComponent {
   initial(u: { displayName?: string | null; email?: string | null } | null): string {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();
+  }
+  /** First name of the signed-in user (Claude.ai-style personalized greeting). Empty if anonymous. */
+  get firstName(): string {
+    const u = this.user();
+    const n = (u?.displayName || u?.email || '').trim();
+    return n ? (n.split(/[\s@]/)[0] || '') : '';
+  }
+  /** Time-of-day greeting ("Buenos días/tardes/noches"), localized. */
+  greetingTime(): string {
+    const h = this.isBrowser ? new Date().getHours() : 12;
+    const key = h < 12 ? 'morning' : (h < 19 ? 'afternoon' : 'evening');
+    return (this.t() as any)[key] || '';
   }
   /** Map the authenticated dateCoachChat response into the widget's render model (places/phrases). */
   private mapAuthCoachResponse(r: any): any {
