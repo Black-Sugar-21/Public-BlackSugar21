@@ -295,9 +295,9 @@
                         <div class="ep-int-cat">{{ lang() === 'es' ? g.es : g.en }}</div>
                         <div class="ep-int-grid">
                           @for (it of g.items; track it.id) {
-                            <button class="ep-int" [class.on]="isInterestSelected(it.id)"
+                            <ui-option shape="pill" [selected]="isInterestSelected(it.id)"
                                     [disabled]="!isInterestSelected(it.id) && epInterests().length >= 5"
-                                    (click)="epToggleInterest(it.id)">{{ lang() === 'es' ? it.es : it.en }}</button>
+                                    (click)="epToggleInterest(it.id)">{{ lang() === 'es' ? it.es : it.en }}</ui-option>
                           }
                         </div>
                       </div>

@@ -19,6 +19,7 @@ src/app/ui/
 | Pill | `ui-pill` | Tags / chips / link actions. Tints: `gold` (maps), `neutral` (web), `instagram`, `purple` (perspective). Renders `<a target=_blank>` when `href` is set. |
 | Badge | `ui-badge` | Gold "fit %" capsule (`94% ✦`) — `.cw-fit` parity with iOS/Android. |
 | Skeleton | `ui-skeleton` | Single shimmer bar. Inputs: `width`, `height`, `radius`, `circle`. No animation under `prefers-reduced-motion`. |
+| Option | `ui-option` | Selectable toggle (interest chips / segmented). `selected` → gold; `shape` pill\|rect; `block` → flex:1. Parent owns the model. |
 
 ## Molecules
 | Component | Selector | Purpose |
