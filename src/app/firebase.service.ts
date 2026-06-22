@@ -59,6 +59,7 @@ import {
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from 'firebase/storage';
 import {
   getFunctions,
@@ -526,6 +527,15 @@ export class FirebaseService {
     const fileName = `web_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
     await uploadBytes(storageRef(this.storage, `users/${u.uid}/${fileName}`), file, { contentType: file.type || 'image/jpeg' });
     return fileName;
+  }
+  /** Delete uploaded profile photos from Storage (used when a gender change invalidates them —
+   *  parity with Android pictureRepository.deletePictures). Best-effort; ignores missing files. */
+  async deleteProfilePhotos(names: string[]): Promise<void> {
+    const u = this.currentUser();
+    if (!u || !Array.isArray(names)) return;
+    await Promise.all(names.map(async (n) => {
+      try { await deleteObject(storageRef(this.storage, `users/${u.uid}/${n}`)); } catch { /* already gone */ }
+    }));
   }
   /** Resolve the current user's own photo filenames to displayable URLs (for the profile view). */
   async getOwnPhotoUrls(names: string[]): Promise<string[]> {

@@ -552,7 +552,14 @@ export class AppShellComponent implements OnDestroy {
     this.ep.male = male;
   }
   epConfirmGender() {
-    if (this.epPendingMale !== null) { this.ep.male = this.epPendingMale; this.epPhotos.set([]); }
+    if (this.epPendingMale !== null) {
+      this.ep.male = this.epPendingMale;
+      // Parity with Android confirmGenderChange: remove the now-invalid photos from Storage too,
+      // not just the local list — otherwise they'd be orphaned (uploaded on add, unreferenced on save).
+      const orphans = this.epPhotos().map((p) => p.name);
+      this.epPhotos.set([]);
+      if (orphans.length) this.firebase.deleteProfilePhotos(orphans);
+    }
     this.epPendingMale = null;
     this.epGenderConfirm.set(false);
   }
@@ -687,11 +694,17 @@ export class AppShellComponent implements OnDestroy {
     } catch { this.epError.set(this.s('obPhotoErr')); }
     finally { this.epUploading.set(false); }
   }
-  epRemovePhoto(i: number) { this.epPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
+  // iOS/Android parity: a profile must keep at least 2 photos — block removing below that
+  // (a gender change is the only path that clears all, since the user must re-validate them).
+  epRemovePhoto(i: number) {
+    if (this.epPhotos().length <= 2) { this.epError.set(this.obPhotosMinText()); return; }
+    this.epError.set('');
+    this.epPhotos.update((p) => p.filter((_, idx) => idx !== i));
+  }
   epRemoveInterest(it: string) { this.epInterests.update((a) => a.filter((x) => x !== it)); }
   epMinChanged(v: any) { this.ep.minAge = +v; if (this.ep.minAge > +this.ep.maxAge) this.ep.maxAge = this.ep.minAge; }
   epMaxChanged(v: any) { this.ep.maxAge = +v; if (this.ep.maxAge < +this.ep.minAge) this.ep.minAge = this.ep.maxAge; }
-  epCanSave(): boolean { return this.ep.name.trim().length >= 2 && this.ep.male !== null && this.ep.type !== '' && !!this.ep.orientation && this.epPhotos().length >= 1; }
+  epCanSave(): boolean { return this.ep.name.trim().length >= 2 && this.ep.male !== null && this.ep.type !== '' && !!this.ep.orientation && this.epPhotos().length >= 2; }
   async epSave() {
     if (this.epSaving()) return;
     if (!this.epCanSave()) { this.epError.set(this.s('obRequired')); return; }
@@ -700,7 +713,7 @@ export class AppShellComponent implements OnDestroy {
       const male = !!this.ep.male;
       const userType = this.ep.type === 'elite' ? (male ? 'SUGAR_DADDY' : 'SUGAR_MOMMY') : 'SUGAR_BABY';
       await this.firebase.updateProfile({
-        name: this.ep.name.trim(), bio: this.ep.bio.trim(), male, userType,
+        name: this.titleCaseName(this.ep.name), bio: this.ep.bio.trim(), male, userType,
         orientation: this.ep.orientation, interests: this.epInterests(),
         pictures: this.epPhotos().map((p) => p.name),
         minAge: this.ep.minAge, maxAge: this.ep.maxAge, maxDistance: this.ep.maxDistance,
@@ -765,7 +778,11 @@ export class AppShellComponent implements OnDestroy {
   // iOS/Android parity: changing gender invalidates photos (they were AI-moderated against the
   // previous expectedGender), so we clear them when the gender actually changes.
   obSetGender(male: boolean) {
-    if (this.ob.male !== null && this.ob.male !== male && this.obPhotos().length) this.obPhotos.set([]);
+    if (this.ob.male !== null && this.ob.male !== male && this.obPhotos().length) {
+      const orphans = this.obPhotos().map((p) => p.name);
+      this.obPhotos.set([]);
+      this.firebase.deleteProfilePhotos(orphans); // they were AI-moderated for the old gender → remove from Storage
+    }
     this.ob.male = male;
   }
   // Age-range sliders keep min ≤ max (mirrors edit-profile).
@@ -851,6 +868,10 @@ export class AppShellComponent implements OnDestroy {
     } else this.obSave();
   }
   obBack() { this.obError.set(''); if (this.obStep() > 0) this.obStep.update((v) => v - 1); }
+  /** iOS parity (PersonalInfoView auto-capitalization): capitalize each word of the display name. */
+  private titleCaseName(s: string): string {
+    return s.trim().replace(/\s+/g, ' ').split(' ').map((w) => w ? w[0].toLocaleUpperCase() + w.slice(1) : w).join(' ');
+  }
   private getGeo(): Promise<{ lat: number; lng: number } | null> {
     return new Promise((res) => {
       if (!navigator.geolocation) return res(null);
@@ -868,7 +889,7 @@ export class AppShellComponent implements OnDestroy {
       const bd = new Date(parseInt(this.ob.year, 10), parseInt(this.ob.month, 10) - 1, parseInt(this.ob.day, 10));
       const geo = this.obGeo() ?? await this.getGeo();
       await this.firebase.saveOnboarding({
-        name: this.ob.name.trim(), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
+        name: this.titleCaseName(this.ob.name), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
         latitude: geo?.lat, longitude: geo?.lng,
         minAge: this.ob.minAge, maxAge: this.ob.maxAge, maxDistance: this.ob.maxDistance,
         pictures: this.obPhotos().map((p) => p.name),
