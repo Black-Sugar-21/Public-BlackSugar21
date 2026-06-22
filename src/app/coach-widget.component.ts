@@ -705,13 +705,14 @@ export class CoachWidgetComponent {
   ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   openLogin(gated = false) { this.phoneErr.set(''); this.authErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
-  // After any successful sign-in: if the account has NO profile yet, send them to onboarding (/app)
-  // — iOS/Android parity (a profile-less login always lands in onboarding). Otherwise resume the question.
+  // After any successful sign-in, always land in /app so the user reaches the full experience
+  // (Profile / Discover / Chats). The app shell routes profile-less accounts to web onboarding
+  // — iOS/Android parity (a login with no userType/birthDate always lands in onboarding).
   private async afterSignIn() {
     this.closeLogin();
+    this.pendingAsk = null;
     try { await this.firebase.refreshProfile(); } catch { /* best-effort */ }
-    if (!this.firebase.isProfileComplete()) { this.pendingAsk = null; this.router.navigate(['/app']); return; }
-    if (this.pendingAsk) { const p = this.pendingAsk; this.pendingAsk = null; this.ask(p); }
+    this.router.navigate(['/app']);
   }
   async signInGoogle() { this.authErr.set(''); this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch (e) { this.handleAuthError(e); } finally { this.signingIn.set(false); } }
   async signInApple() {
