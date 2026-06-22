@@ -10,12 +10,11 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (href) {
-      <a class="ui-pill" [class]="'t-' + tint" [href]="href" target="_blank" rel="noopener"
-         (click)="$event.stopPropagation()"><ng-content></ng-content></a>
-    } @else {
-      <span class="ui-pill" [class]="'t-' + tint" [class.clickable]="clickable"><ng-content></ng-content></span>
-    }
+    <!-- Single element + single <ng-content>: two ng-content slots across @if/@else branches
+         dropped the projected label when href was set (Web/Instagram pills rendered empty). -->
+    <a class="ui-pill" [class]="'t-' + tint" [class.clickable]="clickable || !!href"
+       [attr.href]="href || null" [attr.target]="href ? '_blank' : null" [attr.rel]="href ? 'noopener' : null"
+       (click)="onClick($event)"><ng-content></ng-content></a>
   `,
   styles: [`
     :host { display: inline-flex; }
@@ -40,4 +39,6 @@ export class UiPillComponent {
   @Input() tint: 'gold' | 'neutral' | 'instagram' | 'purple' = 'neutral';
   @Input() href = '';
   @Input() clickable = false;
+  /** When a link, stop the click from bubbling to a parent card handler. */
+  onClick(e: Event) { if (this.href) e.stopPropagation(); }
 }

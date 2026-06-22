@@ -100,6 +100,8 @@ export class FirebaseService {
   /** False until the signed-in user's profile has been loaded/checked at least once — lets the UI
    *  gate onboarding WITHOUT flashing it for existing users during the async profile load. */
   profileChecked = signal(false);
+  /** True when the last sign-in hit a soft-deleted account (blocked re-login → show a notice). */
+  accountDeleted = signal(false);
 
   constructor() {
     this.app = initializeApp(firebaseConfig);
@@ -158,7 +160,12 @@ export class FirebaseService {
       this.currentUser.set(user);
       this.profileChecked.set(false);
       if (user) {
-        try { await this.loadUserProfile(user.uid); } finally { this.profileChecked.set(true); }
+        try {
+          await this.loadUserProfile(user.uid);
+          // A soft-deleted account must NOT be able to log back in — sign out immediately and
+          // surface a notice (the doc still exists during the grace period before the cron purge).
+          if (this.accountDeleted()) { await signOut(this.auth); return; }
+        } finally { this.profileChecked.set(true); }
       } else {
         this.userProfile.set(null);
         this.profileChecked.set(true);
@@ -360,6 +367,13 @@ export class FirebaseService {
 
     if (userSnap.exists()) {
       const data = userSnap.data();
+      // Soft-deleted account (server-side deleteUserData / cron grace period): treat as not-logged-in.
+      if (data['accountStatus'] === 'deleted' || data['scheduledForDeletion'] === true) {
+        this.userProfile.set(null);
+        this.accountDeleted.set(true);
+        return;
+      }
+      this.accountDeleted.set(false);
       this.userProfile.set({
         ...data,
         createdAt: data['createdAt']?.toDate(),

@@ -1,4 +1,4 @@
-import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect } from '@angular/core';
+import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -201,8 +201,21 @@ const I18N: Record<string, any> = {
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
 })
-export class CoachWidgetComponent {
+export class CoachWidgetComponent implements OnDestroy {
   readonly isBrowser: boolean;
+  /** Visible viewport height when the on-screen keyboard is open (iOS Safari) — drives the panel
+   *  height so the composer stays directly above the keyboard instead of being hidden behind it. */
+  readonly kbHeight = signal<number | null>(null);
+  private vvHandler = () => {
+    const vv: any = (window as any).visualViewport;
+    if (!vv) return;
+    const kbOpen = (window.innerHeight - vv.height) > 120; // keyboard covers a chunk of the layout
+    this.kbHeight.set(kbOpen ? Math.round(vv.height) : null);
+  };
+  ngOnDestroy() {
+    const vv: any = this.isBrowser ? (window as any).visualViewport : null;
+    if (vv) { vv.removeEventListener('resize', this.vvHandler); vv.removeEventListener('scroll', this.vvHandler); }
+  }
   readonly open = signal(false);
   // Embedded mode: render the coach inline as a full panel (no FAB / overlay / close) — used by the
   // web-app shell where the Coach is the main centerpiece. Forces the panel open.
@@ -334,6 +347,8 @@ export class CoachWidgetComponent {
   constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService, private firebase: FirebaseService, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
     if (this.isBrowser) {
+      const vv: any = (window as any).visualViewport;
+      if (vv) { vv.addEventListener('resize', this.vvHandler); vv.addEventListener('scroll', this.vvHandler); }
       try {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
@@ -677,6 +692,15 @@ export class CoachWidgetComponent {
 
   // R64: logged-in web users (optional sign-in) get the authenticated coach.
   get user() { return this.firebase.currentUser; }
+  get accountDeleted() { return this.firebase.accountDeleted; }
+  deletedNotice(): string {
+    const m: Record<string, string> = {
+      es: 'Esta cuenta fue eliminada y ya no está disponible.',
+      en: 'This account was deleted and is no longer available.',
+      pt: 'Esta conta foi excluída e não está mais disponível.',
+    };
+    return m[this.lang()] || m['en'];
+  }
   readonly loginOpen = signal(false);
   readonly loginGate = signal(false); // true → opened because the free-taste limit was hit
   readonly loginStep = signal<'choose' | 'phone' | 'code'>('choose');
