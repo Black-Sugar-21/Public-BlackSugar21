@@ -9,7 +9,7 @@
                role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
-            <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
+            <div><b>{{ t().title }}</b><span class="cw-demo"><span class="cw-online-dot"></span>{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
             <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
             <button class="cw-new" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">🕘<span class="cw-new-lbl">{{ ui('historyShort') }}</span></button>

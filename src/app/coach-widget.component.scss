@@ -10,11 +10,13 @@
     .cw-spark { font-size:17px; }
     @keyframes cwPulse { 0%,100%{box-shadow:0 10px 30px rgba(212,175,55,0.30)} 50%{box-shadow:0 10px 42px rgba(212,175,55,0.55)} }
     /* Centered, ChatGPT/Claude-style chat: discreet FAB → spacious centered overlay (the bot is the focus). */
-    .cw-overlay { position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.62); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); animation:cwFadeBg .2s ease; }
+    /* Desktop: transparent click-catch (no page dimming) — the floating card stays unobtrusive, like ChatAI. */
+    .cw-overlay { position:fixed; inset:0; z-index:9998; background:transparent; animation:cwFadeBg .2s ease; }
     @keyframes cwFadeBg { from{opacity:0} to{opacity:1} }
-    .cw-panel { position:fixed; inset:0; margin:auto; z-index:9999; width:min(680px, 94vw); height:min(82vh, 780px);
+    /* Desktop: bottom-right floating card (ChatAI parity) anchored above the FAB; expands from that corner. */
+    .cw-panel { position:fixed; right:22px; bottom:22px; z-index:9999; width:min(400px, calc(100vw - 32px)); height:min(640px, calc(100dvh - 44px));
       display:flex; flex-direction:column; background:var(--cw-bg); border:1px solid var(--cw-border); border-radius:20px; overflow:hidden;
-      box-shadow:0 32px 90px rgba(0,0,0,0.6); animation:cwIn .26s cubic-bezier(.22,1,.36,1);
+      box-shadow:0 32px 90px rgba(0,0,0,0.6); animation:cwIn .26s cubic-bezier(.22,1,.36,1); transform-origin:bottom right;
       -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
     /* Embedded mode (web-app shell): fill the parent container, no floating/positioning. */
     .cw-panel.cw-embedded { position:relative; inset:auto; margin:0; z-index:1; width:100%; height:100%; max-width:none; max-height:none; border:none; border-radius:0; box-shadow:none; animation:none; }
@@ -28,7 +30,7 @@
     .cw-panel.cw-embedded .cw-welcome { padding-top:6vh; }
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
-    @keyframes cwIn { from{opacity:0; transform:scale(.965) translateY(8px)} to{opacity:1; transform:none} }
+    @keyframes cwIn { from{opacity:0; transform:scale(.86) translateY(10px)} to{opacity:1; transform:none} }
     /* Mobile: bottom-anchored sheet (like the ChatAI widget). Anchoring at bottom:0 (NOT top) lets
        iOS Safari lift the whole panel above the on-screen keyboard; JS only shrinks the height to the
        visible viewport via [style.height.px]. Edge-to-edge with rounded top corners. */
@@ -52,7 +54,11 @@
       background:linear-gradient(180deg,rgba(212,175,55,0.08),transparent); }
     .cw-id { display:flex; align-items:center; gap:10px; } .cw-id .cw-spark { color:var(--cw-gold); font-size:20px; filter:drop-shadow(0 0 8px rgba(212,175,55,.5)); }
     .cw-id b { display:block; font-size:15px; color:var(--cw-text); }
-    .cw-demo { font-size:10.5px; color:var(--cw-gold); border:1px solid rgba(212,175,55,.4); border-radius:999px; padding:1px 7px; display:inline-block; margin-top:2px; }
+    .cw-demo { font-size:10.5px; color:var(--cw-gold); border:1px solid rgba(212,175,55,.4); border-radius:999px; padding:1px 7px; display:inline-flex; align-items:center; gap:5px; margin-top:2px; }
+    /* Live "online" indicator (ChatAI parity): pulsing green dot before the status label. */
+    .cw-online-dot { width:6px; height:6px; border-radius:50%; background:#16DBA1; box-shadow:0 0 0 0 rgba(22,219,161,.6); animation:cwOnline 2s ease-in-out infinite; flex:none; }
+    @keyframes cwOnline { 0%,100%{ box-shadow:0 0 0 0 rgba(22,219,161,.55) } 50%{ box-shadow:0 0 0 4px rgba(22,219,161,0) } }
+    @media (prefers-reduced-motion: reduce) { .cw-online-dot { animation:none; } }
     .cw-head-r { display:flex; align-items:center; gap:8px; }
     .cw-signin { background:transparent; border:1px solid rgba(212,175,55,.5); color:var(--cw-gold); border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
     .cw-signin:hover { background:rgba(212,175,55,.1); }
@@ -273,8 +279,11 @@
        input < 16px. ChatAI uses 16px for the same reason. */
     .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:13px; padding:13px 16px; color:var(--cw-text); font-size:16px; outline:none; font-family:inherit; }
     .cw-input input:focus { border-color:var(--cw-gold-d); }
-    .cw-snd { width:42px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; font-size:17px; font-weight:700; cursor:pointer; }
-    .cw-snd:disabled { opacity:.5; cursor:not-allowed; }
+    .cw-snd { width:42px; flex:none; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; font-size:17px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .12s ease, opacity .15s ease, box-shadow .15s ease; }
+    .cw-snd:not(:disabled) { box-shadow:0 4px 14px rgba(212,175,55,.35); }
+    .cw-snd:not(:disabled):hover { transform:translateY(-1px); }
+    .cw-snd:not(:disabled):active { transform:scale(.92); }
+    .cw-snd:disabled { opacity:.4; cursor:not-allowed; box-shadow:none; }
     .cw-fb { display:flex; align-items:center; gap:8px; margin-top:9px; padding-top:9px; border-top:1px solid rgba(255,255,255,.06); }
     .cw-fb-q { font-size:12px; color:var(--cw-muted); }
     .cw-fb-btn { background:none; border:1px solid var(--cw-border); border-radius:8px; width:30px; height:28px; font-size:14px; cursor:pointer; transition:border-color .15s, transform .15s; }
