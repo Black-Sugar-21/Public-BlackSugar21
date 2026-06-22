@@ -290,6 +290,12 @@ export class AppShellComponent implements OnDestroy {
   readonly matchPhotoReady = signal<Record<string, boolean>>({});
   matchPhotoReady_(uid: string): boolean { return !!this.matchPhotoReady()[uid]; }
   onMatchAvatarLoad(uid: string) { this.matchPhotoReady.update((m) => ({ ...m, [uid]: true })); }
+  /** uid → true once getUserBasic has resolved (name + photo known). Until then we show ONLY the
+   *  skeleton — never the "…" name placeholder — so the avatar doesn't flash three dots. */
+  readonly matchBasicReady = signal<Record<string, boolean>>({});
+  matchBasicReady_(uid: string): boolean { return !!this.matchBasicReady()[uid]; }
+  /** First letter of the match name, or "?" — never the "…" loading placeholder. */
+  matchInitial(uid: string): string { return ((this.matchNames()[uid] || '').charAt(0) || '?').toUpperCase(); }
   readonly selectedMatch = signal<any | null>(null);
   // iOS pagination parity: a live TAIL listener (latest page) + cursor-fetched OLDER pages, merged.
   readonly chatTail = signal<any[]>([]);
@@ -528,6 +534,8 @@ export class AppShellComponent implements OnDestroy {
               this.matchNames.update((m) => ({ ...m, [r.otherUid]: b.name }));
               if (b.photo) this.matchPhotos.update((m) => ({ ...m, [r.otherUid]: b.photo }));
             }
+            // Mark resolved either way → avatar now shows the photo (skeleton until <img> decodes) or the letter.
+            this.matchBasicReady.update((m) => ({ ...m, [r.otherUid]: true }));
           });
         }
       });
