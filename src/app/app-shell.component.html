@@ -381,10 +381,18 @@
               @if (!obStarted()) {
                 <!-- Coach welcome intro (parity with iOS/Android COACH_WELCOME) -->
                 <div class="ob-wrap ob-welcome">
-                  <div class="ob-welcome-spark">✦</div>
-                  <h2 class="ob-title">{{ s('obWelcome') }}</h2>
+                  <div class="ob-welcome-spark">✨</div>
+                  <h2 class="ob-title ob-welcome-title">{{ s('obWelcome') }}</h2>
                   <p class="ob-welcome-sub">{{ s('obWelcomeSub') }}</p>
+                  <div class="ob-caps">
+                    <div class="ob-cap"><span class="ob-cap-ic">💬</span><span>{{ s('obCap1') }}</span></div>
+                    <div class="ob-cap"><span class="ob-cap-ic">🎭</span><span>{{ s('obCap2') }}</span></div>
+                    <div class="ob-cap"><span class="ob-cap-ic">💡</span><span>{{ s('obCap3') }}</span></div>
+                    <div class="ob-cap"><span class="ob-cap-ic">🌱</span><span>{{ s('obCap4') }}</span></div>
+                  </div>
+                  <p class="ob-welcome-foot">{{ s('obWelcomeFooter') }}</p>
                   <ui-button variant="primary" shape="rect" [block]="true" (click)="obStarted.set(true)">{{ s('obStart') }}</ui-button>
+                  <button class="ob-signout-link" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
                 </div>
               } @else {
               <div class="ob-wrap">
@@ -468,6 +476,7 @@
                     {{ obSaving() ? '…' : (obStep() === 7 ? s('obFinish') : s('obNext')) }}
                   </ui-button>
                 </div>
+                <button class="ob-signout-link" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
               </div>
               }
             }

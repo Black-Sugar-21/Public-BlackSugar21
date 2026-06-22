@@ -180,6 +180,18 @@
     .ob-back { flex:0 0 auto; background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:13px 22px; font-family:inherit; font-weight:600; cursor:pointer; }
     .ob-next { flex:1; background:var(--gradient-gold); border:none; color:var(--bg-dark); border-radius:999px; padding:13px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; }
     .ob-next:disabled { opacity:.5; }
+    /* Coach welcome intro — mirrors the iOS OnboardingCoachWelcomeView (✨ + title + sub + caps card + footer). */
+    .ob-welcome { align-items:center; text-align:center; justify-content:center; gap:14px; }
+    .ob-welcome-spark { font-size:56px; line-height:1; }
+    .ob-welcome-title { text-align:center; }
+    .ob-welcome-sub { color:var(--text-muted); font-size:15px; line-height:1.45; max-width:360px; margin:0; }
+    .ob-caps { width:100%; box-sizing:border-box; display:flex; flex-direction:column; gap:14px; background:rgba(212,175,55,.07); border-radius:16px; padding:18px; margin-top:4px; text-align:left; }
+    .ob-cap { display:flex; align-items:center; gap:12px; }
+    .ob-cap-ic { font-size:22px; width:30px; text-align:center; flex:none; }
+    .ob-cap span:last-child { font-size:15px; color:var(--text-primary); line-height:1.35; }
+    .ob-welcome-foot { color:var(--text-muted); font-size:13px; line-height:1.45; margin:2px 0 0; }
+    .ob-signout-link { background:none; border:none; color:var(--text-muted); font-family:inherit; font-size:13px; cursor:pointer; padding:8px; margin-top:6px; align-self:center; }
+    .ob-signout-link:hover { color:var(--text-secondary); }
     /* Discovery — Tinder-style card, aligned with the native app aesthetic (dark + gold + green/red). */
     .disco-spin { width:30px; height:30px; border-radius:50%; border:3px solid rgba(212,175,55,.25); border-top-color:var(--gold); animation:disco-rot .8s linear infinite; }
     @keyframes disco-rot { to { transform:rotate(360deg); } }
