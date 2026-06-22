@@ -6,6 +6,7 @@ import { CoachWidgetComponent } from './coach-widget.component';
 import { ShellNavIconComponent } from './shell-nav-icon.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 import { UiOptionComponent } from './ui/atoms/ui-option.component';
+import { UiInputComponent } from './ui/atoms/ui-input.component';
 import { TranslationService, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
@@ -194,7 +195,7 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent, UiInputComponent],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
