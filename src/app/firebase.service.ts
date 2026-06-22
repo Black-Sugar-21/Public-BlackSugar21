@@ -743,9 +743,14 @@ export class FirebaseService {
   async generateIcebreakers(otherUid: string, lang: string): Promise<{ message: string; emoji?: string }[]> {
     const u = this.currentUser();
     if (!u || !otherUid) return [];
+    // Prefer the explicit lang, else the BROWSER/device language (navigator.language) so suggestions
+    // match what the user reads — not the stored deviceLanguage. The backend generates from
+    // `language` (falls back to deviceLanguage/'en'); `userLanguage` only localizes errors.
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
     try {
       const fn = httpsCallable(this.functions, 'generateIcebreakers');
-      const res: any = await fn({ userId1: u.uid, userId2: otherUid, userLanguage: lang || 'en' });
+      const res: any = await fn({ userId1: u.uid, userId2: otherUid, language: l, userLanguage: l });
       const arr = res?.data?.icebreakers;
       if (Array.isArray(arr)) return arr.map((x: any) => ({ message: String(x?.message || '').trim(), emoji: x?.emoji })).filter((x: any) => x.message);
     } catch { /* rate-limited or AI off — caller shows nothing */ }
