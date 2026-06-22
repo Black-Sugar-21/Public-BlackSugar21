@@ -275,13 +275,18 @@ export class FirebaseService {
   /** Popups hang on iOS Safari (ITP) → prefer the full-page redirect flow there. Desktop keeps the
    *  nicer popup. Heuristic: any iOS device, desktop Safari, or a small/touch viewport. */
   shouldUseRedirect(): boolean {
-    // Use the full-page redirect on EVERY browser. signInWithPopup polls the popup's
-    // `window.closed` to detect dismissal, which the Cross-Origin-Opener-Policy severs for the
-    // cross-origin Google/authDomain window — spamming "COOP would block the window.closed call"
-    // warnings on desktop (Chrome) and hanging on iOS Safari (ITP). Redirect has no popup → no
-    // window.closed polling → no COOP warnings, and completes reliably everywhere. Completed by
-    // handleRedirectResult() + the widget's coachOpenRequest/auth effect on the next load.
-    return true;
+    // DESKTOP → popup (works; the COOP "window.closed" lines are benign noise, the postMessage path
+    // still completes the sign-in). MOBILE/iOS Safari → redirect (popup hangs there under ITP).
+    // NOTE: with the cross-domain authDomain (black-sugar21.firebaseapp.com) neither flow is fully
+    // reliable on iOS Safari — getRedirectResult can come back empty due to third-party storage
+    // partitioning. The durable fix is a same-origin authDomain (blacksugar21.com) once its
+    // /__/auth/handler redirect URI is registered in the Web OAuth client.
+    try {
+      const ua = navigator.userAgent || '';
+      const iOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+      const mobileSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|Edg|Android/i.test(ua) && (('ontouchstart' in window) || iOS);
+      return iOS || mobileSafari;
+    } catch { return false; }
   }
   /** Process a pending OAuth (Google/Apple) redirect sign-in on app load (creates the profile for new users). */
   private async handleRedirectResult(): Promise<void> {
