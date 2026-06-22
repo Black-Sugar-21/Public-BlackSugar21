@@ -532,6 +532,7 @@ export class AppShellComponent implements OnDestroy {
     else this.epLocStatus.set('error');
   }
   readonly epPhotos = signal<Array<{ name: string; url: string; loaded?: boolean }>>([]);
+  readonly epUploading = signal(false);
   readonly grid9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   /** Mark a grid photo as painted → removes its skeleton (skeleton stays until the image loads). */
   epImgLoaded(i: number) { this.epPhotos.update((a) => a.map((p, idx) => (idx === i ? { ...p, loaded: true } : p))); }
@@ -600,12 +601,22 @@ export class AppShellComponent implements OnDestroy {
   closeEditProfile() { this.epEditing.set(false); this.epError.set(''); }
   async epAddPhotos(ev: Event) {
     const input = ev.target as HTMLInputElement;
-    const files = Array.from(input.files || []);
+    const files = Array.from(input.files || []).filter((f) => f.type.startsWith('image/'));
     input.value = '';
-    for (const f of files.slice(0, 9 - this.epPhotos().length)) {
-      try { const name = await this.firebase.uploadProfilePhoto(f); this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f), loaded: false }]); }
-      catch { this.epError.set(this.s('obPhotoErr')); }
-    }
+    if (!files.length) return;
+    this.epUploading.set(true); this.epError.set('');
+    try {
+      for (const f of files.slice(0, 9 - this.epPhotos().length)) {
+        if (f.size > 10 * 1024 * 1024) continue;
+        // iOS/Android parity: AI (Gemini Vision) reviews each photo before it's accepted.
+        const b64 = await this.fileToModerationBase64(f);
+        const verdict = await this.firebase.moderateProfileImage(b64, this.ep.male, this.lang());
+        if (!verdict.approved) { this.epError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
+        const name = await this.firebase.uploadProfilePhoto(f);
+        this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f), loaded: false }]);
+      }
+    } catch { this.epError.set(this.s('obPhotoErr')); }
+    finally { this.epUploading.set(false); }
   }
   epRemovePhoto(i: number) { this.epPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
   epRemoveInterest(it: string) { this.epInterests.update((a) => a.filter((x) => x !== it)); }

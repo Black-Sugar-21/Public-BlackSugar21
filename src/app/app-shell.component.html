@@ -208,9 +208,9 @@
                           }
                         </div>
                       } @else {
-                        <label class="ep-cell empty">
-                          <input type="file" accept="image/*" multiple hidden (change)="epAddPhotos($event)" />
-                          <span class="ep-cell-plus">＋</span>
+                        <label class="ep-cell empty" [class.busy]="epUploading()">
+                          <input type="file" accept="image/*" multiple hidden [disabled]="epUploading()" (change)="epAddPhotos($event)" />
+                          <span class="ep-cell-plus">{{ epUploading() ? '…' : '＋' }}</span>
                         </label>
                       }
                     }
