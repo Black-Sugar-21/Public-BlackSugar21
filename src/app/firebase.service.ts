@@ -298,10 +298,17 @@ export class FirebaseService {
   private recaptchaVerifier: RecaptchaVerifier | null = null;
 
   async startPhoneSignIn(phoneE164: string, recaptchaContainerId: string): Promise<void> {
-    if (!this.recaptchaVerifier) {
-      this.recaptchaVerifier = new RecaptchaVerifier(this.auth, recaptchaContainerId, { size: 'invisible' });
+    // Always start from a FRESH invisible reCAPTCHA verifier. Reusing one after a failed/expired
+    // attempt makes sendVerificationCode return 400 on the retry, so clear the old one first.
+    try { this.recaptchaVerifier?.clear(); } catch { /* noop */ }
+    this.recaptchaVerifier = new RecaptchaVerifier(this.auth, recaptchaContainerId, { size: 'invisible' });
+    try {
+      this.phoneConfirmation = await signInWithPhoneNumber(this.auth, phoneE164, this.recaptchaVerifier);
+    } catch (e) {
+      try { this.recaptchaVerifier?.clear(); } catch { /* noop */ }
+      this.recaptchaVerifier = null;
+      throw e;
     }
-    this.phoneConfirmation = await signInWithPhoneNumber(this.auth, phoneE164, this.recaptchaVerifier);
   }
 
   async confirmPhoneCode(code: string): Promise<User> {

@@ -843,7 +843,7 @@ export class CoachWidgetComponent implements OnDestroy {
     if (!this.phoneValid() || !/^\+\d{8,15}$/.test(this.phoneE164)) { this.phoneErr.set(this.li('errInvalidPhone')); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
     try { await this.firebase.startPhoneSignIn(this.phoneE164, 'cw-recaptcha'); this.loginStep.set('code'); this.startOtpAutoRead(); }
-    catch { this.phoneErr.set(this.li('errSend')); }
+    catch (e) { console.error('[phone sign-in] sendVerificationCode failed:', (e as any)?.code, (e as any)?.message, e); this.phoneErr.set(this.li('errSend')); }
     finally { this.phoneBusy.set(false); }
   }
   // SMS code autofill — parity with iOS: keep only digits and AUTO-SUBMIT once the full 6-digit
