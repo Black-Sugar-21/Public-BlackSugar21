@@ -420,6 +420,74 @@ export class FirebaseService {
     return res.data;
   }
 
+  // ── Coach chat SESSIONS (logged-in web → Firestore, shared with iOS/Android) ──
+  // Sessions index = users/{uid}/coachSessions/{id}; messages = users/{uid}/coachChat
+  // tagged with sessionId (same schema the apps use). Anonymous visitors stay on
+  // localStorage (handled in the widget). Returns [] when signed out.
+  /** List the user's coach sessions (newest first). */
+  async loadCoachSessions(): Promise<Array<{ id: string; title: string; createdAt: number; updatedAt: number; lastMessage: string }>> {
+    const u = this.currentUser(); if (!u) return [];
+    try {
+      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachSessions'), orderBy('updatedAt', 'desc')));
+      return snap.docs.map((d) => {
+        const x: any = d.data();
+        return {
+          id: d.id,
+          title: x.title || '',
+          createdAt: x.createdAt?.toMillis ? x.createdAt.toMillis() : 0,
+          updatedAt: x.updatedAt?.toMillis ? x.updatedAt.toMillis() : 0,
+          lastMessage: x.lastMessage || '',
+        };
+      });
+    } catch { return []; }
+  }
+  /** Create/update a session doc (title + lastMessage + timestamps). */
+  async upsertCoachSession(id: string, title: string, lastMessage: string, createdAtMs?: number): Promise<void> {
+    const u = this.currentUser(); if (!u) return;
+    const data: Record<string, unknown> = {
+      title: (title || '').slice(0, 200),
+      lastMessage: (lastMessage || '').slice(0, 120),
+      updatedAt: serverTimestamp(),
+    };
+    if (createdAtMs) data['createdAt'] = Timestamp.fromMillis(createdAtMs);
+    await setDoc(doc(this.db, 'users', u.uid, 'coachSessions', id), data, { merge: true });
+  }
+  /** Delete a session doc + all its messages. */
+  async deleteCoachSession(id: string): Promise<void> {
+    const u = this.currentUser(); if (!u) return;
+    await deleteDoc(doc(this.db, 'users', u.uid, 'coachSessions', id));
+    try {
+      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachChat'), where('sessionId', '==', id)));
+      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+    } catch { /* best-effort */ }
+  }
+  /** Append one chat message to coachChat (sender/message/timestamp/sessionId + rich web payload). */
+  async appendCoachMessage(sessionId: string, role: 'user' | 'coach', text: string, web?: unknown): Promise<void> {
+    const u = this.currentUser(); if (!u) return;
+    const data: Record<string, unknown> = {
+      sender: role === 'user' ? 'user' : 'coach',
+      message: (text || '').slice(0, 8000),
+      timestamp: serverTimestamp(),
+      sessionId,
+    };
+    if (web) { try { data['web'] = JSON.stringify(web).slice(0, 7000); } catch { /* skip rich payload */ } }
+    await addDoc(collection(this.db, 'users', u.uid, 'coachChat'), data);
+  }
+  /** Load a session's messages (sorted client-side by timestamp; no composite index needed). */
+  async loadCoachMessages(sessionId: string): Promise<Array<Record<string, unknown>>> {
+    const u = this.currentUser(); if (!u) return [];
+    try {
+      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachChat'), where('sessionId', '==', sessionId)));
+      const rows = snap.docs.map((d) => {
+        const x: any = d.data();
+        const ts = x.timestamp?.toMillis ? x.timestamp.toMillis() : 0;
+        if (x.web) { try { return { __ts: ts, ...JSON.parse(x.web) }; } catch { /* fallthrough */ } }
+        return { __ts: ts, role: x.sender === 'user' ? 'user' : 'coach', text: x.message || '' };
+      });
+      return rows.sort((a: any, b: any) => a.__ts - b.__ts).map((r: any) => { delete r.__ts; return r; });
+    } catch { return []; }
+  }
+
   // ── Profile / onboarding (web) — same users/{uid} schema as iOS/Android ──────
   /** Re-read the current user's profile doc into the userProfile signal. */
   async refreshProfile(): Promise<void> { const u = this.currentUser(); if (u) await this.loadUserProfile(u.uid); }

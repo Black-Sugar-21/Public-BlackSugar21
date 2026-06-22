@@ -213,6 +213,9 @@ export class CoachWidgetComponent {
   readonly historyOpen = signal(false);
   readonly convoList = signal<Array<{ id: string; title: string; updatedAt: number; active: boolean }>>([]);
   private activeId = '';
+  // How many messages of the active session are already persisted to Firestore (logged-in only),
+  // so the persistence effect appends only NEW ones instead of duplicating.
+  private persistedCounts = new Map<string, number>();
   private static readonly LS_CONVOS = 'bs21_coach_convos';
   private static readonly LS_ACTIVE = 'bs21_coach_active';
   readonly busy = signal(false);
@@ -343,8 +346,12 @@ export class CoachWidgetComponent {
       try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ }
       // Persist the active conversation on every change (skips greeting-only / transient typing).
       effect(() => {
+        const authed = this.firebase.currentUser(); // track auth → re-runs on login/logout
         const m = this.messages().filter((x) => !x.typing);
         if (!this.activeId || !m.some((x) => x.role === 'user')) return;
+        // Logged-in → Firestore (synced across devices + visible to the iOS/Android apps).
+        if (authed) { this.persistToFirestore(m); return; }
+        // Anonymous demo visitor → localStorage (per-browser, like ChatGPT signed-out).
         try {
           const list = this.loadConvos();
           const idx = list.findIndex((c) => c.id === this.activeId);
@@ -354,6 +361,14 @@ export class CoachWidgetComponent {
           const trimmed = list.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40);
           localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(trimmed));
         } catch { /* quota / private mode */ }
+      });
+      // On login, restore the user's most-recent Firestore session (unless they're mid-chat).
+      let lastAuthUid: string | null = null;
+      effect(() => {
+        const u = this.firebase.currentUser();
+        const uid = u?.uid ?? null;
+        if (uid && uid !== lastAuthUid) { lastAuthUid = uid; this.restoreFromFirestore(); }
+        else if (!uid) { lastAuthUid = null; }
       });
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
       try {
@@ -408,42 +423,96 @@ export class CoachWidgetComponent {
     return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
   }
 
+  /** Append only the not-yet-saved messages of the active session to Firestore (logged-in). */
+  private persistToFirestore(m: Msg[]) {
+    const id = this.activeId; if (!id) return;
+    const done = this.persistedCounts.get(id) ?? 0;
+    if (m.length <= done) return;
+    const isNew = done === 0;
+    this.persistedCounts.set(id, m.length); // optimistic — prevents double-append on rapid effects
+    (async () => {
+      try {
+        for (let i = done; i < m.length; i++) {
+          const msg = m[i];
+          // Store the full Msg as the rich `web` payload so the web re-renders cards exactly;
+          // apps read the plain sender/message.
+          await this.firebase.appendCoachMessage(id, msg.role, msg.text || '', msg);
+        }
+        await this.firebase.upsertCoachSession(id, this.convoTitle(m), m[m.length - 1]?.text || '', isNew ? Date.now() : undefined);
+      } catch { this.persistedCounts.set(id, done); /* allow retry on next change */ }
+    })();
+  }
+
+  /** On login, load the user's most-recent Firestore session (unless mid-chat anonymously). */
+  private async restoreFromFirestore() {
+    try {
+      if (this.messages().some((x) => x.role === 'user')) return; // don't clobber an in-progress chat
+      const sessions = await this.firebase.loadCoachSessions();
+      if (!sessions.length) return;
+      const recent = sessions[0];
+      const msgs = await this.firebase.loadCoachMessages(recent.id);
+      this.activeId = recent.id;
+      if (msgs.length) {
+        this.messages.set(msgs as unknown as Msg[]);
+        this.persistedCounts.set(recent.id, msgs.length);
+      }
+    } catch { /* noop */ }
+  }
+
   /** "Nueva conversación": the current chat is already saved — just start a fresh active session. */
   newConversation() {
     this.activeId = this.newConvoId();
-    try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ }
+    this.persistedCounts.set(this.activeId, 0);
+    if (!this.firebase.currentUser()) { try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ } }
     this.messages.set([{ role: 'coach', text: this.t().greeting }]);
     this.historyOpen.set(false);
     this.ga('coach_demo_new_conversation');
   }
 
   /** Open the conversation picker (most-recent first; current highlighted). */
-  openHistory() {
-    const list = this.loadConvos()
-      .filter((c) => Array.isArray(c.msgs) && c.msgs.some((m) => m.role === 'user'))
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((c) => ({ id: c.id, title: this.convoTitle(c.msgs), updatedAt: c.updatedAt, active: c.id === this.activeId }));
-    this.convoList.set(list);
+  async openHistory() {
+    if (this.firebase.currentUser()) {
+      const sessions = await this.firebase.loadCoachSessions();
+      this.convoList.set(sessions
+        .filter((s) => (s.title || s.lastMessage))
+        .map((s) => ({ id: s.id, title: s.title || this.ui('newChat'), updatedAt: s.updatedAt || s.createdAt, active: s.id === this.activeId })));
+    } else {
+      this.convoList.set(this.loadConvos()
+        .filter((c) => Array.isArray(c.msgs) && c.msgs.some((m) => m.role === 'user'))
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map((c) => ({ id: c.id, title: this.convoTitle(c.msgs), updatedAt: c.updatedAt, active: c.id === this.activeId })));
+    }
     this.historyOpen.set(true);
     this.ga('coach_demo_history_open');
   }
   closeHistory() { this.historyOpen.set(false); }
 
   /** Select a previous session and continue it (restores its full message context). */
-  selectConversation(id: string) {
-    const c = this.loadConvos().find((x) => x.id === id);
-    if (c) {
+  async selectConversation(id: string) {
+    if (this.firebase.currentUser()) {
+      const msgs = await this.firebase.loadCoachMessages(id);
       this.activeId = id;
-      try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, id); } catch { /* noop */ }
-      this.messages.set(Array.isArray(c.msgs) && c.msgs.length ? c.msgs : [{ role: 'coach', text: this.t().greeting }]);
+      this.persistedCounts.set(id, msgs.length);
+      this.messages.set(msgs.length ? (msgs as unknown as Msg[]) : [{ role: 'coach', text: this.t().greeting }]);
+    } else {
+      const c = this.loadConvos().find((x) => x.id === id);
+      if (c) {
+        this.activeId = id;
+        try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, id); } catch { /* noop */ }
+        this.messages.set(Array.isArray(c.msgs) && c.msgs.length ? c.msgs : [{ role: 'coach', text: this.t().greeting }]);
+      }
     }
     this.historyOpen.set(false);
   }
 
   /** Delete a stored conversation from the picker. */
-  deleteConversation(id: string, ev: Event) {
+  async deleteConversation(id: string, ev: Event) {
     ev.stopPropagation();
-    try { localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(this.loadConvos().filter((c) => c.id !== id))); } catch { /* noop */ }
+    if (this.firebase.currentUser()) {
+      await this.firebase.deleteCoachSession(id);
+    } else {
+      try { localStorage.setItem(CoachWidgetComponent.LS_CONVOS, JSON.stringify(this.loadConvos().filter((c) => c.id !== id))); } catch { /* noop */ }
+    }
     this.convoList.update((l) => l.filter((c) => c.id !== id));
     if (id === this.activeId) this.newConversation();
   }
