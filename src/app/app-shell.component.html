@@ -384,7 +384,7 @@
                   <div class="ob-welcome-spark">✦</div>
                   <h2 class="ob-title">{{ s('obWelcome') }}</h2>
                   <p class="ob-welcome-sub">{{ s('obWelcomeSub') }}</p>
-                  <button class="ob-next" (click)="obStarted.set(true)">{{ s('obStart') }}</button>
+                  <ui-button variant="primary" [block]="true" (click)="obStarted.set(true)">{{ s('obStart') }}</ui-button>
                 </div>
               } @else {
               <div class="ob-wrap">
@@ -456,10 +456,10 @@
                   @if (obError()) { <p class="ob-error">{{ obError() }}</p> }
                 </div>
                 <div class="ob-nav">
-                  @if (obStep() > 0) { <button class="ob-back" (click)="obBack()">{{ s('obBack') }}</button> }
-                  <button class="ob-next" (click)="obNext()" [disabled]="obSaving() || obUploading()">
+                  @if (obStep() > 0) { <ui-button variant="secondary" (click)="obBack()">{{ s('obBack') }}</ui-button> }
+                  <ui-button variant="primary" [block]="true" [disabled]="obSaving() || obUploading()" (click)="obNext()">
                     {{ obSaving() ? '…' : (obStep() === 7 ? s('obFinish') : s('obNext')) }}
-                  </button>
+                  </ui-button>
                 </div>
               </div>
               }
