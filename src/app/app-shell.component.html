@@ -14,7 +14,7 @@
         <div class="shell-side-foot">
           @if (firebase.currentUser(); as u) {
             <button class="shell-acct" (click)="go('profile')">
-              @if (u.photoURL) { <img [src]="u.photoURL" alt="" referrerpolicy="no-referrer" /> } @else { <span class="shell-acct-i">{{ initial(u) }}</span> }
+              @if (profilePhotos().length) { <img [src]="profilePhotos()[0]" alt="" /> } @else { <span class="shell-acct-i">{{ initial(u) }}</span> }
               <span class="shell-acct-n">{{ u.displayName || u.email }}</span>
             </button>
           }
@@ -210,7 +210,7 @@
                       } @else {
                         <label class="ep-cell empty" [class.busy]="epUploading()">
                           <input type="file" accept="image/*" multiple hidden [disabled]="epUploading()" (change)="epAddPhotos($event)" />
-                          <span class="ep-cell-plus">{{ epUploading() ? '…' : '＋' }}</span>
+                          <span class="ep-cell-plus">{{ epUploading() ? (epUploadPct() > 0 ? epUploadPct() + '%' : '…') : '＋' }}</span>
                         </label>
                       }
                     }
@@ -343,7 +343,6 @@
                   <div class="pf-avatar-ring">
                     @if (profilePhotos().length) { <img class="pf-avatar" [class.skel]="!pfAvatarLoaded()" [src]="profilePhotos()[0]" (load)="pfAvatarLoaded.set(true)" (error)="pfAvatarLoaded.set(true)" alt="" /> }
                     @else if (photosLoading()) { <span class="pf-avatar skel"></span> }
-                    @else if (firebase.currentUser()?.photoURL) { <img class="pf-avatar" [class.skel]="!pfAvatarLoaded()" [src]="firebase.currentUser()?.photoURL" (load)="pfAvatarLoaded.set(true)" (error)="pfAvatarLoaded.set(true)" alt="" referrerpolicy="no-referrer" /> }
                     @else { <span class="pf-avatar initial">{{ initial(firebase.currentUser()) }}</span> }
                   </div>
                   <div class="pf-head-col">
@@ -513,8 +512,23 @@
                 <div class="ob-ai-overlay">
                   <div class="ob-ai-card">
                     <div class="ob-ai-spin"></div>
-                    <div class="ob-ai-title">{{ s('obAnalyzing') }}</div>
-                    <div class="ob-ai-sub">{{ s('obAiSub') }}</div>
+                    @if (obUploadPct() > 0) {
+                      <div class="ob-ai-title">{{ s('obUploadingTitle') }}</div>
+                      <div class="ob-ai-bar"><span [style.width.%]="obUploadPct()"></span></div>
+                      <div class="ob-ai-sub">{{ obUploadPct() }}%</div>
+                    } @else {
+                      <div class="ob-ai-title">{{ s('obAnalyzing') }}</div>
+                      <div class="ob-ai-sub">{{ s('obAiSub') }}</div>
+                    }
+                  </div>
+                </div>
+              }
+              <!-- Elegant "finishing" overlay while the profile saves (mirrors iOS saving overlay). -->
+              @if (obSaving()) {
+                <div class="ob-ai-overlay">
+                  <div class="ob-ai-card">
+                    <div class="ob-ai-spin"></div>
+                    <div class="ob-ai-title">{{ s('obStarting') }}</div>
                   </div>
                 </div>
               }
@@ -548,6 +562,16 @@
               <button class="shell-confirm-cancel" (click)="epCancelGender()">{{ s('cancel') }}</button>
               <button class="shell-confirm-ok" (click)="epConfirmGender()">{{ s('genderClearConfirm') }}</button>
             </div>
+          </div>
+        </div>
+      }
+
+      <!-- Elegant onboarding-complete flourish: gold check springs in, then reveals the app. -->
+      @if (obDone()) {
+        <div class="ob-done-ov">
+          <div class="ob-done-card">
+            <div class="ob-done-check"><svg viewBox="0 0 52 52" aria-hidden="true"><circle class="ob-done-circ" cx="26" cy="26" r="24" /><path class="ob-done-tick" d="M14 27l8 8 16-16" /></svg></div>
+            <div class="ob-done-title">{{ s('obReady') }}</div>
           </div>
         </div>
       }

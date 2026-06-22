@@ -104,6 +104,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   obPhotos: {"es":"Tus fotos","en":"Your photos","pt":"Suas fotos","fr":"Tes photos","de":"Deine Fotos","it":"Le tue foto","zh":"你的照片","ja":"あなたの写真","ko":"사진","ru":"Ваши фото","ar":"صورك","id":"Fotomu","tr":"Fotoğrafların"},
   obPhotoHint: {"es":"Agrega al menos 2 (hasta 6). La 1ª es tu principal.","en":"Add at least 2 (up to 6). The 1st is your main.","pt":"Adicione ao menos 2 (até 6). A 1ª é a principal.","fr":"Ajoute au moins 2 (jusqu'à 6). La 1ʳᵉ est principale.","de":"Mind. 2 (bis 6). Das 1. ist dein Hauptfoto.","it":"Aggiungi almeno 2 (fino a 6). La 1ª è principale.","zh":"至少添加 2 张（最多 6）。第 1 张为主图。","ja":"2枚以上（最大6）。1枚目がメイン。","ko":"최소 2장(최대 6). 첫 번째가 대표.","ru":"Минимум 2 (до 6). Первое — главное.","ar":"أضف صورتين على الأقل (حتى 6). الأولى رئيسية.","id":"Tambah min. 2 (maks 6). Foto ke-1 utama.","tr":"En az 2 (en çok 6). 1.'si ana fotoğraf."},
   obPhotoRejected: {"es":"Esa foto no pasó la revisión de IA. Prueba con otra.","en":"That photo didn't pass the AI review. Try another.","pt":"Essa foto não passou na revisão de IA. Tente outra.","fr":"Cette photo n'a pas passé la vérification IA. Essaie une autre.","de":"Dieses Foto hat die KI-Prüfung nicht bestanden. Versuch ein anderes.","it":"Quella foto non ha superato la verifica IA. Provane un'altra.","zh":"该照片未通过 AI 审核，请换一张。","ja":"その写真はAI審査に通りませんでした。別の写真をお試しください。","ko":"이 사진은 AI 검토를 통과하지 못했어요. 다른 사진을 시도해 보세요.","ru":"Это фото не прошло проверку ИИ. Попробуйте другое.","ar":"لم تجتز هذه الصورة مراجعة الذكاء الاصطناعي. جرّب صورة أخرى.","id":"Foto itu tidak lolos peninjauan AI. Coba yang lain.","tr":"Bu fotoğraf yapay zeka incelemesini geçemedi. Başka birini dene."},
+  obStarting: {"es":"Comenzando…","en":"Getting started…","pt":"Começando…","fr":"On démarre…","de":"Geht los…","it":"Si parte…","zh":"正在开始…","ja":"開始中…","ko":"시작하는 중…","ru":"Начинаем…","ar":"جارٍ البدء…","id":"Memulai…","tr":"Başlıyoruz…"},
+  obReady: {"es":"¡Todo listo!","en":"All set!","pt":"Tudo pronto!","fr":"C'est prêt !","de":"Alles bereit!","it":"Tutto pronto!","zh":"一切就绪！","ja":"準備完了！","ko":"준비 완료!","ru":"Готово!","ar":"كل شيء جاهز!","id":"Semua siap!","tr":"Her şey hazır!"},
+  obUploadingTitle: {"es":"Subiendo foto…","en":"Uploading photo…","pt":"Enviando foto…","fr":"Envoi de la photo…","de":"Foto wird hochgeladen…","it":"Caricamento foto…","zh":"正在上传照片…","ja":"写真をアップロード中…","ko":"사진 업로드 중…","ru":"Загрузка фото…","ar":"جارٍ رفع الصورة…","id":"Mengunggah foto…","tr":"Fotoğraf yükleniyor…"},
   genderClearTitle: {"es":"¿Cambiar tu género?","en":"Change your gender?","pt":"Mudar seu gênero?","fr":"Changer ton genre ?","de":"Geschlecht ändern?","it":"Cambiare il tuo genere?","zh":"更改你的性别？","ja":"性別を変更しますか？","ko":"성별을 변경할까요?","ru":"Изменить пол?","ar":"تغيير جنسك؟","id":"Ubah gender kamu?","tr":"Cinsiyetini değiştir?"},
   genderClearBody: {"es":"Tus fotos se verifican según tu género, así que al cambiarlo se eliminarán. Tendrás que subir fotos nuevas.","en":"Your photos are verified for your gender, so changing it will remove them. You'll need to upload new photos.","pt":"Suas fotos são verificadas conforme seu gênero, então mudá-lo vai removê-las. Você precisará enviar novas fotos.","fr":"Tes photos sont vérifiées selon ton genre, le changer va donc les supprimer. Tu devras en ajouter de nouvelles.","de":"Deine Fotos werden für dein Geschlecht geprüft – eine Änderung entfernt sie. Du musst neue Fotos hochladen.","it":"Le tue foto sono verificate in base al tuo genere, quindi cambiarlo le rimuoverà. Dovrai caricarne di nuove.","zh":"你的照片是按性别审核的，更改性别会删除它们。你需要重新上传照片。","ja":"写真は性別に基づいて審査されるため、変更すると削除されます。新しい写真をアップロードする必要があります。","ko":"사진은 성별에 따라 검증되므로 변경하면 삭제됩니다. 새 사진을 업로드해야 해요.","ru":"Ваши фото проверяются по полу, поэтому при его смене они будут удалены. Нужно будет загрузить новые.","ar":"يتم التحقق من صورك حسب جنسك، لذا تغييره سيحذفها. ستحتاج لرفع صور جديدة.","id":"Foto kamu diverifikasi sesuai gender, jadi mengubahnya akan menghapusnya. Kamu perlu mengunggah foto baru.","tr":"Fotoğrafların cinsiyetine göre doğrulanır, bu yüzden değiştirmek onları kaldırır. Yeni fotoğraf yüklemen gerekir."},
   genderClearConfirm: {"es":"Cambiar y borrar fotos","en":"Change & remove photos","pt":"Mudar e remover fotos","fr":"Changer et supprimer","de":"Ändern & Fotos löschen","it":"Cambia e rimuovi foto","zh":"更改并删除照片","ja":"変更して写真を削除","ko":"변경하고 사진 삭제","ru":"Сменить и удалить фото","ar":"تغيير وحذف الصور","id":"Ubah & hapus foto","tr":"Değiştir ve fotoğrafları sil"},
@@ -374,7 +377,12 @@ export class AppShellComponent implements OnDestroy {
     const n = (u?.displayName || u?.email || '?').trim();
     return (n.charAt(0) || '?').toUpperCase();
   }
-  async signOut() { this.showConfirm.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } this.router.navigate(['/']); }
+  async signOut() {
+    this.showConfirm.set(false);
+    try { await this.firebase.signOutUser(); } catch { /* noop */ }
+    // Hard redirect to the landing (blacksugar21.com/) so no signed-in SPA state lingers.
+    if (this.isBrowser) window.location.assign('/'); else this.router.navigate(['/']);
+  }
 
   // ── Discovery ──────────────────────────────────────────────────────────────
   async loadDiscovery() {
@@ -609,6 +617,7 @@ export class AppShellComponent implements OnDestroy {
   }
   readonly epPhotos = signal<Array<{ name: string; url: string; loaded?: boolean }>>([]);
   readonly epUploading = signal(false);
+  readonly epUploadPct = signal(0); // 0-100 upload progress for the current photo
   readonly grid9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   /** Mark a grid photo as painted → removes its skeleton (skeleton stays until the image loads). */
   epImgLoaded(i: number) { this.epPhotos.update((a) => a.map((p, idx) => (idx === i ? { ...p, loaded: true } : p))); }
@@ -683,16 +692,18 @@ export class AppShellComponent implements OnDestroy {
     this.epUploading.set(true); this.epError.set('');
     try {
       for (const f of files.slice(0, 9 - this.epPhotos().length)) {
-        if (f.size > 10 * 1024 * 1024) continue;
-        // iOS/Android parity: AI (Gemini Vision) reviews each photo before it's accepted.
-        const b64 = await this.fileToModerationBase64(f);
-        const verdict = await this.firebase.moderateProfileImage(b64, this.ep.male, this.lang());
-        if (!verdict.approved) { this.epError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
-        const name = await this.firebase.uploadProfilePhoto(f);
-        this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f), loaded: false }]);
+        if (f.size > 10 * 1024 * 1024) { this.epError.set(this.s('obPhotoErr')); continue; }
+        try {
+          // iOS/Android parity: AI (Gemini Vision) reviews each photo before it's accepted.
+          const b64 = await this.fileToModerationBase64(f);
+          const verdict = await this.firebase.moderateProfileImage(b64, this.ep.male, this.lang());
+          if (!verdict.approved) { this.epError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
+          this.epUploadPct.set(0);
+          const name = await this.firebase.uploadProfilePhoto(f, (pct) => this.epUploadPct.set(pct));
+          this.epPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f), loaded: false }]);
+        } catch (e) { console.error('[edit-profile] photo failed:', e); this.epError.set(this.s('obPhotoErr')); }
       }
-    } catch { this.epError.set(this.s('obPhotoErr')); }
-    finally { this.epUploading.set(false); }
+    } finally { this.epUploading.set(false); }
   }
   // iOS/Android parity: a profile must keep at least 2 photos — block removing below that
   // (a gender change is the only path that clears all, since the user must re-validate them).
@@ -742,6 +753,8 @@ export class AppShellComponent implements OnDestroy {
   ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50 };
   readonly obPhotos = signal<Array<{ name: string; url: string }>>([]);
   readonly obUploading = signal(false);
+  readonly obUploadPct = signal(0); // 0-100 upload progress for the current photo
+  readonly obDone = signal(false);  // elegant success flourish after onboarding completes
   readonly obGeo = signal<{ lat: number; lng: number } | null>(null); // captured in the location step
   readonly obLocating = signal(false);
   private readonly OB_LAST = 8;
@@ -795,35 +808,48 @@ export class AppShellComponent implements OnDestroy {
     this.obUploading.set(true); this.obError.set('');
     try {
       for (const f of files.slice(0, 6 - this.obPhotos().length)) {
-        if (f.size > 10 * 1024 * 1024) continue; // 10MB cap
-        // iOS/Android parity: every photo is reviewed by AI (Gemini Vision) BEFORE it's accepted.
-        const b64 = await this.fileToModerationBase64(f);
-        const verdict = await this.firebase.moderateProfileImage(b64, this.ob.male, this.lang());
-        if (!verdict.approved) { this.obError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
-        const name = await this.firebase.uploadProfilePhoto(f);
-        this.obPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]);
+        if (f.size > 10 * 1024 * 1024) { this.obError.set(this.s('obPhotoErr')); continue; } // 10MB cap
+        // Per-photo: one bad file (HEIC that won't decode, slow upload) must NOT freeze the rest.
+        try {
+          // iOS/Android parity: every photo is reviewed by AI (Gemini Vision) BEFORE it's accepted.
+          const b64 = await this.fileToModerationBase64(f);
+          const verdict = await this.firebase.moderateProfileImage(b64, this.ob.male, this.lang());
+          if (!verdict.approved) { this.obError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
+          this.obUploadPct.set(0);
+          const name = await this.firebase.uploadProfilePhoto(f, (pct) => this.obUploadPct.set(pct));
+          this.obPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]);
+        } catch (e) {
+          console.error('[onboarding] photo failed:', e);
+          this.obError.set(this.s('obPhotoErr')); // surfaced, never a silent hang
+        }
       }
-    } catch { this.obError.set(this.s('obPhotoErr')); }
-    finally { this.obUploading.set(false); input.value = ''; }
+    } finally { this.obUploading.set(false); input.value = ''; }
   }
-  /** Downscale to ≤1024px JPEG → raw base64 (no data: prefix), under the moderation CF's ~1.5MB cap. */
+  /** Downscale to ≤1024px JPEG → raw base64 (no data: prefix), under the moderation CF's ~1.5MB cap.
+   *  Hardened: a hard timeout guarantees it never hangs (some mobile browsers fire NEITHER onload nor
+   *  onerror for HEIC/odd images → the onboarding overlay would spin forever). */
   private fileToModerationBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const max = 1024;
-        let w = img.width, h = img.height;
-        if (w > max || h > max) { const r = Math.min(max / w, max / h); w = Math.round(w * r); h = Math.round(h * r); }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('no-ctx')); return; }
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve((canvas.toDataURL('image/jpeg', 0.82).split(',')[1]) || '');
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img-load')); };
+      let settled = false;
+      const finish = (fn: () => void) => { if (settled) return; settled = true; clearTimeout(timer); URL.revokeObjectURL(url); fn(); };
+      const timer = setTimeout(() => finish(() => reject(new Error('img-timeout'))), 15000);
+      img.onload = () => finish(() => {
+        try {
+          const max = 1024;
+          let w = img.width, h = img.height;
+          if (!w || !h) { reject(new Error('img-empty')); return; }
+          if (w > max || h > max) { const r = Math.min(max / w, max / h); w = Math.round(w * r); h = Math.round(h * r); }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('no-ctx')); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve((canvas.toDataURL('image/jpeg', 0.82).split(',')[1]) || '');
+        } catch (e) { reject(e instanceof Error ? e : new Error('canvas-fail')); }
+      });
+      img.onerror = () => finish(() => reject(new Error('img-load')));
       img.src = url;
     });
   }
@@ -896,6 +922,11 @@ export class AppShellComponent implements OnDestroy {
       });
       this.track('onboarding_complete', { userType });
       this.obStep.set(0);
+      // Load the just-uploaded photos so the profile avatar shows the FIRST uploaded photo
+      // (never the Google/login photo), then play an elegant success flourish.
+      this.profilePhotos.set([]); this.pfAvatarLoaded.set(false); this.loadProfilePhotos();
+      this.obDone.set(true);
+      if (this.isBrowser) setTimeout(() => this.obDone.set(false), 1900);
     } catch { this.obError.set(this.s('obSaveErr')); }
     finally { this.obSaving.set(false); }
   }

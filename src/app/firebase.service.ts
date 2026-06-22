@@ -58,6 +58,7 @@ import {
   getStorage,
   ref as storageRef,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
@@ -520,12 +521,22 @@ export class FirebaseService {
   }
   /** Upload one profile photo to Storage (users/{uid}/{file}) — returns the stored filename. The
    *  discovery feed signs these names server-side, same as photos uploaded from the apps. */
-  async uploadProfilePhoto(file: File): Promise<string> {
+  async uploadProfilePhoto(file: File, onProgress?: (pct: number) => void): Promise<string> {
     const u = this.currentUser();
     if (!u) throw new Error('not-authenticated');
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const fileName = `web_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    await uploadBytes(storageRef(this.storage, `users/${u.uid}/${fileName}`), file, { contentType: file.type || 'image/jpeg' });
+    const ref = storageRef(this.storage, `users/${u.uid}/${fileName}`);
+    // Resumable upload so we can report progress (0-100%) to the user, with a timeout guard so a
+    // flaky/blocked network never hangs the onboarding overlay indefinitely.
+    await new Promise<void>((resolve, reject) => {
+      const task = uploadBytesResumable(ref, file, { contentType: file.type || 'image/jpeg' });
+      const timer = setTimeout(() => { try { task.cancel(); } catch { /* noop */ } reject(new Error('upload-timeout')); }, 60000);
+      task.on('state_changed',
+        (snap) => { if (onProgress && snap.totalBytes) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)); },
+        (err) => { clearTimeout(timer); reject(err); },
+        () => { clearTimeout(timer); resolve(); });
+    });
     return fileName;
   }
   /** Delete uploaded profile photos from Storage (used when a gender change invalidates them —
