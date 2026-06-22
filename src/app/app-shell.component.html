@@ -307,7 +307,7 @@
                               </div>
                               @if (pl.address) { <div class="place-sug-addr">{{ pl.address }}</div> }
                             </div>
-                            <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : s('sharePlace') }}</ui-button>
+                            <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : (placeAddMode() ? s('bpAdd') : s('sharePlace')) }}</ui-button>
                           </div>
                         }
                         @if (placeLoadingMore()) {
@@ -344,7 +344,11 @@
                             @if (bp.totalDuration) { <span class="bp-dur">⏱ {{ bp.totalDuration }}</span> }
                             @if (bp.estimatedBudget) { <span class="bp-dur">💰 {{ bp.estimatedBudget }}</span> }
                           </div>
-                          @for (st of bp.steps; track $index) {
+                          <div class="bp-subhead">
+                            <span class="bp-sugg">✨ {{ s('bpSuggestion') }}</span>
+                            @if (blueprintSteps().length) { <button class="bp-clear" (click)="clearBlueprintSteps()">{{ s('bpClearAll') }}</button> }
+                          </div>
+                          @for (st of blueprintSteps(); track $index) {
                             <div class="bp-step">
                               <div class="bp-step-rail"><span class="bp-step-dot">{{ $index + 1 }}</span></div>
                               <div class="bp-step-card">
@@ -355,16 +359,19 @@
                                   @if (stepPlaceName(st)) { <div class="bp-step-place">📍 {{ stepPlaceName(st) }}</div> }
                                   @if (st.tip) { <div class="bp-step-tip">💡 {{ st.tip }}</div> }
                                 </div>
+                                <button class="bp-step-x" (click)="removeBlueprintStep($index)" aria-label="✕">✕</button>
                               </div>
                             </div>
                           }
+                          @if (!blueprintSteps().length) { <div class="bsheet-empty">{{ s('bpEmptySteps') }}</div> }
+                          <button class="bp-addplace" (click)="addPlaceToBlueprint()">＋ {{ s('bpAddPlace') }}</button>
                           @if (bp.icebreaker) {
                             <div class="bp-ice">
                               <div class="bp-ice-h">💬 {{ s('bpIcebreaker') }}</div>
                               <div class="bp-ice-t">{{ bp.icebreaker }}</div>
                             </div>
                           }
-                          <ui-button variant="primary" [block]="true" style="margin-top:6px" [disabled]="blueprintSending()" (click)="sendBlueprint()">{{ blueprintSending() ? '…' : s('blueprintShare') }}</ui-button>
+                          <ui-button variant="primary" [block]="true" style="margin-top:6px" [disabled]="blueprintSending() || !blueprintSteps().length" (click)="sendBlueprint()">{{ blueprintSending() ? '…' : s('blueprintShare') }}</ui-button>
                         }
                       }
                     </div>

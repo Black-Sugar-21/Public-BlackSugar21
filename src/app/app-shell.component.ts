@@ -68,6 +68,11 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   bpStandard: {"es":"Estándar","en":"Standard","pt":"Padrão","fr":"Standard","de":"Standard","it":"Standard","zh":"标准","ja":"標準","ko":"기본","ru":"Стандарт","ar":"قياسية","id":"Standar","tr":"Standart"},
   bpFull: {"es":"Completa","en":"Full","pt":"Completa","fr":"Complète","de":"Voll","it":"Completa","zh":"完整","ja":"フル","ko":"풀","ru":"Полное","ar":"كاملة","id":"Penuh","tr":"Tam"},
   bpIcebreaker: {"es":"Para romper el hielo","en":"Conversation starter","pt":"Para quebrar o gelo","fr":"Pour briser la glace","de":"Gesprächseinstieg","it":"Per rompere il ghiaccio","zh":"开场白","ja":"会話のきっかけ","ko":"대화 시작","ru":"Для начала разговора","ar":"لكسر الجمود","id":"Pembuka obrolan","tr":"Sohbet başlatıcı"},
+  bpSuggestion: {"es":"Sugerencia IA — personalízala a tu gusto","en":"AI suggestion — customize it to your liking","pt":"Sugestão IA — personalize do seu jeito","fr":"Suggestion IA — personnalise-la à ta guise","de":"KI-Vorschlag — passe ihn an","it":"Suggerimento IA — personalizzalo come vuoi","zh":"AI 建议 — 按你的喜好调整","ja":"AIの提案 — 自由にカスタマイズ","ko":"AI 제안 — 원하는 대로 수정하세요","ru":"AI-предложение — настройте по своему вкусу","ar":"اقتراح ذكي — خصّصه كما تريد","id":"Saran AI — sesuaikan sesukamu","tr":"AI önerisi — istediğin gibi düzenle"},
+  bpAddPlace: {"es":"Agregar un lugar","en":"Add a place","pt":"Adicionar um lugar","fr":"Ajouter un lieu","de":"Ort hinzufügen","it":"Aggiungi un posto","zh":"添加地点","ja":"場所を追加","ko":"장소 추가","ru":"Добавить место","ar":"إضافة مكان","id":"Tambah tempat","tr":"Mekan ekle"},
+  bpClearAll: {"es":"Borrar todo","en":"Clear all","pt":"Limpar tudo","fr":"Tout effacer","de":"Alle löschen","it":"Cancella tutto","zh":"清空","ja":"すべて消去","ko":"모두 지우기","ru":"Очистить всё","ar":"مسح الكل","id":"Hapus semua","tr":"Tümünü sil"},
+  bpAdd: {"es":"Agregar","en":"Add","pt":"Adicionar","fr":"Ajouter","de":"Hinzufügen","it":"Aggiungi","zh":"添加","ja":"追加","ko":"추가","ru":"Добавить","ar":"إضافة","id":"Tambah","tr":"Ekle"},
+  bpEmptySteps: {"es":"Agrega lugares para armar tu plan.","en":"Add places to build your plan.","pt":"Adicione lugares para montar seu plano.","fr":"Ajoute des lieux pour créer ton plan.","de":"Füge Orte hinzu, um deinen Plan zu erstellen.","it":"Aggiungi posti per creare il tuo piano.","zh":"添加地点来制定你的计划。","ja":"場所を追加してプランを作りましょう。","ko":"장소를 추가해 플랜을 만들어요.","ru":"Добавьте места, чтобы составить план.","ar":"أضف أماكن لبناء خطتك.","id":"Tambahkan tempat untuk menyusun rencanamu.","tr":"Planını oluşturmak için mekan ekle."},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -456,8 +461,9 @@ export class AppShellComponent implements OnDestroy {
     const el = e.target as HTMLElement;
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) this.loadMorePlaces();
   }
-  closePlaceSheet() { this.placeSheetOpen.set(false); }
+  closePlaceSheet() { this.placeSheetOpen.set(false); this.placeAddMode.set(false); }
   async sendPlace(place: any) {
+    if (this.placeAddMode()) { this.addBlueprintStepFromPlace(place); return; } // add to the Date Blueprint instead of chat
     const m = this.selectedMatch(); if (!m || this.placeSending()) return;
     this.placeSending.set(place?.placeId || place?.name || 'x');
     try { await this.firebase.sendPlaceMessage(m.id, place); this.placeSheetOpen.set(false); }
@@ -481,19 +487,37 @@ export class AppShellComponent implements OnDestroy {
     this.fetchBlueprint();
   }
   selectBlueprintDuration(d: 'quick' | 'standard' | 'full') { if (this.blueprintDuration() === d || this.blueprintLoading()) return; this.blueprintDuration.set(d); this.fetchBlueprint(); }
+  // Editable steps (iOS DateBlueprintSheet: the AI plan is a suggestion you customize — remove,
+  // add places, clear all — before sharing). Seeded from the generated plan, then user-owned.
+  readonly blueprintSteps = signal<any[]>([]);
   private async fetchBlueprint() {
     const m = this.selectedMatch(); if (!m) return;
-    this.blueprintLoading.set(true); this.blueprint.set(null);
+    this.blueprintLoading.set(true); this.blueprint.set(null); this.blueprintSteps.set([]);
     const bp = await this.firebase.generateDateBlueprint(m.id, this.lang(), this.blueprintDuration());
     this.blueprint.set(bp);
+    this.blueprintSteps.set(bp && Array.isArray(bp.steps) ? [...bp.steps] : []);
     this.blueprintLoading.set(false);
   }
+  removeBlueprintStep(i: number) { this.blueprintSteps.update((arr) => arr.filter((_, idx) => idx !== i)); }
+  clearBlueprintSteps() { this.blueprintSteps.set([]); }
+  /** "Add a place" → open the place picker on top in ADD mode; tapping a place appends it as a step. */
+  addPlaceToBlueprint() { this.placeAddMode.set(true); this.openPlaceSheet(); }
+  addBlueprintStepFromPlace(place: any) {
+    const step = {
+      time: '', duration: '', activity: place?.name || '', placeName: place?.name || '', tip: '',
+      place: { name: place?.name || '', address: place?.address || '', rating: place?.rating ?? null, googleMapsUrl: place?.googleMapsUrl || '', photos: Array.isArray(place?.photos) ? place.photos : [], placeId: place?.placeId || place?.id || '' },
+      photoUrl: this.placePhoto(place),
+    };
+    this.blueprintSteps.update((arr) => [...arr, step]);
+    this.placeSheetOpen.set(false); this.placeAddMode.set(false); // back to the blueprint sheet
+  }
+  readonly placeAddMode = signal(false);
   closeBlueprintSheet() { this.blueprintSheetOpen.set(false); }
   async sendBlueprint() {
     const m = this.selectedMatch(); const bp = this.blueprint();
-    if (!m || !bp || this.blueprintSending()) return;
+    if (!m || !bp || !this.blueprintSteps().length || this.blueprintSending()) return;
     this.blueprintSending.set(true);
-    try { await this.firebase.sendBlueprintMessage(m.id, bp); this.blueprintSheetOpen.set(false); }
+    try { await this.firebase.sendBlueprintMessage(m.id, { ...bp, steps: this.blueprintSteps() }); this.blueprintSheetOpen.set(false); }
     catch { /* best-effort */ }
     finally { this.blueprintSending.set(false); }
   }
@@ -793,7 +817,7 @@ export class AppShellComponent implements OnDestroy {
     this.resetSmartReplies();
     this.resetCoachInsights();
     this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false); this.placeCatSel.set('');
-    this.blueprintSheetOpen.set(false); this.blueprint.set(null); this.blueprintLoading.set(false); this.blueprintDuration.set('standard');
+    this.blueprintSheetOpen.set(false); this.blueprint.set(null); this.blueprintSteps.set([]); this.blueprintLoading.set(false); this.blueprintDuration.set('standard'); this.placeAddMode.set(false);
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
