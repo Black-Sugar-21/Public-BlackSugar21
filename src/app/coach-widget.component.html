@@ -5,16 +5,21 @@
       </button>
     } @else {
       @if (!embedded) { <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div> }
-      <section class="cw-panel" [class.cw-embedded]="embedded" [style.height.px]="panelH()"
+      <section class="cw-panel" [class.cw-embedded]="embedded"
+               [style.top.px]="panelRect()?.top" [style.height.px]="panelRect()?.height"
                role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
             <div><b>{{ t().title }}</b><span class="cw-demo"><span class="cw-online-dot"></span>{{ user() ? li('connected') : t().demo }}</span></div></div>
           <div class="cw-head-r">
             <!-- Conversation history: pick a previous session and continue it (nothing is lost). -->
-            <button class="cw-new" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">🕘<span class="cw-new-lbl">{{ ui('historyShort') }}</span></button>
+            <button class="cw-new cw-new-compose" (click)="openHistory()" [title]="ui('historyTitle')" [attr.aria-label]="ui('historyTitle')">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="cw-new-lbl">{{ ui('historyShort') }}</span></button>
             <!-- Nueva conversación: starts a fresh chat (the current one stays saved in history). -->
-            <button class="cw-new" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">✎<span class="cw-new-lbl">{{ ui('newShort') }}</span></button>
+            <button class="cw-new cw-new-compose" (click)="newConversation()" [title]="ui('newChat')" [attr.aria-label]="ui('newChat')">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="cw-new-lbl">{{ ui('newShort') }}</span></button>
             @if (user(); as u) {
               <button class="cw-avatar" (click)="confirmSignOut.set(true)" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {

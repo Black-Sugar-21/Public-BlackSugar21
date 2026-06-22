@@ -203,14 +203,15 @@ const I18N: Record<string, any> = {
 })
 export class CoachWidgetComponent implements OnDestroy {
   readonly isBrowser: boolean;
-  /** Mobile floating-panel height = visualViewport.height (px). Mirrors the ChatAI widget: the panel
-   *  stays anchored at bottom:0 (so iOS lifts it above the keyboard) and we ONLY shrink the height to
-   *  the visible viewport — no top/offset hacks. null on desktop/embedded (CSS height applies). */
-  readonly panelH = signal<number | null>(null);
+  /** Mobile: the EXACT visible-viewport rectangle (top = visualViewport.offsetTop, height =
+   *  visualViewport.height). The panel is pinned to this rect so it always fills exactly what the user
+   *  can see — fullscreen when no keyboard, and above the keyboard when it's open (composer included).
+   *  An opaque backdrop covers the rest, so the page NEVER shows through. null on desktop/embedded. */
+  readonly panelRect = signal<{ top: number; height: number } | null>(null);
   private vvHandler = () => {
     const vv: any = (window as any).visualViewport;
-    if (!vv || this.embedded) { this.panelH.set(null); return; }
-    this.panelH.set(window.innerWidth <= 600 ? Math.round(vv.height) : null);
+    if (!vv || this.embedded || window.innerWidth > 600) { this.panelRect.set(null); return; }
+    this.panelRect.set({ top: Math.round(vv.offsetTop), height: Math.round(vv.height) });
     if (this.open()) setTimeout(() => this.scrollMessagesToBottom(), 50);
   };
   private scrollMessagesToBottom() {

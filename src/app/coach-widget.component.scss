@@ -39,16 +39,20 @@
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
     @keyframes cwIn { from{opacity:0; transform:scale(.86) translateY(10px)} to{opacity:1; transform:none} }
-    /* Mobile: bottom-anchored sheet (like the ChatAI widget). Anchoring at bottom:0 (NOT top) lets
-       iOS Safari lift the whole panel above the on-screen keyboard; JS only shrinks the height to the
-       visible viewport via [style.height.px]. Edge-to-edge with rounded top corners. */
+    /* Mobile: TRUE fullscreen (Claude-style). The panel covers the ENTIRE screen (inset:0, opaque) so
+       the page never shows through; JS adds padding-bottom = keyboard height ([style.paddingBottom.px])
+       so only the composer lifts above the keyboard. Edge-to-edge, no rounded corners. */
     @media (max-width: 600px) {
+      /* Opaque backdrop covers the WHOLE layout viewport so the page never shows through behind the
+         keyboard (real iOS shrinks the visual viewport, not the layout one). */
+      .cw-overlay { background:var(--cw-bg); }
+      /* Panel pinned to the exact visible-viewport rect (JS sets top+height); fallback fullscreen. */
       .cw-panel:not(.cw-embedded) {
-        inset:auto; top:auto; left:0; right:0; bottom:0; margin:0; width:100%;
-        height:100dvh; height:100svh; max-width:none; max-height:none;
-        border-radius:18px 18px 0 0; border-bottom:none;
-        padding-bottom:env(safe-area-inset-bottom);
+        position:fixed; top:0; left:0; right:0; bottom:auto; margin:0; width:100%;
+        height:100dvh; height:100svh; max-width:none; max-height:none; border-radius:0; border:none;
       }
+      /* Header clears the notch/status bar in fullscreen. */
+      .cw-panel:not(.cw-embedded) .cw-head { padding-top:max(14px, env(safe-area-inset-top)); }
       .cw-fab { right:calc(16px + env(safe-area-inset-right)); bottom:calc(16px + env(safe-area-inset-bottom)); padding:12px 16px; font-size:14px; }
       /* iOS Safari zooms (and shifts the layout) when focusing any input < 16px — force 16px on every
          field in the panel (ChatAI strategy). Prevents the zoom-on-tap that broke the keyboard view. */
@@ -105,10 +109,11 @@
     .cw-x { background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; }
     .cw-new { display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--cw-muted); font-size:16px; cursor:pointer; padding:5px 11px; line-height:1; border:1px solid var(--cw-border); border-radius:999px; }
     .cw-new:hover { color:var(--cw-gold); border-color:var(--cw-gold-d); }
+    .cw-new-compose svg { width:18px; height:18px; display:block; }
     /* Subtle short text label on WEB (clarifies the 🕘/✎ icons). Native iOS/Android keep icon-only. */
     .cw-new-lbl { display:inline; font-size:11.5px; font-weight:600; }
     /* Tight screens: icon-only to avoid header overflow. */
-    @media (max-width: 600px) { .cw-new-lbl { display:none; } .cw-new { border:none; padding:0 5px; } }
+    @media (max-width: 600px) { .cw-new-lbl { display:none; } .cw-new { border:none; padding:6px; } .cw-new-compose svg { width:22px; height:22px; } }
     .cw-history { position:absolute; top:14px; left:14px; right:14px; max-height:calc(100% - 28px); overflow-y:auto; z-index:30; background:var(--cw-card); border:1px solid var(--cw-border); border-radius:18px; padding:18px 16px; box-shadow:0 18px 50px rgba(0,0,0,.55); }
     /* Session-list rows live in the coach-sessions-list organism (ui/organisms). */
     .cw-skel { display:block; height:12px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.14) 37%, rgba(255,255,255,.06) 63%); background-size:400% 100%; animation:cwShimmer 1.4s ease infinite; }
@@ -305,5 +310,5 @@
     .cw-spin-lg { width:36px; height:36px; border:3px solid rgba(212,175,55,.25); border-top-color:var(--cw-gold); }
     .cw-signin-t { color:var(--cw-text); font-size:14.5px; font-weight:600; margin:0; }
     @keyframes cwSpin { to{transform:rotate(360deg)} }
-    @media (max-width:480px){ .cw-panel:not(.cw-embedded){ left:0; right:0; bottom:0; top:auto; width:100%; height:100dvh; height:100svh; max-height:none; border-radius:18px 18px 0 0; } }
+    @media (max-width:480px){ .cw-panel:not(.cw-embedded){ position:fixed; top:0; left:0; right:0; bottom:auto; width:100%; height:100dvh; height:100svh; max-height:none; border-radius:0; border:none; } }
   
