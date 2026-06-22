@@ -2575,3 +2575,31 @@ button:focus-visible,
 /* RTL (Arabic): flip the dropdown anchor */
 [dir="rtl"] .lang-menu { right: auto; left: 0; }
 [dir="rtl"] body, [dir="rtl"] .hero-content { text-align: right; }
+
+/* ── Mobile AI-Coach FAB (opens the fullscreen /coach page) ─────────────────── */
+.coach-fab-link {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 9998;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #1A1206; font-weight: 700; font-size: 14.5px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: linear-gradient(135deg, #D4AF37, #B8860B);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.35);
+  animation: coachFabNudge 5s cubic-bezier(.32,.72,0,1) 2s infinite both;
+}
+.coach-fab-link::before, .coach-fab-link::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 999px;
+  background: linear-gradient(135deg, #D4AF37, #B8860B); opacity: 0;
+  animation: coachFabPing 2.8s ease-out infinite;
+}
+.coach-fab-link::before { animation-delay: 1.4s; }
+.coach-fab-link::after { animation-delay: 2.3s; }
+.coach-fab-spark { font-size: 17px; }
+@keyframes coachFabPing { 0% { transform: scale(1); opacity: .45; } 75%,100% { transform: scale(1.45); opacity: 0; } }
+@keyframes coachFabNudge { 0%,86%,100% { transform: translateY(0) scale(1); } 90% { transform: translateY(-2px) scale(1.06); } 94% { transform: scale(.97); } 97% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .coach-fab-link, .coach-fab-link::before, .coach-fab-link::after { animation: none !important; } }

@@ -50,5 +50,10 @@ export const routes: Routes = [
     path: 'app',
     loadComponent: () => import('./app-shell.component').then(m => m.AppShellComponent),
     title: 'Black Sugar 21'
+  },
+  {
+    path: 'coach',
+    loadComponent: () => import('./coach-page.component').then(m => m.CoachPageComponent),
+    title: 'Coach IA · Black Sugar 21'
   }
 ];

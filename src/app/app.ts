@@ -103,6 +103,9 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     if (this.isBrowser) {
+      const setMobile = () => this.isMobileView.set(window.innerWidth <= 600);
+      setMobile();
+      window.addEventListener('resize', setMobile);
       gsap.registerPlugin(ScrollTrigger);
       // On entry with an active session, send the user straight to /app (the app shell routes
       // profile-less accounts to onboarding). Only from the landing root — legal pages and a
@@ -571,6 +574,15 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
     return u === '/app' || u.startsWith('/app/');
   }
+
+  /** The dedicated fullscreen coach route (mobile). */
+  isCoachRoute(): boolean {
+    const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
+    return u === '/coach';
+  }
+
+  /** Phone-sized screen → the coach opens as the fullscreen /coach page; desktop keeps the card. */
+  readonly isMobileView = signal(false);
 
   toggleMobileMenu(): void {
     this.mobileMenuOpen.set(!this.mobileMenuOpen());
