@@ -208,6 +208,7 @@ export class FirebaseService {
 
   async signInWithGoogle(): Promise<User> {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     const userCredential = await signInWithPopup(this.auth, provider);
     const user = userCredential.user;
 
@@ -270,7 +271,10 @@ export class FirebaseService {
    *  forever (Safari ITP blocks the cross-origin popup messaging between the app origin and the
    *  authDomain). Completed by handleRedirectResult() on the next page load. */
   async signInWithGoogleRedirect(): Promise<void> {
-    await signInWithRedirect(this.auth, new GoogleAuthProvider());
+    const provider = new GoogleAuthProvider();
+    // Always show the account picker so users can switch accounts (not auto-sign-in with cached session).
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await signInWithRedirect(this.auth, provider);
   }
   /** Popups hang on iOS Safari (ITP) → prefer the full-page redirect flow there. Desktop keeps the
    *  nicer popup. Heuristic: any iOS device, desktop Safari, or a small/touch viewport. */
