@@ -34,3 +34,8 @@
 /* Make room in the embedded widget header for the back button (scoped to this page — the widget
    component file is untouched). */
 :host ::ng-deep .cw-panel.cw-embedded .cw-head { padding-left: 56px; }
+
+/* Only the chat messages scroll — the page/host never does, and the chat scroll doesn't chain out. */
+:host, .coach-page { overscroll-behavior: none; }
+:host ::ng-deep .cw-panel.cw-embedded { overflow: hidden; }
+:host ::ng-deep .cw-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }

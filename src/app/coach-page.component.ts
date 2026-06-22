@@ -35,6 +35,9 @@ export class CoachPageComponent implements OnDestroy {
     if (this.isBrowser) {
       this.guardDesktop();
       window.addEventListener('resize', this.guardDesktop);
+      // While on /coach, tint the ROOT to the coach colour (#15151A) so every pixel — including any
+      // strip behind the keyboard — exactly matches the coach (no #0A0A0A vs #15151A seam).
+      document.documentElement.classList.add('coach-route');
       const vv: any = (window as any).visualViewport;
       if (vv) { vv.addEventListener('resize', this.vvHandler); vv.addEventListener('scroll', this.vvHandler); this.vvHandler(); }
     }
@@ -45,6 +48,6 @@ export class CoachPageComponent implements OnDestroy {
   ngOnDestroy() {
     const vv: any = this.isBrowser ? (window as any).visualViewport : null;
     if (vv) { vv.removeEventListener('resize', this.vvHandler); vv.removeEventListener('scroll', this.vvHandler); }
-    if (this.isBrowser) window.removeEventListener('resize', this.guardDesktop);
+    if (this.isBrowser) { window.removeEventListener('resize', this.guardDesktop); document.documentElement.classList.remove('coach-route'); }
   }
 }

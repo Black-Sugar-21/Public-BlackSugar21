@@ -86,6 +86,10 @@
 /* Dark at the ROOT so no white ever shows — iOS Safari leaves background-attachment:fixed gaps when
    the keyboard opens (the strip between content and the keyboard), and the html default is white. */
 html { background: var(--bg-dark, #0A0A0A); }
+/* On the fullscreen /coach route, match the coach surface colour exactly (no seam behind the keyboard). */
+html.coach-route { background: #15151A; }
+/* Lock the page so ONLY the chat messages area scrolls (no body rubber-band / background scroll). */
+html.coach-route, html.coach-route body { overflow: hidden; height: 100%; overscroll-behavior: none; }
 
 body {
   background: var(--gradient-main);
