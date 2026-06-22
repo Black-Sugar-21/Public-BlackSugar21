@@ -52,6 +52,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   coachSuggesting: {"es":"El Coach IA está pensando ideas…","en":"AI Coach is thinking of openers…","pt":"O Coach IA está pensando em ideias…","fr":"Le Coach IA réfléchit à des idées…","de":"Der KI-Coach überlegt Vorschläge…","it":"Il Coach IA sta pensando a delle idee…","zh":"AI 教练正在想开场白…","ja":"AIコーチが一言を考え中…","ko":"AI 코치가 제안을 고민 중…","ru":"ИИ-коуч придумывает идеи…","ar":"مدرب الذكاء الاصطناعي يفكر في أفكار…","id":"Coach AI sedang memikirkan ide…","tr":"AI Koç öneriler düşünüyor…"},
   coachSmartReplies: {"es":"Respuestas sugeridas","en":"Suggested replies","pt":"Respostas sugeridas","fr":"Réponses suggérées","de":"Antwortvorschläge","it":"Risposte suggerite","zh":"建议回复","ja":"返信の候補","ko":"추천 답장","ru":"Подсказки для ответа","ar":"ردود مقترحة","id":"Saran balasan","tr":"Önerilen yanıtlar"},
   coachThinking: {"es":"El Coach IA está pensando…","en":"AI Coach is thinking…","pt":"O Coach IA está pensando…","fr":"Le Coach IA réfléchit…","de":"Der KI-Coach denkt nach…","it":"Il Coach IA sta pensando…","zh":"AI 教练思考中…","ja":"AIコーチが考え中…","ko":"AI 코치가 생각 중…","ru":"ИИ-коуч думает…","ar":"مدرب الذكاء الاصطناعي يفكر…","id":"Coach AI sedang berpikir…","tr":"AI Koç düşünüyor…"},
+  coachChemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契度","ja":"相性","ko":"케미","ru":"Химия","ar":"الانسجام","id":"Chemistry","tr":"Uyum"},
+  coachPreDate: {"es":"Buen momento para proponer una cita","en":"Good moment to suggest a date","pt":"Bom momento para sugerir um encontro","fr":"Bon moment pour proposer un rendez-vous","de":"Guter Moment für ein Date","it":"Buon momento per proporre un appuntamento","zh":"适合提议约会的时机","ja":"デートに誘う好機です","ko":"데이트를 제안하기 좋은 순간","ru":"Хороший момент предложить свидание","ar":"وقت مناسب لاقتراح موعد","id":"Saat tepat untuk mengajak kencan","tr":"Buluşma teklif etmek için iyi an"},
+  coachUse: {"es":"Usar","en":"Use","pt":"Usar","fr":"Utiliser","de":"Verwenden","it":"Usa","zh":"使用","ja":"使う","ko":"사용","ru":"Использовать","ar":"استخدام","id":"Pakai","tr":"Kullan"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -348,6 +351,30 @@ export class AppShellComponent implements OnDestroy {
   useSmartReply(text: string) { this.chatText = text; this.dismissSmartReplies(); }
   dismissSmartReplies() { this.smartReplyDismissed = this.smartReplyFor; this.smartReplies.set([]); this.smartReplyTip.set(''); this.smartRepliesLoading.set(false); }
   private resetSmartReplies() { this.smartReplyFor = ''; this.smartReplyDismissed = ''; this.smartReplies.set([]); this.smartReplyTip.set(''); this.smartRepliesLoading.set(false); }
+  // AI Coach REAL-TIME INSIGHTS (iOS CoachInsightsBanner parity): chemistry score/trend + tips +
+  // a suggested action, auto-fetched (cooldown) for an ongoing conversation; expandable + dismissible.
+  readonly coachInsights = signal<{ chemistryScore: number; chemistryTrend: string; engagementLevel: string; preDateDetected: boolean; tips: { text: string; type: string; icon: string }[]; suggestedAction: { type: string; text: string } | null } | null>(null);
+  readonly coachInsightsLoading = signal(false);
+  readonly coachInsightsExpanded = signal(false);
+  private coachInsightsFor = '';
+  private coachInsightsDismissed = '';
+  private lastCoachFetch = 0;
+  private resetCoachInsights() { this.coachInsights.set(null); this.coachInsightsLoading.set(false); this.coachInsightsExpanded.set(false); this.coachInsightsFor = ''; this.coachInsightsDismissed = ''; this.lastCoachFetch = 0; }
+  private async maybeFetchCoachInsights(matchId: string) {
+    if (!matchId || matchId === this.coachInsightsDismissed) return;
+    const now = Date.now();
+    if (this.coachInsightsFor === matchId && now - this.lastCoachFetch < 45000) return; // iOS-style cooldown
+    this.lastCoachFetch = now; this.coachInsightsFor = matchId;
+    this.coachInsightsLoading.set(true);
+    const r = await this.firebase.getRealtimeCoachTips(matchId, this.lang());
+    if (this.coachInsightsFor === matchId && r && r.tips.length) this.coachInsights.set(r);
+    this.coachInsightsLoading.set(false);
+  }
+  toggleCoachInsights() { this.coachInsightsExpanded.update((v) => !v); }
+  dismissCoachInsights() { this.coachInsightsDismissed = this.selectedMatch()?.id || ''; this.coachInsights.set(null); this.coachInsightsExpanded.set(false); }
+  useCoachAction(text: string) { this.chatText = text; }
+  chemColor(score: number): string { return score >= 75 ? 'green' : score >= 50 ? 'gold' : 'red'; }
+  trendIcon(t: string): string { return t === 'rising' ? '↗' : t === 'falling' ? '↘' : '→'; }
   private unsubMatches: (() => void) | null = null;
   private unsubMsgs: (() => void) | null = null;
   // iOS tab order: Coach (tab 0) → Discover (tab 1) → Messages (tab 2) → Profile. Homologated.
@@ -637,6 +664,7 @@ export class AppShellComponent implements OnDestroy {
     this.firebase.setActiveChat(match.id);
     this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
     this.resetSmartReplies();
+    this.resetCoachInsights();
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
@@ -647,6 +675,7 @@ export class AppShellComponent implements OnDestroy {
         this.firebase.markMatchRead(match.id);
         this.maybeFetchSmartReplies(match.id, last); // AI Coach smart replies for the incoming message
       }
+      if (msgs.length >= 2) this.maybeFetchCoachInsights(match.id); // insights for an ongoing conversation (cooldown-guarded)
     });
   }
   /** Load older messages via timestamp cursor + prepend (iOS loadOlderMessages parity). */

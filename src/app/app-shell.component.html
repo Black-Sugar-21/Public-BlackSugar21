@@ -212,6 +212,30 @@
                   }
                 </div>
                 @if (chatError()) { <div class="chat-err">{{ chatError() }}</div> }
+                <!-- AI Coach insights (iOS CoachInsightsBanner parity): chemistry + tips, tap to expand. -->
+                @if (coachInsights(); as ci) {
+                  <div class="chat-coach" (click)="toggleCoachInsights()">
+                    <div class="chat-coach-head">
+                      <span class="cc-spark">✦</span>
+                      <span class="cc-label">{{ s('coachChemistry') }}</span>
+                      <b class="cc-score" [class]="'cc-' + chemColor(ci.chemistryScore)">{{ ci.chemistryScore }}%</b>
+                      <span class="cc-trend" [class]="'cc-' + chemColor(ci.chemistryScore)">{{ trendIcon(ci.chemistryTrend) }}</span>
+                      <span class="cc-grow"></span>
+                      <button class="chat-smart-x" (click)="$event.stopPropagation(); dismissCoachInsights()" aria-label="✕">✕</button>
+                    </div>
+                    @if (ci.tips[0]) { <div class="cc-tip">💡 {{ ci.tips[0].text }}</div> }
+                    @if (ci.preDateDetected) { <div class="cc-predate">📅 {{ s('coachPreDate') }}</div> }
+                    @if (coachInsightsExpanded()) {
+                      @for (t of ci.tips.slice(1); track t.text) { <div class="cc-tip">💡 {{ t.text }}</div> }
+                      @if (ci.suggestedAction; as act) {
+                        <div class="cc-action">
+                          <div class="cc-action-t">{{ act.text }}</div>
+                          <ui-button variant="primary" size="sm" (click)="$event.stopPropagation(); useCoachAction(act.text)">{{ s('coachUse') }}</ui-button>
+                        </div>
+                      }
+                    }
+                  </div>
+                }
                 <!-- AI Coach smart replies (iOS SmartReplyChipsView parity): above the composer. -->
                 @if (smartRepliesLoading() || smartReplies().length) {
                   <div class="chat-smart">

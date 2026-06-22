@@ -779,6 +779,34 @@ export class FirebaseService {
     return { replies: [], tip: '' };
   }
 
+  /** AI Coach real-time insights for a match — SAME getRealtimeCoachTips callable iOS/Android use:
+   *  chemistry score/trend, engagement, conversation tips + a suggested action. null on error/off. */
+  async getRealtimeCoachTips(matchId: string, lang: string): Promise<{
+    chemistryScore: number; chemistryTrend: string; engagementLevel: string; preDateDetected: boolean;
+    tips: { text: string; type: string; icon: string }[]; suggestedAction: { type: string; text: string } | null;
+  } | null> {
+    const u = this.currentUser();
+    if (!u || !matchId) return null;
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    try {
+      const fn = httpsCallable(this.functions, 'getRealtimeCoachTips');
+      const res: any = await fn({ matchId, userLanguage: l, language: l });
+      const d = res?.data;
+      if (d?.success) {
+        return {
+          chemistryScore: typeof d.chemistryScore === 'number' ? d.chemistryScore : 50,
+          chemistryTrend: d.chemistryTrend || 'stable',
+          engagementLevel: d.engagementLevel || 'medium',
+          preDateDetected: !!d.preDateDetected,
+          tips: Array.isArray(d.tips) ? d.tips.map((t: any) => ({ text: String(t?.text || '').trim(), type: t?.type || 'conversation', icon: t?.icon || 'lightbulb' })).filter((t: any) => t.text) : [],
+          suggestedAction: d.suggestedAction?.text ? { type: d.suggestedAction.type || 'ask_question', text: String(d.suggestedAction.text).trim() } : null,
+        };
+      }
+    } catch { /* rate-limited or AI off — caller shows nothing */ }
+    return null;
+  }
+
   /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
    *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
   async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {
