@@ -235,8 +235,8 @@ export class FirebaseService {
     provider.addScope('name');
     return provider;
   }
-  /** Ensure the Firestore profile exists for an OAuth (Apple) user — shared by popup + redirect paths. */
-  private async ensureAppleProfile(user: User): Promise<void> {
+  /** Ensure the Firestore profile exists for an OAuth (Google/Apple) user — shared by popup + redirect paths. */
+  private async ensureOAuthProfile(user: User): Promise<void> {
     const profileExists = await this.checkUserProfileExists(user.uid);
     if (!profileExists) {
       await this.createUserProfile({
@@ -254,18 +254,35 @@ export class FirebaseService {
   }
   async signInWithApple(): Promise<User> {
     const userCredential = await signInWithPopup(this.auth, this.appleProvider());
-    await this.ensureAppleProfile(userCredential.user);
+    await this.ensureOAuthProfile(userCredential.user);
     return userCredential.user;
   }
   /** Full-page redirect fallback (popups blocked / Safari). Completed by handleRedirectResult() on load. */
   async signInWithAppleRedirect(): Promise<void> {
     await signInWithRedirect(this.auth, this.appleProvider());
   }
-  /** Process a pending Apple redirect sign-in on app load (creates the profile for new users). */
+  /** Google sign-in via full-page redirect — reliable on iOS Safari, where signInWithPopup hangs
+   *  forever (Safari ITP blocks the cross-origin popup messaging between the app origin and the
+   *  authDomain). Completed by handleRedirectResult() on the next page load. */
+  async signInWithGoogleRedirect(): Promise<void> {
+    await signInWithRedirect(this.auth, new GoogleAuthProvider());
+  }
+  /** Popups hang on iOS Safari (ITP) → prefer the full-page redirect flow there. Desktop keeps the
+   *  nicer popup. Heuristic: any iOS device, desktop Safari, or a small/touch viewport. */
+  shouldUseRedirect(): boolean {
+    try {
+      const ua = navigator.userAgent || '';
+      const iOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+      const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
+      const smallTouch = typeof window !== 'undefined' && (('ontouchstart' in window) && window.innerWidth < 900);
+      return iOS || safari || smallTouch;
+    } catch { return false; }
+  }
+  /** Process a pending OAuth (Google/Apple) redirect sign-in on app load (creates the profile for new users). */
   private async handleRedirectResult(): Promise<void> {
     try {
       const res = await getRedirectResult(this.auth);
-      if (res?.user) await this.ensureAppleProfile(res.user);
+      if (res?.user) await this.ensureOAuthProfile(res.user);
     } catch (e) { console.warn('redirect sign-in result error:', e); }
   }
 

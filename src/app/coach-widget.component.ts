@@ -219,9 +219,33 @@ export class CoachWidgetComponent implements OnDestroy {
     const el = document.querySelector('.cw-body');
     if (el) el.scrollTop = el.scrollHeight;
   }
+  // Edge case (iOS Safari / bfcache): the Google/Apple OAuth popup can navigate full-page, so the
+  // sign-in promise may never settle — leaving the "Signing you in…" overlay STUCK when the user
+  // returns (back button, account-chooser dismissed, or page restored from Safari's bfcache, where
+  // the in-memory signingIn=true is snapshotted). When the page becomes visible/focused again, give
+  // Firebase a brief moment to settle, then either finish the sign-in (if it actually succeeded) or
+  // dismiss the overlay so the user is NEVER trapped on "Iniciando sesión…".
+  private signInWatchdog: any = null;
+  private clearOAuthPending() { try { sessionStorage.removeItem(CoachWidgetComponent.LS_OAUTH_PENDING); } catch { /* noop */ } }
+  private resolveStuckSignIn = () => {
+    if (!this.isBrowser || !this.signingIn()) return;
+    clearTimeout(this.signInWatchdog);
+    this.signInWatchdog = setTimeout(() => {
+      if (!this.signingIn()) return;                                        // popup await/finally / effect already cleared it
+      if (this.firebase.currentUser()) { this.clearOAuthPending(); this.signingIn.set(false); this.afterSignIn(); } // succeeded → proceed
+      else { this.clearOAuthPending(); this.signingIn.set(false); }         // came back without finishing → un-stick
+    }, 1800);
+  };
+  private onVisibilityReturn = () => { if (this.isBrowser && document.visibilityState === 'visible') this.resolveStuckSignIn(); };
   ngOnDestroy() {
     const vv: any = this.isBrowser ? (window as any).visualViewport : null;
     if (vv) { vv.removeEventListener('resize', this.vvHandler); vv.removeEventListener('scroll', this.vvHandler); }
+    if (this.isBrowser) {
+      window.removeEventListener('pageshow', this.resolveStuckSignIn);
+      window.removeEventListener('focus', this.resolveStuckSignIn);
+      document.removeEventListener('visibilitychange', this.onVisibilityReturn);
+      clearTimeout(this.signInWatchdog);
+    }
   }
   readonly open = signal(false);
   // Embedded mode: render the coach inline as a full panel (no FAB / overlay / close) — used by the
@@ -245,6 +269,9 @@ export class CoachWidgetComponent implements OnDestroy {
   private persistedCounts = new Map<string, number>();
   private static readonly LS_CONVOS = 'bs21_coach_convos';
   private static readonly LS_ACTIVE = 'bs21_coach_active';
+  // sessionStorage flag marking an in-flight full-page OAuth redirect (survives the navigation to
+  // accounts.google.com and back), so on return we finish the sign-in / un-stick the overlay.
+  private static readonly LS_OAUTH_PENDING = 'bs21_oauth_redirect';
   readonly busy = signal(false);
   readonly justShared = signal(false);
   readonly copiedIdx = signal<number | null>(null);
@@ -356,6 +383,15 @@ export class CoachWidgetComponent implements OnDestroy {
     if (this.isBrowser) {
       const vv: any = (window as any).visualViewport;
       if (vv) { vv.addEventListener('resize', this.vvHandler); vv.addEventListener('scroll', this.vvHandler); }
+      // Un-stick a hung "Signing you in…" overlay when the user returns from the OAuth screen
+      // (pageshow covers Safari bfcache/back; focus + visibilitychange cover the popup-hang return).
+      window.addEventListener('pageshow', this.resolveStuckSignIn);
+      window.addEventListener('focus', this.resolveStuckSignIn);
+      document.addEventListener('visibilitychange', this.onVisibilityReturn);
+      // Returning from a full-page Google/Apple redirect: show the overlay while auth settles, and arm
+      // the watchdog so it resolves (→ /app) or clears even if getRedirectResult never yields a user.
+      let oauthPending = false; try { oauthPending = sessionStorage.getItem(CoachWidgetComponent.LS_OAUTH_PENDING) === '1'; } catch { /* noop */ }
+      if (oauthPending) { this.signingIn.set(true); this.resolveStuckSignIn(); }
       try {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
@@ -396,7 +432,13 @@ export class CoachWidgetComponent implements OnDestroy {
       effect(() => {
         const u = this.firebase.currentUser();
         const uid = u?.uid ?? null;
-        if (uid && uid !== lastAuthUid) { lastAuthUid = uid; this.restoreFromFirestore(); }
+        if (uid && uid !== lastAuthUid) {
+          lastAuthUid = uid;
+          this.restoreFromFirestore();
+          // Finish a pending full-page OAuth redirect (iOS Safari): land in /app + clear the overlay.
+          let pending = false; try { pending = sessionStorage.getItem(CoachWidgetComponent.LS_OAUTH_PENDING) === '1'; } catch { /* noop */ }
+          if (pending) { try { sessionStorage.removeItem(CoachWidgetComponent.LS_OAUTH_PENDING); } catch { /* noop */ } this.signingIn.set(false); this.afterSignIn(); }
+        }
         else if (!uid) { lastAuthUid = null; }
       });
       // R64: Apple Sign-In only on Apple devices (iPhone/iPad/Mac); hidden on Android/others.
@@ -744,7 +786,18 @@ export class CoachWidgetComponent implements OnDestroy {
     try { await this.firebase.refreshProfile(); } catch { /* best-effort */ }
     this.router.navigate(['/app']);
   }
-  async signInGoogle() { this.authErr.set(''); this.signingIn.set(true); try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch (e) { this.handleAuthError(e); } finally { this.signingIn.set(false); } }
+  async signInGoogle() {
+    this.authErr.set(''); this.signingIn.set(true);
+    // iOS Safari: signInWithPopup hangs (ITP blocks cross-origin popup messaging) → use full-page
+    // redirect, completed on the next load by the auth effect / watchdog below. Desktop keeps popup.
+    if (this.firebase.shouldUseRedirect()) {
+      try { sessionStorage.setItem(CoachWidgetComponent.LS_OAUTH_PENDING, '1'); } catch { /* private mode */ }
+      try { await this.firebase.signInWithGoogleRedirect(); /* navigates away */ }
+      catch (e) { try { sessionStorage.removeItem(CoachWidgetComponent.LS_OAUTH_PENDING); } catch { /* noop */ } this.handleAuthError(e); this.signingIn.set(false); }
+      return;
+    }
+    try { await this.firebase.signInWithGoogle(); this.afterSignIn(); } catch (e) { this.handleAuthError(e); } finally { this.signingIn.set(false); }
+  }
   async signInApple() {
     this.authErr.set(''); this.signingIn.set(true);
     try { await this.firebase.signInWithApple(); this.afterSignIn(); }
@@ -752,7 +805,8 @@ export class CoachWidgetComponent implements OnDestroy {
       // Popup blocked → retry via full-page redirect (more reliable for Apple on Safari/macOS).
       const code = (e as any)?.code || '';
       if (code.includes('popup-blocked')) {
-        try { await this.firebase.signInWithAppleRedirect(); return; } catch (e2) { this.handleAuthError(e2); }
+        try { sessionStorage.setItem(CoachWidgetComponent.LS_OAUTH_PENDING, '1'); } catch { /* noop */ }
+        try { await this.firebase.signInWithAppleRedirect(); return; } catch (e2) { this.clearOAuthPending(); this.handleAuthError(e2); }
       } else { this.handleAuthError(e); }
     }
     finally { this.signingIn.set(false); }
