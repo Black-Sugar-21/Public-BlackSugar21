@@ -149,6 +149,9 @@
                   </span>
                   @if (matchBasicReady_(m.otherUid)) { <b>{{ matchName(m.otherUid) }}</b> }
                   @else { <ui-skeleton width="140px" height="16px" /> }
+                  <span class="chat-head-grow"></span>
+                  <!-- AI Coach date spots (iOS toolbar 📍 → PlaceSuggestionsView). -->
+                  <button class="chat-head-btn" (click)="openPlaceSheet()" [attr.aria-label]="s('datePlaces')" [attr.title]="s('datePlaces')">📍</button>
                 </div>
                 <div class="chat-msgs">
                   @if (chatHasMore()) {
@@ -262,6 +265,40 @@
                     <svg class="chat-snd-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6 12l6-6 6 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </button>
                 </form>
+                <!-- AI Coach date-spots BOTTOM SHEET (iOS PlaceSuggestionsView design). -->
+                @if (placeSheetOpen()) {
+                  <div class="bsheet-ov" (click)="closePlaceSheet()"></div>
+                  <div class="bsheet" role="dialog" aria-modal="true">
+                    <div class="bsheet-grab"></div>
+                    <div class="bsheet-head">
+                      <b>📍 {{ s('datePlaces') }}</b>
+                      <button class="bsheet-x" (click)="closePlaceSheet()" aria-label="✕">✕</button>
+                    </div>
+                    <div class="bsheet-body">
+                      @if (placesLoading()) {
+                        <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('datePlacesLoading') }}</div>
+                      } @else if (placeSuggestions().length === 0) {
+                        <div class="bsheet-empty">{{ s('datePlacesEmpty') }}</div>
+                      } @else {
+                        @for (pl of placeSuggestions(); track pl.placeId || pl.name) {
+                          <div class="place-sug">
+                            @if (placePhoto(pl)) { <div class="place-sug-img" [style.background-image]="'url(' + placePhoto(pl) + ')'"></div> }
+                            @else { <div class="place-sug-img place-sug-noimg">📍</div> }
+                            <div class="place-sug-info">
+                              <div class="place-sug-name">{{ pl.name }}</div>
+                              <div class="place-sug-meta">
+                                @if (pl.rating) { <span>⭐ {{ pl.rating }}</span> }
+                                @if (pl.category) { <span>{{ pl.category }}</span> }
+                              </div>
+                              @if (pl.address) { <div class="place-sug-addr">{{ pl.address }}</div> }
+                            </div>
+                            <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : s('sharePlace') }}</ui-button>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             } @else {
               <!-- Matches list -->

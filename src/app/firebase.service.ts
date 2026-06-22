@@ -955,6 +955,48 @@ export class FirebaseService {
   }
 
   /** Send a text message — same shape as the apps; rules enforce sender/membership/first-message gate. */
+  /** AI Coach date-spot suggestions for a match — SAME getDateSuggestions callable iOS/Android use
+   *  (ranked by the venue psychology debate, using the pair's midpoint). [] on error/off. */
+  async getDateSuggestions(matchId: string, lang: string, category?: string): Promise<any[]> {
+    const u = this.currentUser();
+    if (!u || !matchId) return [];
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    try {
+      const fn = httpsCallable(this.functions, 'getDateSuggestions');
+      const res: any = await fn({ matchId, userLanguage: l, language: l, category: category || null });
+      const d = res?.data;
+      if (d?.success && Array.isArray(d.suggestions)) return d.suggestions.slice(0, 12);
+    } catch { /* off / rate-limited — caller shows nothing */ }
+    return [];
+  }
+  /** Share a place into the chat (iOS sendPlaceMessage parity): type:'place' + placeData. */
+  async sendPlaceMessage(matchId: string, place: any): Promise<void> {
+    const u = this.currentUser();
+    if (!u || !matchId || !place) return;
+    const pd: any = {
+      name: String(place.name || ''), address: String(place.address || ''),
+      rating: typeof place.rating === 'number' ? place.rating : null,
+      latitude: place.latitude ?? null, longitude: place.longitude ?? null,
+      placeId: place.placeId || place.id || null,
+    };
+    if (place.googleMapsUrl) pd.googleMapsUrl = place.googleMapsUrl;
+    if (place.website || place.websiteUri) pd.website = place.website || place.websiteUri;
+    if (place.category) pd.category = place.category;
+    if (place.instagram) pd.instagram = place.instagram;
+    if (place.description) pd.description = String(place.description).slice(0, 400);
+    if (Array.isArray(place.photos)) pd.photos = place.photos.map((ph: any) => ({ url: ph?.url || '', width: ph?.width ?? null, height: ph?.height ?? null })).filter((ph: any) => ph.url).slice(0, 6);
+    const msg = ('📍 ' + pd.name).slice(0, 120);
+    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
+      message: msg, senderId: u.uid, timestamp: serverTimestamp(), type: 'place', placeData: pd, isEphemeral: false,
+    });
+    try {
+      await updateDoc(doc(this.db, 'matches', matchId), {
+        lastMessage: msg, lastMessageTime: serverTimestamp(), lastMessageTimestamp: serverTimestamp(),
+        timestamp: serverTimestamp(), lastMessageSenderId: u.uid, lastMessageSeq: increment(1), messageCount: increment(1),
+      });
+    } catch { /* match-doc update is best-effort */ }
+  }
   async sendMessage(matchId: string, text: string): Promise<void> {
     const u = this.currentUser();
     const body = (text || '').trim();

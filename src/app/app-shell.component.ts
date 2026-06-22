@@ -55,6 +55,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   coachChemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契度","ja":"相性","ko":"케미","ru":"Химия","ar":"الانسجام","id":"Chemistry","tr":"Uyum"},
   coachPreDate: {"es":"Buen momento para proponer una cita","en":"Good moment to suggest a date","pt":"Bom momento para sugerir um encontro","fr":"Bon moment pour proposer un rendez-vous","de":"Guter Moment für ein Date","it":"Buon momento per proporre un appuntamento","zh":"适合提议约会的时机","ja":"デートに誘う好機です","ko":"데이트를 제안하기 좋은 순간","ru":"Хороший момент предложить свидание","ar":"وقت مناسب لاقتراح موعد","id":"Saat tepat untuk mengajak kencan","tr":"Buluşma teklif etmek için iyi an"},
   coachUse: {"es":"Usar","en":"Use","pt":"Usar","fr":"Utiliser","de":"Verwenden","it":"Usa","zh":"使用","ja":"使う","ko":"사용","ru":"Использовать","ar":"استخدام","id":"Pakai","tr":"Kullan"},
+  datePlaces: {"es":"Lugares para una cita","en":"Date spots","pt":"Lugares para um encontro","fr":"Lieux pour un rendez-vous","de":"Date-Spots","it":"Posti per un appuntamento","zh":"约会地点","ja":"デートスポット","ko":"데이트 장소","ru":"Места для свидания","ar":"أماكن للموعد","id":"Tempat kencan","tr":"Buluşma mekanları"},
+  datePlacesLoading: {"es":"Buscando lugares cerca…","en":"Finding spots near you…","pt":"Procurando lugares perto…","fr":"Recherche de lieux proches…","de":"Orte in der Nähe suchen…","it":"Cerco posti vicino…","zh":"正在寻找附近地点…","ja":"近くの場所を検索中…","ko":"근처 장소 찾는 중…","ru":"Ищу места рядом…","ar":"البحث عن أماكن قريبة…","id":"Mencari tempat di dekatmu…","tr":"Yakındaki mekanlar aranıyor…"},
+  datePlacesEmpty: {"es":"No se encontraron lugares ahora. Inténtalo más tarde.","en":"No spots found right now. Try again later.","pt":"Nenhum lugar encontrado agora. Tente mais tarde.","fr":"Aucun lieu trouvé pour l'instant. Réessaie plus tard.","de":"Gerade keine Orte gefunden. Versuch es später.","it":"Nessun posto trovato ora. Riprova più tardi.","zh":"暂时没有找到地点，请稍后再试。","ja":"今は場所が見つかりません。後でお試しください。","ko":"지금은 장소를 찾지 못했어요. 나중에 다시 시도하세요.","ru":"Сейчас мест не найдено. Попробуйте позже.","ar":"لا توجد أماكن الآن. حاول لاحقاً.","id":"Belum ada tempat. Coba lagi nanti.","tr":"Şimdilik mekan yok. Sonra tekrar dene."},
+  sharePlace: {"es":"Compartir","en":"Share","pt":"Compartilhar","fr":"Partager","de":"Teilen","it":"Condividi","zh":"分享","ja":"共有","ko":"공유","ru":"Поделиться","ar":"مشاركة","id":"Bagikan","tr":"Paylaş"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -373,6 +377,30 @@ export class AppShellComponent implements OnDestroy {
   toggleCoachInsights() { this.coachInsightsExpanded.update((v) => !v); }
   dismissCoachInsights() { this.coachInsightsDismissed = this.selectedMatch()?.id || ''; this.coachInsights.set(null); this.coachInsightsExpanded.set(false); }
   useCoachAction(text: string) { this.chatText = text; }
+  // AI Coach DATE-SPOT suggestions (iOS PlaceSuggestionsView parity): a sheet of nearby venues to
+  // share into the chat as a place card.
+  readonly placeSheetOpen = signal(false);
+  readonly placeSuggestions = signal<any[]>([]);
+  readonly placesLoading = signal(false);
+  readonly placeSending = signal('');
+  async openPlaceSheet() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.placeSheetOpen.set(true);
+    if (this.placeSuggestions().length || this.placesLoading()) return; // already loaded
+    this.placesLoading.set(true);
+    const list = await this.firebase.getDateSuggestions(m.id, this.lang());
+    this.placeSuggestions.set(list);
+    this.placesLoading.set(false);
+  }
+  closePlaceSheet() { this.placeSheetOpen.set(false); }
+  async sendPlace(place: any) {
+    const m = this.selectedMatch(); if (!m || this.placeSending()) return;
+    this.placeSending.set(place?.placeId || place?.name || 'x');
+    try { await this.firebase.sendPlaceMessage(m.id, place); this.placeSheetOpen.set(false); }
+    catch { /* best-effort */ }
+    finally { this.placeSending.set(''); }
+  }
+  placePhoto(place: any): string { return (Array.isArray(place?.photos) && place.photos[0]?.url) ? place.photos[0].url : ''; }
   chemColor(score: number): string { return score >= 75 ? 'green' : score >= 50 ? 'gold' : 'red'; }
   trendIcon(t: string): string { return t === 'rising' ? '↗' : t === 'falling' ? '↘' : '→'; }
   private unsubMatches: (() => void) | null = null;
@@ -665,6 +693,7 @@ export class AppShellComponent implements OnDestroy {
     this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
     this.resetSmartReplies();
     this.resetCoachInsights();
+    this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false);
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
