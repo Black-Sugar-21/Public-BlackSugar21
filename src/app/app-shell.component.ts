@@ -7,7 +7,7 @@ import { ShellNavIconComponent } from './shell-nav-icon.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 import { UiOptionComponent } from './ui/atoms/ui-option.component';
 import { UiInputComponent } from './ui/atoms/ui-input.component';
-import { UiSuggestionChipComponent } from './ui/atoms/ui-suggestion-chip.component';
+import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { TranslationService, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
 
@@ -241,7 +241,7 @@ const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent, UiInputComponent, UiSuggestionChipComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent, UiInputComponent, UiSkeletonComponent],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

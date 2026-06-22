@@ -132,7 +132,8 @@
                     @if (matchPhoto(m.otherUid)) { <img [class.ready]="matchPhotoReady_(m.otherUid)" [src]="matchPhoto(m.otherUid)" (load)="onMatchAvatarLoad(m.otherUid)" (error)="onMatchAvatarLoad(m.otherUid)" alt="" referrerpolicy="no-referrer" /> }
                     @else if (matchBasicReady_(m.otherUid)) { {{ matchInitial(m.otherUid) }} }
                   </span>
-                  <b>{{ matchName(m.otherUid) }}</b>
+                  @if (matchBasicReady_(m.otherUid)) { <b>{{ matchName(m.otherUid) }}</b> }
+                  @else { <ui-skeleton width="140px" height="16px" /> }
                 </div>
                 <div class="chat-msgs">
                   @if (chatHasMore()) {
@@ -147,7 +148,7 @@
                       <div class="chat-ice">
                         <div class="chat-ice-h">✦ {{ s('coachIcebreakers') }}</div>
                         @for (ib of icebreakers(); track ib.message) {
-                          <ui-suggestion-chip (picked)="useIcebreaker(ib.message)">{{ ib.message }}</ui-suggestion-chip>
+                          <ui-option shape="rect" align="start" [block]="true" (click)="useIcebreaker(ib.message)">{{ ib.message }}</ui-option>
                         }
                       </div>
                     }
@@ -217,7 +218,8 @@
                         @else if (matchBasicReady_(mt.otherUid)) { {{ matchInitial(mt.otherUid) }} }
                       </span>
                       <span class="chat-row-main">
-                        <b>{{ matchName(mt.otherUid) }}</b>
+                        @if (matchBasicReady_(mt.otherUid)) { <b>{{ matchName(mt.otherUid) }}</b> }
+                        @else { <ui-skeleton width="130px" height="14px" /> }
                         @if (mt.lastMessage) { <span class="chat-row-last">{{ mt.lastMessage }}</span> }
                       </span>
                       @if (isUnread(mt)) { <span class="chat-unread-dot" aria-hidden="true"></span> }
