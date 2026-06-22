@@ -261,8 +261,8 @@
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('obGender') }}</label>
                     <div class="ep-opts">
-                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === true" (click)="ep.male = true">{{ s('obMale') }}</ui-option>
-                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === false" (click)="ep.male = false">{{ s('obFemale') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === true" (click)="epSetGender(true)">{{ s('obMale') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === false" (click)="epSetGender(false)">{{ s('obFemale') }}</ui-option>
                     </div>
                   </div>
                   <!-- Orientación -->
@@ -458,6 +458,22 @@
                       <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ob.maxDistance" (ngModelChange)="ob.maxDistance = +$event" />
                     }
                     @case (7) {
+                      <h2 class="ob-title">{{ s('obLocationTitle') }}</h2>
+                      <p class="ob-desc">{{ s('obLocationDesc') }}</p>
+                      <div class="ob-loc-why">
+                        <div class="ob-loc-why-row"><span class="ob-loc-why-ic">📍</span><span>{{ s('obLocationWhy1') }}</span></div>
+                        <div class="ob-loc-why-row"><span class="ob-loc-why-ic">✨</span><span>{{ s('obLocationWhyPlaces') }}</span></div>
+                        <div class="ob-loc-why-row"><span class="ob-loc-why-ic">🔒</span><span>{{ s('obLocationWhy3') }}</span></div>
+                      </div>
+                      @if (obGeo()) {
+                        <div class="ob-photo-status ok"><span class="ob-photo-status-ic">✓</span><span>{{ s('obLocationOk') }}</span></div>
+                      } @else {
+                        <ui-button variant="outline" shape="rect" [block]="true" [disabled]="obLocating()" (click)="obUseLocation()">
+                          {{ obLocating() ? '…' : ('📍 ' + s('obLocationBtn')) }}
+                        </ui-button>
+                      }
+                    }
+                    @case (8) {
                       <h2 class="ob-title">{{ s('obPhotos') }}</h2>
                       <p class="ob-desc">{{ s('obPhotoHint') }}</p>
                       <div class="ob-photo-status" [class.ok]="obPhotos().length >= 2">
@@ -486,7 +502,7 @@
                 <div class="ob-nav">
                   @if (obStep() > 0) { <ui-button variant="secondary" shape="rect" [block]="true" (click)="obBack()">‹ {{ s('obBack') }}</ui-button> }
                   <ui-button variant="primary" shape="rect" [block]="true" [disabled]="obSaving() || obUploading()" (click)="obNext()">
-                    {{ obSaving() ? '…' : (obStep() === 7 ? s('obFinish') : s('obNext')) }}
+                    {{ obSaving() ? '…' : (obStep() === 8 ? s('obFinish') : s('obNext')) }}
                   </ui-button>
                 </div>
                 <button class="ob-signout-link" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
@@ -517,6 +533,20 @@
             <div class="shell-confirm-row">
               <button class="shell-confirm-cancel" (click)="showConfirm.set(false)">{{ s('cancel') }}</button>
               <button class="shell-confirm-ok" (click)="signOut()">{{ s('signOut') }}</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (epGenderConfirm()) {
+        <div class="shell-confirm-ov" (click)="epCancelGender()">
+          <div class="shell-confirm" (click)="$event.stopPropagation()">
+            <div class="shell-confirm-ic">⚧</div>
+            <h3>{{ s('genderClearTitle') }}</h3>
+            <p>{{ s('genderClearBody') }}</p>
+            <div class="shell-confirm-row">
+              <button class="shell-confirm-cancel" (click)="epCancelGender()">{{ s('cancel') }}</button>
+              <button class="shell-confirm-ok" (click)="epConfirmGender()">{{ s('genderClearConfirm') }}</button>
             </div>
           </div>
         </div>

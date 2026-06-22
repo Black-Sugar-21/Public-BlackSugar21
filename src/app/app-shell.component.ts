@@ -91,10 +91,22 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   obFinish: {"es":"Finalizar","en":"Finish","pt":"Concluir","fr":"Terminer","de":"Fertig","it":"Fine","zh":"完成","ja":"完了","ko":"완료","ru":"Готово","ar":"إنهاء","id":"Selesai","tr":"Bitir"},
   obAge18: {"es":"Debes tener al menos 18 años.","en":"You must be at least 18.","pt":"Você deve ter pelo menos 18 anos.","fr":"Tu dois avoir au moins 18 ans.","de":"Du musst mindestens 18 sein.","it":"Devi avere almeno 18 anni.","zh":"你必须年满 18 岁。","ja":"18歳以上である必要があります。","ko":"만 18세 이상이어야 해요.","ru":"Вам должно быть не менее 18 лет.","ar":"يجب أن يكون عمرك 18 عاماً على الأقل.","id":"Kamu harus berusia minimal 18.","tr":"En az 18 yaşında olmalısın."},
   obRequired: {"es":"Completa este paso para continuar.","en":"Complete this step to continue.","pt":"Conclua este passo para continuar.","fr":"Complète cette étape pour continuer.","de":"Schließe diesen Schritt ab, um fortzufahren.","it":"Completa questo passaggio per continuare.","zh":"完成此步骤以继续。","ja":"続けるにはこのステップを完了してください。","ko":"계속하려면 이 단계를 완료하세요.","ru":"Завершите этот шаг, чтобы продолжить.","ar":"أكمل هذه الخطوة للمتابعة.","id":"Selesaikan langkah ini untuk lanjut.","tr":"Devam etmek için bu adımı tamamla."},
+  obLocationTitle: {"es":"Tu ubicación","en":"Your location","pt":"Sua localização","fr":"Ta position","de":"Dein Standort","it":"La tua posizione","zh":"你的位置","ja":"あなたの位置","ko":"내 위치","ru":"Ваше местоположение","ar":"موقعك","id":"Lokasimu","tr":"Konumun"},
+  obLocationDesc: {"es":"La usamos para mostrarte personas cerca de ti.","en":"We use it to show you people near you.","pt":"Usamos para mostrar pessoas perto de você.","fr":"On l'utilise pour te montrer des personnes près de toi.","de":"Wir nutzen ihn, um dir Leute in deiner Nähe zu zeigen.","it":"La usiamo per mostrarti persone vicine a te.","zh":"我们用它向你展示附近的人。","ja":"近くの人を表示するために使います。","ko":"근처 사람을 보여주는 데 사용해요.","ru":"Используем, чтобы показывать людей рядом.","ar":"نستخدمه لعرض أشخاص بالقرب منك.","id":"Kami pakai untuk menampilkan orang di dekatmu.","tr":"Yakınındaki kişileri göstermek için kullanırız."},
+  obLocationWhy1: {"es":"Encontrar coincidencias cercanas","en":"Find nearby matches","pt":"Encontrar matches por perto","fr":"Trouver des profils à proximité","de":"Matches in der Nähe finden","it":"Trovare match nelle vicinanze","zh":"寻找附近的匹配","ja":"近くのマッチを見つける","ko":"근처 매치 찾기","ru":"Находить пары рядом","ar":"العثور على تطابقات قريبة","id":"Temukan match terdekat","tr":"Yakındaki eşleşmeleri bul"},
+  obLocationWhy2: {"es":"Calcular la distancia con precisión","en":"Calculate distance accurately","pt":"Calcular a distância com precisão","fr":"Calculer la distance précisément","de":"Entfernung genau berechnen","it":"Calcolare la distanza con precisione","zh":"精确计算距离","ja":"距離を正確に計算","ko":"거리를 정확히 계산","ru":"Точно рассчитывать расстояние","ar":"حساب المسافة بدقة","id":"Hitung jarak dengan akurat","tr":"Mesafeyi doğru hesapla"},
+  obLocationWhyPlaces: {"es":"Sugerir lugares cercanos para tus citas","en":"Suggest nearby spots for your dates","pt":"Sugerir lugares próximos para seus encontros","fr":"Suggérer des lieux proches pour tes rendez-vous","de":"Orte in der Nähe für deine Dates vorschlagen","it":"Suggerire luoghi vicini per i tuoi appuntamenti","zh":"为你的约会推荐附近的地点","ja":"デートに近くのスポットを提案","ko":"데이트하기 좋은 근처 장소 추천","ru":"Предлагать места рядом для свиданий","ar":"اقتراح أماكن قريبة لمواعيدك","id":"Menyarankan tempat terdekat untuk kencanmu","tr":"Buluşmaların için yakın mekanlar öner"},
+  obLocationWhy3: {"es":"Nunca mostramos tu ubicación exacta","en":"We never show your exact location","pt":"Nunca mostramos sua localização exata","fr":"On ne montre jamais ta position exacte","de":"Wir zeigen nie deinen genauen Standort","it":"Non mostriamo mai la tua posizione esatta","zh":"我们绝不显示你的确切位置","ja":"正確な位置は決して表示しません","ko":"정확한 위치는 절대 표시하지 않아요","ru":"Мы никогда не показываем точное местоположение","ar":"لا نعرض موقعك الدقيق أبداً","id":"Kami tak pernah menampilkan lokasi pastimu","tr":"Tam konumunu asla göstermeyiz"},
+  obLocationBtn: {"es":"Usar mi ubicación","en":"Use my location","pt":"Usar minha localização","fr":"Utiliser ma position","de":"Meinen Standort verwenden","it":"Usa la mia posizione","zh":"使用我的位置","ja":"現在地を使う","ko":"내 위치 사용","ru":"Использовать местоположение","ar":"استخدام موقعي","id":"Gunakan lokasiku","tr":"Konumumu kullan"},
+  obLocationOk: {"es":"✓ Ubicación detectada","en":"✓ Location detected","pt":"✓ Localização detectada","fr":"✓ Position détectée","de":"✓ Standort erkannt","it":"✓ Posizione rilevata","zh":"✓ 已检测到位置","ja":"✓ 位置を取得しました","ko":"✓ 위치를 찾았어요","ru":"✓ Местоположение определено","ar":"✓ تم تحديد الموقع","id":"✓ Lokasi terdeteksi","tr":"✓ Konum algılandı"},
+  obLocationDenied: {"es":"No se pudo obtener tu ubicación. Puedes continuar y añadirla luego.","en":"Couldn't get your location. You can continue and add it later.","pt":"Não foi possível obter sua localização. Você pode continuar e adicioná-la depois.","fr":"Impossible d'obtenir ta position. Tu peux continuer et l'ajouter plus tard.","de":"Standort konnte nicht ermittelt werden. Du kannst fortfahren und ihn später hinzufügen.","it":"Impossibile ottenere la posizione. Puoi continuare e aggiungerla dopo.","zh":"无法获取你的位置。你可以继续，稍后再添加。","ja":"位置を取得できませんでした。続けて後で追加できます。","ko":"위치를 가져오지 못했어요. 계속하고 나중에 추가할 수 있어요.","ru":"Не удалось определить местоположение. Можно продолжить и добавить позже.","ar":"تعذّر تحديد موقعك. يمكنك المتابعة وإضافته لاحقاً.","id":"Tidak bisa mendapatkan lokasimu. Kamu bisa lanjut dan menambahkannya nanti.","tr":"Konumun alınamadı. Devam edip sonra ekleyebilirsin."},
   obSaveErr: {"es":"No se pudo guardar. Inténtalo de nuevo.","en":"Couldn't save. Please try again.","pt":"Não foi possível salvar. Tente de novo.","fr":"Échec de l'enregistrement. Réessaie.","de":"Speichern fehlgeschlagen. Versuch es erneut.","it":"Salvataggio non riuscito. Riprova.","zh":"保存失败，请重试。","ja":"保存できませんでした。再試行してください。","ko":"저장하지 못했어요. 다시 시도하세요.","ru":"Не удалось сохранить. Повторите.","ar":"تعذّر الحفظ. حاول مجدداً.","id":"Gagal menyimpan. Coba lagi.","tr":"Kaydedilemedi. Tekrar dene."},
   obPhotos: {"es":"Tus fotos","en":"Your photos","pt":"Suas fotos","fr":"Tes photos","de":"Deine Fotos","it":"Le tue foto","zh":"你的照片","ja":"あなたの写真","ko":"사진","ru":"Ваши фото","ar":"صورك","id":"Fotomu","tr":"Fotoğrafların"},
   obPhotoHint: {"es":"Agrega al menos 2 (hasta 6). La 1ª es tu principal.","en":"Add at least 2 (up to 6). The 1st is your main.","pt":"Adicione ao menos 2 (até 6). A 1ª é a principal.","fr":"Ajoute au moins 2 (jusqu'à 6). La 1ʳᵉ est principale.","de":"Mind. 2 (bis 6). Das 1. ist dein Hauptfoto.","it":"Aggiungi almeno 2 (fino a 6). La 1ª è principale.","zh":"至少添加 2 张（最多 6）。第 1 张为主图。","ja":"2枚以上（最大6）。1枚目がメイン。","ko":"최소 2장(최대 6). 첫 번째가 대표.","ru":"Минимум 2 (до 6). Первое — главное.","ar":"أضف صورتين على الأقل (حتى 6). الأولى رئيسية.","id":"Tambah min. 2 (maks 6). Foto ke-1 utama.","tr":"En az 2 (en çok 6). 1.'si ana fotoğraf."},
   obPhotoRejected: {"es":"Esa foto no pasó la revisión de IA. Prueba con otra.","en":"That photo didn't pass the AI review. Try another.","pt":"Essa foto não passou na revisão de IA. Tente outra.","fr":"Cette photo n'a pas passé la vérification IA. Essaie une autre.","de":"Dieses Foto hat die KI-Prüfung nicht bestanden. Versuch ein anderes.","it":"Quella foto non ha superato la verifica IA. Provane un'altra.","zh":"该照片未通过 AI 审核，请换一张。","ja":"その写真はAI審査に通りませんでした。別の写真をお試しください。","ko":"이 사진은 AI 검토를 통과하지 못했어요. 다른 사진을 시도해 보세요.","ru":"Это фото не прошло проверку ИИ. Попробуйте другое.","ar":"لم تجتز هذه الصورة مراجعة الذكاء الاصطناعي. جرّب صورة أخرى.","id":"Foto itu tidak lolos peninjauan AI. Coba yang lain.","tr":"Bu fotoğraf yapay zeka incelemesini geçemedi. Başka birini dene."},
+  genderClearTitle: {"es":"¿Cambiar tu género?","en":"Change your gender?","pt":"Mudar seu gênero?","fr":"Changer ton genre ?","de":"Geschlecht ändern?","it":"Cambiare il tuo genere?","zh":"更改你的性别？","ja":"性別を変更しますか？","ko":"성별을 변경할까요?","ru":"Изменить пол?","ar":"تغيير جنسك؟","id":"Ubah gender kamu?","tr":"Cinsiyetini değiştir?"},
+  genderClearBody: {"es":"Tus fotos se verifican según tu género, así que al cambiarlo se eliminarán. Tendrás que subir fotos nuevas.","en":"Your photos are verified for your gender, so changing it will remove them. You'll need to upload new photos.","pt":"Suas fotos são verificadas conforme seu gênero, então mudá-lo vai removê-las. Você precisará enviar novas fotos.","fr":"Tes photos sont vérifiées selon ton genre, le changer va donc les supprimer. Tu devras en ajouter de nouvelles.","de":"Deine Fotos werden für dein Geschlecht geprüft – eine Änderung entfernt sie. Du musst neue Fotos hochladen.","it":"Le tue foto sono verificate in base al tuo genere, quindi cambiarlo le rimuoverà. Dovrai caricarne di nuove.","zh":"你的照片是按性别审核的，更改性别会删除它们。你需要重新上传照片。","ja":"写真は性別に基づいて審査されるため、変更すると削除されます。新しい写真をアップロードする必要があります。","ko":"사진은 성별에 따라 검증되므로 변경하면 삭제됩니다. 새 사진을 업로드해야 해요.","ru":"Ваши фото проверяются по полу, поэтому при его смене они будут удалены. Нужно будет загрузить новые.","ar":"يتم التحقق من صورك حسب جنسك، لذا تغييره سيحذفها. ستحتاج لرفع صور جديدة.","id":"Foto kamu diverifikasi sesuai gender, jadi mengubahnya akan menghapusnya. Kamu perlu mengunggah foto baru.","tr":"Fotoğrafların cinsiyetine göre doğrulanır, bu yüzden değiştirmek onları kaldırır. Yeni fotoğraf yüklemen gerekir."},
+  genderClearConfirm: {"es":"Cambiar y borrar fotos","en":"Change & remove photos","pt":"Mudar e remover fotos","fr":"Changer et supprimer","de":"Ändern & Fotos löschen","it":"Cambia e rimuovi foto","zh":"更改并删除照片","ja":"変更して写真を削除","ko":"변경하고 사진 삭제","ru":"Сменить и удалить фото","ar":"تغيير وحذف الصور","id":"Ubah & hapus foto","tr":"Değiştir ve fotoğrafları sil"},
   obAnalyzing: {"es":"Revisando con IA…","en":"Reviewing with AI…","pt":"Revisando com IA…","fr":"Vérification par l'IA…","de":"KI-Prüfung…","it":"Verifica con IA…","zh":"AI 审核中…","ja":"AIで審査中…","ko":"AI 검토 중…","ru":"Проверка ИИ…","ar":"المراجعة بالذكاء…","id":"Meninjau dengan AI…","tr":"Yapay zeka inceliyor…"},
   obPhotosSelected: {"es":"{n} de 6 fotos","en":"{n} of 6 photos","pt":"{n} de 6 fotos","fr":"{n} sur 6 photos","de":"{n} von 6 Fotos","it":"{n} di 6 foto","zh":"{n}/6 张照片","ja":"6枚中{n}枚","ko":"{n}/6장","ru":"{n} из 6 фото","ar":"{n} من 6 صور","id":"{n} dari 6 foto","tr":"{n} / 6 fotoğraf"},
   obAiSub: {"es":"Verificando que sea apropiada y de buena calidad…","en":"Checking it's appropriate and good quality…","pt":"Verificando se é apropriada e de boa qualidade…","fr":"On vérifie qu'elle est appropriée et de bonne qualité…","de":"Wir prüfen, ob es passend und gut ist…","it":"Verifichiamo che sia appropriata e di buona qualità…","zh":"正在检查照片是否合适且清晰…","ja":"適切で高品質か確認しています…","ko":"적절하고 좋은 품질인지 확인 중이에요…","ru":"Проверяем, что фото подходящее и качественное…","ar":"نتحقق من أنها مناسبة وبجودة جيدة…","id":"Memeriksa apakah pantas dan berkualitas baik…","tr":"Uygun ve kaliteli mi diye kontrol ediyoruz…"},
@@ -281,6 +293,26 @@ export class AppShellComponent implements OnDestroy {
     // iOS/Android parity: a signed-in user WITHOUT a profile is gated into onboarding on every entry
     // (not once). Force the onboarding view whenever the checked profile is incomplete.
     effect(() => { if (this.needsOnboarding() && this.section() !== 'profile') this.section.set('profile'); });
+    // iOS parity: an onboarded user who already granted geolocation gets their location refreshed
+    // silently on entry — keeps nearby-people + nearby-place suggestions accurate without re-asking.
+    effect(() => {
+      if (this.firebase.profileChecked() && !!this.firebase.currentUser() && !this.needsOnboarding()) {
+        this.refreshLocationIfPermitted();
+      }
+    });
+  }
+
+  private autoLocDone = false;
+  /** Silently refresh the stored location IF the browser already granted permission (no prompt). */
+  private async refreshLocationIfPermitted() {
+    if (this.autoLocDone || !this.isBrowser) return;
+    this.autoLocDone = true;
+    try {
+      const perm: any = (navigator as any).permissions ? await (navigator as any).permissions.query({ name: 'geolocation' }) : null;
+      if (perm && perm.state !== 'granted') return; // never prompt here — only refresh when already allowed
+      const geo = await this.getGeo();
+      if (geo) await this.firebase.updateLocation(geo.lat, geo.lng);
+    } catch { /* best-effort: location stays as last saved */ }
   }
 
   /** Signed in + profile loaded + incomplete → must complete onboarding before using the app. */
@@ -508,6 +540,23 @@ export class AppShellComponent implements OnDestroy {
   // ── Edit profile (in-web, iOS EditProfileView parity) ───────────────────────
   readonly epEditing = signal(false);
   readonly epSaving = signal(false);
+  // iOS/Android parity (confirmGenderChange): switching gender invalidates the AI-moderated photos.
+  readonly epGenderConfirm = signal(false);
+  private epPendingMale: boolean | null = null;
+  epSetGender(male: boolean) {
+    if (this.ep.male !== null && this.ep.male !== male && this.epPhotos().length) {
+      this.epPendingMale = male;
+      this.epGenderConfirm.set(true);
+      return;
+    }
+    this.ep.male = male;
+  }
+  epConfirmGender() {
+    if (this.epPendingMale !== null) { this.ep.male = this.epPendingMale; this.epPhotos.set([]); }
+    this.epPendingMale = null;
+    this.epGenderConfirm.set(false);
+  }
+  epCancelGender() { this.epPendingMale = null; this.epGenderConfirm.set(false); }
   readonly epError = signal('');
   ep = { name: '', bio: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50, lat: null as number | null, lng: null as number | null };
   readonly epInterests = signal<string[]>([]);
@@ -680,7 +729,9 @@ export class AppShellComponent implements OnDestroy {
   ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50 };
   readonly obPhotos = signal<Array<{ name: string; url: string }>>([]);
   readonly obUploading = signal(false);
-  private readonly OB_LAST = 7;
+  readonly obGeo = signal<{ lat: number; lng: number } | null>(null); // captured in the location step
+  readonly obLocating = signal(false);
+  private readonly OB_LAST = 8;
   obCanProceed(): boolean {
     switch (this.obStep()) {
       case 0: return this.ob.name.trim().length >= 2;
@@ -690,9 +741,26 @@ export class AppShellComponent implements OnDestroy {
       case 4: return this.ob.orientation !== '';
       case 5: return true; // age range (has defaults)
       case 6: return true; // distance (has default)
-      case 7: return this.obPhotos().length >= 2; // iOS/Android parity: minimum 2 photos
+      case 7: return true; // location (optional, best-effort like iOS)
+      case 8: return this.obPhotos().length >= 2; // iOS/Android parity: minimum 2 photos
       default: return true;
     }
+  }
+  /** Capture location on demand (location step). Mirrors iOS OnboardingLocationView "use my location". */
+  async obUseLocation() {
+    if (this.obLocating()) return;
+    this.obLocating.set(true); this.obError.set('');
+    const geo = await this.getGeo();
+    if (geo) this.obGeo.set(geo); else this.obError.set(this.s('obLocationDenied'));
+    this.obLocating.set(false);
+  }
+  /** iOS parity: if the browser already granted geolocation, capture it automatically when the step opens. */
+  private async obAutoLocateIfGranted() {
+    if (this.obGeo()) return;
+    try {
+      const perm: any = (navigator as any).permissions ? await (navigator as any).permissions.query({ name: 'geolocation' }) : null;
+      if (!perm || perm.state === 'granted') { const geo = await this.getGeo(); if (geo) this.obGeo.set(geo); }
+    } catch { /* permissions API unavailable — leave to the manual button */ }
   }
   // iOS/Android parity: changing gender invalidates photos (they were AI-moderated against the
   // previous expectedGender), so we clear them when the gender actually changes.
@@ -777,8 +845,10 @@ export class AppShellComponent implements OnDestroy {
   obNext() {
     this.obError.set('');
     if (!this.obCanProceed()) { this.obError.set(this.obStep() === 1 ? this.s('obAge18') : this.s('obRequired')); return; }
-    if (this.obStep() < this.OB_LAST) this.obStep.update((v) => v + 1);
-    else this.obSave();
+    if (this.obStep() < this.OB_LAST) {
+      this.obStep.update((v) => v + 1);
+      if (this.obStep() === 7) this.obAutoLocateIfGranted(); // location step: auto-capture if already granted (iOS parity)
+    } else this.obSave();
   }
   obBack() { this.obError.set(''); if (this.obStep() > 0) this.obStep.update((v) => v - 1); }
   private getGeo(): Promise<{ lat: number; lng: number } | null> {
@@ -796,7 +866,7 @@ export class AppShellComponent implements OnDestroy {
       const male = !!this.ob.male;
       const userType = this.ob.type === 'elite' ? (male ? 'SUGAR_DADDY' : 'SUGAR_MOMMY') : 'SUGAR_BABY';
       const bd = new Date(parseInt(this.ob.year, 10), parseInt(this.ob.month, 10) - 1, parseInt(this.ob.day, 10));
-      const geo = await this.getGeo();
+      const geo = this.obGeo() ?? await this.getGeo();
       await this.firebase.saveOnboarding({
         name: this.ob.name.trim(), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
         latitude: geo?.lat, longitude: geo?.lng,

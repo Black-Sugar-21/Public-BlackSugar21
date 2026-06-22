@@ -209,6 +209,10 @@
     .ob-cap { display:flex; align-items:center; gap:12px; }
     .ob-cap-ic { font-size:22px; width:30px; text-align:center; flex:none; }
     .ob-cap span:last-child { font-size:15px; color:var(--text-primary); line-height:1.35; }
+    .ob-loc-why { width:100%; box-sizing:border-box; display:flex; flex-direction:column; gap:14px; background:rgba(212,175,55,.07); border-radius:16px; padding:18px; margin:4px 0 6px; text-align:left; }
+    .ob-loc-why-row { display:flex; align-items:center; gap:12px; }
+    .ob-loc-why-ic { font-size:20px; width:28px; text-align:center; flex:none; }
+    .ob-loc-why-row span:last-child { font-size:14.5px; color:var(--text-primary); line-height:1.35; }
     .ob-welcome-foot { color:var(--text-muted); font-size:13px; line-height:1.45; margin:2px 0 0; }
     .ob-signout-link { background:none; border:none; color:var(--text-muted); font-family:inherit; font-size:13px; cursor:pointer; padding:8px; margin-top:6px; align-self:center; }
     .ob-signout-link:hover { color:var(--text-secondary); }
