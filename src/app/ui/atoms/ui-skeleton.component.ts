@@ -16,7 +16,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     :host { display: block; }
     .ui-skel {
       display: block;
-      background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.14) 37%, rgba(255,255,255,.06) 63%);
+      background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-sheen) 37%, var(--skeleton-base) 63%);
       background-size: 400% 100%;
       animation: uiSkelShimmer 1.4s ease infinite;
     }

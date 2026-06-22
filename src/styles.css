@@ -66,6 +66,8 @@
   --fill-soft: rgba(255, 255, 255, 0.10);
   --scrim: rgba(0, 0, 0, 0.6);
   --on-gold: #1A1206; /* text/icon color on a gold surface (same in both themes) */
+  --skeleton-base: rgba(255, 255, 255, 0.06);  /* loading shimmer track */
+  --skeleton-sheen: rgba(255, 255, 255, 0.14); /* loading shimmer highlight */
 
   /* Spacing */
   --spacing-xs: 0.5rem;
