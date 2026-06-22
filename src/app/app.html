@@ -608,6 +608,6 @@
 
 <!-- AI Coach widget (the elegant animated FAB). Mobile: tapping the FAB opens the dedicated fullscreen
      /coach page; desktop: the floating widget card. Hidden inside the /app shell and on /coach itself. -->
-@if (ageVerified() && !isAppRoute() && !isCoachRoute()) {
+@if (showCoachWidget()) {
   <app-coach-widget />
 }

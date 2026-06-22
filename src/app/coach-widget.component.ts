@@ -1,4 +1,4 @@
-import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect, OnDestroy } from '@angular/core';
+import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -451,13 +451,18 @@ export class CoachWidgetComponent implements OnDestroy {
       } catch { this.appleDevice = false; }
       // R62: load the RC date-planner config once (single source shared with the apps).
       this.firebase.getCoachPlannerConfig().then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
-      // Open from the hero CTA (or any "Talk to the Coach" button on the page).
-      window.addEventListener('open-coach', () => {
-        if (!this.open()) {
+      // Open from the hero CTA (or any "Talk to the Coach" button) via the shared signal — reliable
+      // regardless of mount timing and works when logged-out. Only the request counter is a dependency
+      // (untracked body), so closing the panel / new messages never re-trigger an unwanted re-open.
+      effect(() => {
+        const n = this.firebase.coachOpenRequest();
+        if (n === 0) return; // initial run — nothing requested yet
+        untracked(() => {
+          if (this.embedded || this.open()) return;
           this.open.set(true);
           this.ga('coach_demo_open', { source: 'hero_cta' });
           if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
-        }
+        });
       });
     }
   }

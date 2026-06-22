@@ -94,7 +94,9 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   openCoach() {
     this.firebase.logEvent('click_try_coach', { section: 'hero' });
     if (this.isMobileView()) { this.router.navigate(['/coach']); return; }
-    if (this.isBrowser) window.dispatchEvent(new CustomEvent('open-coach'));
+    // Desktop: ask the widget to open via the shared signal (works even when not logged in and
+    // regardless of widget mount timing — the widget's effect reacts). No CustomEvent races.
+    this.firebase.requestOpenCoach();
   }
 
   constructor(
@@ -582,6 +584,16 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
     return u === '/coach';
   }
+
+  /** Mount the floating Coach widget on every PUBLIC route (landing + legal pages) — NOT gated by
+   *  ageVerified, so the demo is reachable without logging in (and the hero CTA always has a target).
+   *  Hidden only inside the /app shell and on the dedicated /coach fullscreen page. Driven by the
+   *  currentUrl() signal so it stays correct across client-side navigation. */
+  readonly showCoachWidget = computed(() => {
+    const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
+    const inApp = u === '/app' || u.startsWith('/app/');
+    return !inApp && u !== '/coach';
+  });
 
   /** Phone-sized screen → the coach opens as the fullscreen /coach page; desktop keeps the card. */
   readonly isMobileView = signal(false);

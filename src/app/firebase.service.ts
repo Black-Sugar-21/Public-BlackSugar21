@@ -102,6 +102,11 @@ export class FirebaseService {
   profileChecked = signal(false);
   /** True when the last sign-in hit a soft-deleted account (blocked re-login → show a notice). */
   accountDeleted = signal(false);
+  /** Open-coach request bus (signal-based, reliable cross-component): increments each time something
+   *  (e.g. the landing hero CTA) asks to open the Coach widget. The widget reacts via an effect — no
+   *  fragile window CustomEvent / addEventListener that can miss if the widget mounts after the click. */
+  readonly coachOpenRequest = signal(0);
+  requestOpenCoach(): void { this.coachOpenRequest.update((n) => n + 1); }
 
   constructor() {
     this.app = initializeApp(firebaseConfig);
