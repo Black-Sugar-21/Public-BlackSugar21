@@ -146,6 +146,10 @@
     .ob-progress { height:4px; border-radius:2px; background:rgba(255,255,255,.1); overflow:hidden; margin-bottom:32px; }
     .ob-progress span { display:block; height:100%; background:var(--gradient-gold); transition:width .3s ease; }
     .ob-step { flex:1; display:flex; flex-direction:column; gap:18px; }
+    /* iOS-like step transition: each step's content fades + slides in on change (children remount per @case). */
+    .ob-step > * { animation: obStepIn .28s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes obStepIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+    @media (prefers-reduced-motion: reduce) { .ob-step > * { animation:none; } }
     /* iOS parity: onboarding titles use the sans body font (SwiftUI .title2 semibold), not the serif. */
     .ob-title { font-family:'Outfit',system-ui,sans-serif; font-size:22px; font-weight:600; margin:0; }
     .ob-desc { font-size:15px; color:var(--text-muted); line-height:1.45; margin:-6px 0 0; }
