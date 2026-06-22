@@ -73,39 +73,54 @@
               <div class="shell-teaser"><div class="disco-spin"></div><p>{{ s('discoLoading') }}</p></div>
             } @else if (currentProfile(); as p) {
               <div class="disco-wrap">
-                <!-- iOS-exact: full-bleed photo, info bottom-left (name · ↗ near · ✦ chemistry %),
-                     single green ♥ bottom-right. Swipe UP to pass (vertical pager). -->
-                <div class="disco-card" [class.dragging]="dragging()"
-                     [style.transform]="'translateY(' + dragY() + 'px)'"
-                     [style.opacity]="swiping() ? 0 : 1"
+                <!-- Vertical pager (TikTok-style): the deck stacks CURRENT + NEXT; advancing slides
+                     both up together. Swipe up / tap ♥ to advance; you can't go back. -->
+                <div class="disco-deck" [class.dragging]="dragging()" [class.snap]="snapping()"
+                     [style.transform]="deckTransform()"
                      (pointerdown)="onCardDown($event)" (pointermove)="onCardMove($event)"
                      (pointerup)="onCardUp()" (pointercancel)="onCardUp()" (pointerleave)="onCardUp()">
-                  <div class="disco-photo" (click)="!dragging() && nextPhoto()" [style.background-image]="profilePhoto() ? 'url(' + profilePhoto() + ')' : null">
-                    @if (!profilePhoto()) { <div class="disco-nophoto">✦</div> }
-                    @if (p.pictures?.length > 1) {
-                      <div class="disco-dots">
-                        @for (pic of p.pictures; track $index) { <span [class.on]="$index === photoIdx()"></span> }
-                      </div>
-                    }
-                    <div class="disco-grad">
-                      <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }
-                        @if (discoTypeLabel(p)) { <span class="disco-badge" [class.elite]="discoIsElite(p)">{{ discoIsElite(p) ? '💎' : '🌟' }} {{ discoTypeLabel(p) }}</span> }
-                      </div>
-                      <div class="disco-meta near">↗ {{ s('near') }}</div>
-                      @if (p.compatibilityScore != null) {
-                        <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
-                      }
-                      @if (p.interests?.length) {
-                        <div class="disco-chips">
-                          @for (it of p.interests.slice(0, 4); track it) { <span>{{ interestLabel(it) }}</span> }
+                  <!-- CURRENT card (full + interactive) -->
+                  <div class="disco-card">
+                    <div class="disco-photo" (click)="!dragging() && nextPhoto()" [style.background-image]="profilePhoto() ? 'url(' + profilePhoto() + ')' : null">
+                      @if (!profilePhoto()) { <div class="disco-nophoto">✦</div> }
+                      @if (p.pictures?.length > 1) {
+                        <div class="disco-dots">
+                          @for (pic of p.pictures; track $index) { <span [class.on]="$index === photoIdx()"></span> }
                         </div>
                       }
+                      <div class="disco-grad">
+                        <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }
+                          @if (discoTypeLabel(p)) { <span class="disco-badge" [class.elite]="discoIsElite(p)">{{ discoIsElite(p) ? '💎' : '🌟' }} {{ discoTypeLabel(p) }}</span> }
+                        </div>
+                        <div class="disco-meta near">↗ {{ s('near') }}</div>
+                        @if (p.compatibilityScore != null) {
+                          <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
+                        }
+                        @if (p.interests?.length) {
+                          <div class="disco-chips">
+                            @for (it of p.interests.slice(0, 4); track it) { <span>{{ interestLabel(it) }}</span> }
+                          </div>
+                        }
+                      </div>
+                      <button class="disco-like" (click)="$event.stopPropagation(); swipe('like')" [attr.aria-label]="s('like')">
+                        <svg class="disco-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                      </button>
                     </div>
-                    <button class="disco-like" (click)="$event.stopPropagation(); swipe('like')" [attr.aria-label]="s('like')">
-                      <svg class="disco-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    </button>
                   </div>
+                  <!-- NEXT card preview (sits directly below; rises into place as the current leaves) -->
+                  @if (nextProfile(); as np) {
+                    <div class="disco-card disco-next">
+                      <div class="disco-photo" [style.background-image]="nextProfilePhoto() ? 'url(' + nextProfilePhoto() + ')' : null">
+                        @if (!nextProfilePhoto()) { <div class="disco-nophoto">✦</div> }
+                        <div class="disco-grad">
+                          <div class="disco-name">{{ np.name }}@if (np.age) { <span> {{ np.age }}</span> }</div>
+                        </div>
+                      </div>
+                    </div>
+                  }
                 </div>
+                <!-- Can't-go-back notice (shown briefly when the user drags down) -->
+                @if (cantGoBack()) { <div class="disco-noback">{{ s('discoNoBack') }}</div> }
               </div>
             } @else {
               <div class="shell-teaser">

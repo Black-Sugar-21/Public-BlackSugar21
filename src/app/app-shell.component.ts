@@ -44,6 +44,7 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
   chemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契","ja":"相性","ko":"케미","ru":"Химия","ar":"كيمياء","id":"Kimia","tr":"Kimya"},
   near: {"es":"Cerca","en":"Near","pt":"Perto","fr":"Proche","de":"In der Nähe","it":"Vicino","zh":"附近","ja":"近く","ko":"근처","ru":"Рядом","ar":"قريب","id":"Dekat","tr":"Yakın"},
+  discoNoBack: {"es":"No puedes volver atrás 🚫","en":"You can't go back 🚫","pt":"Não dá para voltar 🚫","fr":"Tu ne peux pas revenir 🚫","de":"Zurück geht nicht 🚫","it":"Non puoi tornare indietro 🚫","zh":"无法返回上一个 🚫","ja":"前には戻れません 🚫","ko":"되돌아갈 수 없어요 🚫","ru":"Нельзя вернуться назад 🚫","ar":"لا يمكنك الرجوع 🚫","id":"Tidak bisa kembali 🚫","tr":"Geri dönemezsin 🚫"},
   chatsEmpty: {"es":"Aún no tienes matches. ¡Ve a Descubrir!","en":"No matches yet. Head to Discover!","pt":"Sem matches ainda. Vá em Descobrir!","fr":"Pas encore de matchs. Va dans Découvrir !","de":"Noch keine Matches. Geh zu Entdecken!","it":"Nessun match ancora. Vai su Scopri!","zh":"还没有匹配，去发现页看看！","ja":"まだマッチがありません。発見へ！","ko":"아직 매치가 없어요. 발견으로 가요!","ru":"Пока нет совпадений. Загляните в Поиск!","ar":"لا توجد مطابقات بعد. اذهب إلى اكتشف!","id":"Belum ada match. Ke Jelajah!","tr":"Henüz eşleşme yok. Keşfet'e git!"},
   chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
@@ -326,9 +327,10 @@ export class AppShellComponent implements OnDestroy {
   useIcebreaker(text: string) { this.chatText = text; }
   private unsubMatches: (() => void) | null = null;
   private unsubMsgs: (() => void) | null = null;
+  // iOS tab order: Coach (tab 0) → Discover (tab 1) → Messages (tab 2) → Profile. Homologated.
   readonly navItems: Array<{ key: Section; icon: string }> = [
-    { key: 'discovery', icon: '🔥' },
     { key: 'coach', icon: '✦' },
+    { key: 'discovery', icon: '🔥' },
     { key: 'chats', icon: '💬' },
     { key: 'profile', icon: '👤' },
   ];
@@ -507,10 +509,39 @@ export class AppShellComponent implements OnDestroy {
     if (!p || !Array.isArray(p.pictures) || p.pictures.length < 2) return;
     this.photoIdx.update((v) => (v + 1) % p.pictures.length);
   }
-  private advance() { this.photoIdx.set(0); this.dragX.set(0); this.dragY.set(0); this.swiping.set(null); this.discoIdx.update((v) => v + 1); }
-
-  // iOS-exact vertical pager (TikTok-style): swipe UP advances to the next profile (a pass if you
-  // didn't like it); the ♥ button likes + advances; you CANNOT go back (drag-down springs back).
+  // ── Discovery vertical pager (TikTok-style) ──────────────────────────────────
+  // The deck stacks the CURRENT card + the NEXT card directly below it. Advancing slides the whole
+  // deck UP by one card-height, so the current rises out the top WHILE the next rises into place at
+  // the SAME moment (no "up-then-down" bounce). Swipe UP (or tap ♥) advances; you CANNOT go back —
+  // dragging DOWN resists, shows a brief notice, and springs back to where it was.
+  readonly deckUp = signal(false);      // advancing: deck animates up one card
+  readonly snapping = signal(false);    // instant reset (transition off) after the slide
+  readonly cantGoBack = signal(false);  // brief "can't go back" notice on a down-drag attempt
+  private cantGoBackT: any = null;
+  nextProfile(): any | null {
+    const list = this.discoProfiles();
+    const i = this.discoIdx() + 1;
+    return i < list.length ? list[i] : null;
+  }
+  nextProfilePhoto(): string | null {
+    const p = this.nextProfile();
+    return (p && Array.isArray(p.pictures) && p.pictures.length) ? (p.pictures[0]?.url || null) : null;
+  }
+  deckTransform(): string {
+    if (this.deckUp()) return 'translateY(-100%)';
+    if (this.dragging()) return `translateY(${this.dragY()}px)`;
+    return 'translateY(0)';
+  }
+  private advance() {
+    // Snap with NO transition: deck instantly back to 0 showing the new current + next (the slide
+    // already moved the next into view, so there is zero visible downward motion).
+    this.snapping.set(true);
+    this.deckUp.set(false);
+    this.dragY.set(0); this.dragX.set(0); this.swiping.set(null); this.photoIdx.set(0);
+    this.discoIdx.update((v) => v + 1);
+    if (this.isBrowser) requestAnimationFrame(() => requestAnimationFrame(() => this.snapping.set(false)));
+    else this.snapping.set(false);
+  }
   onCardDown(e: PointerEvent) {
     if (!this.currentProfile() || this.swiping()) return;
     this.dragging.set(true);
@@ -520,23 +551,31 @@ export class AppShellComponent implements OnDestroy {
   onCardMove(e: PointerEvent) {
     if (!this.dragging()) return;
     const dy = e.clientY - this.dragStartY;
-    this.dragY.set(dy < 0 ? dy : dy * 0.18); // up follows; down resists (no going back)
+    if (dy > 6) {
+      // Dragging DOWN — going back is not allowed. Resist hard + show the notice.
+      this.dragY.set(Math.min(dy * 0.10, 30));
+      if (!this.cantGoBack()) this.cantGoBack.set(true);
+    } else {
+      this.dragY.set(dy); // up follows the finger
+    }
   }
   onCardUp() {
     if (!this.dragging()) return;
     this.dragging.set(false);
-    if (this.dragY() < -this.SWIPE_THRESHOLD) this.swipe('pass'); // swiped up enough → pass + advance
-    else this.dragY.set(0); // springs back (CSS transition)
+    if (this.dragY() < -this.SWIPE_THRESHOLD) { this.swipe('pass'); return; } // swiped up enough → advance
+    this.dragY.set(0);            // springs back to where it was
+    if (this.cantGoBack()) { clearTimeout(this.cantGoBackT); this.cantGoBackT = setTimeout(() => this.cantGoBack.set(false), 1400); }
   }
-  /** Like / pass → record then scroll the card up and bring in the next (≈400ms, like the native transition). */
+  /** Like / pass → record, then the deck rises one card (current out the top + next into place, together). */
   swipe(action: 'like' | 'pass' | 'superlike') {
     const p = this.currentProfile();
     if (!p || this.swiping()) return;
-    this.swiping.set(action === 'pass' ? 'pass' : 'like');
-    this.dragY.set(-1100); // fly up out of view
     this.track('discovery_swipe', { action });
     this.firebase.recordSwipe(p.userId, action).then((matchId) => { if (matchId) this.track('new_match'); }).catch(() => { /* best-effort */ });
-    setTimeout(() => this.advance(), 400);
+    this.swiping.set(action === 'pass' ? 'pass' : 'like');
+    this.dragY.set(0);
+    this.deckUp.set(true);                       // slide the deck up (≈380ms)
+    setTimeout(() => this.advance(), 380);
   }
 
   // ── Chat ─────────────────────────────────────────────────────────────────────
