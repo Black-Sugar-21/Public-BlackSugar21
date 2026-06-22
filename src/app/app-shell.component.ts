@@ -46,6 +46,8 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   chatsEmpty: {"es":"Aún no tienes matches. ¡Ve a Descubrir!","en":"No matches yet. Head to Discover!","pt":"Sem matches ainda. Vá em Descobrir!","fr":"Pas encore de matchs. Va dans Découvrir !","de":"Noch keine Matches. Geh zu Entdecken!","it":"Nessun match ancora. Vai su Scopri!","zh":"还没有匹配，去发现页看看！","ja":"まだマッチがありません。発見へ！","ko":"아직 매치가 없어요. 발견으로 가요!","ru":"Пока нет совпадений. Загляните в Поиск!","ar":"لا توجد مطابقات بعد. اذهب إلى اكتشف!","id":"Belum ada match. Ke Jelajah!","tr":"Henüz eşleşme yok. Keşfet'e git!"},
   chatPlaceholder: {"es":"Escribe un mensaje…","en":"Type a message…","pt":"Escreva uma mensagem…","fr":"Écris un message…","de":"Nachricht schreiben…","it":"Scrivi un messaggio…","zh":"输入消息…","ja":"メッセージを入力…","ko":"메시지 입력…","ru":"Напишите сообщение…","ar":"اكتب رسالة…","id":"Tulis pesan…","tr":"Mesaj yaz…"},
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
+  coachIcebreakers: {"es":"Sugerencias del Coach IA","en":"AI Coach openers","pt":"Sugestões do Coach IA","fr":"Suggestions du Coach IA","de":"KI-Coach-Vorschläge","it":"Suggerimenti del Coach IA","zh":"AI 教练开场白","ja":"AIコーチの一言","ko":"AI 코치 제안","ru":"Подсказки ИИ-коуча","ar":"اقتراحات مدرب الذكاء الاصطناعي","id":"Saran Coach AI","tr":"AI Koç önerileri"},
+  coachSuggesting: {"es":"El Coach IA está pensando ideas…","en":"AI Coach is thinking of openers…","pt":"O Coach IA está pensando em ideias…","fr":"Le Coach IA réfléchit à des idées…","de":"Der KI-Coach überlegt Vorschläge…","it":"Il Coach IA sta pensando a delle idee…","zh":"AI 教练正在想开场白…","ja":"AIコーチが一言を考え中…","ko":"AI 코치가 제안을 고민 중…","ru":"ИИ-коуч придумывает идеи…","ar":"مدرب الذكاء الاصطناعي يفكر في أفكار…","id":"Coach AI sedang memikirkan ide…","tr":"AI Koç öneriler düşünüyor…"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -306,6 +308,21 @@ export class AppShellComponent implements OnDestroy {
     return [...map.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
   });
   chatText = '';
+  // AI Coach icebreakers in an empty chat (iOS ChatView Wingman parity) — tappable openers.
+  readonly icebreakers = signal<{ message: string; emoji?: string }[]>([]);
+  readonly icebreakersLoading = signal(false);
+  private icebreakerMatch = '';
+  private loadIcebreakers(match: any) {
+    if (!match?.otherUid) { this.icebreakers.set([]); return; }
+    this.icebreakerMatch = match.id;
+    this.icebreakers.set([]);
+    this.icebreakersLoading.set(true);
+    this.firebase.generateIcebreakers(match.otherUid, this.lang())
+      .then((list) => { if (this.icebreakerMatch === match.id) this.icebreakers.set(list); })
+      .finally(() => { if (this.icebreakerMatch === match.id) this.icebreakersLoading.set(false); });
+  }
+  /** Tap an icebreaker → drop it in the composer so the user can send (or tweak) it. */
+  useIcebreaker(text: string) { this.chatText = text; }
   private unsubMatches: (() => void) | null = null;
   private unsubMsgs: (() => void) | null = null;
   readonly navItems: Array<{ key: Section; icon: string }> = [
@@ -555,6 +572,7 @@ export class AppShellComponent implements OnDestroy {
     // iOS ChatView parity: mark read + set this as the active chat (suppresses the recipient's push).
     this.firebase.markMatchRead(match.id);
     this.firebase.setActiveChat(match.id);
+    this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {

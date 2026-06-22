@@ -738,6 +738,20 @@ export class FirebaseService {
     return [];
   }
 
+  /** AI Coach icebreakers for a match — SAME generateIcebreakers callable iOS/Android use (the
+   *  Wingman). Returns tappable opener suggestions for an empty conversation. [] on error/rate-limit. */
+  async generateIcebreakers(otherUid: string, lang: string): Promise<{ message: string; emoji?: string }[]> {
+    const u = this.currentUser();
+    if (!u || !otherUid) return [];
+    try {
+      const fn = httpsCallable(this.functions, 'generateIcebreakers');
+      const res: any = await fn({ userId1: u.uid, userId2: otherUid, userLanguage: lang || 'en' });
+      const arr = res?.data?.icebreakers;
+      if (Array.isArray(arr)) return arr.map((x: any) => ({ message: String(x?.message || '').trim(), emoji: x?.emoji })).filter((x: any) => x.message);
+    } catch { /* rate-limited or AI off — caller shows nothing */ }
+    return [];
+  }
+
   /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
    *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
   async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {

@@ -138,7 +138,20 @@
                   @if (chatHasMore()) {
                     <button class="chat-loadmore" [disabled]="chatLoadingOlder()" (click)="loadOlderChat()">{{ chatLoadingOlder() ? '…' : s('chatLoadOlder') }}</button>
                   }
-                  @if (chatMsgs().length === 0) { <div class="chat-empty">{{ s('chatStart') }}</div> }
+                  @if (chatMsgs().length === 0) {
+                    <div class="chat-empty">{{ s('chatStart') }}</div>
+                    <!-- AI Coach icebreakers (iOS ChatView Wingman parity): tappable openers. -->
+                    @if (icebreakersLoading()) {
+                      <div class="chat-ice-load"><span class="ep-spin ep-spin-sm"></span> {{ s('coachSuggesting') }}</div>
+                    } @else if (icebreakers().length) {
+                      <div class="chat-ice">
+                        <div class="chat-ice-h">✦ {{ s('coachIcebreakers') }}</div>
+                        @for (ib of icebreakers(); track ib.message) {
+                          <button type="button" class="chat-ice-chip" (click)="useIcebreaker(ib.message)">{{ ib.message }}</button>
+                        }
+                      </div>
+                    }
+                  }
                   @for (msg of chatMsgs(); track msg.id) {
                     @switch (msg.type) {
                       @case ('place') {
