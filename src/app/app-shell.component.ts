@@ -57,6 +57,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   obWelcomeFooter: {"es":"Creemos tu perfil — tu coach te acompaña desde aquí.","en":"Let's set up your profile — your coach is with you from here.","pt":"Vamos criar seu perfil — seu coach te acompanha a partir daqui.","fr":"Créons ton profil — ton coach t'accompagne dès maintenant.","de":"Erstelle dein Profil — dein Coach begleitet dich ab hier.","it":"Creiamo il tuo profilo — il tuo coach ti accompagna da qui.","zh":"来创建你的资料吧——从这里开始，教练与你同行。","ja":"プロフィールを作りましょう。ここからコーチが一緒です。","ko":"프로필을 만들어요 — 지금부터 코치가 함께해요.","ru":"Создадим ваш профиль — коуч рядом с этого момента.","ar":"لننشئ ملفك — مدرّبك معك من هنا.","id":"Yuk buat profilmu — coach-mu menemanimu mulai sekarang.","tr":"Let's set up your profile — your coach is with you from here."},
   obStart: {"es":"Comenzar","en":"Get started","pt":"Começar","fr":"Commencer","de":"Loslegen","it":"Inizia","zh":"开始","ja":"はじめる","ko":"시작하기","ru":"Начать","ar":"ابدأ","id":"Mulai","tr":"Başla"},
   obNameDesc: {"es":"Así te verán el Coach y tus matches.","en":"How the Coach and your matches will see you.","pt":"Como o Coach e seus matches verão você.","fr":"Comment le Coach et tes matchs te verront.","de":"So sehen dich Coach und Matches.","it":"Come ti vedranno il Coach e i match.","zh":"教练和匹配的人将这样看到你。","ja":"コーチとマッチに表示される名前です。","ko":"코치와 매치에게 보일 이름이에요.","ru":"Так вас увидят коуч и совпадения.","ar":"هكذا سيراك المدرّب ومطابقاتك.","id":"Begini Coach dan match melihatmu.","tr":"Koç ve eşleşmelerin seni böyle görür."},
+  obYearsSuffix: {"es":"años","en":"years old","pt":"anos","fr":"ans","de":"Jahre","it":"anni","zh":"岁","ja":"歳","ko":"세","ru":"лет","ar":"سنة","id":"tahun","tr":"yaşında"},
+  obUnderageMsg: {"es":"Debes tener al menos {min} años para continuar.","en":"You must be at least {min} to continue.","pt":"Você precisa ter pelo menos {min} anos para continuar.","fr":"Tu dois avoir au moins {min} ans pour continuer.","de":"Du musst mindestens {min} Jahre alt sein.","it":"Devi avere almeno {min} anni per continuare.","zh":"你必须年满 {min} 岁才能继续。","ja":"続けるには{min}歳以上である必要があります。","ko":"계속하려면 만 {min}세 이상이어야 해요.","ru":"Вам должно быть не менее {min} лет.","ar":"يجب أن يكون عمرك {min} عامًا على الأقل للمتابعة.","id":"Kamu harus berusia minimal {min} tahun untuk lanjut.","tr":"Devam etmek için en az {min} yaşında olmalısın."},
+  obInvalidDateMsg: {"es":"Fecha inválida.","en":"Invalid date.","pt":"Data inválida.","fr":"Date invalide.","de":"Ungültiges Datum.","it":"Data non valida.","zh":"日期无效。","ja":"無効な日付です。","ko":"유효하지 않은 날짜예요.","ru":"Недействительная дата.","ar":"تاريخ غير صالح.","id":"Tanggal tidak valid.","tr":"Geçersiz tarih."},
   obBirthdayDesc: {"es":"Solo para confirmar que eres mayor de 18.","en":"Just to confirm you're 18 or older.","pt":"Apenas para confirmar que você tem 18+.","fr":"Juste pour confirmer que tu as 18 ans ou plus.","de":"Nur um zu bestätigen, dass du 18+ bist.","it":"Solo per confermare che hai almeno 18 anni.","zh":"仅用于确认你已年满 18 岁。","ja":"18歳以上であることの確認のみに使用します。","ko":"만 18세 이상인지 확인하기 위함이에요.","ru":"Только чтобы подтвердить, что вам 18+.","ar":"فقط للتأكد من أنك 18 عامًا أو أكثر.","id":"Hanya untuk memastikan kamu 18+.","tr":"Yalnızca 18 yaşından büyük olduğunu doğrulamak için."},
   obGenderDesc: {"es":"Nos ayuda a mostrarte a las personas correctas.","en":"Helps us show you to the right people.","pt":"Ajuda a mostrar você às pessoas certas.","fr":"Nous aide à te montrer aux bonnes personnes.","de":"Hilft, dich den richtigen Leuten zu zeigen.","it":"Ci aiuta a mostrarti alle persone giuste.","zh":"帮助我们把你展示给合适的人。","ja":"最適な相手に表示するために使います。","ko":"알맞은 사람들에게 보여주는 데 도움이 돼요.","ru":"Помогает показать вас нужным людям.","ar":"يساعدنا على عرضك للأشخاص المناسبين.","id":"Membantu menampilkanmu ke orang yang tepat.","tr":"Seni doğru kişilere göstermemize yardımcı olur."},
   obTypeDesc: {"es":"Elige cómo quieres vivir la experiencia.","en":"Choose how you want to experience it.","pt":"Escolha como quer viver a experiência.","fr":"Choisis comment vivre l'expérience.","de":"Wähle, wie du es erleben willst.","it":"Scegli come vivere l'esperienza.","zh":"选择你想要的体验方式。","ja":"体験のスタイルを選んでください。","ko":"경험 방식을 선택하세요.","ru":"Выберите, как хотите этим пользоваться.","ar":"اختر كيف تريد أن تعيش التجربة.","id":"Pilih cara kamu menikmatinya.","tr":"Deneyimi nasıl yaşamak istediğini seç."},
@@ -678,7 +681,7 @@ export class AppShellComponent implements OnDestroy {
   obCanProceed(): boolean {
     switch (this.obStep()) {
       case 0: return this.ob.name.trim().length >= 2;
-      case 1: { const a = this.obBirthAge(); return a !== null && a >= 18; }
+      case 1: return this.obBirthState() === 'ok';
       case 2: return this.ob.male !== null;
       case 3: return this.ob.type !== '';
       case 4: return this.ob.orientation !== '';
@@ -731,13 +734,35 @@ export class AppShellComponent implements OnDestroy {
     });
   }
   obRemovePhoto(i: number) { this.obPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
-  private obBirthAge(): number | null {
+  obBirthAge(): number | null {
     const d = parseInt(this.ob.day, 10), m = parseInt(this.ob.month, 10), y = parseInt(this.ob.year, 10);
     if (!d || !m || !y || y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return null;
     const bd = new Date(y, m - 1, d);
     if (bd.getFullYear() !== y || bd.getMonth() !== m - 1) return null;
-    return Math.floor((Date.now() - bd.getTime()) / (365.25 * 86400000));
+    if (bd.getTime() > Date.now()) return null; // future date
+    // Exact calendar age (matches iOS dateComponents([.year])).
+    const today = new Date();
+    let age = today.getFullYear() - y;
+    const mo = today.getMonth() - (m - 1);
+    if (mo < 0 || (mo === 0 && today.getDate() < d)) age--;
+    return age;
   }
+  /** Country-based minimum age (mirrors iOS getMinimumAgeByCountry). */
+  obMinAge(): number {
+    let region = '';
+    try { region = (navigator.language.split('-')[1] || '').toUpperCase(); } catch { /* noop */ }
+    const byCountry: Record<string, number> = { KR: 19, TH: 20, SA: 21, AE: 21 };
+    return byCountry[region] ?? 18;
+  }
+  /** Birthday step state for elegant live feedback (iOS parity). */
+  obBirthState(): 'empty' | 'invalid' | 'underage' | 'ok' {
+    if (!this.ob.day || !this.ob.month || !this.ob.year) return 'empty';
+    const age = this.obBirthAge();
+    if (age === null || age > 120) return 'invalid';
+    if (age < this.obMinAge()) return 'underage';
+    return 'ok';
+  }
+  obUnderageText(): string { return this.s('obUnderageMsg').replace('{min}', String(this.obMinAge())); }
   obNext() {
     this.obError.set('');
     if (!this.obCanProceed()) { this.obError.set(this.obStep() === 1 ? this.s('obAge18') : this.s('obRequired')); return; }

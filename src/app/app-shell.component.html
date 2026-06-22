@@ -412,6 +412,11 @@
                         <ui-input [(ngModel)]="ob.month" [placeholder]="s('obMonth')" inputmode="numeric" [maxLength]="2" [center]="true" />
                         <ui-input [(ngModel)]="ob.year" [placeholder]="s('obYear')" inputmode="numeric" [maxLength]="4" [center]="true" />
                       </div>
+                      @switch (obBirthState()) {
+                        @case ('ok') { <div class="ob-age-ok">✓ {{ obBirthAge() }} {{ s('obYearsSuffix') }}</div> }
+                        @case ('underage') { <p class="ob-error">{{ obUnderageText() }}</p> }
+                        @case ('invalid') { <p class="ob-error">{{ s('obInvalidDateMsg') }}</p> }
+                      }
                     }
                     @case (2) {
                       <h2 class="ob-title">{{ s('obGender') }}</h2>
