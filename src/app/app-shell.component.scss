@@ -364,9 +364,13 @@
     .bsheet-head b { font-size:16px; color:var(--text-primary); }
     .bsheet-x { background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; padding:4px 6px; }
     .bsheet-x:hover { color:var(--text-primary); }
-    .bsheet-cats { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:10px 16px; scrollbar-width:none; }
+    .bsheet-cats { display:flex; align-items:center; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:10px 16px 12px; scrollbar-width:none;
+      border-bottom:1px solid rgba(255,255,255,.07); }
     .bsheet-cats::-webkit-scrollbar { display:none; }
     .bsheet-cats ui-option { flex:none; white-space:nowrap; }
+    /* Compact, iOS-style pill chips for the category carousel (adapt the ui-option atom contextually). */
+    .bsheet-cats ::ng-deep .ui-opt { padding:7px 13px; font-size:13px; font-weight:600; }
+    .bsheet-cats::after { content:''; flex:none; width:6px; } /* trailing breathing room so the last chip scrolls fully in */
     .bsheet-body { overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 16px; display:flex; flex-direction:column; gap:10px; }
     .bsheet-empty { text-align:center; color:var(--text-muted); font-size:14px; padding:24px 0; }
     .place-sug { display:flex; align-items:center; gap:12px; padding:10px; border-radius:14px; background:var(--bg-dark); border:1px solid rgba(255,255,255,.08); }
