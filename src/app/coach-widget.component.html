@@ -96,12 +96,7 @@
             <h3 class="cw-login-t">{{ ui('historyTitle') }}</h3>
             <button class="cw-hist-new" (click)="newConversation()">＋ {{ ui('newChat') }}</button>
             @if (historyLoading()) {
-              @for (s of [0,1,2,3,4]; track s) {
-                <div class="cw-hist-skel" aria-hidden="true">
-                  <span class="cw-skel cw-skel-title"></span>
-                  <span class="cw-skel cw-skel-time"></span>
-                </div>
-              }
+              @for (s of [0,1,2,3,4]; track s) { <ui-skeleton-row /> }
             } @else {
               @for (c of convoList(); track c.id) {
                 <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
