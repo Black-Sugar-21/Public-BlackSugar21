@@ -130,7 +130,29 @@
         }
 
         <div class="cw-body" #body>
-          @if (isWelcome()) {
+          @if (chatLoading()) {
+            <!-- Initial-load skeleton — previews the new place card (homologated with iOS/Android). -->
+            <div class="cw-skel-chat" aria-hidden="true">
+              <span class="cw-skel cw-skel-intro"></span>
+              <div class="cw-skel-card">
+                <span class="cw-skel cw-skel-photo"></span>
+                <div class="cw-skel-line">
+                  <span class="cw-skel cw-skel-dot"></span>
+                  <span class="cw-skel cw-skel-grow"></span>
+                  <span class="cw-skel cw-skel-fit"></span>
+                </div>
+                <div class="cw-skel-line">
+                  <span class="cw-skel cw-skel-chip"></span>
+                  <span class="cw-skel cw-skel-chip wide"></span>
+                </div>
+                <span class="cw-skel cw-skel-tip"></span>
+                <div class="cw-skel-line">
+                  <span class="cw-skel cw-skel-pill"></span>
+                  <span class="cw-skel cw-skel-pill sm"></span>
+                </div>
+              </div>
+            </div>
+          } @else if (isWelcome()) {
             <div class="cw-welcome">
               <div class="cw-welcome-spark">✦</div>
               @if (user() && firstName) {

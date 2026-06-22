@@ -104,6 +104,20 @@
     .cw-skel-time { width:26px; flex:none; }
     @keyframes cwShimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
     @media (prefers-reduced-motion: reduce) { .cw-skel { animation:none; } }
+    /* Initial-load card-preview skeleton (homologated with iOS/Android). */
+    .cw-skel-chat { display:flex; flex-direction:column; gap:12px; padding:8px 4px; }
+    .cw-skel-intro { height:34px; width:58%; border-radius:14px; }
+    .cw-skel-card { border:1px solid var(--cw-border); border-radius:14px; padding:11px; display:flex; flex-direction:column; gap:9px; }
+    .cw-skel-photo { height:110px; width:100%; border-radius:12px; }
+    .cw-skel-line { display:flex; align-items:center; gap:8px; }
+    .cw-skel-dot { width:18px; height:18px; border-radius:50%; flex:none; }
+    .cw-skel-grow { flex:1; height:14px; }
+    .cw-skel-fit { width:52px; height:20px; border-radius:999px; flex:none; }
+    .cw-skel-chip { width:84px; height:18px; border-radius:999px; flex:none; }
+    .cw-skel-chip.wide { width:104px; }
+    .cw-skel-tip { height:34px; width:100%; border-radius:8px; }
+    .cw-skel-pill { width:92px; height:26px; border-radius:999px; flex:none; }
+    .cw-skel-pill.sm { width:70px; }
     .cw-confirm { position:absolute; top:50%; left:14px; right:14px; transform:translateY(-50%); z-index:31; background:var(--cw-card); border:1px solid var(--cw-border); border-radius:18px; padding:22px 18px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.55); }
     .cw-confirm-ic { font-size:38px; }
     .cw-confirm-b { color:var(--cw-muted); font-size:13px; line-height:1.45; margin:6px 0 16px; }

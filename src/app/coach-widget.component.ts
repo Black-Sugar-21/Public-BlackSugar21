@@ -212,6 +212,7 @@ export class CoachWidgetComponent {
   readonly confirmSignOut = signal(false);
   readonly historyOpen = signal(false);
   readonly historyLoading = signal(false);
+  readonly chatLoading = signal(false); // initial Firestore restore (logged-in) → card-preview skeleton
   readonly convoList = signal<Array<{ id: string; title: string; updatedAt: number; active: boolean }>>([]);
   private activeId = '';
   // How many messages of the active session are already persisted to Firestore (logged-in only),
@@ -446,8 +447,9 @@ export class CoachWidgetComponent {
 
   /** On login, load the user's most-recent Firestore session (unless mid-chat anonymously). */
   private async restoreFromFirestore() {
+    if (this.messages().some((x) => x.role === 'user')) return; // don't clobber an in-progress chat
+    this.chatLoading.set(true);
     try {
-      if (this.messages().some((x) => x.role === 'user')) return; // don't clobber an in-progress chat
       const sessions = await this.firebase.loadCoachSessions();
       if (!sessions.length) return;
       const recent = sessions[0];
@@ -458,6 +460,7 @@ export class CoachWidgetComponent {
         this.persistedCounts.set(recent.id, msgs.length);
       }
     } catch { /* noop */ }
+    finally { this.chatLoading.set(false); }
   }
 
   /** "Nueva conversación": the current chat is already saved — just start a fresh active session. */
