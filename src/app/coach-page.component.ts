@@ -1,5 +1,6 @@
 import { Component, Inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser, Location } from '@angular/common';
+import { Router } from '@angular/router';
 import { CoachWidgetComponent } from './coach-widget.component';
 
 /**
@@ -25,10 +26,15 @@ export class CoachPageComponent implements OnDestroy {
     const vv: any = (window as any).visualViewport;
     if (vv) this.rect.set({ top: Math.round(vv.offsetTop), height: Math.round(vv.height) });
   };
+  /** This fullscreen page is MOBILE-ONLY — on desktop the coach is the floating widget card, so send
+   *  desktop (or a resize-to-desktop) back to '/' where the widget renders. */
+  private guardDesktop = () => { if (this.isBrowser && window.innerWidth > 600) this.router.navigate(['/']); };
 
-  constructor(@Inject(PLATFORM_ID) platformId: object, private location: Location) {
+  constructor(@Inject(PLATFORM_ID) platformId: object, private location: Location, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
     if (this.isBrowser) {
+      this.guardDesktop();
+      window.addEventListener('resize', this.guardDesktop);
       const vv: any = (window as any).visualViewport;
       if (vv) { vv.addEventListener('resize', this.vvHandler); vv.addEventListener('scroll', this.vvHandler); this.vvHandler(); }
     }
@@ -39,5 +45,6 @@ export class CoachPageComponent implements OnDestroy {
   ngOnDestroy() {
     const vv: any = this.isBrowser ? (window as any).visualViewport : null;
     if (vv) { vv.removeEventListener('resize', this.vvHandler); vv.removeEventListener('scroll', this.vvHandler); }
+    if (this.isBrowser) window.removeEventListener('resize', this.guardDesktop);
   }
 }

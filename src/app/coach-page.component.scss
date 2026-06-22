@@ -1,13 +1,14 @@
 /* Opaque fullscreen host — nothing behind it can ever show through (the core robustness win over an
-   overlay). JS pins it to the exact visible-viewport rect so the composer stays above the keyboard. */
-:host { position: fixed; inset: 0; z-index: 60; display: block; background: var(--bg-dark, #0A0A0A); }
+   overlay). Background matches the widget (--cw-bg #15151A) so it's seamless with the embedded coach.
+   JS pins it to the exact visible-viewport rect so the composer stays above the keyboard. */
+:host { position: fixed; inset: 0; z-index: 60; display: block; background: #15151A; }
 
 .coach-page {
   position: fixed;
   left: 0; right: 0;
   top: 0;
   height: 100dvh; height: 100svh; /* fallback before JS sets the exact visualViewport height */
-  background: var(--bg-dark, #0A0A0A);
+  background: #15151A;
   overflow: hidden;
 }
 

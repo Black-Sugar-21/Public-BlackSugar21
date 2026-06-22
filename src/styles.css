@@ -83,6 +83,10 @@
   padding: 0;
 }
 
+/* Dark at the ROOT so no white ever shows — iOS Safari leaves background-attachment:fixed gaps when
+   the keyboard opens (the strip between content and the keyboard), and the html default is white. */
+html { background: var(--bg-dark, #0A0A0A); }
+
 body {
   background: var(--gradient-main);
   background-attachment: fixed;
