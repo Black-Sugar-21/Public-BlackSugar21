@@ -76,7 +76,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   obRequired: {"es":"Completa este paso para continuar.","en":"Complete this step to continue.","pt":"Conclua este passo para continuar.","fr":"Complète cette étape pour continuer.","de":"Schließe diesen Schritt ab, um fortzufahren.","it":"Completa questo passaggio per continuare.","zh":"完成此步骤以继续。","ja":"続けるにはこのステップを完了してください。","ko":"계속하려면 이 단계를 완료하세요.","ru":"Завершите этот шаг, чтобы продолжить.","ar":"أكمل هذه الخطوة للمتابعة.","id":"Selesaikan langkah ini untuk lanjut.","tr":"Devam etmek için bu adımı tamamla."},
   obSaveErr: {"es":"No se pudo guardar. Inténtalo de nuevo.","en":"Couldn't save. Please try again.","pt":"Não foi possível salvar. Tente de novo.","fr":"Échec de l'enregistrement. Réessaie.","de":"Speichern fehlgeschlagen. Versuch es erneut.","it":"Salvataggio non riuscito. Riprova.","zh":"保存失败，请重试。","ja":"保存できませんでした。再試行してください。","ko":"저장하지 못했어요. 다시 시도하세요.","ru":"Не удалось сохранить. Повторите.","ar":"تعذّر الحفظ. حاول مجدداً.","id":"Gagal menyimpan. Coba lagi.","tr":"Kaydedilemedi. Tekrar dene."},
   obPhotos: {"es":"Tus fotos","en":"Your photos","pt":"Suas fotos","fr":"Tes photos","de":"Deine Fotos","it":"Le tue foto","zh":"你的照片","ja":"あなたの写真","ko":"사진","ru":"Ваши фото","ar":"صورك","id":"Fotomu","tr":"Fotoğrafların"},
-  obPhotoHint: {"es":"Agrega al menos 1 (hasta 6). La 1ª es tu principal.","en":"Add at least 1 (up to 6). The 1st is your main.","pt":"Adicione ao menos 1 (até 6). A 1ª é a principal.","fr":"Ajoute au moins 1 (jusqu'à 6). La 1ʳᵉ est principale.","de":"Mind. 1 (bis 6). Das 1. ist dein Hauptfoto.","it":"Aggiungi almeno 1 (fino a 6). La 1ª è principale.","zh":"至少添加 1 张（最多 6）。第 1 张为主图。","ja":"1枚以上（最大6）。1枚目がメイン。","ko":"최소 1장(최대 6). 첫 번째가 대표.","ru":"Минимум 1 (до 6). Первое — главное.","ar":"أضف صورة واحدة على الأقل (حتى 6). الأولى رئيسية.","id":"Tambah min. 1 (maks 6). Foto ke-1 utama.","tr":"En az 1 (en çok 6). 1.'si ana fotoğraf."},
+  obPhotoHint: {"es":"Agrega al menos 2 (hasta 6). La 1ª es tu principal.","en":"Add at least 2 (up to 6). The 1st is your main.","pt":"Adicione ao menos 2 (até 6). A 1ª é a principal.","fr":"Ajoute au moins 2 (jusqu'à 6). La 1ʳᵉ est principale.","de":"Mind. 2 (bis 6). Das 1. ist dein Hauptfoto.","it":"Aggiungi almeno 2 (fino a 6). La 1ª è principale.","zh":"至少添加 2 张（最多 6）。第 1 张为主图。","ja":"2枚以上（最大6）。1枚目がメイン。","ko":"최소 2장(최대 6). 첫 번째가 대표.","ru":"Минимум 2 (до 6). Первое — главное.","ar":"أضف صورتين على الأقل (حتى 6). الأولى رئيسية.","id":"Tambah min. 2 (maks 6). Foto ke-1 utama.","tr":"En az 2 (en çok 6). 1.'si ana fotoğraf."},
+  obPhotoRejected: {"es":"Esa foto no pasó la revisión de IA. Prueba con otra.","en":"That photo didn't pass the AI review. Try another.","pt":"Essa foto não passou na revisão de IA. Tente outra.","fr":"Cette photo n'a pas passé la vérification IA. Essaie une autre.","de":"Dieses Foto hat die KI-Prüfung nicht bestanden. Versuch ein anderes.","it":"Quella foto non ha superato la verifica IA. Provane un'altra.","zh":"该照片未通过 AI 审核，请换一张。","ja":"その写真はAI審査に通りませんでした。別の写真をお試しください。","ko":"이 사진은 AI 검토를 통과하지 못했어요. 다른 사진을 시도해 보세요.","ru":"Это фото не прошло проверку ИИ. Попробуйте другое.","ar":"لم تجتز هذه الصورة مراجعة الذكاء الاصطناعي. جرّب صورة أخرى.","id":"Foto itu tidak lolos peninjauan AI. Coba yang lain.","tr":"Bu fotoğraf yapay zeka incelemesini geçemedi. Başka birini dene."},
+  obAnalyzing: {"es":"Revisando con IA…","en":"Reviewing with AI…","pt":"Revisando com IA…","fr":"Vérification par l'IA…","de":"KI-Prüfung…","it":"Verifica con IA…","zh":"AI 审核中…","ja":"AIで審査中…","ko":"AI 검토 중…","ru":"Проверка ИИ…","ar":"المراجعة بالذكاء…","id":"Meninjau dengan AI…","tr":"Yapay zeka inceliyor…"},
   obAddPhoto: {"es":"＋ Agregar foto","en":"＋ Add photo","pt":"＋ Adicionar foto","fr":"＋ Ajouter une photo","de":"＋ Foto hinzufügen","it":"＋ Aggiungi foto","zh":"＋ 添加照片","ja":"＋ 写真を追加","ko":"＋ 사진 추가","ru":"＋ Добавить фото","ar":"＋ أضف صورة","id":"＋ Tambah foto","tr":"＋ Fotoğraf ekle"},
   obPhotoErr: {"es":"No se pudo subir la foto. Inténtalo de nuevo.","en":"Couldn't upload the photo. Try again.","pt":"Não foi possível enviar a foto. Tente de novo.","fr":"Échec de l'envoi de la photo. Réessaie.","de":"Foto-Upload fehlgeschlagen. Versuch es erneut.","it":"Caricamento foto non riuscito. Riprova.","zh":"照片上传失败，请重试。","ja":"写真をアップロードできませんでした。","ko":"사진 업로드 실패. 다시 시도.","ru":"Не удалось загрузить фото. Повторите.","ar":"تعذّر رفع الصورة. حاول مجدداً.","id":"Gagal mengunggah foto. Coba lagi.","tr":"Fotoğraf yüklenemedi. Tekrar dene."},
   editInApp: {"es":"Editar perfil en la app","en":"Edit profile in the app","pt":"Editar perfil no app","fr":"Modifier le profil dans l'app","de":"Profil in der App bearbeiten","it":"Modifica profilo nell'app","zh":"在 App 中编辑资料","ja":"アプリでプロフィール編集","ko":"앱에서 프로필 편집","ru":"Изменить профиль в приложении","ar":"عدّل الملف في التطبيق","id":"Edit profil di aplikasi","tr":"Profili uygulamada düzenle"},
@@ -655,7 +657,7 @@ export class AppShellComponent implements OnDestroy {
       case 3: return this.ob.type !== '';
       case 4: return this.ob.orientation !== '';
       case 5: return true; // bio optional
-      case 6: return this.obPhotos().length >= 1; // at least one photo
+      case 6: return this.obPhotos().length >= 2; // iOS/Android parity: minimum 2 photos
       default: return true;
     }
   }
@@ -667,11 +669,36 @@ export class AppShellComponent implements OnDestroy {
     try {
       for (const f of files.slice(0, 6 - this.obPhotos().length)) {
         if (f.size > 10 * 1024 * 1024) continue; // 10MB cap
+        // iOS/Android parity: every photo is reviewed by AI (Gemini Vision) BEFORE it's accepted.
+        const b64 = await this.fileToModerationBase64(f);
+        const verdict = await this.firebase.moderateProfileImage(b64, this.ob.male, this.lang());
+        if (!verdict.approved) { this.obError.set(verdict.reason || this.s('obPhotoRejected')); continue; }
         const name = await this.firebase.uploadProfilePhoto(f);
         this.obPhotos.update((p) => [...p, { name, url: URL.createObjectURL(f) }]);
       }
     } catch { this.obError.set(this.s('obPhotoErr')); }
     finally { this.obUploading.set(false); input.value = ''; }
+  }
+  /** Downscale to ≤1024px JPEG → raw base64 (no data: prefix), under the moderation CF's ~1.5MB cap. */
+  private fileToModerationBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const max = 1024;
+        let w = img.width, h = img.height;
+        if (w > max || h > max) { const r = Math.min(max / w, max / h); w = Math.round(w * r); h = Math.round(h * r); }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('no-ctx')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve((canvas.toDataURL('image/jpeg', 0.82).split(',')[1]) || '');
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img-load')); };
+      img.src = url;
+    });
   }
   obRemovePhoto(i: number) { this.obPhotos.update((p) => p.filter((_, idx) => idx !== i)); }
   private obBirthAge(): number | null {

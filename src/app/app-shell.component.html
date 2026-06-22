@@ -422,7 +422,7 @@
                     }
                     @case (6) {
                       <h2 class="ob-title">{{ s('obPhotos') }}</h2>
-                      <p class="ob-photohint">{{ s('obPhotoHint') }}</p>
+                      <p class="ob-photohint">{{ obUploading() ? s('obAnalyzing') : s('obPhotoHint') }}</p>
                       <div class="ob-photos">
                         @for (ph of obPhotos(); track ph.name) {
                           <div class="ob-photo"><img [src]="ph.url" alt="" /><button class="ob-photo-x" (click)="obRemovePhoto($index)" aria-label="✕">✕</button></div>

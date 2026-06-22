@@ -420,6 +420,27 @@ export class FirebaseService {
     return res.data;
   }
 
+  /**
+   * AI image moderation (Gemini Vision) — same CF the iOS/Android apps call before accepting a
+   * profile photo. Returns {approved, reason}. Fail-OPEN on error (server-side R17 trigger is the
+   * hard gate) — matches the apps' profile-photo behavior.
+   */
+  async moderateProfileImage(imageBase64: string, expectedGender?: boolean | null, lang?: string): Promise<{ approved: boolean; reason: string; category?: string }> {
+    try {
+      const fn = httpsCallable(this.functions, 'moderateProfileImage');
+      const data: Record<string, unknown> = {
+        imageBase64,
+        userLanguage: lang || (typeof navigator !== 'undefined' ? navigator.language : 'en'),
+        isStory: false,
+      };
+      if (expectedGender != null) data['expectedGender'] = expectedGender;
+      const res: any = (await fn(data)).data;
+      return { approved: res?.approved !== false, reason: res?.reason || '', category: res?.category };
+    } catch {
+      return { approved: true, reason: '' }; // fail-open (server trigger enforces)
+    }
+  }
+
   // ── Coach chat SESSIONS (logged-in web → Firestore, shared with iOS/Android) ──
   // Sessions index = users/{uid}/coachSessions/{id}; messages = users/{uid}/coachChat
   // tagged with sessionId (same schema the apps use). Anonymous visitors stay on
