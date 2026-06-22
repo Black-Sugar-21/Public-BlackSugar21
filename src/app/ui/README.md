@@ -42,6 +42,22 @@ import { UiButtonComponent, UiPillComponent } from './ui';
 <ui-badge>94% ✦</ui-badge>
 ```
 
+## Organisms (planned — feature components that compose atoms/molecules)
+
+The atom + molecule layer and adoption are complete. Organisms are the next, optional layer —
+extracting whole feature sections into reusable components. Recommended as a **focused pass**
+(not mixed with other work) since they touch signature production UI:
+
+| Organism | Composes | Source today |
+|---|---|---|
+| `coach-place-card` | ui-card + ui-badge + ui-pill | inline `.cw-place` in coach-widget |
+| `coach-sessions-list` | ui-skeleton-row + rows | history overlay in coach-widget |
+| `app-header` | logo + ui-button (sign in/out) | `app.html` toolbar |
+
+Extraction rules: keep the exact markup/CSS first (verbatim move → zero visual change), wire
+data via `@Input()` and actions via `@Output()`, then refactor internals to atoms. Verify each
+against a screenshot before/after — the place card is the brand's signature element.
+
 ## Rules
 1. **Tokens only** — colors/spacing from `styles.css` variables; no inline hex.
 2. **Cross-device/browser** — `-webkit-` prefixes where needed, `touch-action: manipulation`,
