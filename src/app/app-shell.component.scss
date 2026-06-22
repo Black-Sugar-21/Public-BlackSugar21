@@ -160,9 +160,14 @@
     .ob-bday .ob-input.sm { flex:1; text-align:center; }
     .ob-bday ui-input { flex:1; }
     /* iOS parity: live age badge once a valid 18+ date is entered (spring-in). */
-    .ob-age-ok { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; color:var(--like-green1); font-size:15px; font-weight:700; background:rgba(108,234,197,.10); border:1px solid var(--like-green2); border-radius:999px; padding:7px 14px; animation:obAgeIn .4s cubic-bezier(.34,1.56,.64,1) both; }
+    .ob-age-ok { display:inline-flex; align-items:center; gap:6px; align-self:center; color:var(--like-green1); font-size:15px; font-weight:700; background:rgba(108,234,197,.10); border:1px solid var(--like-green2); border-radius:999px; padding:7px 14px; animation:obAgeIn .4s cubic-bezier(.34,1.56,.64,1) both; }
     @keyframes obAgeIn { from { opacity:0; transform:scale(.85) translateY(4px); } to { opacity:1; transform:none; } }
     @media (prefers-reduced-motion: reduce) { .ob-age-ok { animation:none; } }
+    /* iOS parity: photos status banner — gold (incomplete) → green (≥2 selected). */
+    .ob-photo-status { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--gold); background:rgba(212,175,55,.10); border-radius:12px; padding:10px 12px; }
+    .ob-photo-status.ok { color:var(--like-green1); background:rgba(108,234,197,.10); }
+    .ob-photo-status-ic { font-size:15px; flex:none; }
+    .ob-photo-min { font-weight:400; opacity:.85; }
     .ob-opts { display:flex; gap:12px; }
     .ob-opts.col { flex-direction:column; }
     .ob-opt { flex:1; background:var(--bg-card); border:1px solid rgba(255,255,255,.14); border-radius:14px; padding:16px; color:var(--text-primary); font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; text-align:left; transition:border-color .15s ease, background .15s ease; }

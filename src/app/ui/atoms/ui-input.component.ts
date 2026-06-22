@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 /**
@@ -11,6 +11,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UiInputComponent), multi: true }],
   template: `
     <input
+      #field
       class="ui-input"
       [class.center]="center"
       [type]="type"
@@ -50,6 +51,9 @@ export class UiInputComponent implements ControlValueAccessor {
   @Input() center = false;
   @Input() disabled = false;
   @Input() ariaLabel = '';
+  /** Fires once the value reaches maxLength — lets a parent auto-advance focus (e.g. day → month). */
+  @Output() complete = new EventEmitter<void>();
+  @ViewChild('field') private field?: ElementRef<HTMLInputElement>;
 
   value = '';
   private onChange: (v: string) => void = () => {};
@@ -59,5 +63,11 @@ export class UiInputComponent implements ControlValueAccessor {
   registerOnChange(fn: (v: string) => void): void { this.onChange = fn; }
   registerOnTouched(fn: () => void): void { this.onTouched = fn; }
   setDisabledState(d: boolean): void { this.disabled = d; }
-  onInput(e: Event): void { this.value = (e.target as HTMLInputElement).value; this.onChange(this.value); }
+  onInput(e: Event): void {
+    this.value = (e.target as HTMLInputElement).value;
+    this.onChange(this.value);
+    if (this.maxLength && this.value.length >= this.maxLength) this.complete.emit();
+  }
+  /** Focus the inner field (used for auto-advance between segmented inputs). */
+  focus(): void { this.field?.nativeElement.focus(); }
 }
