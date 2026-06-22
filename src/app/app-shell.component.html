@@ -150,8 +150,16 @@
                   @if (matchBasicReady_(m.otherUid)) { <b>{{ matchName(m.otherUid) }}</b> }
                   @else { <ui-skeleton width="140px" height="16px" /> }
                   <span class="chat-head-grow"></span>
-                  <!-- AI Coach date spots (iOS toolbar 📍 → PlaceSuggestionsView). -->
-                  <button class="chat-head-btn" (click)="openPlaceSheet()" [attr.aria-label]="s('datePlaces')" [attr.title]="s('datePlaces')">📍</button>
+                  <!-- iOS ChatView toolbar icons: sparkles (Coach) · mappin.circle.fill (date spots) · map.fill (blueprint). -->
+                  <button class="chat-head-btn ic-coach" (click)="go('coach')" [attr.aria-label]="s('coach')" [attr.title]="s('coach')">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l1.7 5.5a3 3 0 0 0 2 2L21 11.8l-5.3 1.7a3 3 0 0 0-2 2L12 21l-1.7-5.5a3 3 0 0 0-2-2L3 11.8l5.3-1.7a3 3 0 0 0 2-2L12 2.6z"/><path d="M19 3l.6 1.9L21.5 5.5l-1.9.6L19 8l-.6-1.9L16.5 5.5l1.9-.6L19 3z"/></svg>
+                  </button>
+                  <button class="chat-head-btn ic-places" (click)="openPlaceSheet()" [attr.aria-label]="s('datePlaces')" [attr.title]="s('datePlaces')">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+                  </button>
+                  <button class="chat-head-btn ic-bp" (click)="openBlueprintSheet()" [attr.aria-label]="s('blueprintTitle')" [attr.title]="s('blueprintTitle')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z"/><path d="M9 4v14M15 6v14"/></svg>
+                  </button>
                 </div>
                 <div class="chat-msgs">
                   @if (chatHasMore()) {
@@ -304,6 +312,59 @@
                         }
                         @if (placeLoadingMore()) {
                           <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('datePlacesLoading') }}</div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+                <!-- AI Coach Date Blueprint BOTTOM SHEET (iOS DateBlueprintSheet design). -->
+                @if (blueprintSheetOpen()) {
+                  <div class="bsheet-ov" (click)="closeBlueprintSheet()"></div>
+                  <div class="bsheet" role="dialog" aria-modal="true">
+                    <div class="bsheet-grab"></div>
+                    <div class="bsheet-head">
+                      <b>🗺️ {{ s('blueprintTitle') }}</b>
+                      <button class="bsheet-x" (click)="closeBlueprintSheet()" aria-label="✕">✕</button>
+                    </div>
+                    <!-- Duration selector -->
+                    <div class="bsheet-cats">
+                      @for (d of blueprintDurations; track d.id) {
+                        <ui-option shape="pill" [selected]="blueprintDuration() === d.id" (click)="selectBlueprintDuration(d.id)">{{ d.icon }} {{ s(d.id === 'quick' ? 'bpQuick' : d.id === 'standard' ? 'bpStandard' : 'bpFull') }}</ui-option>
+                      }
+                    </div>
+                    <div class="bsheet-body">
+                      @if (blueprintLoading()) {
+                        <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('blueprintLoadingTxt') }}</div>
+                      } @else if (!blueprint()) {
+                        <div class="bsheet-empty">{{ s('blueprintEmpty') }}</div>
+                      } @else {
+                        @if (blueprint(); as bp) {
+                          <div class="bp-head">
+                            <div class="bp-title">{{ bp.title }}</div>
+                            @if (bp.totalDuration) { <span class="bp-dur">⏱ {{ bp.totalDuration }}</span> }
+                            @if (bp.estimatedBudget) { <span class="bp-dur">💰 {{ bp.estimatedBudget }}</span> }
+                          </div>
+                          @for (st of bp.steps; track $index) {
+                            <div class="bp-step">
+                              <div class="bp-step-rail"><span class="bp-step-dot">{{ $index + 1 }}</span></div>
+                              <div class="bp-step-card">
+                                @if (stepPhoto(st)) { <div class="bp-step-img" [style.background-image]="'url(' + stepPhoto(st) + ')'"></div> }
+                                <div class="bp-step-body">
+                                  <div class="bp-step-time">@if (st.time) { <span>{{ st.time }}</span> }@if (st.duration) { <span class="bp-step-len">· {{ st.duration }}</span> }</div>
+                                  <div class="bp-step-act">{{ st.activity }}</div>
+                                  @if (stepPlaceName(st)) { <div class="bp-step-place">📍 {{ stepPlaceName(st) }}</div> }
+                                  @if (st.tip) { <div class="bp-step-tip">💡 {{ st.tip }}</div> }
+                                </div>
+                              </div>
+                            </div>
+                          }
+                          @if (bp.icebreaker) {
+                            <div class="bp-ice">
+                              <div class="bp-ice-h">💬 {{ s('bpIcebreaker') }}</div>
+                              <div class="bp-ice-t">{{ bp.icebreaker }}</div>
+                            </div>
+                          }
+                          <ui-button variant="primary" [block]="true" style="margin-top:6px" [disabled]="blueprintSending()" (click)="sendBlueprint()">{{ blueprintSending() ? '…' : s('blueprintShare') }}</ui-button>
                         }
                       }
                     </div>

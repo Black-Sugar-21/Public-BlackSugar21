@@ -60,6 +60,14 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   datePlacesEmpty: {"es":"No se encontraron lugares ahora. Inténtalo más tarde.","en":"No spots found right now. Try again later.","pt":"Nenhum lugar encontrado agora. Tente mais tarde.","fr":"Aucun lieu trouvé pour l'instant. Réessaie plus tard.","de":"Gerade keine Orte gefunden. Versuch es später.","it":"Nessun posto trovato ora. Riprova più tardi.","zh":"暂时没有找到地点，请稍后再试。","ja":"今は場所が見つかりません。後でお試しください。","ko":"지금은 장소를 찾지 못했어요. 나중에 다시 시도하세요.","ru":"Сейчас мест не найдено. Попробуйте позже.","ar":"لا توجد أماكن الآن. حاول لاحقاً.","id":"Belum ada tempat. Coba lagi nanti.","tr":"Şimdilik mekan yok. Sonra tekrar dene."},
   sharePlace: {"es":"Compartir","en":"Share","pt":"Compartilhar","fr":"Partager","de":"Teilen","it":"Condividi","zh":"分享","ja":"共有","ko":"공유","ru":"Поделиться","ar":"مشاركة","id":"Bagikan","tr":"Paylaş"},
   placesAll: {"es":"Todos","en":"All","pt":"Todos","fr":"Tous","de":"Alle","it":"Tutti","zh":"全部","ja":"すべて","ko":"전체","ru":"Все","ar":"الكل","id":"Semua","tr":"Tümü"},
+  blueprintTitle: {"es":"Plan de cita IA","en":"AI Date Blueprint","pt":"Plano de encontro IA","fr":"Plan de rendez-vous IA","de":"KI-Date-Plan","it":"Piano d'appuntamento IA","zh":"AI 约会计划","ja":"AIデートプラン","ko":"AI 데이트 플랜","ru":"AI-план свидания","ar":"خطة موعد بالذكاء الاصطناعي","id":"Rencana Kencan AI","tr":"AI Buluşma Planı"},
+  blueprintLoadingTxt: {"es":"Planeando tu cita perfecta…","en":"Planning your perfect date…","pt":"Planejando seu encontro perfeito…","fr":"Planification de ton rendez-vous parfait…","de":"Dein perfektes Date wird geplant…","it":"Sto pianificando il tuo appuntamento perfetto…","zh":"正在规划你的完美约会…","ja":"完璧なデートを計画中…","ko":"완벽한 데이트를 계획 중…","ru":"Планирую идеальное свидание…","ar":"أخطط لموعدك المثالي…","id":"Merencanakan kencan sempurnamu…","tr":"Mükemmel buluşmanı planlıyorum…"},
+  blueprintShare: {"es":"Compartir plan al chat","en":"Share plan to chat","pt":"Compartilhar plano no chat","fr":"Partager le plan dans le chat","de":"Plan im Chat teilen","it":"Condividi il piano in chat","zh":"分享计划到聊天","ja":"プランをチャットで共有","ko":"플랜을 채팅에 공유","ru":"Поделиться планом в чате","ar":"شارك الخطة في المحادثة","id":"Bagikan rencana ke chat","tr":"Planı sohbette paylaş"},
+  blueprintEmpty: {"es":"No se pudo generar el plan. Intenta de nuevo.","en":"Couldn't generate the plan. Try again.","pt":"Não foi possível gerar o plano. Tente de novo.","fr":"Impossible de générer le plan. Réessaie.","de":"Plan konnte nicht erstellt werden. Versuch es erneut.","it":"Impossibile generare il piano. Riprova.","zh":"无法生成计划，请重试。","ja":"プランを生成できませんでした。再試行してください。","ko":"플랜을 생성하지 못했어요. 다시 시도하세요.","ru":"Не удалось создать план. Попробуйте снова.","ar":"تعذّر إنشاء الخطة. حاول مجدداً.","id":"Gagal membuat rencana. Coba lagi.","tr":"Plan oluşturulamadı. Tekrar dene."},
+  bpQuick: {"es":"Rápida","en":"Quick","pt":"Rápida","fr":"Rapide","de":"Kurz","it":"Veloce","zh":"快速","ja":"短め","ko":"짧게","ru":"Быстро","ar":"سريعة","id":"Singkat","tr":"Kısa"},
+  bpStandard: {"es":"Estándar","en":"Standard","pt":"Padrão","fr":"Standard","de":"Standard","it":"Standard","zh":"标准","ja":"標準","ko":"기본","ru":"Стандарт","ar":"قياسية","id":"Standar","tr":"Standart"},
+  bpFull: {"es":"Completa","en":"Full","pt":"Completa","fr":"Complète","de":"Voll","it":"Completa","zh":"完整","ja":"フル","ko":"풀","ru":"Полное","ar":"كاملة","id":"Penuh","tr":"Tam"},
+  bpIcebreaker: {"es":"Para romper el hielo","en":"Conversation starter","pt":"Para quebrar o gelo","fr":"Pour briser la glace","de":"Gesprächseinstieg","it":"Per rompere il ghiaccio","zh":"开场白","ja":"会話のきっかけ","ko":"대화 시작","ru":"Для начала разговора","ar":"لكسر الجمود","id":"Pembuka obrolan","tr":"Sohbet başlatıcı"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -457,6 +465,41 @@ export class AppShellComponent implements OnDestroy {
     finally { this.placeSending.set(''); }
   }
   placePhoto(place: any): string { return (Array.isArray(place?.photos) && place.photos[0]?.url) ? place.photos[0].url : ''; }
+  // AI Coach DATE BLUEPRINT (iOS DateBlueprintSheet parity): a full date plan in a bottom sheet.
+  readonly blueprintSheetOpen = signal(false);
+  readonly blueprint = signal<any | null>(null);
+  readonly blueprintLoading = signal(false);
+  readonly blueprintSending = signal(false);
+  readonly blueprintDuration = signal<'quick' | 'standard' | 'full'>('standard');
+  readonly blueprintDurations: { id: 'quick' | 'standard' | 'full'; icon: string }[] = [
+    { id: 'quick', icon: '⚡' }, { id: 'standard', icon: '✨' }, { id: 'full', icon: '🌙' },
+  ];
+  async openBlueprintSheet() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.blueprintSheetOpen.set(true);
+    if (this.blueprint() || this.blueprintLoading()) return;
+    this.fetchBlueprint();
+  }
+  selectBlueprintDuration(d: 'quick' | 'standard' | 'full') { if (this.blueprintDuration() === d || this.blueprintLoading()) return; this.blueprintDuration.set(d); this.fetchBlueprint(); }
+  private async fetchBlueprint() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.blueprintLoading.set(true); this.blueprint.set(null);
+    const bp = await this.firebase.generateDateBlueprint(m.id, this.lang(), this.blueprintDuration());
+    this.blueprint.set(bp);
+    this.blueprintLoading.set(false);
+  }
+  closeBlueprintSheet() { this.blueprintSheetOpen.set(false); }
+  async sendBlueprint() {
+    const m = this.selectedMatch(); const bp = this.blueprint();
+    if (!m || !bp || this.blueprintSending()) return;
+    this.blueprintSending.set(true);
+    try { await this.firebase.sendBlueprintMessage(m.id, bp); this.blueprintSheetOpen.set(false); }
+    catch { /* best-effort */ }
+    finally { this.blueprintSending.set(false); }
+  }
+  /** A blueprint step's photo (handles both {place:{photos}} and flattened {photoUrl}). */
+  stepPhoto(s: any): string { return s?.place?.photos?.[0]?.url || s?.photoUrl || ''; }
+  stepPlaceName(s: any): string { return s?.place?.name || s?.placeName || ''; }
   chemColor(score: number): string { return score >= 75 ? 'green' : score >= 50 ? 'gold' : 'red'; }
   trendIcon(t: string): string { return t === 'rising' ? '↗' : t === 'falling' ? '↘' : '→'; }
   private unsubMatches: (() => void) | null = null;
@@ -750,6 +793,7 @@ export class AppShellComponent implements OnDestroy {
     this.resetSmartReplies();
     this.resetCoachInsights();
     this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false); this.placeCatSel.set('');
+    this.blueprintSheetOpen.set(false); this.blueprint.set(null); this.blueprintLoading.set(false); this.blueprintDuration.set('standard');
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
