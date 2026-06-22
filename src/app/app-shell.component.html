@@ -384,7 +384,7 @@
                   <div class="ob-welcome-spark">✦</div>
                   <h2 class="ob-title">{{ s('obWelcome') }}</h2>
                   <p class="ob-welcome-sub">{{ s('obWelcomeSub') }}</p>
-                  <ui-button variant="primary" [block]="true" (click)="obStarted.set(true)">{{ s('obStart') }}</ui-button>
+                  <ui-button variant="primary" shape="rect" [block]="true" (click)="obStarted.set(true)">{{ s('obStart') }}</ui-button>
                 </div>
               } @else {
               <div class="ob-wrap">
@@ -393,10 +393,12 @@
                   @switch (obStep()) {
                     @case (0) {
                       <h2 class="ob-title">{{ s('obName') }}</h2>
+                      <p class="ob-desc">{{ s('obNameDesc') }}</p>
                       <input class="ob-input" [(ngModel)]="ob.name" [placeholder]="s('obNamePh')" maxlength="40" autocomplete="given-name" />
                     }
                     @case (1) {
                       <h2 class="ob-title">{{ s('obBirthday') }}</h2>
+                      <p class="ob-desc">{{ s('obBirthdayDesc') }}</p>
                       <div class="ob-bday">
                         <input class="ob-input sm" [(ngModel)]="ob.day" [placeholder]="s('obDay')" inputmode="numeric" maxlength="2" />
                         <input class="ob-input sm" [(ngModel)]="ob.month" [placeholder]="s('obMonth')" inputmode="numeric" maxlength="2" />
@@ -405,6 +407,7 @@
                     }
                     @case (2) {
                       <h2 class="ob-title">{{ s('obGender') }}</h2>
+                      <p class="ob-desc">{{ s('obGenderDesc') }}</p>
                       <div class="ob-opts">
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === true" (click)="ob.male = true">{{ s('obMale') }}</ui-option>
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === false" (click)="ob.male = false">{{ s('obFemale') }}</ui-option>
@@ -412,6 +415,7 @@
                     }
                     @case (3) {
                       <h2 class="ob-title">{{ s('obType') }}</h2>
+                      <p class="ob-desc">{{ s('obTypeDesc') }}</p>
                       <div class="ob-opts col">
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.type === 'elite'" [title]="s('obElite')" [desc]="s('obEliteDesc')" (click)="ob.type = 'elite'"></ui-option>
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.type === 'prime'" [title]="s('obPrime')" [desc]="s('obPrimeDesc')" (click)="ob.type = 'prime'"></ui-option>
@@ -419,6 +423,7 @@
                     }
                     @case (4) {
                       <h2 class="ob-title">{{ s('obOrientation') }}</h2>
+                      <p class="ob-desc">{{ s('obOrientationDesc') }}</p>
                       <div class="ob-opts col">
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.orientation === 'men'" (click)="ob.orientation = 'men'">{{ s('obMen') }}</ui-option>
                         <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.orientation === 'women'" (click)="ob.orientation = 'women'">{{ s('obWomen') }}</ui-option>
@@ -427,6 +432,7 @@
                     }
                     @case (5) {
                       <h2 class="ob-title">{{ s('epAgeRange') }}</h2>
+                      <p class="ob-desc">{{ s('obAgeDesc') }}</p>
                       <div class="ep-slider-row"><span>{{ s('epMinAge') }}</span><b>{{ ob.minAge }}</b></div>
                       <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.minAge" (ngModelChange)="obMinChanged($event)" />
                       <div class="ep-slider-row"><span>{{ s('epMaxAge') }}</span><b>{{ ob.maxAge }}</b></div>
@@ -434,6 +440,7 @@
                     }
                     @case (6) {
                       <h2 class="ob-title">{{ s('epDistance') }}</h2>
+                      <p class="ob-desc">{{ s('obDistanceDesc') }}</p>
                       <div class="ep-slider-row"><span></span><b>{{ ob.maxDistance }} km</b></div>
                       <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ob.maxDistance" (ngModelChange)="ob.maxDistance = +$event" />
                     }
@@ -456,8 +463,8 @@
                   @if (obError()) { <p class="ob-error">{{ obError() }}</p> }
                 </div>
                 <div class="ob-nav">
-                  @if (obStep() > 0) { <ui-button variant="secondary" (click)="obBack()">{{ s('obBack') }}</ui-button> }
-                  <ui-button variant="primary" [block]="true" [disabled]="obSaving() || obUploading()" (click)="obNext()">
+                  @if (obStep() > 0) { <ui-button variant="secondary" shape="rect" [block]="true" (click)="obBack()">‹ {{ s('obBack') }}</ui-button> }
+                  <ui-button variant="primary" shape="rect" [block]="true" [disabled]="obSaving() || obUploading()" (click)="obNext()">
                     {{ obSaving() ? '…' : (obStep() === 7 ? s('obFinish') : s('obNext')) }}
                   </ui-button>
                 </div>
