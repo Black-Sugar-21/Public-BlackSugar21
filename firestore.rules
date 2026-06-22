@@ -335,6 +335,11 @@ service cloud.firestore {
             // message field: o no existe (sim payloads) o es string ≤ 8KB
             !('message' in request.resource.data)
             || (request.resource.data.message is string && request.resource.data.message.size() <= 8000)
+          )
+          && (
+            // sessionId (2026-06-21): agrupa mensajes por sesión de chat. Opcional, string corto.
+            !('sessionId' in request.resource.data)
+            || (request.resource.data.sessionId is string && request.resource.data.sessionId.size() <= 64)
           );
         // Update: solo el propio user puede tocar campos no-críticos (ej. read flag).
         // Bloquea la mutación de sender/message/timestamp para evitar tampering.
@@ -351,6 +356,18 @@ service cloud.firestore {
           );
         // Delete: cliente puede borrar su propio mensaje (deleteCoachMessage CF
         // usa admin SDK y bypassa esto, pero swipe-to-delete UI puede borrar local).
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Subcolección COACH SESSIONS (2026-06-21): índice de sesiones de chat del coach
+      // (estilo ChatGPT, multi-dispositivo). Cada doc = una conversación; los mensajes
+      // viven en coachChat con su sessionId. Solo el dueño lee/escribe/borra.
+      match /coachSessions/{sessionId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 200;
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
 
