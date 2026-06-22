@@ -1,11 +1,13 @@
 // Firebase Configuration
 export const firebaseConfig = {
   apiKey: "AIzaSyAczpQQmPhIPygDJEVqw406h_ibn3hRey0",
-  // Use Firebase's default auth domain — its OAuth redirect handler
-  // (https://black-sugar21.firebaseapp.com/__/auth/handler) is pre-authorized in the Google
-  // OAuth client. The custom domain "blacksugar21.com" caused Error 400 redirect_uri_mismatch
-  // because its /__/auth/handler URI was never registered in the OAuth client.
-  authDomain: "black-sugar21.firebaseapp.com",
+  // Branded auth domain: Google's account chooser shows this verbatim ("Ir a blacksugar21.com").
+  // blacksugar21.com is connected to Firebase Hosting (serves /__/auth/handler, HTTP 200) AND its
+  // redirect URI (https://blacksugar21.com/__/auth/handler) + JS origin (https://blacksugar21.com)
+  // are now registered in the Google OAuth client — without that registration this throws
+  // Error 400 redirect_uri_mismatch (the reason it was previously pinned to the firebaseapp.com domain).
+  // If login ever breaks with that 400, revert to "black-sugar21.firebaseapp.com" (always pre-authorized).
+  authDomain: "blacksugar21.com",
   databaseURL: "https://black-sugar21-default-rtdb.firebaseio.com",
   projectId: "black-sugar21",
   storageBucket: "black-sugar21.firebasestorage.app",
