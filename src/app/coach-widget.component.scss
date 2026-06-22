@@ -18,10 +18,6 @@
       -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
     /* Embedded mode (web-app shell): fill the parent container, no floating/positioning. */
     .cw-panel.cw-embedded { position:relative; inset:auto; margin:0; z-index:1; width:100%; height:100%; max-width:none; max-height:none; border:none; border-radius:0; box-shadow:none; animation:none; }
-    /* On-screen keyboard open (iOS Safari): pin the panel to the visible viewport so the composer
-       stays above the keyboard. JS sets the exact height via [style.height.px]. */
-    .cw-panel.cw-kb { position:fixed; top:0; left:0; right:0; bottom:auto; margin:0; max-height:none; z-index:9999; }
-    .cw-panel.cw-embedded.cw-kb { border-radius:0; }
     /* Claude-style: the panel fills the area, but the chat column is centered with a comfortable
        max width so lines aren't stretched across a wide desktop. */
     .cw-panel.cw-embedded .cw-head { max-width:860px; width:100%; margin-inline:auto; }
@@ -33,10 +29,16 @@
     /* keep the coach's actual content selectable/copyable; the chrome (footer, header, buttons) is not */
     .cw-bubble > span, .cw-appr-phrase, .cw-appr-why, .cw-stage-narr, .cw-stage-phrase span, .cw-mv-insights li, .cw-phrase span { -webkit-user-select:text; user-select:text; }
     @keyframes cwIn { from{opacity:0; transform:scale(.965) translateY(8px)} to{opacity:1; transform:none} }
-    /* Mobile: near-fullscreen sheet, safe-area aware. */
+    /* Mobile: bottom-anchored sheet (like the ChatAI widget). Anchoring at bottom:0 (NOT top) lets
+       iOS Safari lift the whole panel above the on-screen keyboard; JS only shrinks the height to the
+       visible viewport via [style.height.px]. Edge-to-edge with rounded top corners. */
     @media (max-width: 600px) {
-      .cw-panel { inset:6px; margin:0; width:auto; height:auto; max-width:none; max-height:none;
-        border-radius:18px; padding-bottom:env(safe-area-inset-bottom); }
+      .cw-panel:not(.cw-embedded) {
+        inset:auto; top:auto; left:0; right:0; bottom:0; margin:0; width:100%;
+        height:100dvh; max-width:none; max-height:none;
+        border-radius:18px 18px 0 0; border-bottom:none;
+        padding-bottom:env(safe-area-inset-bottom);
+      }
       .cw-fab { right:16px; bottom:16px; padding:12px 16px; font-size:14px; }
     }
     @media (max-width: 380px) {
@@ -281,5 +283,5 @@
     .cw-spin-lg { width:36px; height:36px; border:3px solid rgba(212,175,55,.25); border-top-color:var(--cw-gold); }
     .cw-signin-t { color:var(--cw-text); font-size:14.5px; font-weight:600; margin:0; }
     @keyframes cwSpin { to{transform:rotate(360deg)} }
-    @media (max-width:480px){ .cw-panel{ right:8px; bottom:8px; width:calc(100vw - 16px); height:calc(100dvh - 16px); max-height:none; } }
+    @media (max-width:480px){ .cw-panel:not(.cw-embedded){ left:0; right:0; bottom:0; top:auto; width:100%; height:100dvh; max-height:none; border-radius:18px 18px 0 0; } }
   

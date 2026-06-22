@@ -203,15 +203,21 @@ const I18N: Record<string, any> = {
 })
 export class CoachWidgetComponent implements OnDestroy {
   readonly isBrowser: boolean;
-  /** Visible viewport height when the on-screen keyboard is open (iOS Safari) — drives the panel
-   *  height so the composer stays directly above the keyboard instead of being hidden behind it. */
-  readonly kbHeight = signal<number | null>(null);
+  /** Mobile floating-panel height = visualViewport.height (px). Mirrors the ChatAI widget: the panel
+   *  stays anchored at bottom:0 (so iOS lifts it above the keyboard) and we ONLY shrink the height to
+   *  the visible viewport — no top/offset hacks. null on desktop/embedded (CSS height applies). */
+  readonly panelH = signal<number | null>(null);
   private vvHandler = () => {
     const vv: any = (window as any).visualViewport;
-    if (!vv) return;
-    const kbOpen = (window.innerHeight - vv.height) > 120; // keyboard covers a chunk of the layout
-    this.kbHeight.set(kbOpen ? Math.round(vv.height) : null);
+    if (!vv || this.embedded) { this.panelH.set(null); return; }
+    this.panelH.set(window.innerWidth <= 600 ? Math.round(vv.height) : null);
+    if (this.open()) setTimeout(() => this.scrollMessagesToBottom(), 50);
   };
+  private scrollMessagesToBottom() {
+    if (!this.isBrowser) return;
+    const el = document.querySelector('.cw-body');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
   ngOnDestroy() {
     const vv: any = this.isBrowser ? (window as any).visualViewport : null;
     if (vv) { vv.removeEventListener('resize', this.vvHandler); vv.removeEventListener('scroll', this.vvHandler); }

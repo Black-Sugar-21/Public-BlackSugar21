@@ -5,8 +5,8 @@
       </button>
     } @else {
       @if (!embedded) { <div class="cw-overlay" (click)="toggle()" aria-hidden="true"></div> }
-      <section class="cw-panel" [class.cw-embedded]="embedded" [class.cw-kb]="kbHeight() != null"
-               [style.height.px]="kbHeight()" role="dialog" [attr.aria-label]="t().title">
+      <section class="cw-panel" [class.cw-embedded]="embedded" [style.height.px]="panelH()"
+               role="dialog" [attr.aria-label]="t().title">
         <header class="cw-head">
           <div class="cw-id"><span class="cw-spark">✦</span>
             <div><b>{{ t().title }}</b><span class="cw-demo">{{ user() ? li('connected') : t().demo }}</span></div></div>
