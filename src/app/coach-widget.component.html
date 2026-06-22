@@ -128,22 +128,22 @@
           @if (chatLoading()) {
             <!-- Initial-load skeleton — previews the new place card (homologated with iOS/Android). -->
             <div class="cw-skel-chat" aria-hidden="true">
-              <span class="cw-skel cw-skel-intro"></span>
+              <ui-skeleton width="58%" height="34px" radius="14px" />
               <div class="cw-skel-card">
-                <span class="cw-skel cw-skel-photo"></span>
+                <ui-skeleton height="110px" radius="12px" />
                 <div class="cw-skel-line">
-                  <span class="cw-skel cw-skel-dot"></span>
-                  <span class="cw-skel cw-skel-grow"></span>
-                  <span class="cw-skel cw-skel-fit"></span>
+                  <ui-skeleton width="18px" height="18px" [circle]="true" />
+                  <ui-skeleton height="14px" radius="6px" class="grow" />
+                  <ui-skeleton width="52px" height="20px" radius="999px" />
                 </div>
                 <div class="cw-skel-line">
-                  <span class="cw-skel cw-skel-chip"></span>
-                  <span class="cw-skel cw-skel-chip wide"></span>
+                  <ui-skeleton width="84px" height="18px" radius="999px" />
+                  <ui-skeleton width="104px" height="18px" radius="999px" />
                 </div>
-                <span class="cw-skel cw-skel-tip"></span>
+                <ui-skeleton height="34px" radius="8px" />
                 <div class="cw-skel-line">
-                  <span class="cw-skel cw-skel-pill"></span>
-                  <span class="cw-skel cw-skel-pill sm"></span>
+                  <ui-skeleton width="92px" height="26px" radius="999px" />
+                  <ui-skeleton width="70px" height="26px" radius="999px" />
                 </div>
               </div>
             </div>

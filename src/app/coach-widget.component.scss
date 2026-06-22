@@ -110,6 +110,7 @@
     .cw-skel-card { border:1px solid var(--cw-border); border-radius:14px; padding:11px; display:flex; flex-direction:column; gap:9px; }
     .cw-skel-photo { height:110px; width:100%; border-radius:12px; }
     .cw-skel-line { display:flex; align-items:center; gap:8px; }
+    .cw-skel-line ui-skeleton.grow { flex:1; min-width:0; }
     .cw-skel-dot { width:18px; height:18px; border-radius:50%; flex:none; }
     .cw-skel-grow { flex:1; height:14px; }
     .cw-skel-fit { width:52px; height:20px; border-radius:999px; flex:none; }
