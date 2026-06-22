@@ -70,9 +70,9 @@ interface CountryItem { iso: CountryCode; name: string; code: string; flag: stri
       background:var(--bg-card,#1A1A1A); border:1px solid rgba(255,255,255,.14); border-radius:14px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.5);
       animation:piIn .14s ease; }
     @keyframes piIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
-    .pi-search { margin:8px; height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.05); color:var(--text-primary,#fff); font-family:inherit; font-size:15px; outline:none; }
-    .pi-search:focus { border-color:var(--gold,#D4AF37); }
+    .pi-search { display:block; box-sizing:border-box; width:auto; margin:10px 10px 8px; height:46px; padding:0 14px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text-primary,#fff); font-family:inherit; font-size:16px; outline:none; }
+    .pi-search:focus { border-color:var(--gold,#D4AF37); box-shadow:0 0 0 3px rgba(212,175,55,.15); }
     .pi-list { overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
     .pi-item { width:100%; display:flex; align-items:center; gap:10px; padding:10px 14px; border:none; background:none; cursor:pointer;
       color:var(--text-primary,#fff); font-family:inherit; font-size:14px; text-align:left; }
@@ -102,12 +102,22 @@ export class UiPhoneInputComponent {
     try { return iso.replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0))); } catch { return ''; }
   }
 
+  /** Locale list for country names: the BROWSER's preferred languages first (navigator.languages),
+   *  then the app language, then English — so names render in the user's browser language. */
+  private nameLocales(): string[] {
+    const out: string[] = [];
+    try { for (const l of (navigator.languages || [navigator.language] || [])) if (l) out.push(l); } catch { /* SSR */ }
+    out.push(this._lang(), 'en');
+    return out.filter(Boolean);
+  }
   readonly countries = computed<CountryItem[]>(() => {
+    const locales = this.nameLocales();
     let dn: Intl.DisplayNames | null = null;
-    try { dn = new Intl.DisplayNames([this._lang()], { type: 'region' }); } catch { dn = null; }
+    try { dn = new Intl.DisplayNames(locales, { type: 'region' }); } catch { try { dn = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { dn = null; } }
+    const sortLocale = locales[0] || 'en';
     return getCountries()
       .map((iso) => ({ iso, code: getCountryCallingCode(iso), name: (dn && dn.of(iso)) || iso, flag: this.flagOf(iso) }))
-      .sort((a, b) => a.name.localeCompare(b.name, this._lang()));
+      .sort((a, b) => a.name.localeCompare(b.name, sortLocale));
   });
 
   readonly filtered = computed<CountryItem[]>(() => {
