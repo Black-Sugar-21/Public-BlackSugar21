@@ -3,7 +3,7 @@
     :host { --cw-gold:var(--gold); --cw-gold-d:var(--gold-dark); --cw-purple-l:var(--purple-light); --cw-purple-v:var(--purple-vivid); --cw-app-red:var(--app-red);
       --cw-bg:#15151A; --cw-card:#1E1E26; --cw-border:#2A2A33; --cw-text:#fff; --cw-muted:#8A8A99;
       font-family:'Outfit',system-ui,sans-serif; }
-    .cw-fab { position:fixed; right:22px; bottom:22px; z-index:9998; display:flex; align-items:center; gap:9px;
+    .cw-fab { position:fixed; right:calc(22px + env(safe-area-inset-right)); bottom:calc(22px + env(safe-area-inset-bottom)); z-index:9998; display:flex; align-items:center; gap:9px;
       padding:13px 18px; border:none; border-radius:999px; cursor:pointer; color:#1A1206; font-weight:700; font-size:14.5px;
       background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); box-shadow:0 10px 30px rgba(212,175,55,0.35); animation:cwPulse 2.6s ease infinite; }
     .cw-fab:hover { filter:brightness(1.06); transform:translateY(-2px); transition:.2s; }
@@ -39,7 +39,7 @@
         border-radius:18px 18px 0 0; border-bottom:none;
         padding-bottom:env(safe-area-inset-bottom);
       }
-      .cw-fab { right:16px; bottom:16px; padding:12px 16px; font-size:14px; }
+      .cw-fab { right:calc(16px + env(safe-area-inset-right)); bottom:calc(16px + env(safe-area-inset-bottom)); padding:12px 16px; font-size:14px; }
       /* iOS Safari zooms (and shifts the layout) when focusing any input < 16px — force 16px on every
          field in the panel (ChatAI strategy). Prevents the zoom-on-tap that broke the keyboard view. */
       .cw-panel input, .cw-panel textarea { font-size:16px !important; }
