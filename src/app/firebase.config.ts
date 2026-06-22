@@ -1,14 +1,15 @@
 // Firebase Configuration
 export const firebaseConfig = {
   apiKey: "AIzaSyAczpQQmPhIPygDJEVqw406h_ibn3hRey0",
-  // Use Firebase's default auth domain — its OAuth redirect handler
-  // (https://black-sugar21.firebaseapp.com/__/auth/handler) is pre-authorized in the Google
-  // OAuth client. The custom domain "blacksugar21.com" caused Error 400 redirect_uri_mismatch
-  // because its /__/auth/handler URI was never (correctly) registered in the OAuth client.
-  // To re-attempt the branded domain: register EXACTLY https://blacksugar21.com/__/auth/handler
-  // as an Authorized redirect URI + https://blacksugar21.com as a JS origin in the Web OAuth
-  // client, wait for propagation (minutes–hours), THEN flip authDomain to "blacksugar21.com".
-  authDomain: "black-sugar21.firebaseapp.com",
+  // Same-origin (eTLD+1) auth domain. The Web OAuth client now authorizes
+  // https://blacksugar21.com/__/auth/handler (redirect URI) + https://blacksugar21.com (JS origin),
+  // and the domain is connected to Firebase Hosting (serves /__/auth/handler, HTTP 200). Using the
+  // brand domain instead of *.firebaseapp.com: (1) brands Google's chooser ("Ir a blacksugar21.com"),
+  // (2) FIXES mobile/iOS Safari sign-in — the handler shares the app's registrable domain, so it's no
+  // longer third-party storage (which made signInWithRedirect return empty under storage partitioning),
+  // (3) avoids the bounce-tracking "intermediate site" warning. If Error 400 redirect_uri_mismatch ever
+  // reappears, revert to "black-sugar21.firebaseapp.com" (always pre-authorized).
+  authDomain: "blacksugar21.com",
   databaseURL: "https://black-sugar21-default-rtdb.firebaseio.com",
   projectId: "black-sugar21",
   storageBucket: "black-sugar21.firebasestorage.app",
