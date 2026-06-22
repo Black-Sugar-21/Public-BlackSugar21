@@ -404,8 +404,8 @@
                     @case (3) {
                       <h2 class="ob-title">{{ s('obType') }}</h2>
                       <div class="ob-opts col">
-                        <button class="ob-opt big" [class.on]="ob.type === 'elite'" (click)="ob.type = 'elite'"><b>{{ s('obElite') }}</b><span>{{ s('obEliteDesc') }}</span></button>
-                        <button class="ob-opt big" [class.on]="ob.type === 'prime'" (click)="ob.type = 'prime'"><b>{{ s('obPrime') }}</b><span>{{ s('obPrimeDesc') }}</span></button>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.type === 'elite'" [title]="s('obElite')" [desc]="s('obEliteDesc')" (click)="ob.type = 'elite'"></ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.type === 'prime'" [title]="s('obPrime')" [desc]="s('obPrimeDesc')" (click)="ob.type = 'prime'"></ui-option>
                       </div>
                     }
                     @case (4) {
