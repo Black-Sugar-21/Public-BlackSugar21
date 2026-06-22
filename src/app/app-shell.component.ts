@@ -283,6 +283,13 @@ export class AppShellComponent implements OnDestroy {
   // Chat state
   readonly matches = signal<any[]>([]);
   readonly matchNames = signal<Record<string, string>>({});
+  /** uid → first-photo download URL for the matches/chat list avatars (iOS pictures.first parity). */
+  readonly matchPhotos = signal<Record<string, string>>({});
+  matchPhoto(uid: string): string { return this.matchPhotos()[uid] || ''; }
+  /** uid → true once its avatar <img> has decoded (so we can show an elegant skeleton until then). */
+  readonly matchPhotoReady = signal<Record<string, boolean>>({});
+  matchPhotoReady_(uid: string): boolean { return !!this.matchPhotoReady()[uid]; }
+  onMatchAvatarLoad(uid: string) { this.matchPhotoReady.update((m) => ({ ...m, [uid]: true })); }
   readonly selectedMatch = signal<any | null>(null);
   // iOS pagination parity: a live TAIL listener (latest page) + cursor-fetched OLDER pages, merged.
   readonly chatTail = signal<any[]>([]);
@@ -517,7 +524,10 @@ export class AppShellComponent implements OnDestroy {
         if (r.otherUid && names[r.otherUid] === undefined) {
           names[r.otherUid] = '';
           this.firebase.getUserBasic(r.otherUid).then((b) => {
-            if (b) this.matchNames.update((m) => ({ ...m, [r.otherUid]: b.name }));
+            if (b) {
+              this.matchNames.update((m) => ({ ...m, [r.otherUid]: b.name }));
+              if (b.photo) this.matchPhotos.update((m) => ({ ...m, [r.otherUid]: b.photo }));
+            }
           });
         }
       });

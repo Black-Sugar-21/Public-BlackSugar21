@@ -844,9 +844,22 @@ export class FirebaseService {
   }
 
   /** Basic profile (name) for a match row — photos need signed URLs, so we use initials in the UI. */
-  async getUserBasic(uid: string): Promise<{ name: string } | null> {
-    try { const s = await getDoc(doc(this.db, 'users', uid)); return s.exists() ? { name: (s.data() as any).name || '' } : null; }
-    catch { return null; }
+  async getUserBasic(uid: string): Promise<{ name: string; photo: string } | null> {
+    try {
+      const s = await getDoc(doc(this.db, 'users', uid));
+      if (!s.exists()) return null;
+      const data: any = s.data();
+      const name = data.name || data.displayName || '';
+      // Match photo = the user's FIRST picture (iOS parity: userProfile.pictures.first). Stored as a
+      // Storage filename under users/{uid}/ — resolve to a download URL (or use it directly if already a URL).
+      let photo = '';
+      const first = Array.isArray(data.pictures) ? data.pictures[0] : '';
+      if (first) {
+        if (/^https?:\/\//i.test(first)) photo = first;
+        else { try { photo = await getDownloadURL(storageRef(this.storage, `users/${uid}/${first}`)); } catch { photo = ''; } }
+      }
+      return { name, photo };
+    } catch { return null; }
   }
   /** Live messages for a match (iOS pagination parity): listens to the latest `limit` messages
    *  (desc+limit, reversed to oldest→newest). "Load older" grows `limit` and re-subscribes.

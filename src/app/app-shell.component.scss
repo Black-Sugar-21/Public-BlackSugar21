@@ -292,7 +292,9 @@
     .chat-list { flex:1; width:100%; max-width:560px; margin:0 auto; padding:14px; overflow-y:auto; }
     .chat-row { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; border-bottom:1px solid rgba(255,255,255,.06); padding:13px 8px; cursor:pointer; }
     .chat-row:hover { background:rgba(255,255,255,.04); }
-    .chat-av { width:46px; height:46px; flex:none; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; font-size:18px; }
+    .chat-av { width:46px; height:46px; flex:none; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; font-size:18px; overflow:hidden; }
+    .chat-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; opacity:0; transition:opacity .25s ease; }
+    .chat-av img.ready { opacity:1; }
     .chat-row-main { display:flex; flex-direction:column; min-width:0; flex:1; }
     .chat-row-main b { color:var(--text-primary); font-size:15px; }
     .chat-row-last { color:var(--text-muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

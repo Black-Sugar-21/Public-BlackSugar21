@@ -128,7 +128,10 @@
               <div class="chat-view">
                 <div class="chat-head">
                   <button class="chat-back" (click)="backToList()" aria-label="←">‹</button>
-                  <span class="chat-av">{{ (matchName(m.otherUid).charAt(0) || '?').toUpperCase() }}</span>
+                  <span class="chat-av" [class.skel]="matchPhoto(m.otherUid) && !matchPhotoReady_(m.otherUid)">
+                    @if (matchPhoto(m.otherUid)) { <img [class.ready]="matchPhotoReady_(m.otherUid)" [src]="matchPhoto(m.otherUid)" (load)="onMatchAvatarLoad(m.otherUid)" (error)="onMatchAvatarLoad(m.otherUid)" alt="" referrerpolicy="no-referrer" /> }
+                    @else { {{ (matchName(m.otherUid).charAt(0) || '?').toUpperCase() }} }
+                  </span>
                   <b>{{ matchName(m.otherUid) }}</b>
                 </div>
                 <div class="chat-msgs">
@@ -193,7 +196,10 @@
                 } @else {
                   @for (mt of matches(); track mt.id) {
                     <button class="chat-row" [class.unread]="isUnread(mt)" (click)="openChat(mt)">
-                      <span class="chat-av">{{ (matchName(mt.otherUid).charAt(0) || '?').toUpperCase() }}</span>
+                      <span class="chat-av" [class.skel]="matchPhoto(mt.otherUid) && !matchPhotoReady_(mt.otherUid)">
+                        @if (matchPhoto(mt.otherUid)) { <img [class.ready]="matchPhotoReady_(mt.otherUid)" [src]="matchPhoto(mt.otherUid)" (load)="onMatchAvatarLoad(mt.otherUid)" (error)="onMatchAvatarLoad(mt.otherUid)" alt="" referrerpolicy="no-referrer" /> }
+                        @else { {{ (matchName(mt.otherUid).charAt(0) || '?').toUpperCase() }} }
+                      </span>
                       <span class="chat-row-main">
                         <b>{{ matchName(mt.otherUid) }}</b>
                         @if (mt.lastMessage) { <span class="chat-row-last">{{ mt.lastMessage }}</span> }
