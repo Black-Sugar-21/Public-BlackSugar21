@@ -147,7 +147,7 @@
                       <div class="chat-ice">
                         <div class="chat-ice-h">✦ {{ s('coachIcebreakers') }}</div>
                         @for (ib of icebreakers(); track ib.message) {
-                          <button type="button" class="chat-ice-chip" (click)="useIcebreaker(ib.message)">{{ ib.message }}</button>
+                          <ui-suggestion-chip (picked)="useIcebreaker(ib.message)">{{ ib.message }}</ui-suggestion-chip>
                         }
                       </div>
                     }

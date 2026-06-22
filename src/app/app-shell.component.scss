@@ -311,9 +311,6 @@
     /* AI Coach icebreakers (empty chat) — elegant tappable openers. */
     .chat-ice { display:flex; flex-direction:column; gap:8px; max-width:440px; margin:0 auto auto; width:100%; animation:obFade .3s ease; }
     .chat-ice-h { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gold); text-align:center; margin-bottom:2px; }
-    .chat-ice-chip { text-align:left; padding:12px 14px; border-radius:14px; border:1px solid rgba(212,175,55,.30); background:rgba(212,175,55,.07); color:var(--text-primary); font-family:inherit; font-size:14px; line-height:1.4; cursor:pointer; transition:background .15s ease, border-color .15s ease, transform .12s ease; }
-    .chat-ice-chip:hover { background:rgba(212,175,55,.14); border-color:var(--gold); }
-    .chat-ice-chip:active { transform:scale(.99); }
     .chat-ice-load { display:flex; align-items:center; justify-content:center; gap:8px; color:var(--text-muted); font-size:13px; margin:0 auto auto; }
     .chat-bubble { max-width:74%; padding:10px 14px; border-radius:16px; font-size:14.5px; line-height:1.45; color:var(--text-primary); align-self:flex-start; background:var(--bg-card); border-bottom-left-radius:5px; }
     .chat-bubble.mine { align-self:flex-end; background:var(--gradient-gold); color:var(--bg-dark); font-weight:500; border-radius:16px; border-bottom-right-radius:5px; }
