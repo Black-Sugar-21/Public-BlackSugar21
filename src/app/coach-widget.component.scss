@@ -35,7 +35,7 @@
     @media (max-width: 600px) {
       .cw-panel:not(.cw-embedded) {
         inset:auto; top:auto; left:0; right:0; bottom:0; margin:0; width:100%;
-        height:100dvh; max-width:none; max-height:none;
+        height:100dvh; height:100svh; max-width:none; max-height:none;
         border-radius:18px 18px 0 0; border-bottom:none;
         padding-bottom:env(safe-area-inset-bottom);
       }
@@ -288,5 +288,5 @@
     .cw-spin-lg { width:36px; height:36px; border:3px solid rgba(212,175,55,.25); border-top-color:var(--cw-gold); }
     .cw-signin-t { color:var(--cw-text); font-size:14.5px; font-weight:600; margin:0; }
     @keyframes cwSpin { to{transform:rotate(360deg)} }
-    @media (max-width:480px){ .cw-panel:not(.cw-embedded){ left:0; right:0; bottom:0; top:auto; width:100%; height:100dvh; max-height:none; border-radius:18px 18px 0 0; } }
+    @media (max-width:480px){ .cw-panel:not(.cw-embedded){ left:0; right:0; bottom:0; top:auto; width:100%; height:100dvh; height:100svh; max-height:none; border-radius:18px 18px 0 0; } }
   

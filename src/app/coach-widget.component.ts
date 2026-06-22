@@ -429,6 +429,9 @@ export class CoachWidgetComponent implements OnDestroy {
     if (this.open()) {
       this.ga('coach_demo_open');
       if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+      // ChatAI parity: size the panel to the actual visible viewport the moment it opens (not just on
+      // a later resize event), so on iOS the composer never sits behind Safari's bottom bar.
+      setTimeout(() => this.vvHandler(), 0);
     }
   }
 
