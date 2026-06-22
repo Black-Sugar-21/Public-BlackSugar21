@@ -211,6 +211,7 @@ export class CoachWidgetComponent {
   // in `messages`; the full list lives in localStorage and is surfaced via the history picker.
   readonly confirmSignOut = signal(false);
   readonly historyOpen = signal(false);
+  readonly historyLoading = signal(false);
   readonly convoList = signal<Array<{ id: string; title: string; updatedAt: number; active: boolean }>>([]);
   private activeId = '';
   // How many messages of the active session are already persisted to Firestore (logged-in only),
@@ -471,19 +472,25 @@ export class CoachWidgetComponent {
 
   /** Open the conversation picker (most-recent first; current highlighted). */
   async openHistory() {
+    this.historyOpen.set(true);
+    this.ga('coach_demo_history_open');
     if (this.firebase.currentUser()) {
-      const sessions = await this.firebase.loadCoachSessions();
-      this.convoList.set(sessions
-        .filter((s) => (s.title || s.lastMessage))
-        .map((s) => ({ id: s.id, title: s.title || this.ui('newChat'), updatedAt: s.updatedAt || s.createdAt, active: s.id === this.activeId })));
+      // Logged-in: fetch from Firestore → show a skeleton while the network round-trip runs.
+      this.historyLoading.set(true);
+      this.convoList.set([]);
+      try {
+        const sessions = await this.firebase.loadCoachSessions();
+        this.convoList.set(sessions
+          .filter((s) => (s.title || s.lastMessage))
+          .map((s) => ({ id: s.id, title: s.title || this.ui('newChat'), updatedAt: s.updatedAt || s.createdAt, active: s.id === this.activeId })));
+      } finally { this.historyLoading.set(false); }
     } else {
+      this.historyLoading.set(false);
       this.convoList.set(this.loadConvos()
         .filter((c) => Array.isArray(c.msgs) && c.msgs.some((m) => m.role === 'user'))
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((c) => ({ id: c.id, title: this.convoTitle(c.msgs), updatedAt: c.updatedAt, active: c.id === this.activeId })));
     }
-    this.historyOpen.set(true);
-    this.ga('coach_demo_history_open');
   }
   closeHistory() { this.historyOpen.set(false); }
 
