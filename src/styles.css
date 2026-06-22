@@ -55,6 +55,18 @@
   --gradient-premium: linear-gradient(135deg, var(--bg-card), #252525);
   --gradient-main: linear-gradient(to bottom, #0A0A14, #140B28, #1C0E38);
 
+  /* Semantic neutral overlays — single source for borders/fills/scrims used by the design system.
+     Dark values today; a future light theme overrides ONLY these (e.g. :root[data-theme="light"]),
+     so the ui/* atoms need no per-component changes. No raw rgba literals in components. */
+  --border-faint: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-mid: rgba(255, 255, 255, 0.14);
+  --fill-faint: rgba(255, 255, 255, 0.035);
+  --fill-subtle: rgba(255, 255, 255, 0.06);
+  --fill-soft: rgba(255, 255, 255, 0.10);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --on-gold: #1A1206; /* text/icon color on a gold surface (same in both themes) */
+
   /* Spacing */
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;

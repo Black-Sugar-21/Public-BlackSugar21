@@ -42,13 +42,13 @@ import { NgClass } from '@angular/common';
     .ui-btn:disabled { opacity: .5; cursor: not-allowed; }
     .s-sm { min-height: 34px; padding: 0 12px; font-size: 12.5px; }
     .shape-rect { border-radius: 10px; }
-    .v-primary { background: var(--gradient-gold); color: #1A1206; font-weight: 700; }
+    .v-primary { background: var(--gradient-gold); color: var(--on-gold); font-weight: 700; }
     .v-primary:hover:not(:disabled) { filter: brightness(1.05); }
     .v-outline { background: transparent; color: var(--gold); border-color: rgba(212,175,55,.5); }
     .v-outline:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,.08); }
     .v-ghost { background: transparent; color: var(--gold); }
     .v-ghost:hover:not(:disabled) { background: rgba(212,175,55,.08); }
-    .v-secondary { background: rgba(255,255,255,.04); color: var(--text-primary); border-color: rgba(255,255,255,.14); }
+    .v-secondary { background: var(--fill-faint); color: var(--text-primary); border-color: var(--border-mid); }
     .v-secondary:hover:not(:disabled) { border-color: var(--gold); }
     @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } .ui-btn:active { transform: none; } }
   `],

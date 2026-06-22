@@ -19,7 +19,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     .ui-card {
       position: relative; display: block; box-sizing: border-box;
       background: var(--card-bg);
-      border: 1px solid #2A2A33; border-radius: 16px; padding: 14px 15px;
+      border: 1px solid var(--border-subtle); border-radius: 16px; padding: 14px 15px;
       transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     }
     .ui-card.hl {

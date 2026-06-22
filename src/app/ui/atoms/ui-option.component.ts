@@ -33,7 +33,7 @@ import { NgClass } from '@angular/common';
       -webkit-appearance: none; appearance: none; font-family: 'Outfit', system-ui, sans-serif;
       width: 100%; box-sizing: border-box; cursor: pointer; text-align: center;
       color: var(--text-secondary); background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,.16); font-size: 13.5px; font-weight: 500;
+      border: 1px solid var(--border-mid); font-size: 13.5px; font-weight: 500;
       transition: border-color .15s, background .15s, color .15s, opacity .15s;
       -webkit-tap-highlight-color: transparent; touch-action: manipulation;
     }

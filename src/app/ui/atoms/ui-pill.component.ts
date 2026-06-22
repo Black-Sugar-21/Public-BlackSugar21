@@ -24,7 +24,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
       font-family: 'Outfit', system-ui, sans-serif;
       font-size: 11.5px; font-weight: 700; line-height: 1;
       padding: 5px 11px; border-radius: 999px; text-decoration: none;
-      border: 1px solid rgba(255,255,255,.14); white-space: nowrap; box-sizing: border-box;
+      border: 1px solid var(--border-mid); white-space: nowrap; box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
     }
     .ui-pill.clickable, a.ui-pill { cursor: pointer; }
