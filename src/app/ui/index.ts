@@ -8,3 +8,4 @@ export { UiOptionComponent } from './atoms/ui-option.component';
 export { UiInputComponent } from './atoms/ui-input.component';
 export { UiCardComponent } from './molecules/ui-card.component';
 export { UiSkeletonRowComponent } from './molecules/ui-skeleton-row.component';
+export { CoachPlaceCardComponent } from './organisms/coach-place-card.component';

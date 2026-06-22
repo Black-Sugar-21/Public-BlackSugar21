@@ -140,27 +140,7 @@
     .cw-snd.sm { width:38px; }
     /* Suggested places/activities — elegant cards (iOS-aligned: clear hierarchy, gold fit pill, best highlight) */
     .cw-places { margin-top:12px; display:flex; flex-direction:column; gap:10px; }
-    .cw-place { position:relative; display:block; background:var(--cw-card); border:1px solid var(--cw-border); border-radius:16px; padding:14px 15px; text-decoration:none; cursor:pointer; transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
-    .cw-place:hover { border-color:var(--cw-gold); transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,0,0,.35); }
-    .cw-place-i { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-    .cw-place-i b { color:var(--cw-text); font-size:15px; font-weight:700; line-height:1.25; }
-    .cw-rate { flex:none; color:var(--cw-gold); font-size:12px; font-weight:700; white-space:nowrap; }
-    .cw-fit { flex:none; display:inline-flex; align-items:center; gap:3px; color:var(--cw-gold); font-size:11px; font-weight:800; white-space:nowrap; background:rgba(212,175,55,.14); border:1px solid rgba(212,175,55,.34); border-radius:999px; padding:3px 9px; }
-    .cw-place small { display:block; color:var(--cw-muted); font-size:12px; margin-top:5px; line-height:1.4; }
-    .cw-place-why { margin:9px 0 0; color:var(--cw-text); font-size:12.5px; line-height:1.5; opacity:.92; }
-    .cw-place-persp { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-    .cw-place-tip { margin:9px 0 0; color:var(--like-green1); font-size:12px; line-height:1.45; background:rgba(108,234,197,.08); border-left:2px solid var(--like-green2); border-radius:0 8px 8px 0; padding:7px 10px; }
-    /* Action tags row: Maps (card tap) + clickable Website / Instagram pills */
-    .cw-place-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
-    .cw-place-link { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; text-decoration:none; border:1px solid rgba(255,255,255,.14); }
-    .cw-place-link.maps { color:var(--cw-gold); background:rgba(212,175,55,.12); border-color:rgba(212,175,55,.34); }
-    .cw-place-link.web { color:var(--cw-text); }
-    .cw-place-link.web:hover { border-color:var(--cw-gold); color:var(--cw-gold); }
-    .cw-place-link.ig { color:var(--instagram-pink); border-color:rgba(228,64,95,.4); }
-    .cw-place-link.ig:hover { background:rgba(228,64,95,.12); }
-    /* "Best" venue (top of the 4-agent psychology panel) — gold accent + ribbon */
-    .cw-place.best { border-color:rgba(212,175,55,.5); background:linear-gradient(180deg,rgba(212,175,55,.09),var(--cw-card)); box-shadow:0 6px 20px rgba(212,175,55,.1); }
-    .cw-place.best::before { content:'✦'; position:absolute; top:-9px; left:14px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--bg-dark); background:var(--gradient-gold); border-radius:50%; box-shadow:0 2px 6px rgba(212,175,55,.5); }
+    /* The place card itself lives in the coach-place-card organism (ui/organisms). */
     .cw-phrases { margin-top:10px; display:flex; flex-direction:column; gap:7px; }
     .cw-phrase { display:flex; gap:8px; align-items:flex-start; background:#0c0c10; border:1px solid var(--cw-border); border-radius:11px; padding:9px 11px; }
     .cw-phrase-body { flex:1; display:flex; flex-direction:column; gap:4px; min-width:0; }

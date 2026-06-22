@@ -5,8 +5,8 @@ import { Router } from '@angular/router';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
 import { UiSkeletonRowComponent } from './ui/molecules/ui-skeleton-row.component';
-import { UiBadgeComponent } from './ui/atoms/ui-badge.component';
 import { UiPillComponent } from './ui/atoms/ui-pill.component';
+import { CoachPlaceCardComponent } from './ui/organisms/coach-place-card.component';
 import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 
@@ -197,7 +197,7 @@ const I18N: Record<string, any> = {
 @Component({
   selector: 'app-coach-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiSkeletonRowComponent, UiBadgeComponent, UiPillComponent, UiSkeletonComponent, UiButtonComponent],
+  imports: [CommonModule, FormsModule, UiSkeletonRowComponent, UiPillComponent, UiSkeletonComponent, UiButtonComponent, CoachPlaceCardComponent],
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
 })
@@ -574,13 +574,6 @@ export class CoachWidgetComponent {
   openPlace(p: PlaceCard, rank: number) {
     this.placeClick(p, rank);
     if (this.isBrowser && p.mapsUrl) window.open(p.mapsUrl, '_blank', 'noopener');
-  }
-  /** Normalize an Instagram value (handle or URL) → full profile URL. */
-  igUrl(p: PlaceCard): string | null {
-    const raw = (p.instagram || p.instagramHandle || '').trim();
-    if (!raw) return null;
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return 'https://instagram.com/' + raw.replace(/^@/, '');
   }
   inputPlaceholder() {
     if (this.simMode() === 'multiverse') return this.t().mvHint;

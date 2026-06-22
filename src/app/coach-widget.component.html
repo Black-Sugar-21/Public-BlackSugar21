@@ -177,23 +177,9 @@
                 @if (m.places?.length) {
                   <div class="cw-places">
                     @for (p of m.places!; track p.name; let pi = $index) {
-                      <div class="cw-place" [class.best]="pi === 0 && p.score != null" role="link" tabindex="0"
-                           (click)="openPlace(p, pi)" (keydown.enter)="openPlace(p, pi)">
-                        <div class="cw-place-i"><b>{{ p.name }}</b>
-                          @if (p.score != null) { <ui-badge>{{ p.score }}% ✦</ui-badge> }
-                          @else if (p.rating) { <span class="cw-rate">★ {{ p.rating }}</span> }</div>
-                        <small>{{ p.address }}</small>
-                        @if (p.why) { <p class="cw-place-why">{{ p.why }}</p> }
-                        @if (p.perspectives?.length) {
-                          <div class="cw-place-persp">@for (pp of p.perspectives!; track pp) { <ui-pill tint="purple">{{ pp }}</ui-pill> }</div>
-                        }
-                        @if (p.tip) { <p class="cw-place-tip">💡 {{ p.tip }}</p> }
-                        <div class="cw-place-actions">
-                          <ui-pill tint="gold">📍 {{ t().viewMap }}</ui-pill>
-                          @if (p.website) { <ui-pill tint="neutral" [href]="p.website">🌐 {{ t().webSite }}</ui-pill> }
-                          @if (igUrl(p); as ig) { <ui-pill tint="instagram" [href]="ig">📷 Instagram</ui-pill> }
-                        </div>
-                      </div>
+                      <coach-place-card [place]="p" [best]="pi === 0 && p.score != null"
+                                        [viewMapLabel]="t().viewMap" [webLabel]="t().webSite"
+                                        (open)="openPlace(p, pi)" />
                     }
                   </div>
                 }
