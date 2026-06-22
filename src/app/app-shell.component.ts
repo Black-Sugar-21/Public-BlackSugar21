@@ -50,6 +50,8 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   chatStart: {"es":"Inicia la conversación 👋","en":"Start the conversation 👋","pt":"Comece a conversa 👋","fr":"Commence la conversation 👋","de":"Starte das Gespräch 👋","it":"Inizia la conversazione 👋","zh":"开始聊天吧 👋","ja":"会話を始めよう 👋","ko":"대화를 시작해요 👋","ru":"Начните разговор 👋","ar":"ابدأ المحادثة 👋","id":"Mulai obrolan 👋","tr":"Sohbete başla 👋"},
   coachIcebreakers: {"es":"Sugerencias del Coach IA","en":"AI Coach openers","pt":"Sugestões do Coach IA","fr":"Suggestions du Coach IA","de":"KI-Coach-Vorschläge","it":"Suggerimenti del Coach IA","zh":"AI 教练开场白","ja":"AIコーチの一言","ko":"AI 코치 제안","ru":"Подсказки ИИ-коуча","ar":"اقتراحات مدرب الذكاء الاصطناعي","id":"Saran Coach AI","tr":"AI Koç önerileri"},
   coachSuggesting: {"es":"El Coach IA está pensando ideas…","en":"AI Coach is thinking of openers…","pt":"O Coach IA está pensando em ideias…","fr":"Le Coach IA réfléchit à des idées…","de":"Der KI-Coach überlegt Vorschläge…","it":"Il Coach IA sta pensando a delle idee…","zh":"AI 教练正在想开场白…","ja":"AIコーチが一言を考え中…","ko":"AI 코치가 제안을 고민 중…","ru":"ИИ-коуч придумывает идеи…","ar":"مدرب الذكاء الاصطناعي يفكر في أفكار…","id":"Coach AI sedang memikirkan ide…","tr":"AI Koç öneriler düşünüyor…"},
+  coachSmartReplies: {"es":"Respuestas sugeridas","en":"Suggested replies","pt":"Respostas sugeridas","fr":"Réponses suggérées","de":"Antwortvorschläge","it":"Risposte suggerite","zh":"建议回复","ja":"返信の候補","ko":"추천 답장","ru":"Подсказки для ответа","ar":"ردود مقترحة","id":"Saran balasan","tr":"Önerilen yanıtlar"},
+  coachThinking: {"es":"El Coach IA está pensando…","en":"AI Coach is thinking…","pt":"O Coach IA está pensando…","fr":"Le Coach IA réfléchit…","de":"Der KI-Coach denkt nach…","it":"Il Coach IA sta pensando…","zh":"AI 教练思考中…","ja":"AIコーチが考え中…","ko":"AI 코치가 생각 중…","ru":"ИИ-коуч думает…","ar":"مدرب الذكاء الاصطناعي يفكر…","id":"Coach AI sedang berpikir…","tr":"AI Koç düşünüyor…"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -325,6 +327,27 @@ export class AppShellComponent implements OnDestroy {
   }
   /** Tap an icebreaker → drop it in the composer so the user can send (or tweak) it. */
   useIcebreaker(text: string) { this.chatText = text; }
+  // AI Coach SMART REPLIES (iOS SmartReplyChipsView parity): when the OTHER person's message is the
+  // latest, auto-suggest up to 3 replies + an engagement tip above the composer. Tap → fill composer.
+  readonly smartReplies = signal<string[]>([]);
+  readonly smartReplyTip = signal('');
+  readonly smartRepliesLoading = signal(false);
+  private smartReplyFor = '';        // message id we fetched/are fetching for
+  private smartReplyDismissed = '';  // message id the user dismissed (don't re-suggest)
+  private async maybeFetchSmartReplies(matchId: string, lastMsg: any) {
+    const id = lastMsg?.id || '';
+    const text = String(lastMsg?.message || '').trim();
+    if (!id || !text || id === this.smartReplyFor || id === this.smartReplyDismissed) return;
+    if (lastMsg.type && lastMsg.type !== 'text') return; // only plain-text incoming messages
+    this.smartReplyFor = id;
+    this.smartReplies.set([]); this.smartReplyTip.set(''); this.smartRepliesLoading.set(true);
+    const r = await this.firebase.generateSmartReply(matchId, text, this.lang());
+    if (this.smartReplyFor === id) { this.smartReplies.set(r.replies); this.smartReplyTip.set(r.tip); }
+    this.smartRepliesLoading.set(false);
+  }
+  useSmartReply(text: string) { this.chatText = text; this.dismissSmartReplies(); }
+  dismissSmartReplies() { this.smartReplyDismissed = this.smartReplyFor; this.smartReplies.set([]); this.smartReplyTip.set(''); this.smartRepliesLoading.set(false); }
+  private resetSmartReplies() { this.smartReplyFor = ''; this.smartReplyDismissed = ''; this.smartReplies.set([]); this.smartReplyTip.set(''); this.smartRepliesLoading.set(false); }
   private unsubMatches: (() => void) | null = null;
   private unsubMsgs: (() => void) | null = null;
   // iOS tab order: Coach (tab 0) → Discover (tab 1) → Messages (tab 2) → Profile. Homologated.
@@ -613,13 +636,17 @@ export class AppShellComponent implements OnDestroy {
     this.firebase.markMatchRead(match.id);
     this.firebase.setActiveChat(match.id);
     this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
+    this.resetSmartReplies();
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {
       this.chatTail.set(msgs);
       if (this.chatOlder().length === 0) this.chatHasMore.set(more);  // more older than the first page?
       const last = msgs[msgs.length - 1];
-      if (last && last.senderId && last.senderId !== this.myUid()) this.firebase.markMatchRead(match.id);
+      if (last && last.senderId && last.senderId !== this.myUid()) {
+        this.firebase.markMatchRead(match.id);
+        this.maybeFetchSmartReplies(match.id, last); // AI Coach smart replies for the incoming message
+      }
     });
   }
   /** Load older messages via timestamp cursor + prepend (iOS loadOlderMessages parity). */

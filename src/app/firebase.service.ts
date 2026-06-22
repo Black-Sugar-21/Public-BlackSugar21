@@ -757,6 +757,28 @@ export class FirebaseService {
     return [];
   }
 
+  /** AI Coach smart replies — SAME generateSmartReply callable iOS/Android use. Given the match's
+   *  last (incoming) message, returns up to 3 tappable reply suggestions + an engagement tip.
+   *  Generated in the browser/device language. Returns { replies:[], tip:'' } on error/rate-limit. */
+  async generateSmartReply(matchId: string, lastMessage: string, lang: string): Promise<{ replies: string[]; tip: string }> {
+    const u = this.currentUser();
+    if (!u || !matchId || !lastMessage) return { replies: [], tip: '' };
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    try {
+      const fn = httpsCallable(this.functions, 'generateSmartReply');
+      const res: any = await fn({ matchId, lastMessage: String(lastMessage).slice(0, 1000), language: l, userLanguage: l });
+      const d = res?.data;
+      if (d?.success) {
+        const replies = Array.isArray(d.replies)
+          ? d.replies.map((r: any) => String(r?.text || '').trim()).filter(Boolean).slice(0, 3)
+          : [];
+        return { replies, tip: String(d?.suggestions?.engagementTip || '').trim() };
+      }
+    } catch { /* rate-limited or AI off — caller shows nothing */ }
+    return { replies: [], tip: '' };
+  }
+
   /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
    *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
   async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {

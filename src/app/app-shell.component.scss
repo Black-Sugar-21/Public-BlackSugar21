@@ -320,6 +320,13 @@
     .chat-ice { display:flex; flex-direction:column; gap:8px; max-width:440px; margin:0 auto auto; width:100%; animation:obFade .3s ease; }
     .chat-ice-h { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gold); text-align:center; margin-bottom:2px; }
     .chat-ice-load { display:flex; align-items:center; justify-content:center; gap:8px; color:var(--text-muted); font-size:13px; margin:0 auto auto; }
+    /* AI Coach smart replies bar (above the composer) — elegant, dismissible. */
+    .chat-smart { display:flex; flex-direction:column; gap:8px; padding:10px 16px 4px; max-width:720px; width:100%; margin:0 auto; animation:obFade .25s ease; }
+    .chat-smart-h { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gold); }
+    .chat-smart-x { background:none; border:none; color:var(--text-muted); font-size:14px; cursor:pointer; padding:2px 6px; line-height:1; }
+    .chat-smart-x:hover { color:var(--text-primary); }
+    .chat-smart-chips { display:flex; flex-direction:column; gap:8px; }
+    .chat-smart-tip { font-size:12.5px; color:var(--text-muted); line-height:1.4; padding:2px 2px 0; }
     .chat-bubble { max-width:74%; padding:10px 14px; border-radius:16px; font-size:14.5px; line-height:1.45; color:var(--text-primary); align-self:flex-start; background:var(--bg-card); border-bottom-left-radius:5px; }
     .chat-bubble.mine { align-self:flex-end; background:var(--gradient-gold); color:var(--bg-dark); font-weight:500; border-radius:16px; border-bottom-right-radius:5px; }
     .chat-err { text-align:center; color:var(--dislike-red1); font-size:12.5px; padding:6px 16px 0; }

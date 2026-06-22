@@ -212,6 +212,25 @@
                   }
                 </div>
                 @if (chatError()) { <div class="chat-err">{{ chatError() }}</div> }
+                <!-- AI Coach smart replies (iOS SmartReplyChipsView parity): above the composer. -->
+                @if (smartRepliesLoading() || smartReplies().length) {
+                  <div class="chat-smart">
+                    <div class="chat-smart-h">
+                      <span>✦ {{ s('coachSmartReplies') }}</span>
+                      <button class="chat-smart-x" (click)="dismissSmartReplies()" aria-label="✕">✕</button>
+                    </div>
+                    @if (smartRepliesLoading()) {
+                      <div class="chat-ice-load"><span class="ep-spin ep-spin-sm"></span> {{ s('coachThinking') }}</div>
+                    } @else {
+                      <div class="chat-smart-chips">
+                        @for (r of smartReplies(); track r) {
+                          <ui-option shape="rect" align="start" [block]="true" (click)="useSmartReply(r)">{{ r }}</ui-option>
+                        }
+                      </div>
+                      @if (smartReplyTip()) { <div class="chat-smart-tip">💡 {{ smartReplyTip() }}</div> }
+                    }
+                  </div>
+                }
                 <form class="chat-input" (submit)="$event.preventDefault(); sendChat()">
                   <input [(ngModel)]="chatText" name="ct" [placeholder]="s('chatPlaceholder')" autocomplete="off" maxlength="4000" />
                   <button type="submit" [disabled]="!chatText.trim()" aria-label="Send">
