@@ -49,6 +49,7 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   // Onboarding (13 languages)
   obWelcome: {"es":"Completa tu perfil","en":"Complete your profile","pt":"Complete seu perfil","fr":"Complète ton profil","de":"Profil vervollständigen","it":"Completa il profilo","zh":"完善你的资料","ja":"プロフィールを完成","ko":"프로필 완성","ru":"Заполните профиль","ar":"أكمل ملفك","id":"Lengkapi profilmu","tr":"Profilini tamamla"},
   obWelcomeSub: {"es":"Unos pasos para que el Coach y tus matches te conozcan.","en":"A few steps so the Coach and your matches know you.","pt":"Alguns passos para o Coach e seus matches te conhecerem.","fr":"Quelques étapes pour que le Coach et tes matchs te connaissent.","de":"Ein paar Schritte, damit Coach und Matches dich kennen.","it":"Pochi passi per farti conoscere dal Coach e dai match.","zh":"几步让教练和匹配的人了解你。","ja":"コーチとマッチがあなたを知るための数ステップ。","ko":"코치와 매치가 당신을 알 수 있도록 몇 단계.","ru":"Несколько шагов, чтобы коуч и совпадения узнали вас.","ar":"خطوات قليلة ليتعرّف عليك المدرّب ومطابقاتك.","id":"Beberapa langkah agar Coach dan match mengenalmu.","tr":"Koç ve eşleşmelerin seni tanıması için birkaç adım."},
+  obStart: {"es":"Comenzar","en":"Get started","pt":"Começar","fr":"Commencer","de":"Loslegen","it":"Inizia","zh":"开始","ja":"はじめる","ko":"시작하기","ru":"Начать","ar":"ابدأ","id":"Mulai","tr":"Başla"},
   obName: {"es":"¿Cómo te llamas?","en":"What's your name?","pt":"Como você se chama?","fr":"Comment t'appelles-tu ?","de":"Wie heißt du?","it":"Come ti chiami?","zh":"你叫什么名字？","ja":"お名前は？","ko":"이름이 뭐예요?","ru":"Как вас зовут?","ar":"ما اسمك؟","id":"Siapa namamu?","tr":"Adın ne?"},
   obNamePh: {"es":"Tu nombre","en":"Your name","pt":"Seu nome","fr":"Ton nom","de":"Dein Name","it":"Il tuo nome","zh":"你的名字","ja":"あなたの名前","ko":"이름","ru":"Ваше имя","ar":"اسمك","id":"Namamu","tr":"Adın"},
   obBirthday: {"es":"Tu fecha de nacimiento","en":"Your birthday","pt":"Sua data de nascimento","fr":"Ta date de naissance","de":"Dein Geburtsdatum","it":"La tua data di nascita","zh":"你的生日","ja":"生年月日","ko":"생년월일","ru":"Дата рождения","ar":"تاريخ ميلادك","id":"Tanggal lahirmu","tr":"Doğum tarihin"},
@@ -654,6 +655,7 @@ export class AppShellComponent implements OnDestroy {
 
   // Onboarding wizard (creates a discovery-valid profile with the apps' schema).
   readonly obStep = signal(0);
+  readonly obStarted = signal(false); // coach-welcome intro before the wizard (iOS/Android parity)
   readonly obSaving = signal(false);
   readonly obError = signal('');
   ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50 };

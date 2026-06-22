@@ -378,8 +378,17 @@
               </div>
             } @else {
               <!-- No profile yet → elegant onboarding wizard (iOS-style) -->
+              @if (!obStarted()) {
+                <!-- Coach welcome intro (parity with iOS/Android COACH_WELCOME) -->
+                <div class="ob-wrap ob-welcome">
+                  <div class="ob-welcome-spark">✦</div>
+                  <h2 class="ob-title">{{ s('obWelcome') }}</h2>
+                  <p class="ob-welcome-sub">{{ s('obWelcomeSub') }}</p>
+                  <button class="ob-next" (click)="obStarted.set(true)">{{ s('obStart') }}</button>
+                </div>
+              } @else {
               <div class="ob-wrap">
-                <div class="ob-progress"><span [style.width.%]="(obStep()+1) / 7 * 100"></span></div>
+                <div class="ob-progress"><span [style.width.%]="(obStep()+1) / 8 * 100"></span></div>
                 <div class="ob-step">
                   @switch (obStep()) {
                     @case (0) {
@@ -453,6 +462,7 @@
                   </button>
                 </div>
               </div>
+              }
             }
           }
         }
