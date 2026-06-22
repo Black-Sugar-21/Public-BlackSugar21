@@ -782,12 +782,14 @@ export class CoachWidgetComponent implements OnDestroy {
   ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   openLogin(gated = false) { this.phoneErr.set(''); this.authErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
   closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
-  // After any successful sign-in, always land in /app so the user reaches the full experience
+  // After any successful sign-in, land in /app so the user reaches the full experience
   // (Profile / Discover / Chats). The app shell routes profile-less accounts to web onboarding
   // — iOS/Android parity (a login with no userType/birthDate always lands in onboarding).
   private async afterSignIn() {
     this.closeLogin();
     this.pendingAsk = null;
+    // Account deletion is now a HARD delete (server-side) — a re-login with the same provider is a
+    // brand-new account with no profile doc, so the app shell routes it straight to onboarding.
     try { await this.firebase.refreshProfile(); } catch { /* best-effort */ }
     this.router.navigate(['/app']);
   }

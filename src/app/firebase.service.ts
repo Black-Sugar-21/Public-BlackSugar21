@@ -401,6 +401,11 @@ export class FirebaseService {
         createdAt: data['createdAt']?.toDate(),
         lastLogin: data['lastLogin']?.toDate()
       } as UserProfile);
+    } else {
+      // No doc yet (brand-new OAuth user before createUserProfile lands) — NOT a deleted account.
+      // Reset the flag so a prior deleted-account login can't leave a stale "deleted" notice.
+      this.accountDeleted.set(false);
+      this.userProfile.set(null);
     }
   }
 
