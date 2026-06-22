@@ -40,6 +40,9 @@
         padding-bottom:env(safe-area-inset-bottom);
       }
       .cw-fab { right:16px; bottom:16px; padding:12px 16px; font-size:14px; }
+      /* iOS Safari zooms (and shifts the layout) when focusing any input < 16px — force 16px on every
+         field in the panel (ChatAI strategy). Prevents the zoom-on-tap that broke the keyboard view. */
+      .cw-panel input, .cw-panel textarea { font-size:16px !important; }
     }
     @media (max-width: 380px) {
       .cw-fab .cw-fab-label { display:none; } /* tiny screens: icon-only FAB to avoid overflow */
@@ -265,8 +268,10 @@
     .cw-modex { width:30px; height:30px; border-radius:9px; border:1px solid var(--cw-border); background:var(--cw-card); color:var(--cw-muted); font-size:13px; cursor:pointer; }
     .cw-modex:hover { color:var(--cw-text); border-color:var(--cw-gold-d); }
     .cw-taste { text-align:center; font-size:11px; font-weight:600; color:var(--cw-gold); letter-spacing:.2px; padding:7px 12px 0; }
-    .cw-input { display:flex; gap:8px; padding:14px 16px; border-top:1px solid var(--cw-border); }
-    .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:13px; padding:13px 16px; color:var(--cw-text); font-size:15px; outline:none; font-family:inherit; }
+    .cw-input { display:flex; gap:8px; padding:14px 16px; border-top:1px solid var(--cw-border); padding-bottom:max(14px, env(safe-area-inset-bottom)); }
+    /* font-size:16px is REQUIRED: iOS Safari auto-zooms (and shifts the whole layout) on focus of any
+       input < 16px. ChatAI uses 16px for the same reason. */
+    .cw-input input { flex:1; background:#0c0c10; border:1px solid var(--cw-border); border-radius:13px; padding:13px 16px; color:var(--cw-text); font-size:16px; outline:none; font-family:inherit; }
     .cw-input input:focus { border-color:var(--cw-gold-d); }
     .cw-snd { width:42px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); color:#1A1206; font-size:17px; font-weight:700; cursor:pointer; }
     .cw-snd:disabled { opacity:.5; cursor:not-allowed; }
