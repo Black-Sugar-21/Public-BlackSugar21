@@ -1,5 +1,5 @@
 .legal-page-container {
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   padding: 2rem;
   background: var(--gradient-main);
   background-attachment: fixed;
@@ -38,7 +38,7 @@
   padding: 3rem;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
 }

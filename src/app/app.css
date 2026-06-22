@@ -68,7 +68,7 @@ body {
     font-family: 'Outfit', sans-serif;
     line-height: 1.6;
     overflow-x: hidden;
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
 }
 
 h1,
@@ -107,7 +107,7 @@ a:hover {
 
 /* Layout */
 .app-container {
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
     position: relative;
     background: var(--gradient-main);
     background-attachment: fixed;
@@ -134,7 +134,7 @@ a:hover {
     width: 90%;
     border: 1px solid rgba(212, 175, 55, 0.15);
     background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     border-radius: 24px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 80px rgba(212, 175, 55, 0.06);
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -155,7 +155,7 @@ a:hover {
     border-radius: 50%;
     border: 2px solid rgba(212, 175, 55, 0.3);
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     box-shadow: 0 0 40px rgba(212, 175, 55, 0.15), 0 20px 40px rgba(0, 0, 0, 0.3);
     transition: transform 0.3s ease;
     animation: float 6s ease-in-out infinite;
@@ -189,7 +189,7 @@ a:hover {
 /* Language Switcher */
 .language-switcher {
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
     border: 1px solid rgba(212, 175, 55, 0.3);
     color: var(--text-primary);
     padding: 12px 24px;
@@ -220,7 +220,7 @@ a:hover {
 
 .language-switcher-toolbar {
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
     border: 1px solid rgba(212, 175, 55, 0.25);
     color: var(--text-primary);
     padding: 10px 18px;
@@ -256,7 +256,7 @@ a:hover {
 /* Glass Panel Utility */
 .glass-panel {
     background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
@@ -292,7 +292,7 @@ a:hover {
     width: 100%;
     z-index: 100;
     background: linear-gradient(135deg, rgba(131, 27, 252, 0.15) 0%, rgba(156, 89, 234, 0.15) 100%);
-    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(212, 175, 55, 0.2);
     box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
     height: 70px;
@@ -340,7 +340,7 @@ a:hover {
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     padding: 10px 16px;
     border-radius: 50px;
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -412,7 +412,7 @@ a:hover {
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     z-index: 99;
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
 }
 
 /* Mobile Menu */
@@ -423,9 +423,9 @@ a:hover {
     right: 0;
     width: 280px;
     max-width: 85vw;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 70px); height: calc(100dvh - 70px);
     background: linear-gradient(135deg, rgba(26, 11, 46, 0.98) 0%, rgba(45, 27, 78, 0.98) 100%);
-    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     border-left: 1px solid rgba(212, 175, 55, 0.2);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
@@ -461,7 +461,7 @@ a:hover {
 
 .mobile-nav-item.mobile-lang-switcher {
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     border: 1px solid rgba(212, 175, 55, 0.3);
     border-radius: 16px;
     margin: 16px;
@@ -499,7 +499,7 @@ a:hover {
 
 /* Hero Section */
 .hero-section {
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1213,7 +1213,7 @@ a:hover {
     padding: var(--spacing-lg);
     line-height: 1.9;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
     border-radius: 24px;
     border: 1px solid rgba(212, 175, 55, 0.15);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -1260,7 +1260,7 @@ a:hover {
 /* Footer */
 .elegant-footer {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, #000000 100%);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     border-top: 1px solid rgba(212, 175, 55, 0.2);
     padding: var(--spacing-lg) var(--spacing-md);
     margin-top: var(--spacing-xl);
@@ -2121,7 +2121,7 @@ a:hover {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2390,7 +2390,7 @@ button:focus-visible,
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.06), rgba(74, 0, 79, 0.06));
   border: 1px solid rgba(212, 175, 55, 0.18);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
 .trust-stat {
   display: flex;
