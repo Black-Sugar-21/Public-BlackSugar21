@@ -957,18 +957,60 @@ export class FirebaseService {
   /** Send a text message — same shape as the apps; rules enforce sender/membership/first-message gate. */
   /** AI Coach date-spot suggestions for a match — SAME getDateSuggestions callable iOS/Android use
    *  (ranked by the venue psychology debate, using the pair's midpoint). [] on error/off. */
-  async getDateSuggestions(matchId: string, lang: string, category?: string): Promise<any[]> {
+  async getDateSuggestions(matchId: string, lang: string, category?: string, opts?: { loadCount?: number; excludePlaceIds?: string[] }): Promise<{ suggestions: any[]; hasMore: boolean }> {
     const u = this.currentUser();
-    if (!u || !matchId) return [];
+    if (!u || !matchId) return { suggestions: [], hasMore: false };
     let l = (lang || '').split('-')[0];
     if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
     try {
       const fn = httpsCallable(this.functions, 'getDateSuggestions');
-      const res: any = await fn({ matchId, userLanguage: l, language: l, category: category || null });
+      const res: any = await fn({ matchId, userLanguage: l, language: l, category: category || null, loadCount: opts?.loadCount || 0, excludePlaceIds: (opts?.excludePlaceIds || []).slice(0, 500) });
       const d = res?.data;
-      if (d?.success && Array.isArray(d.suggestions)) return d.suggestions.slice(0, 12);
+      if (d?.success && Array.isArray(d.suggestions)) return { suggestions: d.suggestions, hasMore: !!d.hasMore };
     } catch { /* off / rate-limited — caller shows nothing */ }
-    return [];
+    return { suggestions: [], hasMore: false };
+  }
+  /** AI Coach Date Blueprint — SAME generateDateBlueprint callable iOS/Android use. Returns a full
+   *  date plan (title, totalDuration, icebreaker, ranked steps with places). null on error/off. */
+  async generateDateBlueprint(matchId: string, lang: string, duration: 'quick' | 'standard' | 'full' = 'standard'): Promise<any | null> {
+    const u = this.currentUser();
+    if (!u || !matchId) return null;
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    try {
+      const fn = httpsCallable(this.functions, 'generateDateBlueprint');
+      const res: any = await fn({ matchId, userLanguage: l, language: l, duration });
+      const d = res?.data;
+      if (d?.success && d.blueprint) return d.blueprint;
+    } catch { /* off / rate-limited */ }
+    return null;
+  }
+  /** Share a Date Blueprint into the chat (iOS parity): type:'date_blueprint' + blueprintData. */
+  async sendBlueprintMessage(matchId: string, bp: any): Promise<void> {
+    const u = this.currentUser();
+    if (!u || !matchId || !bp) return;
+    const steps = Array.isArray(bp.steps) ? bp.steps.map((s: any, i: number) => ({
+      order: i + 1, time: s.time || '', duration: s.duration || '', activity: s.activity || '',
+      placeName: s.place?.name || s.placeName || '', tip: s.tip || '', whyThisPlace: s.whyThisPlace || '',
+      travelTimeToNext: s.travelTimeToNext || '', photoUrl: s.place?.photos?.[0]?.url || s.photoUrl || '',
+      googleMapsUrl: s.place?.googleMapsUrl || s.googleMapsUrl || '', placeId: s.place?.placeId || s.placeId || '',
+      address: s.place?.address || s.address || '', rating: s.place?.rating || s.rating || 0,
+    })) : [];
+    const blueprintData = {
+      title: bp.title || '', totalDuration: bp.totalDuration || '', estimatedBudget: bp.estimatedBudget || '',
+      dresscode: bp.dresscode || '', icebreaker: bp.icebreaker || '', steps,
+    };
+    const preview = ('🗺️ ' + (bp.title || 'Date plan')).slice(0, 120);
+    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
+      message: (bp.icebreaker || preview).slice(0, 4000), senderId: u.uid, timestamp: serverTimestamp(),
+      type: 'date_blueprint', blueprintData, isEphemeral: false,
+    });
+    try {
+      await updateDoc(doc(this.db, 'matches', matchId), {
+        lastMessage: preview, lastMessageTime: serverTimestamp(), lastMessageTimestamp: serverTimestamp(),
+        timestamp: serverTimestamp(), lastMessageSenderId: u.uid, lastMessageSeq: increment(1), messageCount: increment(1),
+      });
+    } catch { /* best-effort */ }
   }
   /** Share a place into the chat (iOS sendPlaceMessage parity): type:'place' + placeData. */
   async sendPlaceMessage(matchId: string, place: any): Promise<void> {

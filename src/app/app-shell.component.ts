@@ -59,6 +59,7 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   datePlacesLoading: {"es":"Buscando lugares cerca…","en":"Finding spots near you…","pt":"Procurando lugares perto…","fr":"Recherche de lieux proches…","de":"Orte in der Nähe suchen…","it":"Cerco posti vicino…","zh":"正在寻找附近地点…","ja":"近くの場所を検索中…","ko":"근처 장소 찾는 중…","ru":"Ищу места рядом…","ar":"البحث عن أماكن قريبة…","id":"Mencari tempat di dekatmu…","tr":"Yakındaki mekanlar aranıyor…"},
   datePlacesEmpty: {"es":"No se encontraron lugares ahora. Inténtalo más tarde.","en":"No spots found right now. Try again later.","pt":"Nenhum lugar encontrado agora. Tente mais tarde.","fr":"Aucun lieu trouvé pour l'instant. Réessaie plus tard.","de":"Gerade keine Orte gefunden. Versuch es später.","it":"Nessun posto trovato ora. Riprova più tardi.","zh":"暂时没有找到地点，请稍后再试。","ja":"今は場所が見つかりません。後でお試しください。","ko":"지금은 장소를 찾지 못했어요. 나중에 다시 시도하세요.","ru":"Сейчас мест не найдено. Попробуйте позже.","ar":"لا توجد أماكن الآن. حاول لاحقاً.","id":"Belum ada tempat. Coba lagi nanti.","tr":"Şimdilik mekan yok. Sonra tekrar dene."},
   sharePlace: {"es":"Compartir","en":"Share","pt":"Compartilhar","fr":"Partager","de":"Teilen","it":"Condividi","zh":"分享","ja":"共有","ko":"공유","ru":"Поделиться","ar":"مشاركة","id":"Bagikan","tr":"Paylaş"},
+  placesAll: {"es":"Todos","en":"All","pt":"Todos","fr":"Tous","de":"Alle","it":"Tutti","zh":"全部","ja":"すべて","ko":"전체","ru":"Все","ar":"الكل","id":"Semua","tr":"Tümü"},
   chatSignIn: {"es":"Inicia sesión para ver tus mensajes","en":"Sign in to see your messages","pt":"Entre para ver suas mensagens","fr":"Connecte-toi pour voir tes messages","de":"Melde dich an, um Nachrichten zu sehen","it":"Accedi per vedere i messaggi","zh":"登录以查看消息","ja":"ログインしてメッセージを見る","ko":"로그인하고 메시지 보기","ru":"Войдите, чтобы видеть сообщения","ar":"سجّل الدخول لعرض رسائلك","id":"Masuk untuk melihat pesan","tr":"Mesajları görmek için giriş yap"},
   // Onboarding (13 languages)
   obWelcome: {"es":"Conoce a tu Coach de Inteligencia Emocional","en":"Meet your AI Emotional-Intelligence Coach","pt":"Conheça seu Coach de Inteligência Emocional com IA","fr":"Rencontre ton coach en intelligence émotionnelle IA","de":"Lerne deinen KI-Coach für emotionale Intelligenz kennen","it":"Conosci il tuo Coach IA di intelligenza emotiva","zh":"认识你的 AI 情商教练","ja":"AI感情知能コーチに出会いましょう","ko":"AI 감성지능 코치를 만나보세요","ru":"Познакомьтесь с ИИ-коучем по эмоциональному интеллекту","ar":"تعرّف على مدرّب الذكاء العاطفي بالذكاء الاصطناعي","id":"Kenali Coach Kecerdasan Emosional AI-mu","tr":"Meet your AI Emotional-Intelligence Coach"},
@@ -248,6 +249,24 @@ const BIO_FALLBACK: Record<string, string[]> = {
 
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
 
+// Date-spot category labels (iOS category-* parity) — 13 languages.
+const PLACE_CAT_LABELS: Record<string, Record<string, string>> = {
+  cafe: {es:'Café',en:'Café',pt:'Café',fr:'Café',de:'Café',it:'Caffè',zh:'咖啡',ja:'カフェ',ko:'카페',ru:'Кафе',ar:'مقهى',id:'Kafe',tr:'Kafe'},
+  restaurant: {es:'Restaurante',en:'Restaurant',pt:'Restaurante',fr:'Restaurant',de:'Restaurant',it:'Ristorante',zh:'餐厅',ja:'レストラン',ko:'레스토랑',ru:'Ресторан',ar:'مطعم',id:'Restoran',tr:'Restoran'},
+  bar: {es:'Bar',en:'Bar',pt:'Bar',fr:'Bar',de:'Bar',it:'Bar',zh:'酒吧',ja:'バー',ko:'바',ru:'Бар',ar:'بار',id:'Bar',tr:'Bar'},
+  night_club: {es:'Discoteca',en:'Club',pt:'Balada',fr:'Club',de:'Club',it:'Discoteca',zh:'夜店',ja:'クラブ',ko:'클럽',ru:'Клуб',ar:'نادٍ ليلي',id:'Klub',tr:'Kulüp'},
+  movie_theater: {es:'Cine',en:'Cinema',pt:'Cinema',fr:'Cinéma',de:'Kino',it:'Cinema',zh:'电影院',ja:'映画館',ko:'영화관',ru:'Кино',ar:'سينما',id:'Bioskop',tr:'Sinema'},
+  park: {es:'Parque',en:'Park',pt:'Parque',fr:'Parc',de:'Park',it:'Parco',zh:'公园',ja:'公園',ko:'공원',ru:'Парк',ar:'حديقة',id:'Taman',tr:'Park'},
+  museum: {es:'Museo',en:'Museum',pt:'Museu',fr:'Musée',de:'Museum',it:'Museo',zh:'博物馆',ja:'博物館',ko:'박물관',ru:'Музей',ar:'متحف',id:'Museum',tr:'Müze'},
+  bowling_alley: {es:'Bolos',en:'Bowling',pt:'Boliche',fr:'Bowling',de:'Bowling',it:'Bowling',zh:'保龄球',ja:'ボウリング',ko:'볼링',ru:'Боулинг',ar:'بولينغ',id:'Boling',tr:'Bowling'},
+  art_gallery: {es:'Galería',en:'Gallery',pt:'Galeria',fr:'Galerie',de:'Galerie',it:'Galleria',zh:'画廊',ja:'ギャラリー',ko:'갤러리',ru:'Галерея',ar:'معرض فني',id:'Galeri',tr:'Galeri'},
+  bakery: {es:'Pastelería',en:'Bakery',pt:'Padaria',fr:'Boulangerie',de:'Bäckerei',it:'Pasticceria',zh:'烘焙店',ja:'ベーカリー',ko:'베이커리',ru:'Пекарня',ar:'مخبز',id:'Toko roti',tr:'Fırın'},
+  shopping_mall: {es:'Centro comercial',en:'Mall',pt:'Shopping',fr:'Centre commercial',de:'Einkaufszentrum',it:'Centro commerciale',zh:'商场',ja:'モール',ko:'쇼핑몰',ru:'ТЦ',ar:'مركز تسوق',id:'Mal',tr:'AVM'},
+  spa: {es:'Spa',en:'Spa',pt:'Spa',fr:'Spa',de:'Spa',it:'Spa',zh:'水疗',ja:'スパ',ko:'스파',ru:'Спа',ar:'سبا',id:'Spa',tr:'Spa'},
+  aquarium: {es:'Acuario',en:'Aquarium',pt:'Aquário',fr:'Aquarium',de:'Aquarium',it:'Acquario',zh:'水族馆',ja:'水族館',ko:'아쿠아리움',ru:'Аквариум',ar:'حوض أسماك',id:'Akuarium',tr:'Akvaryum'},
+  zoo: {es:'Zoológico',en:'Zoo',pt:'Zoológico',fr:'Zoo',de:'Zoo',it:'Zoo',zh:'动物园',ja:'動物園',ko:'동물원',ru:'Зоопарк',ar:'حديقة حيوان',id:'Kebun binatang',tr:'Hayvanat bahçesi'},
+};
+
 @Component({
   selector: 'app-shell',
   standalone: true,
@@ -383,14 +402,51 @@ export class AppShellComponent implements OnDestroy {
   readonly placeSuggestions = signal<any[]>([]);
   readonly placesLoading = signal(false);
   readonly placeSending = signal('');
+  // iOS PlaceSuggestionsView category carousel — same ids/icons/order.
+  readonly placeCats: { id: string; icon: string }[] = [
+    { id: 'cafe', icon: '☕' }, { id: 'restaurant', icon: '🍽️' }, { id: 'bar', icon: '🍺' }, { id: 'night_club', icon: '💃' },
+    { id: 'movie_theater', icon: '🎬' }, { id: 'park', icon: '🌳' }, { id: 'museum', icon: '🏛️' }, { id: 'bowling_alley', icon: '🎳' },
+    { id: 'art_gallery', icon: '🎨' }, { id: 'bakery', icon: '🥐' }, { id: 'shopping_mall', icon: '🛍️' }, { id: 'spa', icon: '💆' },
+    { id: 'aquarium', icon: '🐠' }, { id: 'zoo', icon: '🦁' },
+  ];
+  readonly placeCatSel = signal(''); // '' = all
+  placeCatLabel(id: string): string { const m = PLACE_CAT_LABELS[id]; return (m && (m[this.lang()] || m['en'])) || id; }
   async openPlaceSheet() {
     const m = this.selectedMatch(); if (!m) return;
     this.placeSheetOpen.set(true);
     if (this.placeSuggestions().length || this.placesLoading()) return; // already loaded
-    this.placesLoading.set(true);
-    const list = await this.firebase.getDateSuggestions(m.id, this.lang());
-    this.placeSuggestions.set(list);
+    this.fetchPlaces();
+  }
+  selectPlaceCat(id: string) { if (this.placeCatSel() === id || this.placesLoading()) return; this.placeCatSel.set(id); this.fetchPlaces(); }
+  readonly placeHasMore = signal(false);
+  readonly placeLoadingMore = signal(false);
+  private placeLoadCount = 0;
+  private async fetchPlaces() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.placesLoading.set(true); this.placeSuggestions.set([]); this.placeHasMore.set(false); this.placeLoadCount = 0;
+    const cat = this.placeCatSel();
+    const r = await this.firebase.getDateSuggestions(m.id, this.lang(), cat || undefined, { loadCount: 0 });
+    this.placeSuggestions.set(r.suggestions); this.placeHasMore.set(r.hasMore);
     this.placesLoading.set(false);
+  }
+  /** Infinite scroll: append the next page, excluding already-shown places, until hasMore is false. */
+  async loadMorePlaces() {
+    const m = this.selectedMatch();
+    if (!m || this.placeLoadingMore() || this.placesLoading() || !this.placeHasMore()) return;
+    this.placeLoadingMore.set(true);
+    this.placeLoadCount += 1;
+    const cur = this.placeSuggestions();
+    const exclude = cur.map((p: any) => p.placeId || p.id).filter(Boolean);
+    const r = await this.firebase.getDateSuggestions(m.id, this.lang(), this.placeCatSel() || undefined, { loadCount: this.placeLoadCount, excludePlaceIds: exclude });
+    const seen = new Set(exclude);
+    const fresh = r.suggestions.filter((p: any) => !seen.has(p.placeId || p.id));
+    if (fresh.length) this.placeSuggestions.set([...cur, ...fresh]);
+    this.placeHasMore.set(r.hasMore && fresh.length > 0); // stop if a page returned nothing new
+    this.placeLoadingMore.set(false);
+  }
+  onPlaceScroll(e: Event) {
+    const el = e.target as HTMLElement;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) this.loadMorePlaces();
   }
   closePlaceSheet() { this.placeSheetOpen.set(false); }
   async sendPlace(place: any) {
@@ -693,7 +749,7 @@ export class AppShellComponent implements OnDestroy {
     this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
     this.resetSmartReplies();
     this.resetCoachInsights();
-    this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false);
+    this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false); this.placeCatSel.set('');
     // Live TAIL listener: the latest page only (older pages are cursor-fetched on demand).
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.unsubMsgs = this.firebase.listenMessages(match.id, AppShellComponent.CHAT_PAGE, (msgs, more) => {

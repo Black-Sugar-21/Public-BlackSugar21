@@ -274,7 +274,14 @@
                       <b>📍 {{ s('datePlaces') }}</b>
                       <button class="bsheet-x" (click)="closePlaceSheet()" aria-label="✕">✕</button>
                     </div>
-                    <div class="bsheet-body">
+                    <!-- Category carousel (iOS PlaceSuggestionsView) -->
+                    <div class="bsheet-cats">
+                      <ui-option shape="pill" [selected]="placeCatSel() === ''" (click)="selectPlaceCat('')">✨ {{ s('placesAll') }}</ui-option>
+                      @for (c of placeCats; track c.id) {
+                        <ui-option shape="pill" [selected]="placeCatSel() === c.id" (click)="selectPlaceCat(c.id)">{{ c.icon }} {{ placeCatLabel(c.id) }}</ui-option>
+                      }
+                    </div>
+                    <div class="bsheet-body" (scroll)="onPlaceScroll($event)">
                       @if (placesLoading()) {
                         <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('datePlacesLoading') }}</div>
                       } @else if (placeSuggestions().length === 0) {
@@ -294,6 +301,9 @@
                             </div>
                             <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : s('sharePlace') }}</ui-button>
                           </div>
+                        }
+                        @if (placeLoadingMore()) {
+                          <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('datePlacesLoading') }}</div>
                         }
                       }
                     </div>
