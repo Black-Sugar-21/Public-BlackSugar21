@@ -275,13 +275,13 @@ export class FirebaseService {
   /** Popups hang on iOS Safari (ITP) → prefer the full-page redirect flow there. Desktop keeps the
    *  nicer popup. Heuristic: any iOS device, desktop Safari, or a small/touch viewport. */
   shouldUseRedirect(): boolean {
-    try {
-      const ua = navigator.userAgent || '';
-      const iOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document);
-      const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
-      const smallTouch = typeof window !== 'undefined' && (('ontouchstart' in window) && window.innerWidth < 900);
-      return iOS || safari || smallTouch;
-    } catch { return false; }
+    // Use the full-page redirect on EVERY browser. signInWithPopup polls the popup's
+    // `window.closed` to detect dismissal, which the Cross-Origin-Opener-Policy severs for the
+    // cross-origin Google/authDomain window — spamming "COOP would block the window.closed call"
+    // warnings on desktop (Chrome) and hanging on iOS Safari (ITP). Redirect has no popup → no
+    // window.closed polling → no COOP warnings, and completes reliably everywhere. Completed by
+    // handleRedirectResult() + the widget's coachOpenRequest/auth effect on the next load.
+    return true;
   }
   /** Process a pending OAuth (Google/Apple) redirect sign-in on app load (creates the profile for new users). */
   private async handleRedirectResult(): Promise<void> {
