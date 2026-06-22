@@ -89,9 +89,11 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /** Open the live AI-Coach demo widget (the site's centerpiece). The widget listens for this event. */
+  /** Open the AI-Coach. Mobile → the dedicated fullscreen /coach page; desktop → the widget overlay
+   *  (which listens for this event). */
   openCoach() {
     this.firebase.logEvent('click_try_coach', { section: 'hero' });
+    if (this.isMobileView()) { this.router.navigate(['/coach']); return; }
     if (this.isBrowser) window.dispatchEvent(new CustomEvent('open-coach'));
   }
 

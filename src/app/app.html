@@ -606,14 +606,8 @@
   }
 </div>
 
-<!-- AI Coach. Mobile: a FAB that opens the dedicated fullscreen /coach page (back gesture closes it).
-     Desktop: the floating widget card. Hidden inside the /app shell and on the /coach page itself. -->
+<!-- AI Coach widget (the elegant animated FAB). Mobile: tapping the FAB opens the dedicated fullscreen
+     /coach page; desktop: the floating widget card. Hidden inside the /app shell and on /coach itself. -->
 @if (ageVerified() && !isAppRoute() && !isCoachRoute()) {
-  @if (isMobileView()) {
-    <a class="coach-fab-link" routerLink="/coach" [attr.aria-label]="getCurrentLanguage()==='es' ? 'Abrir Coach IA' : 'Open AI Coach'">
-      <span class="coach-fab-spark">✦</span>{{ getCurrentLanguage()==='es' ? 'Coach IA' : 'AI Coach' }}
-    </a>
-  } @else {
-    <app-coach-widget />
-  }
+  <app-coach-widget />
 }

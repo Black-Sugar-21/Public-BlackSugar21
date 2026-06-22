@@ -426,6 +426,12 @@ export class CoachWidgetComponent implements OnDestroy {
   }
 
   toggle() {
+    // Mobile: the FAB opens the dedicated fullscreen /coach page (back gesture closes it) instead of
+    // the inline overlay — more elegant + robust on phones. Desktop keeps the floating card overlay.
+    if (!this.embedded && this.isBrowser && window.innerWidth <= 600 && this.router.url.split('?')[0].split('#')[0] !== '/coach') {
+      this.router.navigate(['/coach']);
+      return;
+    }
     this.open.update((v) => !v);
     if (this.open()) {
       this.ga('coach_demo_open');
