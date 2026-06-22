@@ -24,6 +24,17 @@
     .shell-pf-av.initial { display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; font-size:2rem; }
     .shell-pf-mail { color:var(--text-muted); }
     .shell-signout { background:none; border:1px solid rgba(255,255,255,.18); color:var(--text-secondary); border-radius:999px; padding:11px 24px; font-family:inherit; cursor:pointer; }
+    .shell-delacct { background:none; border:none; color:var(--app-red); font-family:inherit; font-size:13px; cursor:pointer; padding:8px; margin-top:6px; align-self:flex-start; }
+    // Delete-account sheet
+    .da-sheet { max-width:380px; }
+    .da-sheet .da-warn { font-size:12.5px; color:var(--text-muted); background:rgba(255,255,255,.05); border-radius:10px; padding:10px 12px; line-height:1.45; }
+    .da-actions { display:flex; flex-direction:column; gap:10px; width:100%; margin-top:6px; }
+    .da-delete-link { background:none; border:none; color:var(--app-red); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; padding:8px; }
+    .da-delete-link:disabled { opacity:.5; }
+    .da-lose { width:100%; box-sizing:border-box; text-align:left; background:rgba(255,68,87,.07); border:1px solid rgba(255,68,87,.18); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+    .da-lose-t { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .da-lose-row { font-size:13px; color:var(--text-secondary); }
+    .da-type-lbl { font-size:13px; color:var(--text-secondary); align-self:flex-start; }
     .shell-cta-2 { color:var(--text-muted); font-size:0.85rem; text-decoration:none; margin-top:4px; }
     .shell-cta-2:hover { color:var(--gold); }
     /* Profile view — réplica del tab de Perfil de iOS (ProfileView.swift) */

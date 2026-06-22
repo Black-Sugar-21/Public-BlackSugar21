@@ -298,6 +298,22 @@ export class FirebaseService {
     await signOut(this.auth);
   }
 
+  /** Pause the account (soft, reversible) — hides the profile. Parity with iOS/Android pauseAccount(). */
+  async pauseAccount(): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    await updateDoc(doc(this.db, 'users', u.uid), { paused: true, visible: false, pausedAt: serverTimestamp() });
+  }
+
+  /** Delete the account — calls the SAME callable as the apps (now a server-side SOFT delete:
+   *  hides immediately + schedules the irreversible purge after a grace period). */
+  async deleteAccount(): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    const fn = httpsCallable(this.functions, 'deleteUserData');
+    await fn({ userId: u.uid, userLanguage: this.deviceLang() });
+  }
+
   // Locale / timezone helpers (parity with iOS/Android signup fields; used by coach lang + nudges).
   private deviceLang(): string { try { return (navigator.language || 'en').split('-')[0].toLowerCase(); } catch { return 'en'; } }
   private tz(): string { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } }

@@ -374,6 +374,7 @@
                 }
 
                 <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
+                <button class="shell-delacct" (click)="openDeleteAccount()">{{ s('daDelete') }}</button>
               </div>
             } @else {
               <!-- No profile yet → elegant onboarding wizard (iOS-style) -->
@@ -562,6 +563,42 @@
               <button class="shell-confirm-cancel" (click)="epCancelGender()">{{ s('cancel') }}</button>
               <button class="shell-confirm-ok" (click)="epConfirmGender()">{{ s('genderClearConfirm') }}</button>
             </div>
+          </div>
+        </div>
+      }
+
+      @if (daOpen()) {
+        <div class="shell-confirm-ov" (click)="closeDeleteAccount()">
+          <div class="shell-confirm da-sheet" (click)="$event.stopPropagation()">
+            @if (!daConfirm()) {
+              <!-- Step 1: pause-first (iOS "Need a break?") -->
+              <div class="shell-confirm-ic">⏸️</div>
+              <h3>{{ s('daTitle') }}</h3>
+              <p>{{ s('daDesc') }}</p>
+              <p class="da-warn">{{ s('daWarning') }}</p>
+              <div class="da-actions">
+                <ui-button variant="primary" shape="rect" [block]="true" [disabled]="daBusy()" (click)="daPauseAccount()">{{ daBusy() ? '…' : s('daPause') }}</ui-button>
+                <button class="da-delete-link" [disabled]="daBusy()" (click)="daConfirm.set(true)">{{ s('daDelete') }}</button>
+                <button class="shell-confirm-cancel" [disabled]="daBusy()" (click)="closeDeleteAccount()">{{ s('cancel') }}</button>
+              </div>
+            } @else {
+              <!-- Step 2: type-DELETE confirmation -->
+              <div class="shell-confirm-ic">⚠️</div>
+              <h3>{{ s('daDelete') }}</h3>
+              <p>{{ s('daConfirmDesc') }}</p>
+              <div class="da-lose">
+                <div class="da-lose-t">{{ s('daLoseTitle') }}</div>
+                <div class="da-lose-row">💔 {{ s('daLose1') }}</div>
+                <div class="da-lose-row">💬 {{ s('daLose2') }}</div>
+                <div class="da-lose-row">🖼️ {{ s('daLose3') }}</div>
+              </div>
+              <label class="da-type-lbl">{{ s('daTypeLabel') }}</label>
+              <ui-input [(ngModel)]="daType" placeholder="DELETE" [center]="true" />
+              <div class="da-actions">
+                <ui-button variant="primary" shape="rect" [block]="true" [disabled]="daBusy() || !daCanDelete()" (click)="daDeleteAccount()">{{ daBusy() ? '…' : s('daDeleteBtn') }}</ui-button>
+                <button class="shell-confirm-cancel" [disabled]="daBusy()" (click)="closeDeleteAccount()">{{ s('cancel') }}</button>
+              </div>
+            }
           </div>
         </div>
       }
