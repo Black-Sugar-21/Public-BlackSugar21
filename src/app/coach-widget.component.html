@@ -17,7 +17,7 @@
             @if (user(); as u) {
               <button class="cw-avatar" (click)="confirmSignOut.set(true)" [title]="li('signOut') + ' · ' + (u.displayName || u.email || '')">{{ initial(u) }}</button>
             } @else {
-              <button class="cw-signin" (click)="openLogin()">{{ li('headerSignIn') }}</button>
+              <ui-button variant="outline" size="sm" (click)="openLogin()">{{ li('headerSignIn') }}</ui-button>
             }
             @if (!embedded) { <button class="cw-x" (click)="toggle()" [attr.aria-label]="ui('ariaClose')">✕</button> }
           </div>
@@ -68,18 +68,18 @@
             @if (loginStep() === 'phone') {
               <input class="cw-login-in" [(ngModel)]="phoneInput" name="cwphone" type="tel" inputmode="tel" autocomplete="tel"
                 [placeholder]="li('phonePh')" />
-              <button class="cw-prov cw-prov-go" (click)="sendCode()" [disabled]="phoneBusy()">
+              <ui-button variant="primary" [block]="true" style="margin-bottom:11px" (click)="sendCode()" [disabled]="phoneBusy()">
                 {{ phoneBusy() ? li('sending') : li('sendCode') }}
-              </button>
+              </ui-button>
               <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ li('back') }}</button>
             }
 
             @if (loginStep() === 'code') {
               <input class="cw-login-in" [(ngModel)]="codeInput" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
                 [placeholder]="li('codePh')" />
-              <button class="cw-prov cw-prov-go" (click)="verifyCode()" [disabled]="phoneBusy()">
+              <ui-button variant="primary" [block]="true" style="margin-bottom:11px" (click)="verifyCode()" [disabled]="phoneBusy()">
                 {{ phoneBusy() ? li('verifying') : li('verify') }}
-              </button>
+              </ui-button>
               <button class="cw-login-back" (click)="loginStep.set('phone')">← {{ li('changeNumber') }}</button>
             }
 
@@ -366,8 +366,8 @@
             <div class="cw-cta">
               <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
               <div class="cw-cta-actions">
-                <a class="cw-btn gold" [href]="storeLink" target="_blank" rel="noopener" (click)="trackDownload()">{{ t().download }}</a>
-                <button class="cw-btn" (click)="share()">{{ justShared() ? t().shared : t().share }}</button>
+                <ui-button variant="primary" shape="rect" [block]="true" [href]="storeLink" (click)="trackDownload()">{{ t().download }}</ui-button>
+                <ui-button variant="secondary" shape="rect" [block]="true" (click)="share()">{{ justShared() ? t().shared : t().share }}</ui-button>
               </div>
             </div>
           }

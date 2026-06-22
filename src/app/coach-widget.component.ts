@@ -8,6 +8,7 @@ import { UiSkeletonRowComponent } from './ui/molecules/ui-skeleton-row.component
 import { UiBadgeComponent } from './ui/atoms/ui-badge.component';
 import { UiPillComponent } from './ui/atoms/ui-pill.component';
 import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
+import { UiButtonComponent } from './ui/atoms/ui-button.component';
 
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
@@ -196,7 +197,7 @@ const I18N: Record<string, any> = {
 @Component({
   selector: 'app-coach-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiSkeletonRowComponent, UiBadgeComponent, UiPillComponent, UiSkeletonComponent],
+  imports: [CommonModule, FormsModule, UiSkeletonRowComponent, UiBadgeComponent, UiPillComponent, UiSkeletonComponent, UiButtonComponent],
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
 })
