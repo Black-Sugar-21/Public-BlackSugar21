@@ -123,7 +123,7 @@ const I18N: Record<string, any> = {
       { key: 'cafe', t: '☕ Café', q: '¿Qué cafeterías acogedoras hay cerca para una cita?' },
       { key: 'restaurant', t: '🍽️ Restaurante', q: '¿Qué restaurantes con buen ambiente hay cerca para una cita?' },
       { key: 'bar', t: '🍸 Bar', q: '¿Qué bares con buen ambiente hay cerca para una cita?' },
-      { key: 'nightclub', t: '🪩 Discoteca', q: '¿Qué discotecas buenas hay cerca para salir a bailar de noche?' },
+      { key: 'night_club', t: '🪩 Discoteca', q: '¿Qué discotecas buenas hay cerca para salir a bailar de noche?' },
     ],
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
     locRequesting: 'Obteniendo tu ubicación 📍…',
@@ -154,7 +154,7 @@ const I18N: Record<string, any> = {
       { key: 'cafe', t: '☕ Coffee', q: 'What cozy coffee shops are near me for a date?' },
       { key: 'restaurant', t: '🍽️ Restaurant', q: 'What restaurants with great ambiance are near me for a date?' },
       { key: 'bar', t: '🍸 Bar', q: 'What good bars are near me for a date?' },
-      { key: 'nightclub', t: '🪩 Club', q: 'What good clubs are near me to go dancing at night?' },
+      { key: 'night_club', t: '🪩 Club', q: 'What good clubs are near me to go dancing at night?' },
     ],
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
     locRequesting: 'Getting your location 📍…',
@@ -185,7 +185,7 @@ const I18N: Record<string, any> = {
       { key: 'cafe', t: '☕ Café', q: 'Que cafeterias aconchegantes tem perto para um encontro?' },
       { key: 'restaurant', t: '🍽️ Restaurante', q: 'Que restaurantes com bom ambiente tem perto para um encontro?' },
       { key: 'bar', t: '🍸 Bar', q: 'Que bons bares tem perto para um encontro?' },
-      { key: 'nightclub', t: '🪩 Balada', q: 'Que boas baladas tem perto para sair para dançar à noite?' },
+      { key: 'night_club', t: '🪩 Balada', q: 'Que boas baladas tem perto para sair para dançar à noite?' },
     ],
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
     locRequesting: 'Obtendo sua localização 📍…',
@@ -331,7 +331,7 @@ export class CoachWidgetComponent implements OnDestroy {
     if (h >= 5 && h < 12) return 'cafe';
     if (h >= 12 && h < 18) return 'restaurant';
     if (h >= 18 && h < 23) return 'bar';
-    return 'nightclub'; // 23:00–05:00
+    return 'night_club'; // 23:00–05:00
   });
   // Welcome/empty state (ChatGPT/Claude-style) — shown before the first real exchange.
   readonly isWelcome = computed(() => this.messages().length <= 1 && !this.simMode() && !this.simLoading() && !this.thinking());
