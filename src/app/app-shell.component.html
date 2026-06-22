@@ -422,8 +422,8 @@
                       <h2 class="ob-title">{{ s('obGender') }}</h2>
                       <p class="ob-desc">{{ s('obGenderDesc') }}</p>
                       <div class="ob-opts">
-                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === true" (click)="ob.male = true">{{ s('obMale') }}</ui-option>
-                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === false" (click)="ob.male = false">{{ s('obFemale') }}</ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === true" (click)="obSetGender(true)">{{ s('obMale') }}</ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === false" (click)="obSetGender(false)">{{ s('obFemale') }}</ui-option>
                       </div>
                     }
                     @case (3) {

@@ -694,6 +694,12 @@ export class AppShellComponent implements OnDestroy {
       default: return true;
     }
   }
+  // iOS/Android parity: changing gender invalidates photos (they were AI-moderated against the
+  // previous expectedGender), so we clear them when the gender actually changes.
+  obSetGender(male: boolean) {
+    if (this.ob.male !== null && this.ob.male !== male && this.obPhotos().length) this.obPhotos.set([]);
+    this.ob.male = male;
+  }
   // Age-range sliders keep min ≤ max (mirrors edit-profile).
   obMinChanged(v: any) { this.ob.minAge = +v; if (this.ob.minAge > this.ob.maxAge) this.ob.maxAge = this.ob.minAge; }
   obMaxChanged(v: any) { this.ob.maxAge = +v; if (this.ob.maxAge < this.ob.minAge) this.ob.minAge = this.ob.maxAge; }
