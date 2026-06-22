@@ -459,24 +459,24 @@
                     }
                     @case (7) {
                       <h2 class="ob-title">{{ s('obPhotos') }}</h2>
-                      @if (obUploading()) {
-                        <p class="ob-photohint">{{ s('obAnalyzing') }}</p>
-                      } @else {
-                        <div class="ob-photo-status" [class.ok]="obPhotos().length >= 2">
-                          <span class="ob-photo-status-ic">{{ obPhotos().length >= 2 ? '✓' : 'ⓘ' }}</span>
-                          <span>{{ obPhotosSelectedText() }}</span>
-                          @if (obPhotos().length < 2) { <span class="ob-photo-min">{{ obPhotosMinText() }}</span> }
-                        </div>
-                      }
+                      <p class="ob-desc">{{ s('obPhotoHint') }}</p>
+                      <div class="ob-photo-status" [class.ok]="obPhotos().length >= 2">
+                        <span class="ob-photo-status-ic">{{ obPhotos().length >= 2 ? '✓' : 'ⓘ' }}</span>
+                        <span>{{ obPhotosSelectedText() }}</span>
+                        @if (obPhotos().length < 2) { <span class="ob-photo-min">{{ obPhotosMinText() }}</span> }
+                      </div>
                       <div class="ob-photos">
-                        @for (ph of obPhotos(); track ph.name) {
-                          <div class="ob-photo"><img [src]="ph.url" alt="" /><button class="ob-photo-x" (click)="obRemovePhoto($index)" aria-label="✕">✕</button></div>
-                        }
-                        @if (obPhotos().length < 6) {
-                          <label class="ob-photo-add" [class.busy]="obUploading()">
-                            {{ obUploading() ? '…' : s('obAddPhoto') }}
-                            <input type="file" accept="image/*" multiple (change)="obAddPhotos($event)" hidden [disabled]="obUploading()" />
-                          </label>
+                        @for (i of [0,1,2,3,4,5]; track i) {
+                          @if (i < obPhotos().length) {
+                            <div class="ob-photo"><img [src]="obPhotos()[i].url" alt="" /><button class="ob-photo-x" (click)="obRemovePhoto(i)" aria-label="✕">✕</button></div>
+                          } @else if (i === obPhotos().length) {
+                            <label class="ob-photo-add" [class.busy]="obUploading()">
+                              <span class="ob-photo-plus">＋</span>
+                              <input type="file" accept="image/*" multiple (change)="obAddPhotos($event)" hidden [disabled]="obUploading()" />
+                            </label>
+                          } @else {
+                            <div class="ob-photo-empty"></div>
+                          }
                         }
                       </div>
                     }
@@ -491,6 +491,16 @@
                 </div>
                 <button class="ob-signout-link" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
               </div>
+              }
+              <!-- Elegant AI photo-review overlay (mirrors iOS ValidatingImageDialog). -->
+              @if (obUploading()) {
+                <div class="ob-ai-overlay">
+                  <div class="ob-ai-card">
+                    <div class="ob-ai-spin"></div>
+                    <div class="ob-ai-title">{{ s('obAnalyzing') }}</div>
+                    <div class="ob-ai-sub">{{ s('obAiSub') }}</div>
+                  </div>
+                </div>
               }
             }
           }
