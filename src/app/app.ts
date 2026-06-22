@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -104,8 +104,21 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     this.isBrowser = isPlatformBrowser(this.platformId);
     if (this.isBrowser) {
       gsap.registerPlugin(ScrollTrigger);
+      // On entry with an active session, send the user straight to /app (the app shell routes
+      // profile-less accounts to onboarding). Only from the landing root — legal pages and a
+      // manual sign-out (→ '/') are respected via the one-shot guard.
+      effect(() => {
+        const u = this.firebase.currentUser();
+        if (this.redirectedToApp || !u) return;
+        const path = (this.router.url.split('?')[0].split('#')[0]) || '/';
+        if (path === '/' || path === '') {
+          this.redirectedToApp = true;
+          this.router.navigate(['/app']);
+        }
+      });
     }
   }
+  private redirectedToApp = false;
 
   private initGsapAnimations() {
     if (this.gsapCtx) return; // Already initialized
