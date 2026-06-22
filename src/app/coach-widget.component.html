@@ -73,16 +73,17 @@
             }
 
             @if (loginStep() === 'phone') {
-              <input class="cw-login-in" [(ngModel)]="phoneInput" name="cwphone" type="tel" inputmode="tel" autocomplete="tel"
-                [placeholder]="li('phonePh')" />
-              <ui-button variant="primary" [block]="true" style="margin-bottom:11px" (click)="sendCode()" [disabled]="phoneBusy()">
+              <ui-phone-input style="display:block; margin-bottom:11px" [lang]="lang()"
+                [searchPlaceholder]="li('searchCountry')" [numberPlaceholder]="li('phoneNumPh')"
+                (valueChange)="onPhone($event)" />
+              <ui-button variant="primary" [block]="true" style="margin-bottom:11px" (click)="sendCode()" [disabled]="phoneBusy() || !phoneValid()">
                 {{ phoneBusy() ? li('sending') : li('sendCode') }}
               </ui-button>
               <button class="cw-login-back" (click)="loginStep.set('choose')">← {{ li('back') }}</button>
             }
 
             @if (loginStep() === 'code') {
-              <input class="cw-login-in" [(ngModel)]="codeInput" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+              <input class="cw-login-in" [(ngModel)]="codeInput" (ngModelChange)="onCodeInput()" name="cwcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
                 [placeholder]="li('codePh')" />
               <ui-button variant="primary" [block]="true" style="margin-bottom:11px" (click)="verifyCode()" [disabled]="phoneBusy()">
                 {{ phoneBusy() ? li('verifying') : li('verify') }}

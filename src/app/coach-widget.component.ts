@@ -9,6 +9,7 @@ import { CoachPlaceCardComponent } from './ui/organisms/coach-place-card.compone
 import { CoachSessionsListComponent } from './ui/organisms/coach-sessions-list.component';
 import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
+import { UiPhoneInputComponent } from './ui/molecules/ui-phone-input.component';
 
 interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
@@ -56,6 +57,8 @@ const LOGIN_I18N: Record<string, Record<string, string>> = {
   apple: {"es":"Continuar con Apple","en":"Continue with Apple","pt":"Continuar com a Apple","fr":"Continuer avec Apple","de":"Mit Apple fortfahren","it":"Continua con Apple","zh":"使用 Apple 继续","ja":"Apple で続ける","ko":"Apple로 계속하기","ru":"Продолжить с Apple","ar":"المتابعة بحساب Apple","id":"Lanjutkan dengan Apple","tr":"Apple ile devam et"},
   phone: {"es":"Continuar con tu teléfono","en":"Continue with your phone","pt":"Continuar com seu telefone","fr":"Continuer avec votre téléphone","de":"Mit deinem Telefon fortfahren","it":"Continua con il tuo telefono","zh":"使用手机号继续","ja":"電話番号で続ける","ko":"휴대폰으로 계속하기","ru":"Продолжить с телефоном","ar":"المتابعة برقم هاتفك","id":"Lanjutkan dengan ponselmu","tr":"Telefonunla devam et"},
   phonePh: {"es":"Teléfono, ej. +56 9 1234 5678","en":"Phone, e.g. +56 9 1234 5678","pt":"Telefone, ex. +56 9 1234 5678","fr":"Téléphone, ex. +56 9 1234 5678","de":"Telefon, z. B. +56 9 1234 5678","it":"Telefono, es. +56 9 1234 5678","zh":"电话，例如 +56 9 1234 5678","ja":"電話番号、例 +56 9 1234 5678","ko":"전화번호, 예: +56 9 1234 5678","ru":"Телефон, напр. +56 9 1234 5678","ar":"الهاتف، مثال +56 9 1234 5678","id":"Telepon, mis. +56 9 1234 5678","tr":"Telefon, örn. +56 9 1234 5678"},
+  phoneNumPh: {"es":"Número de teléfono","en":"Phone number","pt":"Número de telefone","fr":"Numéro de téléphone","de":"Telefonnummer","it":"Numero di telefono","zh":"电话号码","ja":"電話番号","ko":"전화번호","ru":"Номер телефона","ar":"رقم الهاتف","id":"Nomor telepon","tr":"Telefon numarası"},
+  searchCountry: {"es":"Buscar país","en":"Search country","pt":"Buscar país","fr":"Rechercher un pays","de":"Land suchen","it":"Cerca paese","zh":"搜索国家/地区","ja":"国を検索","ko":"국가 검색","ru":"Поиск страны","ar":"ابحث عن بلد","id":"Cari negara","tr":"Ülke ara"},
   sendCode: {"es":"Enviar código","en":"Send code","pt":"Enviar código","fr":"Envoyer le code","de":"Code senden","it":"Invia codice","zh":"发送验证码","ja":"コードを送信","ko":"코드 전송","ru":"Отправить код","ar":"إرسال الرمز","id":"Kirim kode","tr":"Kod gönder"},
   sending: {"es":"Enviando…","en":"Sending…","pt":"Enviando…","fr":"Envoi…","de":"Senden…","it":"Invio…","zh":"发送中…","ja":"送信中…","ko":"전송 중…","ru":"Отправка…","ar":"جارٍ الإرسال…","id":"Mengirim…","tr":"Gönderiliyor…"},
   codePh: {"es":"Código de 6 dígitos","en":"6-digit code","pt":"Código de 6 dígitos","fr":"Code à 6 chiffres","de":"6-stelliger Code","it":"Codice di 6 cifre","zh":"6 位验证码","ja":"6 桁のコード","ko":"6자리 코드","ru":"6-значный код","ar":"رمز من 6 أرقام","id":"Kode 6 digit","tr":"6 haneli kod"},
@@ -197,7 +200,7 @@ const I18N: Record<string, any> = {
 @Component({
   selector: 'app-coach-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiPillComponent, UiSkeletonComponent, UiButtonComponent, CoachPlaceCardComponent, CoachSessionsListComponent],
+  imports: [CommonModule, FormsModule, UiPillComponent, UiSkeletonComponent, UiButtonComponent, UiPhoneInputComponent, CoachPlaceCardComponent, CoachSessionsListComponent],
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
 })
@@ -245,6 +248,7 @@ export class CoachWidgetComponent implements OnDestroy {
       window.removeEventListener('focus', this.resolveStuckSignIn);
       document.removeEventListener('visibilitychange', this.onVisibilityReturn);
       clearTimeout(this.signInWatchdog);
+      this.stopOtpAutoRead();
     }
   }
   readonly open = signal(false);
@@ -780,8 +784,8 @@ export class CoachWidgetComponent implements OnDestroy {
   li(key: string): string { const m = LOGIN_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
   /** 13-language UI string (greeting / history / discover) — falls back to English. */
   ui(key: string): string { const m = UI_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
-  openLogin(gated = false) { this.phoneErr.set(''); this.authErr.set(''); this.phoneInput = ''; this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
-  closeLogin() { this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
+  openLogin(gated = false) { this.phoneErr.set(''); this.authErr.set(''); this.phoneInput = ''; this.phoneE164 = ''; this.phoneValid.set(false); this.codeInput = ''; this.loginStep.set('choose'); this.loginGate.set(gated); this.loginOpen.set(true); }
+  closeLogin() { this.stopOtpAutoRead(); this.loginOpen.set(false); this.loginStep.set('choose'); this.loginGate.set(false); }
   // After any successful sign-in, land in /app so the user reaches the full experience
   // (Profile / Discover / Chats). The app shell routes profile-less accounts to web onboarding
   // — iOS/Android parity (a login with no userType/birthDate always lands in onboarding).
@@ -830,19 +834,46 @@ export class CoachWidgetComponent implements OnDestroy {
   }
   async signOut() { this.confirmSignOut.set(false); try { await this.firebase.signOutUser(); } catch { /* noop */ } }
   // Phone OTP (2 steps): enter number → SMS code → verify.
+  /** E.164 number + validity from the ui-phone-input (country selector + libphonenumber-js). */
+  phoneE164 = '';
+  readonly phoneValid = signal(false);
+  onPhone(e: { e164: string; valid: boolean }) { this.phoneE164 = e.e164; this.phoneValid.set(e.valid); if (this.phoneErr()) this.phoneErr.set(''); }
   async sendCode() {
-    const phone = this.phoneInput.trim().replace(/[^\d+]/g, '');
-    if (!/^\+\d{8,15}$/.test(phone)) { this.phoneErr.set(this.li('errInvalidPhone')); return; }
+    // Validated per-country by libphonenumber-js; phoneE164 is already a clean +<country><national>.
+    if (!this.phoneValid() || !/^\+\d{8,15}$/.test(this.phoneE164)) { this.phoneErr.set(this.li('errInvalidPhone')); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
-    try { await this.firebase.startPhoneSignIn(phone, 'cw-recaptcha'); this.loginStep.set('code'); }
+    try { await this.firebase.startPhoneSignIn(this.phoneE164, 'cw-recaptcha'); this.loginStep.set('code'); this.startOtpAutoRead(); }
     catch { this.phoneErr.set(this.li('errSend')); }
     finally { this.phoneBusy.set(false); }
   }
+  // SMS code autofill — parity with iOS: keep only digits and AUTO-SUBMIT once the full 6-digit
+  // code is present (whether typed, pasted, suggested by the iOS one-time-code keyboard, or read by
+  // the WebOTP API on Android). No extra tap needed.
+  onCodeInput() {
+    const digits = (this.codeInput || '').replace(/\D/g, '').slice(0, 6);
+    if (digits !== this.codeInput) this.codeInput = digits;
+    if (digits.length === 6 && !this.phoneBusy()) this.verifyCode();
+  }
+  /** WebOTP: on supported devices (Android Chrome) read the incoming SMS code automatically and
+   *  verify it. iOS Safari has no WebOTP — there the input's autocomplete="one-time-code" makes the
+   *  keyboard suggest the code (same end result). Best-effort; never blocks manual entry. */
+  private otpAbort: AbortController | null = null;
+  private startOtpAutoRead() {
+    if (!this.isBrowser) return;
+    const nav: any = navigator;
+    if (!('OTPCredential' in window) || !nav.credentials || !nav.credentials.get) return;
+    try { this.otpAbort?.abort(); } catch { /* noop */ }
+    this.otpAbort = new AbortController();
+    nav.credentials.get({ otp: { transport: ['sms'] }, signal: this.otpAbort.signal })
+      .then((cred: any) => { const code = (cred?.code || '').replace(/\D/g, ''); if (code) { this.codeInput = code; this.onCodeInput(); } })
+      .catch(() => { /* aborted / no SMS / unsupported — manual + one-time-code keyboard still work */ });
+  }
+  private stopOtpAutoRead() { try { this.otpAbort?.abort(); } catch { /* noop */ } this.otpAbort = null; }
   async verifyCode() {
     const code = this.codeInput.trim().replace(/\D/g, '');
     if (code.length < 4) { this.phoneErr.set(this.li('errCode')); return; }
     this.phoneBusy.set(true); this.phoneErr.set('');
-    try { await this.firebase.confirmPhoneCode(code); this.afterSignIn(); }
+    try { await this.firebase.confirmPhoneCode(code); this.stopOtpAutoRead(); this.afterSignIn(); }
     catch { this.phoneErr.set(this.li('errWrong')); }
     finally { this.phoneBusy.set(false); }
   }
