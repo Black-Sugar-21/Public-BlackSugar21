@@ -4,9 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslationService } from './translation.service';
 import { FirebaseService } from './firebase.service';
-import { UiSkeletonRowComponent } from './ui/molecules/ui-skeleton-row.component';
 import { UiPillComponent } from './ui/atoms/ui-pill.component';
 import { CoachPlaceCardComponent } from './ui/organisms/coach-place-card.component';
+import { CoachSessionsListComponent } from './ui/organisms/coach-sessions-list.component';
 import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 
@@ -197,7 +197,7 @@ const I18N: Record<string, any> = {
 @Component({
   selector: 'app-coach-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiSkeletonRowComponent, UiPillComponent, UiSkeletonComponent, UiButtonComponent, CoachPlaceCardComponent],
+  imports: [CommonModule, FormsModule, UiPillComponent, UiSkeletonComponent, UiButtonComponent, CoachPlaceCardComponent, CoachSessionsListComponent],
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
 })
@@ -421,14 +421,6 @@ export class CoachWidgetComponent {
     const u = (msgs || []).find((m) => m.role === 'user' && m.text);
     return u ? (u.text.length > 42 ? u.text.slice(0, 42) + '…' : u.text) : this.ui('newChat');
   }
-  /** Relative time label for the history list (compact, locale-light). */
-  convoTime(ts: number): string {
-    const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return this.lang() === 'es' ? 'ahora' : (this.lang() === 'pt' ? 'agora' : 'now');
-    if (mins < 60) return `${mins}m`;
-    const h = Math.floor(mins / 60);
-    return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
-  }
 
   /** Append only the not-yet-saved messages of the active session to Firestore (logged-in). */
   private persistToFirestore(m: Msg[]) {
@@ -521,8 +513,8 @@ export class CoachWidgetComponent {
   }
 
   /** Delete a stored conversation from the picker. */
-  async deleteConversation(id: string, ev: Event) {
-    ev.stopPropagation();
+  async deleteConversation(id: string, ev?: Event) {
+    ev?.stopPropagation();
     if (this.firebase.currentUser()) {
       await this.firebase.deleteCoachSession(id);
     } else {

@@ -94,19 +94,10 @@
           <div class="cw-history" role="dialog" aria-modal="true">
             <button class="cw-login-x" (click)="closeHistory()" [attr.aria-label]="ui('ariaClose')">✕</button>
             <h3 class="cw-login-t">{{ ui('historyTitle') }}</h3>
-            <button class="cw-hist-new" (click)="newConversation()">＋ {{ ui('newChat') }}</button>
-            @if (historyLoading()) {
-              @for (s of [0,1,2,3,4]; track s) { <ui-skeleton-row /> }
-            } @else {
-              @for (c of convoList(); track c.id) {
-                <button class="cw-hist-row" [class.active]="c.active" (click)="selectConversation(c.id)">
-                  <span class="cw-hist-title">{{ c.title }}</span>
-                  <span class="cw-hist-time">{{ convoTime(c.updatedAt) }}</span>
-                  <span class="cw-hist-del" (click)="deleteConversation(c.id, $event)" role="button" [attr.aria-label]="ui('ariaDelete')">🗑</span>
-                </button>
-              }
-              @if (convoList().length === 0) { <p class="cw-hist-empty">{{ ui('historyEmpty') }}</p> }
-            }
+            <coach-sessions-list
+              [sessions]="convoList()" [loading]="historyLoading()" [lang]="lang()"
+              [newLabel]="ui('newChat')" [emptyLabel]="ui('historyEmpty')" [deleteAria]="ui('ariaDelete')"
+              (newChat)="newConversation()" (select)="selectConversation($event)" (remove)="deleteConversation($event)" />
           </div>
         }
 
