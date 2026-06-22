@@ -328,7 +328,8 @@
     .chat-input { display:flex; gap:8px; padding:12px 16px; border-top:1px solid rgba(255,255,255,.08); }
     .chat-input input { flex:1; background:var(--bg-card); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:12px 16px; color:var(--text-primary); font-family:inherit; font-size:14.5px; outline:none; }
     .chat-input input:focus { border-color:var(--gold-dark); }
-    .chat-input button { width:46px; flex:none; border:none; border-radius:50%; background:var(--gradient-gold); color:var(--bg-dark); font-size:18px; font-weight:700; cursor:pointer; }
+    .chat-input button { width:46px; flex:none; border:none; border-radius:50%; background:var(--gradient-gold); color:var(--bg-dark); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .chat-input button .chat-snd-i { width:20px; height:20px; display:block; } /* iOS arrow.up parity (was a thin Unicode ↑) */
     .chat-input button:disabled { opacity:.4; cursor:default; }
     .shell-confirm-ov { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:24px; }
     .shell-confirm { background:var(--bg-card); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:28px 24px; max-width:360px; text-align:center; }

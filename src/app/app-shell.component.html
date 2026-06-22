@@ -185,7 +185,10 @@
                 @if (chatError()) { <div class="chat-err">{{ chatError() }}</div> }
                 <form class="chat-input" (submit)="$event.preventDefault(); sendChat()">
                   <input [(ngModel)]="chatText" name="ct" [placeholder]="s('chatPlaceholder')" autocomplete="off" maxlength="4000" />
-                  <button type="submit" [disabled]="!chatText.trim()">↑</button>
+                  <button type="submit" [disabled]="!chatText.trim()" aria-label="Send">
+                    <!-- iOS parity: SF Symbol "arrow.up" (semibold, rounded caps, chevron head) -->
+                    <svg class="chat-snd-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6 12l6-6 6 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
                 </form>
               </div>
             } @else {
