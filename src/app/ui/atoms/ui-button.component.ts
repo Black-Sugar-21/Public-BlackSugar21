@@ -34,11 +34,19 @@ import { NgClass } from '@angular/common';
       min-height: 44px; padding: 0 18px; border-radius: 999px;
       font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; text-decoration: none;
       border: 1px solid transparent; box-sizing: border-box;
-      transition: transform .16s ease, filter .16s ease, background .16s ease, border-color .16s ease;
+      /* Release: spring overshoot — cubic-bezier(.34,1.56,.64,1) mimics UIKit spring */
+      transition: transform .38s cubic-bezier(.34,1.56,.64,1), filter .22s ease, background .16s ease, border-color .16s ease;
       -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
+      will-change: transform;
     }
     :host(:not(.block)) .ui-btn { width: auto; }
-    .ui-btn:active { transform: scale(0.98); }
+    /* Press: fast scale-down + slight dim (UIKit feel) */
+    .ui-btn:active:not(:disabled) {
+      transform: scale(0.94);
+      filter: brightness(0.88);
+      /* Fast press-down, spring only on release */
+      transition: transform .1s ease-in, filter .1s ease-in, background .16s ease, border-color .16s ease;
+    }
     .ui-btn:disabled { opacity: .5; cursor: not-allowed; }
     .s-sm { min-height: 34px; padding: 0 12px; font-size: 12.5px; }
     .shape-rect { border-radius: 10px; }
@@ -50,7 +58,7 @@ import { NgClass } from '@angular/common';
     .v-ghost:hover:not(:disabled) { background: rgba(212,175,55,.08); }
     .v-secondary { background: var(--fill-faint); color: var(--text-primary); border-color: var(--border-mid); }
     .v-secondary:hover:not(:disabled) { border-color: var(--gold); }
-    @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } .ui-btn:active { transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } .ui-btn:active { transform: none; filter: none; } }
   `],
 })
 export class UiButtonComponent {
