@@ -333,6 +333,16 @@ export class FirebaseService {
     if (!u) return;
     await updateDoc(doc(this.db, 'users', u.uid), { paused: true, visible: false, pausedAt: serverTimestamp() });
   }
+  /** Reactivate a paused account (parity with iOS ReactiveAccountViewModel / Android reactivateAccount):
+   *  clear the pause flags so the profile is visible in discovery again, and reflect it locally so the
+   *  UI gate (accountPaused) clears immediately. "Pause and come back when you want." */
+  async reactivateAccount(): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    await updateDoc(doc(this.db, 'users', u.uid), { paused: false, visible: true });
+    const p: any = this.userProfile();
+    if (p) this.userProfile.set({ ...p, paused: false, visible: true });
+  }
 
   /** Delete the account — calls the SAME callable as the apps (now a server-side SOFT delete:
    *  hides immediately + schedules the irreversible purge after a grace period). */

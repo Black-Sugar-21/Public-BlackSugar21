@@ -1,4 +1,28 @@
     <div class="shell" [attr.dir]="lang() === 'ar' ? 'rtl' : 'ltr'">
+      <!-- Reactivation gate (paused account re-login) — same design + copy as iOS ReactiveAccountView
+           / Android reactivate screen. Covers the whole app until the user re-enables or signs out. -->
+      @if (accountPaused()) {
+        <div class="ra-screen">
+          <div class="ra-inner">
+            <div class="ra-icon">
+              <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <circle cx="38" cy="22" r="11" stroke="var(--gold)" stroke-width="3.5"/>
+                <path d="M20 53c0-9.4 8-16 18-16s18 6.6 18 16" stroke="var(--gold)" stroke-width="3.5" stroke-linecap="round"/>
+                <circle cx="18" cy="42" r="12.5" fill="var(--bg-dark)"/>
+                <circle cx="18" cy="42" r="11" stroke="var(--gold)" stroke-width="3.5"/>
+                <path d="M12.5 42l3.7 3.7 7.3-7.3" stroke="var(--gold)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h2 class="ra-title">{{ s('raTitle') }}</h2>
+            <p class="ra-desc">{{ s('raDesc') }}</p>
+            @if (reactivateErr()) { <p class="ra-err">{{ reactivateErr() }}</p> }
+          </div>
+          <div class="ra-actions">
+            <ui-button variant="primary" shape="rect" [block]="true" [disabled]="reactivating()" (click)="reactivateAccount()">{{ reactivating() ? '…' : s('raEnable') }}</ui-button>
+            <button class="ra-cancel" [disabled]="reactivating()" (click)="cancelReactivate()">{{ s('cancel') }}</button>
+          </div>
+        </div>
+      }
       <!-- Desktop sidebar -->
       <aside class="shell-side">
         <a routerLink="/" class="shell-brand"><span class="shell-spark">✦</span> Black Sugar <b>21</b></a>

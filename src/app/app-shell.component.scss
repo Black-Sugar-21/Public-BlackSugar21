@@ -67,6 +67,20 @@
     .ep-account-actions { display:flex; flex-direction:column; gap:10px; align-items:flex-start; margin-top:18px; padding-top:18px; border-top:1px solid rgba(255,255,255,.10); }
     .ep-account-actions .shell-signout { align-self:flex-start; }
     .ep-account-actions .shell-delacct { margin-top:0; }
+    /* Reactivation gate (paused re-login) — iOS ReactiveAccountView layout, web dark theme. */
+    .ra-screen { position:fixed; inset:0; z-index:120; background:var(--bg-dark); display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); }
+    .ra-inner { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:420px; }
+    .ra-icon { width:88px; height:88px; margin-bottom:28px; filter:drop-shadow(0 6px 20px rgba(212,175,55,.28)); animation:raPop .45s cubic-bezier(.34,1.56,.64,1) both; }
+    .ra-icon svg { width:100%; height:100%; }
+    @keyframes raPop { from { opacity:0; transform:scale(.72); } to { opacity:1; transform:none; } }
+    .ra-title { font-family:'Playfair Display', serif; font-size:26px; font-weight:700; color:var(--text-primary); margin:0 0 12px; line-height:1.2; }
+    .ra-desc { font-size:15px; color:var(--text-muted); margin:0; line-height:1.5; }
+    .ra-err { color:var(--app-red); font-size:13px; margin:14px 0 0; }
+    .ra-actions { width:100%; max-width:420px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .ra-cancel { background:none; border:none; color:var(--gold); font-family:inherit; font-size:15px; font-weight:600; padding:12px; cursor:pointer; }
+    .ra-cancel:disabled { opacity:.5; cursor:not-allowed; }
+    @media (prefers-reduced-motion: reduce) { .ra-icon { animation:none; } }
 
     /* Chat — per-bubble timestamp (parity with iOS ContentMessageView) */
     .chat-time { font-size:10px; opacity:.55; margin-left:8px; white-space:nowrap; }
