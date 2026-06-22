@@ -261,25 +261,25 @@
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('obGender') }}</label>
                     <div class="ep-opts">
-                      <button class="ep-opt" [class.on]="ep.male === true" (click)="ep.male = true">{{ s('obMale') }}</button>
-                      <button class="ep-opt" [class.on]="ep.male === false" (click)="ep.male = false">{{ s('obFemale') }}</button>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === true" (click)="ep.male = true">{{ s('obMale') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.male === false" (click)="ep.male = false">{{ s('obFemale') }}</ui-option>
                     </div>
                   </div>
                   <!-- Orientación -->
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('obOrientation') }}</label>
                     <div class="ep-opts">
-                      <button class="ep-opt" [class.on]="ep.orientation === 'men'" (click)="ep.orientation = 'men'">{{ s('obMen') }}</button>
-                      <button class="ep-opt" [class.on]="ep.orientation === 'women'" (click)="ep.orientation = 'women'">{{ s('obWomen') }}</button>
-                      <button class="ep-opt" [class.on]="ep.orientation === 'both'" (click)="ep.orientation = 'both'">{{ s('obBoth') }}</button>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.orientation === 'men'" (click)="ep.orientation = 'men'">{{ s('obMen') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.orientation === 'women'" (click)="ep.orientation = 'women'">{{ s('obWomen') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.orientation === 'both'" (click)="ep.orientation = 'both'">{{ s('obBoth') }}</ui-option>
                     </div>
                   </div>
                   <!-- Tipo -->
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('obType') }}</label>
                     <div class="ep-opts">
-                      <button class="ep-opt" [class.on]="ep.type === 'elite'" (click)="ep.type = 'elite'">{{ s('obElite') }}</button>
-                      <button class="ep-opt" [class.on]="ep.type === 'prime'" (click)="ep.type = 'prime'">{{ s('obPrime') }}</button>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.type === 'elite'" (click)="ep.type = 'elite'">{{ s('obElite') }}</ui-option>
+                      <ui-option shape="rect" tone="white" [block]="true" [selected]="ep.type === 'prime'" (click)="ep.type = 'prime'">{{ s('obPrime') }}</ui-option>
                     </div>
                   </div>
                   <!-- Intereses — selector curado (mismos IDs interest_* que iOS) -->
@@ -397,8 +397,8 @@
                     @case (2) {
                       <h2 class="ob-title">{{ s('obGender') }}</h2>
                       <div class="ob-opts">
-                        <button class="ob-opt" [class.on]="ob.male === true" (click)="ob.male = true">{{ s('obMale') }}</button>
-                        <button class="ob-opt" [class.on]="ob.male === false" (click)="ob.male = false">{{ s('obFemale') }}</button>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === true" (click)="ob.male = true">{{ s('obMale') }}</ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.male === false" (click)="ob.male = false">{{ s('obFemale') }}</ui-option>
                       </div>
                     }
                     @case (3) {
@@ -411,9 +411,9 @@
                     @case (4) {
                       <h2 class="ob-title">{{ s('obOrientation') }}</h2>
                       <div class="ob-opts col">
-                        <button class="ob-opt" [class.on]="ob.orientation === 'men'" (click)="ob.orientation = 'men'">{{ s('obMen') }}</button>
-                        <button class="ob-opt" [class.on]="ob.orientation === 'women'" (click)="ob.orientation = 'women'">{{ s('obWomen') }}</button>
-                        <button class="ob-opt" [class.on]="ob.orientation === 'both'" (click)="ob.orientation = 'both'">{{ s('obBoth') }}</button>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.orientation === 'men'" (click)="ob.orientation = 'men'">{{ s('obMen') }}</ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.orientation === 'women'" (click)="ob.orientation = 'women'">{{ s('obWomen') }}</ui-option>
+                        <ui-option shape="rect" size="lg" align="start" [block]="true" [selected]="ob.orientation === 'both'" (click)="ob.orientation = 'both'">{{ s('obBoth') }}</ui-option>
                       </div>
                     }
                     @case (5) {
