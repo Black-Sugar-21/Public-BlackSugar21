@@ -325,6 +325,11 @@
                     @if (epLocStatus() === 'error') { <div class="ob-error">{{ s('epLocError') }}</div> }
                   </div>
                   @if (epError()) { <div class="ob-error">{{ epError() }}</div> }
+                  <!-- Account actions live at the bottom of Edit Profile (parity with iOS/Android). -->
+                  <div class="ep-sec ep-account-actions">
+                    <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
+                    <button class="shell-delacct" (click)="openDeleteAccount()">{{ s('daDelete') }}</button>
+                  </div>
                 </div>
                 @if (epLoading()) {
                   <div class="ep-loading-overlay">
@@ -372,9 +377,7 @@
                     @for (it of profileInterests(); track it) { <span class="pf-chip">{{ interestLabel(it) }}</span> }
                   </div>
                 }
-
-                <button class="shell-signout" (click)="showConfirm.set(true)">{{ s('signOut') }}</button>
-                <button class="shell-delacct" (click)="openDeleteAccount()">{{ s('daDelete') }}</button>
+                <!-- Sign-out + Delete account moved into Edit Profile (parity with iOS/Android). -->
               </div>
             } @else {
               <!-- No profile yet → elegant onboarding wizard (iOS-style) -->

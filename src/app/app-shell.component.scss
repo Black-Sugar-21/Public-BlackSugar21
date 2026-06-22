@@ -63,6 +63,10 @@
     .pf-interests { display:flex; flex-wrap:wrap; gap:8px; }
     .pf-chip { font-size:13px; color:var(--gold); border:1px solid rgba(212,175,55,.4); background:rgba(212,175,55,.08); border-radius:999px; padding:6px 13px; }
     .pf-tab .shell-signout { align-self:flex-start; margin-top:4px; }
+    /* Account actions at the bottom of Edit Profile (parity with iOS/Android): a clear separator + stack. */
+    .ep-account-actions { display:flex; flex-direction:column; gap:10px; align-items:flex-start; margin-top:18px; padding-top:18px; border-top:1px solid rgba(255,255,255,.10); }
+    .ep-account-actions .shell-signout { align-self:flex-start; }
+    .ep-account-actions .shell-delacct { margin-top:0; }
 
     /* Chat — per-bubble timestamp (parity with iOS ContentMessageView) */
     .chat-time { font-size:10px; opacity:.55; margin-left:8px; white-space:nowrap; }
@@ -91,10 +95,11 @@
     /* Photo grid — 3 columns × 9 cells, portrait 0.6 aspect, gold + / white ✕ (iOS PictureGridView) */
     .ep-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
     .ep-cell { position:relative; aspect-ratio:0.62; border-radius:10px; background-size:cover; background-position:center; }
-    /* Skeleton shimmer (shown while the backend signs photo URLs — same intent as iOS .showLoading) */
-    .skel { background:linear-gradient(100deg, rgba(255,255,255,.05) 30%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.05) 70%) !important; background-size:200% 100% !important; animation:bsShimmer 1.3s linear infinite; }
-    @keyframes bsShimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
-    @media (prefers-reduced-motion: reduce) { .skel { animation:none; background:rgba(255,255,255,.08) !important; } }
+    /* Premium skeleton shimmer (shown while the backend signs photo URLs — same intent as iOS .showLoading).
+       Brand-gold sweep over a soft card base; smoother ease-in-out for an elegant, expensive feel. */
+    .skel { background-color:var(--bg-card) !important; background-image:linear-gradient(105deg, rgba(255,255,255,0) 38%, rgba(212,175,55,.16) 47%, rgba(255,255,255,.13) 53%, rgba(255,255,255,0) 64%) !important; background-size:220% 100% !important; background-repeat:no-repeat !important; animation:bsShimmer 1.7s cubic-bezier(.4,0,.2,1) infinite; }
+    @keyframes bsShimmer { 0% { background-position:170% 0; } 100% { background-position:-70% 0; } }
+    @media (prefers-reduced-motion: reduce) { .skel { animation:none; background:rgba(255,255,255,.06) !important; } }
     .ep-cell.empty { border:2px dashed rgba(255,255,255,.22); background-color:var(--bg-card); display:flex; align-items:center; justify-content:center; cursor:pointer; }
     .ep-cell.empty:hover { border-color:var(--gold); }
     .ep-cell-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit; }
