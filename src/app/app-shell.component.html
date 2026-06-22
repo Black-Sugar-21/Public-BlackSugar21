@@ -194,7 +194,7 @@
                 <div class="ep-topbar">
                   <button class="ep-back-circle" (click)="closeEditProfile()" aria-label="‹">‹</button>
                   <b class="ep-title">{{ ep.name || firebase.userProfile()?.displayName || s('epEdit') }}</b>
-                  <button class="ep-done" [class.changed]="true" [disabled]="epSaving()" (click)="epSave()">{{ epSaving() ? '…' : s('epDone') }}</button>
+                  <ui-button variant="ghost" size="sm" [disabled]="epSaving()" (click)="epSave()">{{ epSaving() ? '…' : s('epDone') }}</ui-button>
                 </div>
                 <div class="ep-body">
                   <!-- Grid de fotos 3×3 (iOS PictureGridView) -->
@@ -348,7 +348,7 @@
                   </div>
                   <div class="pf-head-col">
                     <h2 class="pf-name">{{ firebase.userProfile()?.displayName || $any(firebase.userProfile())?.name }}@if (profileAge()) { <span class="pf-age">, {{ profileAge() }}</span> }</h2>
-                    <button class="pf-edit-btn" (click)="openEditProfile()">{{ s('epEdit') }}</button>
+                    <ui-button variant="outline" [block]="true" (click)="openEditProfile()">{{ s('epEdit') }}</ui-button>
                   </div>
                 </div>
 
