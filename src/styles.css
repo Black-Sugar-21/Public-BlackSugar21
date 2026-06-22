@@ -88,8 +88,11 @@
 html { background: var(--bg-dark, #0A0A0A); }
 /* On the fullscreen /coach route, match the coach surface colour exactly (no seam behind the keyboard). */
 html.coach-route { background: #15151A; }
-/* Lock the page so ONLY the chat messages area scrolls (no body rubber-band / background scroll). */
-html.coach-route, html.coach-route body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+/* Lock the page so ONLY the chat messages area scrolls. iOS Safari ignores body{overflow:hidden} for
+   the document rubber-band — position:fixed on the body is the reliable lock (the /coach route opens
+   at scroll 0, so no jump). The marketing landing behind the fullscreen page can no longer scroll. */
+html.coach-route { overflow: hidden; height: 100%; overscroll-behavior: none; }
+html.coach-route body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 body {
   background: var(--gradient-main);
