@@ -5,10 +5,18 @@
       font-family:'Outfit',system-ui,sans-serif; }
     .cw-fab { position:fixed; right:calc(22px + env(safe-area-inset-right)); bottom:calc(22px + env(safe-area-inset-bottom)); z-index:9998; display:flex; align-items:center; gap:9px;
       padding:13px 18px; border:none; border-radius:999px; cursor:pointer; color:#1A1206; font-weight:700; font-size:14.5px;
-      background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); box-shadow:0 10px 30px rgba(212,175,55,0.35); animation:cwPulse 2.6s ease infinite; }
-    .cw-fab:hover { filter:brightness(1.06); transform:translateY(-2px); transition:.2s; }
+      background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); box-shadow:0 10px 30px rgba(212,175,55,0.35);
+      animation:cwFabNudge 5s cubic-bezier(.32,.72,0,1) 2s infinite both; }
+    /* ChatAI-style attention effect: two gold "ping" rings radiate out from the pill, staggered. */
+    .cw-fab::before, .cw-fab::after { content:''; position:absolute; inset:0; z-index:-1; border-radius:999px;
+      background:linear-gradient(135deg,var(--cw-gold),var(--cw-gold-d)); opacity:0; animation:cwFabPing 2.8s ease-out infinite; }
+    .cw-fab::before { animation-delay:1.4s; }
+    .cw-fab::after { animation-delay:2.3s; }
+    .cw-fab:hover { filter:brightness(1.06); transform:translateY(-2px) scale(1.03); transition:.2s; }
     .cw-spark { font-size:17px; }
-    @keyframes cwPulse { 0%,100%{box-shadow:0 10px 30px rgba(212,175,55,0.30)} 50%{box-shadow:0 10px 42px rgba(212,175,55,0.55)} }
+    @keyframes cwFabPing { 0%{transform:scale(1); opacity:.45} 75%{transform:scale(1.45); opacity:0} 100%{transform:scale(1.45); opacity:0} }
+    @keyframes cwFabNudge { 0%,86%,100%{transform:translateY(0) scale(1)} 90%{transform:translateY(-2px) scale(1.06)} 94%{transform:scale(.97)} 97%{transform:scale(1)} }
+    @media (prefers-reduced-motion: reduce) { .cw-fab, .cw-fab::before, .cw-fab::after { animation:none !important; } }
     /* Centered, ChatGPT/Claude-style chat: discreet FAB → spacious centered overlay (the bot is the focus). */
     /* Desktop: transparent click-catch (no page dimming) — the floating card stays unobtrusive, like ChatAI. */
     .cw-overlay { position:fixed; inset:0; z-index:9998; background:transparent; animation:cwFadeBg .2s ease; }
