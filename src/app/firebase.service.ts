@@ -557,7 +557,7 @@ export class FirebaseService {
   }
 
   /** Persist onboarding — writes the exact discovery-valid schema the apps read. */
-  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[]; pictures?: string[] }): Promise<void> {
+  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[]; pictures?: string[]; minAge?: number; maxAge?: number; maxDistance?: number }): Promise<void> {
     const u = this.currentUser();
     if (!u) return;
     // NOTE: accountStatus is intentionally NOT written here — it is blocked on UPDATE by the
@@ -571,9 +571,9 @@ export class FirebaseService {
       orientation: d.orientation,     // men | women | both
       onboardingCompleted: true,
       // discovery search prefs (apps write these; used as the caller's feed filters)
-      minAge: 18,
-      maxAge: 99,
-      maxDistance: 100,
+      minAge: d.minAge ?? 18,
+      maxAge: d.maxAge ?? 99,
+      maxDistance: d.maxDistance ?? 100,
     };
     if (d.bio) data['bio'] = d.bio;
     if (Array.isArray(d.interests)) data['interests'] = d.interests;

@@ -417,10 +417,18 @@
                       </div>
                     }
                     @case (5) {
-                      <h2 class="ob-title">{{ s('obBio') }}</h2>
-                      <textarea class="ob-input ta" [(ngModel)]="ob.bio" [placeholder]="s('obBioPh')" maxlength="400" rows="4"></textarea>
+                      <h2 class="ob-title">{{ s('epAgeRange') }}</h2>
+                      <div class="ep-slider-row"><span>{{ s('epMinAge') }}</span><b>{{ ob.minAge }}</b></div>
+                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.minAge" (ngModelChange)="obMinChanged($event)" />
+                      <div class="ep-slider-row"><span>{{ s('epMaxAge') }}</span><b>{{ ob.maxAge }}</b></div>
+                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.maxAge" (ngModelChange)="obMaxChanged($event)" />
                     }
                     @case (6) {
+                      <h2 class="ob-title">{{ s('epDistance') }}</h2>
+                      <div class="ep-slider-row"><span></span><b>{{ ob.maxDistance }} km</b></div>
+                      <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ob.maxDistance" (ngModelChange)="ob.maxDistance = +$event" />
+                    }
+                    @case (7) {
                       <h2 class="ob-title">{{ s('obPhotos') }}</h2>
                       <p class="ob-photohint">{{ obUploading() ? s('obAnalyzing') : s('obPhotoHint') }}</p>
                       <div class="ob-photos">
@@ -441,7 +449,7 @@
                 <div class="ob-nav">
                   @if (obStep() > 0) { <button class="ob-back" (click)="obBack()">{{ s('obBack') }}</button> }
                   <button class="ob-next" (click)="obNext()" [disabled]="obSaving() || obUploading()">
-                    {{ obSaving() ? '…' : (obStep() === 6 ? s('obFinish') : s('obNext')) }}
+                    {{ obSaving() ? '…' : (obStep() === 7 ? s('obFinish') : s('obNext')) }}
                   </button>
                 </div>
               </div>

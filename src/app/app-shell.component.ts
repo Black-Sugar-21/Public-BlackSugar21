@@ -656,10 +656,10 @@ export class AppShellComponent implements OnDestroy {
   readonly obStep = signal(0);
   readonly obSaving = signal(false);
   readonly obError = signal('');
-  ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', bio: '' };
+  ob = { name: '', day: '', month: '', year: '', male: null as boolean | null, type: '' as 'elite' | 'prime' | '', orientation: '' as 'men' | 'women' | 'both' | '', minAge: 18, maxAge: 50, maxDistance: 50 };
   readonly obPhotos = signal<Array<{ name: string; url: string }>>([]);
   readonly obUploading = signal(false);
-  private readonly OB_LAST = 6;
+  private readonly OB_LAST = 7;
   obCanProceed(): boolean {
     switch (this.obStep()) {
       case 0: return this.ob.name.trim().length >= 2;
@@ -667,11 +667,15 @@ export class AppShellComponent implements OnDestroy {
       case 2: return this.ob.male !== null;
       case 3: return this.ob.type !== '';
       case 4: return this.ob.orientation !== '';
-      case 5: return true; // bio optional
-      case 6: return this.obPhotos().length >= 2; // iOS/Android parity: minimum 2 photos
+      case 5: return true; // age range (has defaults)
+      case 6: return true; // distance (has default)
+      case 7: return this.obPhotos().length >= 2; // iOS/Android parity: minimum 2 photos
       default: return true;
     }
   }
+  // Age-range sliders keep min ≤ max (mirrors edit-profile).
+  obMinChanged(v: any) { this.ob.minAge = +v; if (this.ob.minAge > this.ob.maxAge) this.ob.maxAge = this.ob.minAge; }
+  obMaxChanged(v: any) { this.ob.maxAge = +v; if (this.ob.maxAge < this.ob.minAge) this.ob.minAge = this.ob.maxAge; }
   async obAddPhotos(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const files = Array.from(input.files || []).filter((f) => f.type.startsWith('image/'));
@@ -744,7 +748,8 @@ export class AppShellComponent implements OnDestroy {
       const geo = await this.getGeo();
       await this.firebase.saveOnboarding({
         name: this.ob.name.trim(), birthDate: bd, male, userType, orientation: this.ob.orientation || 'both',
-        bio: this.ob.bio.trim() || undefined, latitude: geo?.lat, longitude: geo?.lng,
+        latitude: geo?.lat, longitude: geo?.lng,
+        minAge: this.ob.minAge, maxAge: this.ob.maxAge, maxDistance: this.ob.maxDistance,
         pictures: this.obPhotos().map((p) => p.name),
       });
       this.track('onboarding_complete', { userType });
