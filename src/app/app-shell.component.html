@@ -158,7 +158,7 @@
                     <div class="chat-empty">{{ s('chatStart') }}</div>
                     <!-- AI Coach icebreakers (iOS ChatView Wingman parity): tappable openers. -->
                     @if (icebreakersLoading()) {
-                      <div class="chat-ice-load"><span class="ep-spin ep-spin-sm"></span> {{ s('coachSuggesting') }}</div>
+                      <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('coachSuggesting') }}</div>
                     } @else if (icebreakers().length) {
                       <div class="chat-ice">
                         <div class="chat-ice-h">✦ {{ s('coachIcebreakers') }}</div>
@@ -244,7 +244,7 @@
                       <button class="chat-smart-x" (click)="dismissSmartReplies()" aria-label="✕">✕</button>
                     </div>
                     @if (smartRepliesLoading()) {
-                      <div class="chat-ice-load"><span class="ep-spin ep-spin-sm"></span> {{ s('coachThinking') }}</div>
+                      <div class="chat-ice-load"><span class="coach-dots"><span></span><span></span><span></span></span> {{ s('coachThinking') }}</div>
                     } @else {
                       <div class="chat-smart-chips">
                         @for (r of smartReplies(); track r) {
