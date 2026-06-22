@@ -40,9 +40,9 @@
                 <div class="shell-teaser-ic">📍</div>
                 <h2>{{ s('discoLocTitle') }}</h2>
                 <p>{{ s('discoLocBody') }}</p>
-                <button class="shell-cta" [disabled]="discoLocStatus() === 'loading'" (click)="enableDiscoveryLocation()">
+                <ui-button variant="primary" style="margin-top:6px" [disabled]="discoLocStatus() === 'loading'" (click)="enableDiscoveryLocation()">
                   {{ discoLocStatus() === 'loading' ? '…' : s('discoLocBtn') }}
-                </button>
+                </ui-button>
                 @if (discoLocStatus() === 'denied') { <p class="ob-error">{{ s('discoLocDenied') }}</p> }
               </div>
             } @else if (discoLoading()) {
@@ -87,7 +87,7 @@
               <div class="shell-teaser">
                 <div class="shell-teaser-ic">{{ discoError() ? '⚠️' : '🔥' }}</div>
                 <p>{{ discoError() ? s('discoError') : s('discoEmpty') }}</p>
-                <button class="shell-cta" (click)="discoLoaded.set(false); loadDiscovery()">{{ s('discoRetry') }}</button>
+                <ui-button variant="primary" style="margin-top:6px" (click)="discoLoaded.set(false); loadDiscovery()">{{ s('discoRetry') }}</ui-button>
                 <a class="shell-cta-2" [href]="storeLink" target="_blank" rel="noopener">📱 {{ s('download') }}</a>
               </div>
             }
