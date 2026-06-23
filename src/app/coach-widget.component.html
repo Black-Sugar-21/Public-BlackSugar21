@@ -167,7 +167,7 @@
                   <div class="cw-loc">
                     <button class="cw-chip" (click)="useLocation()">{{ t().useLoc }}</button>
                     <form class="cw-city" (submit)="$event.preventDefault(); sendCity()">
-                      <input [(ngModel)]="cityDraft" name="city" [placeholder]="t().cityPh" autocomplete="off" />
+                      <input [(ngModel)]="cityDraft" name="city" [placeholder]="t().cityPh" autocomplete="off" aria-label="Ciudad" />
                       <button type="submit" class="cw-snd sm">→</button>
                     </form>
                   </div>
@@ -377,7 +377,7 @@
           <div class="cw-taste cw-taste-counter">✦ {{ freeCounterLabel() }}</div>
         }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
-          <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />
+          <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" aria-label="Escribe tu pregunta al coach" />
           <button type="submit" class="cw-snd" [disabled]="busy() || !draft.trim()">
             @if (busy()) { <span class="cw-spin"></span> } @else {
               <!-- iOS parity: matches SF Symbol "arrow.up" (semibold, rounded caps, chevron head) -->

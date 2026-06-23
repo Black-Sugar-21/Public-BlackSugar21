@@ -112,7 +112,7 @@ const I18N: Record<string, any> = {
     ctaSubtitle: 'En la app tenés 4 preguntas al día, te recuerda y simula tu relación.',
     ctaText: 'En la app son 4 preguntas al día: te recuerda, conoce tus matches y simula tu relación.',
     ctaDismiss: 'Seguir probando',
-    freeCounterOf: 'de', freeCounterSuffix: 'gratis',
+    freeCounterOf: 'de', freeCounterSuffix: 'gratis', freeCounterPrefix: 'Pregunta',
     taste2: 'preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
@@ -148,7 +148,7 @@ const I18N: Record<string, any> = {
     ctaSubtitle: 'In the app you get 4 questions a day, it remembers you and simulates your relationship.',
     ctaText: 'In the app it\'s 4 questions a day: it remembers you, knows your matches, and simulates your relationship.',
     ctaDismiss: 'Keep trying',
-    freeCounterOf: 'of', freeCounterSuffix: 'free',
+    freeCounterOf: 'of', freeCounterSuffix: 'free', freeCounterPrefix: 'Question',
     taste2: 'free questions to try', taste1: '✦ 1 free question left',
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
@@ -183,7 +183,7 @@ const I18N: Record<string, any> = {
     ctaSubtitle: 'No app você tem 4 perguntas por dia, ele te lembra e simula seu relacionamento.',
     ctaText: 'No app são 4 perguntas por dia: ele lembra de você, conhece seus matches e simula sua relação.',
     ctaDismiss: 'Continuar testando',
-    freeCounterOf: 'de', freeCounterSuffix: 'grátis',
+    freeCounterOf: 'de', freeCounterSuffix: 'grátis', freeCounterPrefix: 'Pergunta',
     taste2: 'perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
@@ -310,7 +310,7 @@ export class CoachWidgetComponent implements OnDestroy {
     const n = this.freeCounterNum();
     const t = this.t();
     if (t.freeCounterOf) {
-      return `Pregunta ${n} ${t.freeCounterOf} ${FREE_TASTE} ${t.freeCounterSuffix}`;
+      return `${t.freeCounterPrefix} ${n} ${t.freeCounterOf} ${FREE_TASTE} ${t.freeCounterSuffix}`;
     }
     return this.freeLeft() === 1 ? t.taste1 : `✦ ${this.freeLeft()} ${t.taste2}`;
   }

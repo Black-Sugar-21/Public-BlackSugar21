@@ -1,11 +1,25 @@
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
-import { getAuth } from 'firebase/auth';
+import { Router } from '@angular/router';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { Observable } from 'rxjs';
 import { ModerationPolicyComponent } from './components/moderation-policy/moderation-policy.component';
 import { TermsComponent } from './pages/terms/terms.component';
 import { PrivacyComponent } from './pages/privacy/privacy.component';
 import { DataDeletionComponent } from './pages/data-deletion/data-deletion.component';
 import { SafetyStandardsComponent } from './pages/safety-standards/safety-standards.component';
+
+/** Resolves once with the current Firebase auth state (null = not signed in). */
+function authStateOnce(): Observable<boolean | import('@angular/router').UrlTree> {
+  const router = inject(Router);
+  return new Observable(subscriber => {
+    const unsubscribe = onAuthStateChanged(getAuth(), user => {
+      subscriber.next(user ? true : router.createUrlTree(['/']));
+      subscriber.complete();
+      unsubscribe();
+    });
+  });
+}
 
 /**
  * Analytics route guard — requires Firebase Auth sign-in.
@@ -13,12 +27,10 @@ import { SafetyStandardsComponent } from './pages/safety-standards/safety-standa
  *   const idTokenResult = await getAuth().currentUser?.getIdTokenResult();
  *   return idTokenResult?.claims?.['isAdmin'] === true;
  */
-function analyticsAuthGuard(): boolean {
-  const auth = getAuth();
-  if (auth.currentUser) return true;
-  // Not signed in — the analytics component will show the "sign in" message.
-  return true; // allow load; the component itself blocks display until auth resolves
-}
+export const analyticsAuthGuard = () => authStateOnce();
+
+/** Auth guard for /app — redirects unauthenticated users to the landing page. */
+export const authGuard = () => authStateOnce();
 
 export const routes: Routes = [
   {
@@ -65,11 +77,13 @@ export const routes: Routes = [
   {
     path: 'app',
     loadComponent: () => import('./app-shell.component').then(m => m.AppShellComponent),
-    title: 'Black Sugar 21'
+    title: 'Black Sugar 21',
+    canActivate: [authGuard],
   },
   {
     path: 'coach',
     loadComponent: () => import('./coach-page.component').then(m => m.CoachPageComponent),
     title: 'Coach IA · Black Sugar 21'
-  }
+  },
+  { path: '**', redirectTo: '/' }
 ];

@@ -281,7 +281,7 @@
                   </div>
                 }
                 <form class="chat-input" (submit)="$event.preventDefault(); sendChat()">
-                  <input [(ngModel)]="chatText" name="ct" [placeholder]="s('chatPlaceholder')" autocomplete="off" maxlength="4000" />
+                  <input [(ngModel)]="chatText" name="ct" [placeholder]="s('chatPlaceholder')" autocomplete="off" maxlength="4000" [attr.aria-label]="s('chatPlaceholder')" />
                   <button type="submit" [disabled]="!chatText.trim()" aria-label="Send">
                     <!-- iOS parity: SF Symbol "arrow.up" (semibold, rounded caps, chevron head) -->
                     <svg class="chat-snd-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6 12l6-6 6 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -555,15 +555,15 @@
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('epAgeRange') }}</label>
                     <div class="ep-slider-row"><span>{{ s('epMinAge') }}</span><b>{{ ep.minAge }}</b></div>
-                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.minAge" (ngModelChange)="epMinChanged($event)" />
+                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.minAge" (ngModelChange)="epMinChanged($event)" [attr.aria-label]="s('epMinAge')" />
                     <div class="ep-slider-row"><span>{{ s('epMaxAge') }}</span><b>{{ ep.maxAge }}</b></div>
-                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.maxAge" (ngModelChange)="epMaxChanged($event)" />
+                    <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ep.maxAge" (ngModelChange)="epMaxChanged($event)" [attr.aria-label]="s('epMaxAge')" />
                   </div>
                   <!-- Distancia -->
                   <div class="ep-sec">
                     <label class="ep-label">{{ s('epDistance') }}</label>
                     <div class="ep-slider-row"><span></span><b>{{ ep.maxDistance }} km</b></div>
-                    <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ep.maxDistance" (ngModelChange)="ep.maxDistance = +$event" />
+                    <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ep.maxDistance" (ngModelChange)="ep.maxDistance = +$event" [attr.aria-label]="s('epDistance')" />
                   </div>
                   <!-- Ubicación (iOS location section) — re-detecta geo y actualiza g/geohash -->
                   <div class="ep-sec">
@@ -698,15 +698,15 @@
                       <h2 class="ob-title">{{ s('epAgeRange') }}</h2>
                       <p class="ob-desc">{{ s('obAgeDesc') }}</p>
                       <div class="ep-slider-row"><span>{{ s('epMinAge') }}</span><b>{{ ob.minAge }}</b></div>
-                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.minAge" (ngModelChange)="obMinChanged($event)" />
+                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.minAge" (ngModelChange)="obMinChanged($event)" [attr.aria-label]="s('epMinAge')" />
                       <div class="ep-slider-row"><span>{{ s('epMaxAge') }}</span><b>{{ ob.maxAge }}</b></div>
-                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.maxAge" (ngModelChange)="obMaxChanged($event)" />
+                      <input class="ep-range" type="range" min="18" max="99" step="1" [ngModel]="ob.maxAge" (ngModelChange)="obMaxChanged($event)" [attr.aria-label]="s('epMaxAge')" />
                     }
                     @case (6) {
                       <h2 class="ob-title">{{ s('epDistance') }}</h2>
                       <p class="ob-desc">{{ s('obDistanceDesc') }}</p>
                       <div class="ep-slider-row"><span></span><b>{{ ob.maxDistance }} km</b></div>
-                      <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ob.maxDistance" (ngModelChange)="ob.maxDistance = +$event" />
+                      <input class="ep-range" type="range" min="1" max="500" step="1" [ngModel]="ob.maxDistance" (ngModelChange)="ob.maxDistance = +$event" [attr.aria-label]="s('epDistance')" />
                     }
                     @case (7) {
                       <h2 class="ob-title">{{ s('obLocationTitle') }}</h2>

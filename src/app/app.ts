@@ -1,6 +1,7 @@
 import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { TranslationService, LANGUAGES, LanguageOption, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
@@ -17,6 +18,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 export class App implements OnInit, OnDestroy, AfterViewInit {
   private isBrowser: boolean;
   private gsapCtx: gsap.Context | null = null;
+  private routerSub?: Subscription;
   protected readonly title = signal('Black Sugar 21');
   protected readonly ageVerified = signal(false);
   // R: seed iOS with the real App Store URL so the badge is never a dead '#' on first
@@ -356,6 +358,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.gsapCtx?.revert();
     this.stopCarousel();
+    this.routerSub?.unsubscribe();
   }
 
   private dotTween: gsap.core.Tween | null = null;
@@ -620,7 +623,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     });
 
     // Log subsequent navigations
-    this.router.events
+    this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
         this.currentUrl.set(event.urlAfterRedirects); // R(SEO): update route-gating
