@@ -202,7 +202,7 @@
                             <div class="place-sug-actions">
                               @if (msg.placeData?.googleMapsUrl) { <a class="chat-card-cta" [href]="msg.placeData.googleMapsUrl" target="_blank" rel="noopener">🗺️ {{ s('viewOnMaps') }}</a> }
                               @if (msg.placeData?.website) { <a class="chat-card-cta" [href]="msg.placeData.website" target="_blank" rel="noopener">🌐 {{ s('placeWebsite') }}</a> }
-                              @if (msg.placeData?.instagramUrl) { <a class="chat-card-cta place-sug-cta-ig" [href]="msg.placeData.instagramUrl" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
+                              @if (msg.placeData?.instagram) { <a class="chat-card-cta place-sug-cta-ig" [href]="msg.placeData.instagramUrl" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
                             </div>
                           </div>
                         </div>
@@ -331,7 +331,7 @@
                               <div class="place-sug-actions">
                                 @if (pl.googleMapsUrl) { <a class="place-sug-cta" [href]="pl.googleMapsUrl" target="_blank" rel="noopener">🗺️ Maps</a> }
                                 @if (pl.website) { <a class="place-sug-cta" [href]="pl.website" target="_blank" rel="noopener">🌐 {{ s('placeWebsite') }}</a> }
-                                @if (pl.instagramUrl) { <a class="place-sug-cta place-sug-cta-ig" [href]="pl.instagramUrl" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
+                                @if (pl.instagram) { <a class="place-sug-cta place-sug-cta-ig" [href]="pl.instagram" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
                               </div>
                             </div>
                             <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : (placeAddMode() ? s('bpAdd') : s('sharePlace')) }}</ui-button>
