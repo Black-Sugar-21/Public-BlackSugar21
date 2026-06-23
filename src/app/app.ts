@@ -21,7 +21,11 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   protected readonly ageVerified = signal(false);
   // R: seed iOS with the real App Store URL so the badge is never a dead '#' on first
   // paint / Firebase-slow (the app-id is already known in index.html). Firebase may override.
-  protected readonly storeLinks = signal({ ios: 'https://apps.apple.com/app/id6470783901', android: '#' });
+  // R: seed with real known URLs so store badges are never '#' on first paint / Firebase-slow.
+  protected readonly storeLinks = signal({
+    ios: 'https://apps.apple.com/app/id6470783901',
+    android: 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21',
+  });
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
   // R(SEO): track the current route so the homepage <main> renders by ROUTE (always in the

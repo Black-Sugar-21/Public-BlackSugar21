@@ -97,7 +97,9 @@ const UI_I18N: Record<string, Record<string, string>> = {
   discoverHint: {"es":"✨ En la app: descubre personas compatibles","en":"✨ In the app: discover compatible people","pt":"✨ No app: descubra pessoas compatíveis","fr":"✨ Dans l'app : découvre des personnes compatibles","de":"✨ In der App: entdecke passende Menschen","it":"✨ Nell'app: scopri persone compatibili","zh":"✨ 在应用中：发现合拍的人","ja":"✨ アプリで相性の良い人を見つけよう","ko":"✨ 앱에서 잘 맞는 사람을 만나보세요","ru":"✨ В приложении: знакомься с подходящими людьми","ar":"✨ في التطبيق: اكتشف أشخاصاً متوافقين","id":"✨ Di app: temukan orang yang cocok","tr":"✨ Uygulamada: uyumlu kişileri keşfet"},
 };
 const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
-const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
+// NOTE: store links should be loaded from Remote Config (store_url_ios / store_url_android) at runtime.
+// These constants are production-known fallbacks used before RC resolves.
+const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21';
 const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
@@ -106,7 +108,11 @@ const I18N: Record<string, any> = {
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
     placeholder: 'Escribe tu situación…', send: 'Enviar',
-    ctaTitle: '✦ Probaste el Coach IA', ctaText: 'En la app son 4 preguntas al día: te recuerda, conoce tus matches y simula tu relación.',
+    ctaTitle: 'Probaste el Coach IA ✦',
+    ctaSubtitle: 'En la app tenés 4 preguntas al día, te recuerda y simula tu relación.',
+    ctaText: 'En la app son 4 preguntas al día: te recuerda, conoce tus matches y simula tu relación.',
+    ctaDismiss: 'Seguir probando',
+    freeCounterOf: 'de', freeCounterSuffix: 'gratis',
     taste2: 'preguntas gratis para probar', taste1: '✦ Te queda 1 pregunta gratis',
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
@@ -138,7 +144,11 @@ const I18N: Record<string, any> = {
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
     placeholder: 'Describe your situation…', send: 'Send',
-    ctaTitle: '✦ You tried the AI Coach', ctaText: 'In the app it\'s 4 questions a day: it remembers you, knows your matches, and simulates your relationship.',
+    ctaTitle: 'You\'ve tried Coach IA ✦',
+    ctaSubtitle: 'In the app you get 4 questions a day, it remembers you and simulates your relationship.',
+    ctaText: 'In the app it\'s 4 questions a day: it remembers you, knows your matches, and simulates your relationship.',
+    ctaDismiss: 'Keep trying',
+    freeCounterOf: 'of', freeCounterSuffix: 'free',
     taste2: 'free questions to try', taste1: '✦ 1 free question left',
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
@@ -169,7 +179,11 @@ const I18N: Record<string, any> = {
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
     placeholder: 'Escreva sua situação…', send: 'Enviar',
-    ctaTitle: '✦ Você testou o Coach IA', ctaText: 'No app são 4 perguntas por dia: ele lembra de você, conhece seus matches e simula sua relação.',
+    ctaTitle: 'Você testou o Coach IA ✦',
+    ctaSubtitle: 'No app você tem 4 perguntas por dia, ele te lembra e simula seu relacionamento.',
+    ctaText: 'No app são 4 perguntas por dia: ele lembra de você, conhece seus matches e simula sua relação.',
+    ctaDismiss: 'Continuar testando',
+    freeCounterOf: 'de', freeCounterSuffix: 'grátis',
     taste2: 'perguntas grátis para testar', taste1: '✦ Resta 1 pergunta grátis',
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
@@ -289,10 +303,25 @@ export class CoachWidgetComponent implements OnDestroy {
   readonly carouselPage = signal<Record<number, number>>({});
   draft = '';
   cityDraft = '';
+  // expose to template (module-level const not accessible otherwise)
+  readonly FREE_TASTE = FREE_TASTE;
+  /** "Pregunta 1 de 2 gratis" — localized free-taste counter label. */
+  freeCounterLabel(): string {
+    const n = this.freeCounterNum();
+    const t = this.t();
+    if (t.freeCounterOf) {
+      return `Pregunta ${n} ${t.freeCounterOf} ${FREE_TASTE} ${t.freeCounterSuffix}`;
+    }
+    return this.freeLeft() === 1 ? t.taste1 : `✦ ${this.freeLeft()} ${t.taste2}`;
+  }
   private readonly coachReplies = signal(0); // reactive so the free-taste counter + CTA update live
   // R50: app-store CTA + free-taste funnel are OFF until the apps are approved. Backend sends `appCta`
   // (RC flag coach_demo_app_cta, default false) → both stay hidden until flipped on in Remote Config.
   readonly appCtaEnabled = signal(false);
+  // Plan C: the CTA is NOT a hard wall — the user can dismiss it and keep chatting.
+  // The backstop (FREE_TASTE per session) still prevents unlimited free use; the CTA is a generous nudge.
+  readonly ctaDismissed = signal(false);
+  dismissCta() { this.ctaDismissed.set(true); this.ga('coach_demo_cta_dismiss'); }
   private lastCoachText = '';
   private lastUserMsg = '';
   private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
@@ -321,8 +350,16 @@ export class CoachWidgetComponent implements OnDestroy {
   // Free "taste" of the coach before nudging to the app. Generous: we never block — after FREE_TASTE
   // replies we show the download CTA, but the visitor can keep asking (the per-IP/hour backstop only
   // guards against abuse). The counter is a soft, attractive nudge.
-  readonly showCta = computed(() => this.appCtaEnabled() && this.coachReplies() >= FREE_TASTE);
+  // Show the premium CTA once FREE_TASTE replies are used, unless the user dismissed it.
+  // "Seguir probando" (dismiss) makes the CTA non-blocking — generous soft-gate.
+  readonly showCta = computed(() => this.appCtaEnabled() && this.coachReplies() >= FREE_TASTE && !this.ctaDismissed());
   readonly freeLeft = computed(() => Math.max(0, FREE_TASTE - this.coachReplies()));
+  // Counter: "Pregunta X de 2 gratis" shown while < FREE_TASTE replies have been received.
+  // coachReplies() is 0 before any answer, 1 after first, etc.
+  // Show when appCtaEnabled and replies < FREE_TASTE (i.e. there are still free questions left).
+  readonly showFreeCounter = computed(() => this.appCtaEnabled() && this.coachReplies() < FREE_TASTE);
+  // "Pregunta 1 de 2" before reply 1, "Pregunta 2 de 2" after reply 1
+  readonly freeCounterNum = computed(() => Math.min(this.coachReplies() + 1, FREE_TASTE));
   // Time-aware date-place suggestion: highlight the category that fits the current local hour
   // (morning→café, day→restaurant, evening→bar, late-night→club) using the app's venue categories.
   // R62: date-planner config from Remote Config (coach_planner_config) — single source shared with
@@ -688,7 +725,7 @@ export class CoachWidgetComponent implements OnDestroy {
         this.messages.update((m) => [...m, { role: 'coach', text: data?.reply || this.t().greeting }]);
       }
     } catch {
-      this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
+      this.messages.update((m) => [...m, { role: 'coach', text: this.simErrMsg() }]);
     } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(''); this.scroll(); }
   }
 
@@ -714,7 +751,7 @@ export class CoachWidgetComponent implements OnDestroy {
         this.messages.update((m) => [...m, { role: 'coach', text: data?.reply || this.t().greeting }]);
       }
     } catch {
-      this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Simulation hiccup — try again.' : 'Hubo un problema con la simulación, inténtalo de nuevo.' }]);
+      this.messages.update((m) => [...m, { role: 'coach', text: this.simErrMsg() }]);
     } finally { this.busy.set(false); this.simLoading.set(false); this.simMode.set(''); this.scroll(); }
   }
 
@@ -765,8 +802,58 @@ export class CoachWidgetComponent implements OnDestroy {
       es: 'Esta cuenta fue eliminada y ya no está disponible.',
       en: 'This account was deleted and is no longer available.',
       pt: 'Esta conta foi excluída e não está mais disponível.',
+      fr: 'Ce compte a été supprimé et n\'est plus disponible.',
+      de: 'Dieses Konto wurde gelöscht und ist nicht mehr verfügbar.',
+      it: 'Questo account è stato eliminato e non è più disponibile.',
+      zh: '此账户已删除，不再可用。',
+      ja: 'このアカウントは削除されており、利用できません。',
+      ko: '이 계정은 삭제되었으며 더 이상 사용할 수 없습니다.',
+      ru: 'Этот аккаунт удалён и больше недоступен.',
+      ar: 'تم حذف هذا الحساب ولم يعد متاحاً.',
+      id: 'Akun ini telah dihapus dan tidak lagi tersedia.',
+      tr: 'Bu hesap silindi ve artık mevcut değil.',
     };
     return m[this.lang()] || m['en'];
+  }
+
+  /** Localized simulation error message — all 13 coach languages. */
+  private simErrMsg(): string {
+    const m: Record<string, string> = {
+      es: 'Hubo un problema con la simulación, inténtalo de nuevo.',
+      en: 'Simulation hiccup — try again.',
+      pt: 'Houve um problema com a simulação, tente de novo.',
+      fr: 'Problème avec la simulation — réessaie.',
+      de: 'Simulation fehlgeschlagen — versuch es erneut.',
+      it: 'Problema con la simulazione — riprova.',
+      zh: '模拟出了点问题，请重试。',
+      ja: 'シミュレーションに問題が発生しました。再試行してください。',
+      ko: '시뮬레이션에 문제가 생겼어요. 다시 시도하세요.',
+      ru: 'Ошибка симуляции — попробуйте снова.',
+      ar: 'حدثت مشكلة في المحاكاة، حاول مجدداً.',
+      id: 'Ada masalah dengan simulasi, coba lagi.',
+      tr: 'Simülasyonda sorun oluştu — tekrar dene.',
+    };
+    return m[this.coachLang()] || m['en'];
+  }
+
+  /** Localized connection error message — all 13 coach languages. */
+  private connErrMsg(): string {
+    const m: Record<string, string> = {
+      es: 'Hubo un problema de conexión, inténtalo de nuevo.',
+      en: 'Connection hiccup — try again.',
+      pt: 'Houve um problema de conexão, tente de novo.',
+      fr: 'Problème de connexion — réessaie.',
+      de: 'Verbindungsproblem — versuch es erneut.',
+      it: 'Problema di connessione — riprova.',
+      zh: '连接出现问题，请重试。',
+      ja: '接続に問題が発生しました。再試行してください。',
+      ko: '연결 문제가 생겼어요. 다시 시도하세요.',
+      ru: 'Проблема соединения — попробуйте снова.',
+      ar: 'حدثت مشكلة في الاتصال، حاول مجدداً.',
+      id: 'Ada masalah koneksi, coba lagi.',
+      tr: 'Bağlantı sorunu — tekrar dene.',
+    };
+    return m[this.coachLang()] || m['en'];
   }
   readonly loginOpen = signal(false);
   readonly loginGate = signal(false); // true → opened because the free-taste limit was hit
@@ -969,7 +1056,7 @@ export class CoachWidgetComponent implements OnDestroy {
         this.messages.update((m) => m.map((x, i) => i === m.length - 1 ? { ...x, ask: true, q: this.lastUserMsg } : x));
       }
     } catch {
-      this.messages.update((m) => [...m, { role: 'coach', text: this.lang() === 'en' ? 'Connection hiccup — try again.' : 'Hubo un problema de conexión, inténtalo de nuevo.' }]);
+      this.messages.update((m) => [...m, { role: 'coach', text: this.connErrMsg() }]);
     } finally { this.busy.set(false); this.thinking.set(false); this.scroll(); }
   }
 

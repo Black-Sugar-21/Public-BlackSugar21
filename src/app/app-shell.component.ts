@@ -262,7 +262,10 @@ const BIO_FALLBACK: Record<string, string[]> = {
   ],
 };
 
-const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
+// Store URLs are loaded from Firebase Remote Config (store_url_ios / store_url_android) at runtime.
+// These constants are kept as fallbacks in case Remote Config is unavailable.
+const STORE_IOS_FALLBACK = 'https://apps.apple.com/app/id6470783901';
+const STORE_ANDROID_FALLBACK = 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21';
 
 // Date-spot category labels (iOS category-* parity) — 13 languages.
 const PLACE_CAT_LABELS: Record<string, Record<string, string>> = {
@@ -537,7 +540,15 @@ export class AppShellComponent implements OnDestroy {
     { key: 'chats', icon: '💬' },
     { key: 'profile', icon: '👤' },
   ];
-  readonly storeLink = STORE_IOS;
+  // Store links loaded from Remote Config (store_url_ios / store_url_android).
+  // Falls back to the known production URLs so the link is never broken on RC timeout.
+  readonly storeIos = signal(STORE_IOS_FALLBACK);
+  readonly storeAndroid = signal(STORE_ANDROID_FALLBACK);
+  /** Returns the platform-appropriate store link (Android/iOS). */
+  get storeLink(): string {
+    if (this.isBrowser && /android/i.test(navigator.userAgent)) return this.storeAndroid();
+    return this.storeIos();
+  }
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
@@ -556,6 +567,11 @@ export class AppShellComponent implements OnDestroy {
         this.refreshLocationIfPermitted();
       }
     });
+    // Load store links from Remote Config (same source as app.ts and coach-widget).
+    this.firebase.getStoreLinks().then((links) => {
+      if (links?.ios) this.storeIos.set(links.ios);
+      if (links?.android) this.storeAndroid.set(links.android);
+    }).catch(() => { /* fallback values already set */ });
   }
 
   private autoLocDone = false;

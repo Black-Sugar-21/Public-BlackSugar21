@@ -7,8 +7,9 @@
   @if (!authenticated()) {
     <div class="login-card">
       <h2>Admin Access</h2>
-      <input #codeInput type="password" class="code-input" placeholder="Access code" (keydown.enter)="checkCode(codeInput)">
-      <button class="btn-gold" (click)="checkCode(codeInput)">Enter</button>
+      <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+        Inicia sesión con tu cuenta de administrador en la app para acceder a este panel.
+      </p>
       @if (error()) {
         <p class="error-text">{{ error() }}</p>
       }

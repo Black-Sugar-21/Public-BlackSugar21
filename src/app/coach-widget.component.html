@@ -348,11 +348,14 @@
             </div>
           }
           @if (showCta()) {
-            <div class="cw-cta">
-              <b>{{ t().ctaTitle }}</b><p>{{ t().ctaText }}</p>
+            <div class="cw-cta cw-cta-premium">
+              <div class="cw-cta-header">
+                <span class="cw-cta-title">{{ t().ctaTitle }}</span>
+              </div>
+              <p class="cw-cta-subtitle">{{ t().ctaSubtitle }}</p>
               <div class="cw-cta-actions">
                 <ui-button variant="primary" shape="rect" [block]="true" [href]="storeLink" (click)="trackDownload()">{{ t().download }}</ui-button>
-                <ui-button variant="secondary" shape="rect" [block]="true" (click)="share()">{{ justShared() ? t().shared : t().share }}</ui-button>
+                <button class="cw-cta-dismiss" (click)="dismissCta()">{{ t().ctaDismiss }}</button>
               </div>
             </div>
           }
@@ -370,8 +373,8 @@
             }
           </div>
         }
-        @if (appCtaEnabled() && !showCta()) {
-          <div class="cw-taste">{{ freeLeft() === 1 ? t().taste1 : ('✦ ' + freeLeft() + ' ' + t().taste2) }}</div>
+        @if (showFreeCounter()) {
+          <div class="cw-taste cw-taste-counter">✦ {{ freeCounterLabel() }}</div>
         }
         <form class="cw-input" (submit)="$event.preventDefault(); send(draft)">
           <input [(ngModel)]="draft" name="d" [placeholder]="inputPlaceholder()" [disabled]="busy()" autocomplete="off" maxlength="400" />

@@ -1,6 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 interface DailyAnalytics {
   date: string;
@@ -36,23 +37,28 @@ export class AnalyticsComponent implements OnInit {
   errorRate = signal(0);
   avgCostPerDay = signal(0);
 
-  private readonly accessCode = 'bs21-admin-2026';
+  // SECURITY: Access is gated behind Firebase Authentication.
+  // The user must be signed in to view analytics. The previous hardcoded password
+  // ('bs21-admin-2026') was exposed in the JS bundle and has been removed.
+  // TODO: Upgrade to admin custom-claim check once the admin role is provisioned:
+  //   const idTokenResult = await user.getIdTokenResult();
+  //   if (!idTokenResult.claims['isAdmin']) { this.error.set('Acceso denegado'); return; }
+  // To set admin claims, use the Firebase Admin SDK:
+  //   admin.auth().setCustomUserClaims(uid, { isAdmin: true, role: 'admin' })
 
   ngOnInit() {
-    if (sessionStorage.getItem('bs21-analytics') === 'ok') {
-      this.authenticated.set(true);
-      this.loadData();
-    }
-  }
-
-  checkCode(input: HTMLInputElement) {
-    if (input.value === this.accessCode) {
-      this.authenticated.set(true);
-      sessionStorage.setItem('bs21-analytics', 'ok');
-      this.loadData();
-    } else {
-      this.error.set('Código incorrecto');
-    }
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in — grant access.
+        // TODO: replace with admin claim check (see comment above).
+        this.authenticated.set(true);
+        this.loadData();
+      } else {
+        this.authenticated.set(false);
+        this.error.set('Debes iniciar sesión para ver el panel de analytics.');
+      }
+    });
   }
 
   async loadData() {
@@ -132,7 +138,8 @@ export class AnalyticsComponent implements OnInit {
   }
 
   logout() {
-    sessionStorage.removeItem('bs21-analytics');
+    const auth = getAuth();
+    auth.signOut().catch(() => { /* noop */ });
     this.authenticated.set(false);
   }
 }

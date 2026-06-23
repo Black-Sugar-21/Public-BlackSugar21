@@ -1106,12 +1106,15 @@ export class FirebaseService {
       const android = getString(this.remoteConfig, 'store_url_android');
 
       return {
-        ios: ios || '#',
-        android: android || '#'
+        ios: ios || 'https://apps.apple.com/app/id6470783901',
+        android: android || 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21',
       };
     } catch (error) {
       console.error('Error fetching store links from Remote Config:', error);
-      return { ios: '#', android: '#' };
+      return {
+        ios: 'https://apps.apple.com/app/id6470783901',
+        android: 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21',
+      };
     }
   }
 
