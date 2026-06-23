@@ -47,7 +47,7 @@ import {
 } from 'firebase/remote-config';
 import {
   initializeAppCheck,
-  ReCaptchaV3Provider
+  ReCaptchaEnterpriseProvider
 } from 'firebase/app-check';
 import {
   getAnalytics,
@@ -131,7 +131,7 @@ export class FirebaseService {
       daily_super_likes_limit: 5
     };
 
-    // Inicializar App Check con reCAPTCHA v3 (desactivado por defecto — ver appCheckEnabled).
+    // Inicializar App Check con reCAPTCHA Enterprise.
     if (appCheckEnabled && recaptchaSiteKey) {
       try {
         // En desarrollo, usar modo debug para evitar errores 403
@@ -142,23 +142,17 @@ export class FirebaseService {
           // Modo debug para desarrollo local
           // Esto generará un token de debug que debe ser registrado en Firebase Console
           (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-          console.log('🔧 App Check en modo DEBUG para desarrollo local');
-          console.log('📝 Si ves errores 403, copia el debug token de la consola y añádelo en:');
-          console.log('   Firebase Console > App Check > Apps > Manage debug tokens');
         }
 
         initializeAppCheck(this.app, {
-          provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+          provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
           isTokenAutoRefreshEnabled: true
         });
-
-        console.log('✅ Firebase App Check inicializado con reCAPTCHA v3');
       } catch (error) {
         // En desarrollo, no bloquear la aplicación por errores de App Check
-        console.warn('⚠️ Error al inicializar App Check (ignorado en desarrollo):', error);
+        console.warn('App Check initialization error (non-blocking):', error);
       }
     }
-    // (App Check intentionally disabled via appCheckEnabled — no warning; not enforced on any API.)
 
     // Listen to auth state changes
     onAuthStateChanged(this.auth, async (user) => {
