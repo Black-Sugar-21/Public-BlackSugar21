@@ -52,10 +52,10 @@ import { NgClass } from '@angular/common';
     .shape-rect { border-radius: 10px; }
     .v-primary { background: var(--gradient-gold); color: var(--on-gold); font-weight: 700; }
     .v-primary:hover:not(:disabled) { filter: brightness(1.05); }
-    .v-outline { background: transparent; color: var(--gold); border-color: rgba(212,175,55,.5); }
-    .v-outline:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,.08); }
+    .v-outline { background: transparent; color: var(--gold); border-color: color-mix(in srgb, var(--gold) 50%, transparent); }
+    .v-outline:hover:not(:disabled) { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 8%, transparent); }
     .v-ghost { background: transparent; color: var(--gold); }
-    .v-ghost:hover:not(:disabled) { background: rgba(212,175,55,.08); }
+    .v-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--gold) 8%, transparent); }
     .v-secondary { background: var(--fill-faint); color: var(--text-primary); border-color: var(--border-mid); }
     .v-secondary:hover:not(:disabled) { border-color: var(--gold); }
     @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } .ui-btn:active { transform: none; filter: none; } }

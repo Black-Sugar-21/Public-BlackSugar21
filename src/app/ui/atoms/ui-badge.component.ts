@@ -14,7 +14,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
       display: inline-flex; align-items: center; gap: 3px;
       font-family: 'Outfit', system-ui, sans-serif;
       color: var(--gold); font-size: 11px; font-weight: 800; line-height: 1; white-space: nowrap;
-      background: rgba(212,175,55,.14); border: 1px solid rgba(212,175,55,.34);
+      background: color-mix(in srgb, var(--gold) 14%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 34%, transparent);
       border-radius: 999px; padding: 3px 9px; box-sizing: border-box;
     }
   `],

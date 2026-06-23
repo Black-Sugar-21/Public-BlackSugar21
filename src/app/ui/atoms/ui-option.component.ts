@@ -43,7 +43,7 @@ import { NgClass } from '@angular/common';
     .align-start { text-align: left; }
     .stacked { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; }
     .stacked .opt-desc { font-size: 13px; font-weight: 400; color: var(--text-muted); }
-    .ui-opt.on { border-color: var(--gold); background: rgba(212,175,55,.12); }
+    .ui-opt.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); }
     .tone-gold.on { color: var(--gold); font-weight: 600; }
     .tone-white.on { color: var(--text-primary); font-weight: 700; }
     .tone-gold.on .opt-desc { color: var(--gold); opacity: .85; }

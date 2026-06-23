@@ -59,7 +59,7 @@ interface CountryItem { iso: CountryCode; name: string; code: string; flag: stri
     .pi-country { flex:none; display:flex; align-items:center; gap:5px; padding:0 10px 0 12px; height:50px; border-radius:14px;
       border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:var(--text-primary,#fff); font-family:inherit; font-size:15px; cursor:pointer;
       -webkit-tap-highlight-color:transparent; touch-action:manipulation; transition:border-color .16s ease, background .16s ease; }
-    .pi-country:hover { border-color:rgba(212,175,55,.4); background:rgba(255,255,255,.08); }
+    .pi-country:hover { border-color:color-mix(in srgb, var(--gold) 40%, transparent); background:rgba(255,255,255,.08); }
     .pi-flag { font-size:19px; line-height:1; }
     .pi-code { font-weight:600; font-size:15px; }
     .pi-caret { font-size:10px; color:var(--text-muted,#B0B0B0); transition:transform .2s ease; margin-left:2px; }
@@ -69,7 +69,7 @@ interface CountryItem { iso: CountryCode; name: string; code: string; flag: stri
       border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05);
       color:var(--text-primary,#fff); font-family:inherit; font-size:16px; outline:none;
       transition:border-color .16s ease; }
-    .pi-num:focus { border-color:rgba(212,175,55,.5); }
+    .pi-num:focus { border-color:color-mix(in srgb, var(--gold) 50%, transparent); }
     .pi-num::placeholder { color:var(--text-muted,#707070); }
     /* Dropdown panel */
     .pi-pop { position:absolute; z-index:30; top:calc(100% + 8px); left:0; right:0; max-height:300px; display:flex; flex-direction:column;
@@ -82,18 +82,18 @@ interface CountryItem { iso: CountryCode; name: string; code: string; flag: stri
       padding:0 14px; border-radius:10px; border:1.5px solid rgba(255,255,255,.1);
       background:rgba(255,255,255,.07); color:var(--text-primary,#fff); font-family:inherit; font-size:15px; outline:none;
       transition:border-color .16s ease; }
-    .pi-search:focus { border-color:rgba(212,175,55,.4); }
+    .pi-search:focus { border-color:color-mix(in srgb, var(--gold) 40%, transparent); }
     .pi-search::placeholder { color:var(--text-muted,#666); }
     /* Country list */
     .pi-list { overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px 0 8px; }
     .pi-list::-webkit-scrollbar { width:3px; }
     .pi-list::-webkit-scrollbar-track { background:transparent; }
-    .pi-list::-webkit-scrollbar-thumb { background:rgba(212,175,55,.25); border-radius:2px; }
+    .pi-list::-webkit-scrollbar-thumb { background:color-mix(in srgb, var(--gold) 25%, transparent); border-radius:2px; }
     .pi-item { width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:10px 14px; border:none; background:none; cursor:pointer;
       color:var(--text-primary,#fff); font-family:inherit; font-size:14px; text-align:left;
       -webkit-tap-highlight-color:transparent; transition:background .12s ease; }
     .pi-item:hover { background:rgba(255,255,255,.06); }
-    .pi-item.sel { background:rgba(212,175,55,.1); }
+    .pi-item.sel { background:color-mix(in srgb, var(--gold) 10%, transparent); }
     .pi-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .pi-icode { color:var(--text-muted,#888); font-variant-numeric:tabular-nums; font-size:13px; }
     .pi-empty { padding:16px; text-align:center; color:var(--text-muted,#B0B0B0); font-size:14px; }

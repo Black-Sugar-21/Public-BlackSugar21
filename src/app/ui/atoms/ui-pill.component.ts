@@ -27,7 +27,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
       -webkit-tap-highlight-color: transparent;
     }
     .ui-pill.clickable, a.ui-pill { cursor: pointer; }
-    .t-gold { color: var(--gold); background: rgba(212,175,55,.12); border-color: rgba(212,175,55,.34); }
+    .t-gold { color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); border-color: color-mix(in srgb, var(--gold) 34%, transparent); }
     .t-neutral { color: var(--text-primary); }
     .t-neutral:hover { border-color: var(--gold); color: var(--gold); }
     .t-instagram { color: var(--instagram-pink); border-color: rgba(228,64,95,.4); }

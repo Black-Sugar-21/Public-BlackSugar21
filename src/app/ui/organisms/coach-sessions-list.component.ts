@@ -31,8 +31,8 @@ export interface CoachSessionItem { id: string; title: string; updatedAt: number
     }
   `,
   styles: [`
-    .cw-hist-new { width:100%; text-align:left; background:rgba(212,175,55,.10); border:1px solid rgba(212,175,55,.3); color:var(--cw-gold); font-size:13px; font-weight:600; border-radius:12px; padding:11px 12px; cursor:pointer; margin:6px 0 12px; }
-    .cw-hist-new:hover { background:rgba(212,175,55,.18); }
+    .cw-hist-new { width:100%; text-align:left; background:color-mix(in srgb, var(--gold) 10%, transparent); border:1px solid color-mix(in srgb, var(--gold) 30%, transparent); color:var(--cw-gold); font-size:13px; font-weight:600; border-radius:12px; padding:11px 12px; cursor:pointer; margin:6px 0 12px; }
+    .cw-hist-new:hover { background:color-mix(in srgb, var(--gold) 18%, transparent); }
     .cw-hist-row { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none; border-radius:12px; padding:11px 10px; cursor:pointer; color:var(--cw-text); }
     .cw-hist-row:hover { background:rgba(255,255,255,.05); }
     .cw-hist-row.active { background:rgba(156,89,234,.12); }

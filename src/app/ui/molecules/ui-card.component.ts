@@ -23,15 +23,15 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
       transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     }
     .ui-card.hl {
-      border-color: rgba(212,175,55,.5);
-      background: linear-gradient(180deg, rgba(212,175,55,.09), var(--card-bg));
-      box-shadow: 0 6px 20px rgba(212,175,55,.10);
+      border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 9%, transparent), var(--card-bg));
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--gold) 10%, transparent);
     }
     .ui-card.best::before {
       content: '✦'; position: absolute; top: -9px; left: 14px;
       width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
       font-size: 12px; color: var(--bg-dark); background: var(--gradient-gold);
-      border-radius: 50%; box-shadow: 0 2px 6px rgba(212,175,55,.5);
+      border-radius: 50%; box-shadow: 0 2px 6px color-mix(in srgb, var(--gold) 50%, transparent);
     }
     @media (prefers-reduced-motion: reduce) { .ui-card { transition: none; } }
   `],
