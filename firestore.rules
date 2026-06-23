@@ -457,7 +457,8 @@ service cloud.firestore {
         (
           request.auth.uid == resource.data.senderId ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']) &&
-           request.resource.data.viewedBy.hasAll(resource.data.get('viewedBy', [])))
+           request.resource.data.viewedBy.hasAll(resource.data.get('viewedBy', [])) &&
+           request.resource.data.viewedBy.hasOnly(resource.data.get('viewedBy', []) + [request.auth.uid]))
         );
 
       // Eliminar: solo el creador

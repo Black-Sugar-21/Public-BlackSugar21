@@ -80,11 +80,11 @@ export interface CoachPlace {
     .cw-place-tip { margin:9px 0 0; color:var(--like-green1); font-size:12px; line-height:1.45; background:rgba(108,234,197,.08); border-left:2px solid var(--like-green2); border-radius:0 8px 8px 0; padding:7px 10px; }
     .cw-place-offer { margin:8px 0 0; color:var(--cw-muted); font-size:12px; font-style:italic; line-height:1.45; }
     .cw-place-events { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
-    .cw-event-pill { display:inline-block; font-size:11px; font-weight:500; color:var(--gold); background:rgba(212,175,55,.1); border-radius:6px; padding:2px 8px; text-decoration:none; cursor:pointer; transition:background .14s ease; }
-    .cw-event-pill:hover { background:rgba(212,175,55,.2); }
+    .cw-event-pill { display:inline-block; font-size:11px; font-weight:500; color:var(--gold); background:color-mix(in srgb,var(--gold) 10%,transparent); border-radius:6px; padding:2px 8px; text-decoration:none; cursor:pointer; transition:background .14s ease; }
+    .cw-event-pill:hover { background:color-mix(in srgb,var(--gold) 20%,transparent); }
     .cw-place-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
-    .cw-place.best { border-color:rgba(212,175,55,.5); background:linear-gradient(180deg,rgba(212,175,55,.09),var(--cw-card)); box-shadow:0 6px 20px rgba(212,175,55,.1); }
-    .cw-place.best::before { content:'✦'; position:absolute; top:-9px; left:14px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--bg-dark); background:var(--gradient-gold); border-radius:50%; box-shadow:0 2px 6px rgba(212,175,55,.5); }
+    .cw-place.best { border-color:color-mix(in srgb,var(--gold) 50%,transparent); background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 9%,transparent),var(--cw-card)); box-shadow:0 6px 20px color-mix(in srgb,var(--gold) 10%,transparent); }
+    .cw-place.best::before { content:'✦'; position:absolute; top:-9px; left:14px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--bg-dark); background:var(--gradient-gold); border-radius:50%; box-shadow:0 2px 6px color-mix(in srgb,var(--gold) 50%,transparent); }
     @media (prefers-reduced-motion: reduce) { .cw-place { transition:none; } }
   `],
 })
