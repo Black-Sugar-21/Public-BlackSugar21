@@ -185,11 +185,25 @@
                         <div class="chat-msg-card" [class.mine]="msg.senderId === myUid()">
                           @if (msg.placeData?.photos?.[0]?.url) { <img class="chat-card-img" [src]="msg.placeData.photos[0].url" alt="" /> }
                           <div class="chat-card-body">
-                            <div class="chat-card-cat">{{ placeCategory(msg.placeData) }}</div>
+                            <div class="chat-card-cat">
+                              {{ placeCategory(msg.placeData) }}
+                              @if (msg.placeData?.psychFit != null) { <span class="place-sug-fit">{{ msg.placeData.psychFit }}% ✦</span> }
+                            </div>
                             <div class="chat-card-title">{{ msg.placeData?.name }}</div>
                             @if (msg.placeData?.address) { <div class="chat-card-line">📍 {{ msg.placeData.address }}</div> }
                             @if (msg.placeData?.rating) { <div class="chat-card-line">⭐ {{ msg.placeData.rating }}/5</div> }
-                            @if (msg.placeData?.googleMapsUrl) { <a class="chat-card-cta" [href]="msg.placeData.googleMapsUrl" target="_blank" rel="noopener">{{ s('viewOnMaps') }} →</a> }
+                            @if (msg.placeData?.psychWhy) { <div class="place-sug-why">{{ msg.placeData.psychWhy }}</div> }
+                            @if (msg.placeData?.psychPerspectives?.length) {
+                              <div class="place-sug-persp">
+                                @for (p of msg.placeData.psychPerspectives; track p) { <span class="place-sug-pill">{{ p }}</span> }
+                              </div>
+                            }
+                            @if (msg.placeData?.psychTip) { <div class="place-sug-tip">💡 {{ msg.placeData.psychTip }}</div> }
+                            <div class="place-sug-actions">
+                              @if (msg.placeData?.googleMapsUrl) { <a class="chat-card-cta" [href]="msg.placeData.googleMapsUrl" target="_blank" rel="noopener">🗺️ {{ s('viewOnMaps') }}</a> }
+                              @if (msg.placeData?.website) { <a class="chat-card-cta" [href]="msg.placeData.website" target="_blank" rel="noopener">🌐 {{ s('placeWebsite') }}</a> }
+                              @if (msg.placeData?.instagramUrl) { <a class="chat-card-cta place-sug-cta-ig" [href]="msg.placeData.instagramUrl" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
+                            </div>
                           </div>
                         </div>
                       }
@@ -304,8 +318,21 @@
                               <div class="place-sug-meta">
                                 @if (pl.rating) { <span>⭐ {{ pl.rating }}</span> }
                                 @if (pl.category) { <span>{{ pl.category }}</span> }
+                                @if (pl.psychFit != null) { <span class="place-sug-fit">{{ pl.psychFit }}% ✦</span> }
                               </div>
                               @if (pl.address) { <div class="place-sug-addr">{{ pl.address }}</div> }
+                              @if (pl.psychWhy) { <div class="place-sug-why">{{ pl.psychWhy }}</div> }
+                              @if (pl.psychPerspectives?.length) {
+                                <div class="place-sug-persp">
+                                  @for (p of pl.psychPerspectives; track p) { <span class="place-sug-pill">{{ p }}</span> }
+                                </div>
+                              }
+                              @if (pl.psychTip) { <div class="place-sug-tip">💡 {{ pl.psychTip }}</div> }
+                              <div class="place-sug-actions">
+                                @if (pl.googleMapsUrl) { <a class="place-sug-cta" [href]="pl.googleMapsUrl" target="_blank" rel="noopener">🗺️ Maps</a> }
+                                @if (pl.website) { <a class="place-sug-cta" [href]="pl.website" target="_blank" rel="noopener">🌐 {{ s('placeWebsite') }}</a> }
+                                @if (pl.instagramUrl) { <a class="place-sug-cta place-sug-cta-ig" [href]="pl.instagramUrl" target="_blank" rel="noopener">📸 {{ s('placeIG') }}</a> }
+                              </div>
                             </div>
                             <ui-button variant="primary" size="sm" [disabled]="!!placeSending()" (click)="sendPlace(pl)">{{ placeSending() ? '…' : (placeAddMode() ? s('bpAdd') : s('sharePlace')) }}</ui-button>
                           </div>
