@@ -16,6 +16,8 @@ export interface CoachPlace {
   website?: string | null;
   instagram?: string | null;
   instagramHandle?: string | null;
+  venueOffer?: string | null;
+  upcomingEvents?: string[] | null;
 }
 
 /**
@@ -42,10 +44,26 @@ export interface CoachPlace {
         <div class="cw-place-persp">@for (pp of place.perspectives!; track pp) { <ui-pill tint="purple">{{ pp }}</ui-pill> }</div>
       }
       @if (place.tip) { <p class="cw-place-tip">💡 {{ place.tip }}</p> }
+      @if (place.venueOffer) { <p class="cw-place-offer">{{ place.venueOffer }}</p> }
+      @if (place.upcomingEvents?.length) {
+        <div class="cw-place-events">
+          @for (ev of place.upcomingEvents!; track ev) {
+            @if (igUrl(); as ig) {
+              <a class="cw-event-pill" [href]="ig" target="_blank" rel="noopener">{{ ev }} ›</a>
+            } @else {
+              <span class="cw-event-pill">{{ ev }}</span>
+            }
+          }
+        </div>
+      }
       <div class="cw-place-actions">
         <ui-pill tint="gold">📍 {{ viewMapLabel }}</ui-pill>
         @if (place.website) { <ui-pill tint="neutral" [href]="place.website">🌐 {{ webLabel }}</ui-pill> }
-        @if (igUrl(); as ig) { <ui-pill tint="instagram" [href]="ig">📷 Instagram</ui-pill> }
+        @if (igUrl(); as ig) {
+          <ui-pill [tint]="hasEvents() ? 'gold' : 'instagram'" [href]="ig">
+            📷 {{ hasEvents() ? 'Ver eventos →' : 'Instagram' }}
+          </ui-pill>
+        }
       </div>
     </div>
   `,
@@ -60,6 +78,10 @@ export interface CoachPlace {
     .cw-place-why { margin:9px 0 0; color:var(--cw-text); font-size:12.5px; line-height:1.5; opacity:.92; }
     .cw-place-persp { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
     .cw-place-tip { margin:9px 0 0; color:var(--like-green1); font-size:12px; line-height:1.45; background:rgba(108,234,197,.08); border-left:2px solid var(--like-green2); border-radius:0 8px 8px 0; padding:7px 10px; }
+    .cw-place-offer { margin:8px 0 0; color:var(--cw-muted); font-size:12px; font-style:italic; line-height:1.45; }
+    .cw-place-events { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+    .cw-event-pill { display:inline-block; font-size:11px; font-weight:500; color:var(--gold); background:rgba(212,175,55,.1); border-radius:6px; padding:2px 8px; text-decoration:none; cursor:pointer; transition:background .14s ease; }
+    .cw-event-pill:hover { background:rgba(212,175,55,.2); }
     .cw-place-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
     .cw-place.best { border-color:rgba(212,175,55,.5); background:linear-gradient(180deg,rgba(212,175,55,.09),var(--cw-card)); box-shadow:0 6px 20px rgba(212,175,55,.1); }
     .cw-place.best::before { content:'✦'; position:absolute; top:-9px; left:14px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--bg-dark); background:var(--gradient-gold); border-radius:50%; box-shadow:0 2px 6px rgba(212,175,55,.5); }
@@ -72,6 +94,10 @@ export class CoachPlaceCardComponent {
   @Input() viewMapLabel = '';
   @Input() webLabel = '';
   @Output() open = new EventEmitter<void>();
+
+  hasEvents(): boolean {
+    return (this.place.upcomingEvents?.length ?? 0) > 0;
+  }
 
   /** Normalize an Instagram value (handle or URL) → full profile URL. */
   igUrl(): string | null {

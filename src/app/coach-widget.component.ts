@@ -11,7 +11,7 @@ import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 import { UiPhoneInputComponent } from './ui/molecules/ui-phone-input.component';
 
-interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; }
+interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; venueOffer?: string | null; upcomingEvents?: string[] | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
@@ -902,6 +902,7 @@ export class CoachWidgetComponent implements OnDestroy {
       perspectives: Array.isArray(a.psychPerspectives) ? a.psychPerspectives : [],
       score: typeof a.psychFit === 'number' ? a.psychFit : null, tip: a.psychTip || null,
       website: a.website || null, instagram: a.instagram || null, instagramHandle: a.instagramHandle || null,
+      venueOffer: a.venueOffer || null, upcomingEvents: Array.isArray(a.upcomingEvents) ? a.upcomingEvents : null,
     })).filter((p: any) => p.name);
     const suggestions = Array.isArray(r?.suggestions) ? r.suggestions.filter((s: any) => typeof s === 'string' && s.trim()) : [];
     return {
