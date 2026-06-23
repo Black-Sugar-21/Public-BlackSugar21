@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslationService } from '../../translation.service';
 import { RouterModule } from '@angular/router';
@@ -9,7 +9,8 @@ import { SeoService } from '../../services/seo.service';
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './features.component.html',
-  styleUrls: ['./features.component.css']
+  styleUrls: ['./features.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FeaturesComponent implements OnInit {
   constructor(public translate: TranslationService, private seo: SeoService) {}

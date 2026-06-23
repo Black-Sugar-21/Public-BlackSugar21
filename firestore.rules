@@ -529,6 +529,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // --- AI ANALYTICS (daily cost/token aggregates — CF Admin SDK only) ---
+    // Client access is intentionally blocked: these docs contain billing data.
+    // Cloud Functions write via Admin SDK which bypasses these rules.
+    match /aiAnalytics/{date} {
+      allow read, write: if false; // CF Admin SDK only — no client access
+    }
+
     // --- INTENT LEARNING QUEUE (auto-learning from probe regressions) ---
     // CF-only. Probe writes high-priority candidates here when isAdviceRequest
     // misses but LLM Layer 5 corrects. Consolidator reviews + promotes verified

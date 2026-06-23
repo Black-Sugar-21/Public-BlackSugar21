@@ -1,4 +1,4 @@
-import { Component, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -217,6 +217,7 @@ const I18N: Record<string, any> = {
   imports: [CommonModule, FormsModule, UiPillComponent, UiSkeletonComponent, UiButtonComponent, UiPhoneInputComponent, CoachPlaceCardComponent, CoachSessionsListComponent],
   templateUrl: './coach-widget.component.html',
   styleUrls: ['./coach-widget.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CoachWidgetComponent implements OnDestroy {
   readonly isBrowser: boolean;

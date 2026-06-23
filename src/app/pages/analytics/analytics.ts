@@ -1,7 +1,10 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+
+// Admin UIDs allowed to access analytics
+const ADMIN_UIDS = ['tvmkXqXGSzfriAkQUI4KrQF6sZm2'];
 
 interface DailyAnalytics {
   date: string;
@@ -21,6 +24,7 @@ interface DailyAnalytics {
   imports: [CommonModule],
   templateUrl: './analytics.html',
   styleUrl: './analytics.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AnalyticsComponent implements OnInit {
   authenticated = signal(false);
@@ -49,11 +53,15 @@ export class AnalyticsComponent implements OnInit {
   ngOnInit() {
     const auth = getAuth();
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // User is signed in — grant access.
+      if (user && ADMIN_UIDS.includes(user.uid)) {
+        // User is signed in AND is an allowed admin UID — grant access.
         // TODO: replace with admin claim check (see comment above).
         this.authenticated.set(true);
         this.loadData();
+      } else if (user) {
+        // Authenticated but not an admin UID.
+        this.authenticated.set(false);
+        this.error.set('Acceso denegado: no tienes permisos para ver esta página.');
       } else {
         this.authenticated.set(false);
         this.error.set('Debes iniciar sesión para ver el panel de analytics.');

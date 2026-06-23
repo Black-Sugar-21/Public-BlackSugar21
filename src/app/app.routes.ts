@@ -23,6 +23,7 @@ function authStateOnce(): Observable<boolean | import('@angular/router').UrlTree
 
 /**
  * Analytics route guard — requires Firebase Auth sign-in.
+ * analyticsAuthGuard: checks Firebase Auth sign-in. Admin UID check is done in the component.
  * TODO: Once admin custom claims are provisioned, upgrade to:
  *   const idTokenResult = await getAuth().currentUser?.getIdTokenResult();
  *   return idTokenResult?.claims?.['isAdmin'] === true;

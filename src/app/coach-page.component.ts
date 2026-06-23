@@ -1,4 +1,4 @@
-import { Component, Inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { CoachWidgetComponent } from './coach-widget.component';
@@ -17,6 +17,7 @@ import { CoachWidgetComponent } from './coach-widget.component';
   imports: [CommonModule, CoachWidgetComponent],
   templateUrl: './coach-page.component.html',
   styleUrls: ['./coach-page.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CoachPageComponent implements OnDestroy {
   readonly isBrowser: boolean;
