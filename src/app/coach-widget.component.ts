@@ -135,6 +135,14 @@ const I18N: Record<string, any> = {
       { key: 'night_club', t: '💃 Discoteca', q: '¿Qué discotecas buenas hay cerca para salir a bailar de noche?' },
     ],
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
+    debateSteps: [
+      'Analizando lugares cercanos…',
+      'Dinámica social · evaluando el ambiente…',
+      'Comunicación · revisando reseñas…',
+      'Inteligencia emocional · midiendo la conexión…',
+      'Presencia digital · buscando Instagram e historias…',
+      'Sintetizando las mejores opciones para ti…',
+    ],
     locRequesting: 'Obteniendo tu ubicación 📍…',
     locBlocked: 'Tu navegador tiene la ubicación bloqueada 🔒 Habilítala en el candado de la barra de direcciones, o escribe tu ciudad aquí abajo y te recomiendo lugares 👇',
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
@@ -170,6 +178,14 @@ const I18N: Record<string, any> = {
       { key: 'night_club', t: '💃 Club', q: 'What good clubs are near me to go dancing at night?' },
     ],
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
+    debateSteps: [
+      'Scanning nearby spots…',
+      'Social dynamics · reading the vibe…',
+      'Communication · checking reviews…',
+      'Emotional intelligence · gauging the connection…',
+      'Digital presence · finding Instagram & stories…',
+      'Synthesizing the best options for you…',
+    ],
     locRequesting: 'Getting your location 📍…',
     locBlocked: "Your browser has location blocked 🔒 Enable it from the lock icon in the address bar, or type your city below and I'll suggest spots 👇",
     needCity: "Tell me what city you're in and I'll suggest places 👇",
@@ -205,6 +221,14 @@ const I18N: Record<string, any> = {
       { key: 'night_club', t: '💃 Balada', q: 'Que boas baladas tem perto para sair para dançar à noite?' },
     ],
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
+    debateSteps: [
+      'Analisando lugares próximos…',
+      'Dinâmica social · avaliando o ambiente…',
+      'Comunicação · revisando avaliações…',
+      'Inteligência emocional · medindo a conexão…',
+      'Presença digital · buscando Instagram e stories…',
+      'Sintetizando as melhores opções para você…',
+    ],
     locRequesting: 'Obtendo sua localização 📍…',
     locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade aqui embaixo e te recomendo lugares 👇',
     needCity: 'Me diga em que cidade você está e te recomendo lugares 👇',
@@ -264,6 +288,7 @@ export class CoachWidgetComponent implements OnDestroy {
       document.removeEventListener('visibilitychange', this.onVisibilityReturn);
       clearTimeout(this.signInWatchdog);
       this.stopOtpAutoRead();
+      this.stopDebateSteps();
     }
   }
   readonly open = signal(false);
@@ -792,7 +817,33 @@ export class CoachWidgetComponent implements OnDestroy {
   /** Re-ask the last question once we have a location (geo or city). */
   private async askWithLocation(extra: { lat?: number; lng?: number; city?: string }) {
     if (!this.lastUserMsg || this.busy()) return;
+    // Elegant "agents debating" loader while the places backend works (scan → 4 venue
+    // perspectives debate → synthesize). Auto-stops when `thinking` clears.
+    this.startDebateSteps();
     await this.ask({ message: this.lastUserMsg, ...extra });
+  }
+
+  // Rotating "coach agents are debating" loader steps shown during the places request.
+  // Settles on the final ("synthesizing") step; auto-stops if the response arrives early
+  // (thinking() flips false) so we never out-live the loader.
+  private debateTimer: ReturnType<typeof setInterval> | null = null;
+  private startDebateSteps() {
+    if (!this.isBrowser) return;
+    this.stopDebateSteps();
+    const steps = this.t().debateSteps as string[] | undefined;
+    if (!steps || !steps.length) { this.thinkingLabel.set(this.t().placesLoading); return; }
+    let i = 0;
+    this.thinkingLabel.set(steps[0]);
+    this.thinking.set(true); // ensure the loader is visible (sendCity path sets it late in ask())
+    this.debateTimer = setInterval(() => {
+      if (!this.thinking()) { this.stopDebateSteps(); return; }
+      i = Math.min(i + 1, steps.length - 1);
+      this.thinkingLabel.set(steps[i]);
+      if (i >= steps.length - 1) { this.stopDebateSteps(); } // settle on "synthesizing…"
+    }, 1400);
+  }
+  private stopDebateSteps() {
+    if (this.debateTimer) { clearInterval(this.debateTimer); this.debateTimer = null; }
   }
 
   // R64: logged-in web users (optional sign-in) get the authenticated coach.
