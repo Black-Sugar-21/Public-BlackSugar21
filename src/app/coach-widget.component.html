@@ -183,6 +183,34 @@
                   </div>
                 }
 
+                <!-- Distinct "events near you" card — gold-accented, NOT mixed with venue cards. -->
+                @if (m.areaEvents?.length) {
+                  <div class="cw-events">
+                    <div class="cw-events-head">🎟 {{ t().areaEventsTitle }}</div>
+                    @for (ev of m.areaEvents!; track ev.title) {
+                      @if (areaEventIg(ev); as ig) {
+                        <a class="cw-event" [href]="ig" target="_blank" rel="noopener">
+                          <span class="cw-event-badge">{{ areaEventBadge(ev) }}</span>
+                          <span class="cw-event-body">
+                            <span class="cw-event-title">{{ ev.title }}</span>
+                            <span class="cw-event-meta">{{ ev.venue }}{{ ev.time ? ' · ' + ev.time : '' }}</span>
+                            @if (ev.description) { <span class="cw-event-desc">{{ ev.description }}</span> }
+                          </span>
+                        </a>
+                      } @else {
+                        <div class="cw-event">
+                          <span class="cw-event-badge">{{ areaEventBadge(ev) }}</span>
+                          <span class="cw-event-body">
+                            <span class="cw-event-title">{{ ev.title }}</span>
+                            <span class="cw-event-meta">{{ ev.venue }}{{ ev.time ? ' · ' + ev.time : '' }}</span>
+                            @if (ev.description) { <span class="cw-event-desc">{{ ev.description }}</span> }
+                          </span>
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+
                 @if (m.phrases?.length) {
                   <div class="cw-phrases">
                     @for (ph of m.phrases!; track ph; let i = $index) {

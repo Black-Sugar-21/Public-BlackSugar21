@@ -336,3 +336,13 @@
     @keyframes cwSpin { to{transform:rotate(360deg)} }
     @media (max-width:480px){ .cw-panel:not(.cw-embedded){ position:fixed; top:0; left:0; right:0; bottom:auto; width:100%; height:100dvh; height:100svh; max-height:none; border-radius:0; border:none; } }
   
+    /* Distinct "events near you" card — gold-accented, clearly separate from venue cards */
+    .cw-events { margin-top:10px; background:color-mix(in srgb,var(--cw-gold) 7%,var(--cw-card)); border:1px solid color-mix(in srgb,var(--cw-gold) 35%,transparent); border-left:3px solid var(--cw-gold); border-radius:14px; padding:11px 13px; display:flex; flex-direction:column; gap:9px; }
+    .cw-events-head { font-size:13px; font-weight:700; color:var(--cw-gold); letter-spacing:.2px; }
+    .cw-event { display:flex; gap:11px; align-items:flex-start; text-decoration:none; color:inherit; }
+    a.cw-event:hover .cw-event-title { text-decoration:underline; }
+    .cw-event-badge { flex:none; min-width:46px; text-align:center; font-size:11px; font-weight:700; color:var(--cw-gold); background:color-mix(in srgb,var(--cw-gold) 14%,transparent); border:1px solid color-mix(in srgb,var(--cw-gold) 30%,transparent); border-radius:8px; padding:4px 6px; line-height:1.25; }
+    .cw-event-body { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .cw-event-title { font-size:13px; font-weight:600; color:var(--cw-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cw-event-meta { font-size:11.5px; color:var(--cw-gold); opacity:.85; }
+    .cw-event-desc { font-size:11.5px; color:var(--cw-muted); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }

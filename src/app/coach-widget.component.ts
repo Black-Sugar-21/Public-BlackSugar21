@@ -17,9 +17,11 @@ interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames
 interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
 interface MvResult { compatibilityScore: number | null; compatibilityStars: number | null; compatibilityLabel: string; stages: MvStage[]; keyInsights: string[]; }
 type SimMode = '' | 'situation' | 'multiverse';
+interface AreaEvent { title: string; date: string; time: string; venue: string; description: string; category: string; instagram: string | null; }
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
   places?: PlaceCard[]; phrases?: string[]; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
+  areaEvents?: AreaEvent[]; // distinct "events near you" card (Google-grounded, no IG needed)
   ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
 }
 
@@ -136,6 +138,7 @@ const I18N: Record<string, any> = {
       { key: 'bar', t: '🍸 Bar', q: '¿Qué bares con buen ambiente hay cerca para una cita?' },
       { key: 'night_club', t: '💃 Discoteca', q: '¿Qué discotecas buenas hay cerca para salir a bailar de noche?' },
     ],
+    areaEventsTitle: 'Eventos cerca de ti', areaEventsSoon: 'Próx.',
     thinking: 'El coach está pensando…', placesLoading: 'Buscando lugares para tu cita 📍…',
     debateSteps: [
       'Analizando lugares cercanos…',
@@ -179,6 +182,7 @@ const I18N: Record<string, any> = {
       { key: 'bar', t: '🍸 Bar', q: 'What good bars are near me for a date?' },
       { key: 'night_club', t: '💃 Club', q: 'What good clubs are near me to go dancing at night?' },
     ],
+    areaEventsTitle: 'Events near you', areaEventsSoon: 'Soon',
     thinking: 'The coach is thinking…', placesLoading: 'Finding date spots near you 📍…',
     debateSteps: [
       'Scanning nearby spots…',
@@ -222,6 +226,7 @@ const I18N: Record<string, any> = {
       { key: 'bar', t: '🍸 Bar', q: 'Que bons bares tem perto para um encontro?' },
       { key: 'night_club', t: '💃 Balada', q: 'Que boas baladas tem perto para sair para dançar à noite?' },
     ],
+    areaEventsTitle: 'Eventos perto de você', areaEventsSoon: 'Próx.',
     thinking: 'O coach está pensando…', placesLoading: 'Buscando lugares para o seu encontro 📍…',
     debateSteps: [
       'Analisando lugares próximos…',
@@ -1035,6 +1040,24 @@ export class CoachWidgetComponent implements OnDestroy {
     return this.ui(key);
   }
   /** Map the authenticated dateCoachChat response into the widget's render model (places/phrases). */
+  /** Compact date badge for an area event: "28 jun" from YYYY-MM-DD, else the localized "soon". */
+  areaEventBadge(e: AreaEvent): string {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(e?.date || '');
+    if (!m) return this.t().areaEventsSoon || 'Soon';
+    const months: Record<string, string[]> = {
+      es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+      pt: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    };
+    const mo = (months[this.lang()] || months['en'])[Math.max(0, Math.min(11, parseInt(m[2], 10) - 1))];
+    return `${parseInt(m[3], 10)} ${mo}`;
+  }
+  /** Instagram profile URL for an area event row (or null). */
+  areaEventIg(e: AreaEvent): string | null {
+    const h = (e?.instagram || '').trim().replace(/^@/, '');
+    return h ? 'https://instagram.com/' + h : null;
+  }
+
   private mapAuthCoachResponse(r: any): any {
     const acts = Array.isArray(r?.activitySuggestions) ? r.activitySuggestions : [];
     const places = acts.map((a: any) => ({
@@ -1046,10 +1069,19 @@ export class CoachWidgetComponent implements OnDestroy {
       venueOffer: a.venueOffer || null, upcomingEvents: Array.isArray(a.upcomingEvents) ? a.upcomingEvents : null,
     })).filter((p: any) => p.name);
     const suggestions = Array.isArray(r?.suggestions) ? r.suggestions.filter((s: any) => typeof s === 'string' && s.trim()) : [];
+    // Distinct "events near you" card — Google-grounded area events (Instagram-independent).
+    const areaEvents = Array.isArray(r?.areaEvents)
+      ? r.areaEvents.filter((e: any) => e && typeof e.title === 'string' && e.title.trim()).slice(0, 4).map((e: any) => ({
+        title: String(e.title), date: String(e.date || ''), time: String(e.time || ''),
+        venue: String(e.venue || ''), description: String(e.description || ''),
+        category: String(e.category || ''), instagram: e.instagram ? String(e.instagram) : null,
+      }))
+      : [];
     return {
       reply: (r && typeof r.reply === 'string') ? r.reply : '',
       places: places.length ? places : undefined,
       phrases: (!places.length && suggestions.length) ? suggestions : undefined,
+      areaEvents: areaEvents.length ? areaEvents : undefined,
     };
   }
 
@@ -1101,9 +1133,9 @@ export class CoachWidgetComponent implements OnDestroy {
       const intent = data?.places?.length ? 'place' : data?.phrases?.length ? 'phrase' : data?.needLocation ? 'place_need_loc' : 'general';
       this.ga('coach_demo_message', { intent, lang: this.lang() });
       if (data?.limited) this.ga('coach_demo_limited');
-      if (data?.places?.length || data?.phrases?.length || data?.needLocation) {
+      if (data?.places?.length || data?.phrases?.length || data?.needLocation || data?.areaEvents?.length) {
         // structured result — show immediately with attachments (no typewriter)
-        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, areaEvents: data.areaEvents, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
         this.scroll();
       } else {
         await this.typewrite(reply);
