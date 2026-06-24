@@ -1185,12 +1185,12 @@ export class CoachWidgetComponent implements OnDestroy {
     this.busy.set(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-      (err) => {
+      (_err) => {
+        // GPS denied / timeout / unavailable → proceed without coords.
+        // Backend uses server-side IP geolocation; only shows city input if IP also fails.
         this.busy.set(false);
-        this.thinking.set(false);
-        const blocked = !!(err && err.code === err.PERMISSION_DENIED);
-        this.addLocationPrompt(blocked ? this.t().locBlocked : this.t().needCity);
-        this.scroll();
+        this.startDebateSteps();
+        this.askWithLocation({});
       },
       { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
     );
@@ -1213,15 +1213,21 @@ export class CoachWidgetComponent implements OnDestroy {
     this.ga('coach_demo_place_chip', { lang: this.coachLang(), cat: label ? 'category' : 'general' });
 
     if (!this.isBrowser || !navigator.geolocation) {
-      this.addLocationPrompt(this.t().needCity);
-      this.scroll();
+      // No GPS API (SSR / old browser) → proceed to backend; IP fallback handles location.
+      this.thinkingLabel.set(this.t().placesLoading);
+      this.thinking.set(true); this.scroll();
+      this.startDebateSteps();
+      await this.ask({ message: this.lastUserMsg });
       return;
     }
     const state = await this.geoPermissionState();
     if (state === 'denied') {
-      // Blocked at the browser level — a prompt can't appear → let them type a city.
-      this.addLocationPrompt(this.t().locBlocked);
-      this.scroll();
+      // GPS blocked at browser level → proceed to backend without coords; IP fallback handles it.
+      // City input is shown only if the backend also fails to determine location (needLocation: true).
+      this.thinkingLabel.set(this.t().placesLoading);
+      this.thinking.set(true); this.scroll();
+      this.startDebateSteps();
+      await this.ask({ message: this.lastUserMsg });
       return;
     }
     // granted → uses coords instantly; prompt/unknown → triggers the native permission request.
@@ -1232,11 +1238,22 @@ export class CoachWidgetComponent implements OnDestroy {
 
   /** "Use my location" button shown in the needLocation block — same three-case handling. */
   async useLocation() {
-    if (!this.isBrowser || !navigator.geolocation) { return; }
+    const fallbackMsg = this.lastUserMsg || this.t().placeQuery;
+    if (!this.isBrowser || !navigator.geolocation) {
+      // No GPS API → IP fallback via backend.
+      this.thinkingLabel.set(this.t().placesLoading);
+      this.thinking.set(true); this.scroll();
+      this.startDebateSteps();
+      await this.ask({ message: fallbackMsg });
+      return;
+    }
     const state = await this.geoPermissionState();
     if (state === 'denied') {
-      this.messages.update((m) => [...m, { role: 'coach', text: this.t().locBlocked }]);
-      this.scroll();
+      // GPS blocked → IP fallback via backend; city input only if IP also fails.
+      this.thinkingLabel.set(this.t().placesLoading);
+      this.thinking.set(true); this.scroll();
+      this.startDebateSteps();
+      await this.ask({ message: fallbackMsg });
       return;
     }
     this.thinkingLabel.set(state === 'granted' ? this.t().placesLoading : this.t().locRequesting);
