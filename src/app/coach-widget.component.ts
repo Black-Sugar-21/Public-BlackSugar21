@@ -512,6 +512,9 @@ export class CoachWidgetComponent implements OnDestroy {
           // Finish a pending full-page OAuth redirect (iOS Safari): land in /app + clear the overlay.
           let pending = false; try { pending = sessionStorage.getItem(CoachWidgetComponent.LS_OAUTH_PENDING) === '1'; } catch { /* noop */ }
           if (pending) { try { sessionStorage.removeItem(CoachWidgetComponent.LS_OAUTH_PENDING); } catch { /* noop */ } this.signingIn.set(false); this.afterSignIn(); }
+          // Silently refresh Firestore location on every login so the authenticated coach
+          // always uses the current city — only if GPS was already granted (no prompt).
+          this.silentLocationRefresh();
         }
         else if (!uid) { lastAuthUid = null; }
       });
@@ -1181,10 +1184,31 @@ export class CoachWidgetComponent implements OnDestroy {
     }
   }
 
+  /** Silently refresh Firestore location when GPS is already granted — no UI, no prompt.
+   *  Called on every login so the authenticated coach always has the user's current city. */
+  private silentLocationRefresh(): void {
+    if (!this.isBrowser || !navigator.geolocation) return;
+    this.geoPermissionState().then((state) => {
+      if (state !== 'granted') return; // never prompt silently
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { this.firebase.updateLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {}); },
+        () => { /* silently ignored — not a user-visible action */ },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+      );
+    }).catch(() => {});
+  }
+
   private requestGeolocation(q: string) {
     this.busy.set(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { this.busy.set(false); this.askWithLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+      (pos) => {
+        this.busy.set(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        // Persist fresh GPS coords to Firestore so authenticated coach always uses current location.
+        if (this.user()) { this.firebase.updateLocation(lat, lng).catch(() => {}); }
+        this.askWithLocation({ lat, lng });
+      },
       (_err) => {
         // GPS denied / timeout / unavailable → proceed without coords.
         // Backend uses server-side IP geolocation; only shows city input if IP also fails.
