@@ -1103,7 +1103,14 @@ export class CoachWidgetComponent implements OnDestroy {
       if (this.user()) {
         // R64: logged-in → the SAME authenticated coach as the apps (persists + feeds the agent).
         try {
-          const r = await this.firebase.coachChat({ message: payload.message, userLanguage: this.coachLang(), city: payload.city || undefined });
+          const r = await this.firebase.coachChat({
+            message: payload.message,
+            userLanguage: this.coachLang(),
+            city: payload.city || undefined,
+            // Pass browser GPS directly so the CF uses fresh coords even when the
+            // Firestore profile still has stale ones (async update hasn't landed yet).
+            ...(payload.lat != null && payload.lng != null ? { lat: payload.lat, lng: payload.lng } : {}),
+          });
           const mapped = this.mapAuthCoachResponse(r);
           if (mapped.reply || mapped.places || mapped.phrases) data = mapped;
         } catch { /* e.g. web-only account without a profile → fall back to the demo coach */ }
