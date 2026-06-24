@@ -357,6 +357,9 @@ export class CoachWidgetComponent implements OnDestroy {
   dismissCta() { this.ctaDismissed.set(true); this.ga('coach_demo_cta_dismiss'); }
   private lastCoachText = '';
   private lastUserMsg = '';
+  /** Last known GPS coords obtained from the browser — injected into every ask() call
+   *  so typed place messages also benefit from accurate location, not just chip presses. */
+  private lastKnownCoords: { lat: number; lng: number } | null = null;
   private shownPlaces = new Set<string>(); // venues already shown this session (so re-press shows OTHERS)
   private shownPhrases = new Set<string>(); // phrases already shown this session (so re-ask shows OTHERS)
 
@@ -739,7 +742,8 @@ export class CoachWidgetComponent implements OnDestroy {
     this.messages.update((m) => [...m, { role: 'user', text: msg }]);
     if (this.simMode() === 'situation') { await this.runSim(msg); return; }
     if (this.simMode() === 'multiverse') { await this.runMultiverse(msg); return; }
-    await this.ask({ message: msg });
+    // Inject last known GPS coords so typed place queries also get accurate location.
+    await this.ask({ message: msg, ...this.lastKnownCoords ?? {} });
   }
 
   /** Multi-agent simulation: 5 perspectives analyze the visitor's situation. */
@@ -1198,7 +1202,10 @@ export class CoachWidgetComponent implements OnDestroy {
     this.geoPermissionState().then((state) => {
       if (state !== 'granted') return; // never prompt silently
       navigator.geolocation.getCurrentPosition(
-        (pos) => { this.firebase.updateLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {}); },
+        (pos) => {
+          this.lastKnownCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          this.firebase.updateLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        },
         () => { /* silently ignored — not a user-visible action */ },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
       );
@@ -1212,6 +1219,7 @@ export class CoachWidgetComponent implements OnDestroy {
         this.busy.set(false);
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+        this.lastKnownCoords = { lat, lng };
         // Persist fresh GPS coords to Firestore so authenticated coach always uses current location.
         if (this.user()) { this.firebase.updateLocation(lat, lng).catch(() => {}); }
         this.askWithLocation({ lat, lng });
