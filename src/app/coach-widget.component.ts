@@ -30,7 +30,9 @@ const FB_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachD
 const PLACE_CLICK_ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoPlaceClick';
 // Languages CoachFish (getLanguageInstruction/normalizeLanguageCode) responds in — auto-detected.
 const COACH_LANGS = ['en', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ar', 'id', 'ru', 'tr'];
-const FREE_TASTE = 3; // free coach replies for unauthenticated visitors before the login soft-gate
+const FREE_TASTE = 5; // free coach replies for unauthenticated visitors before the login soft-gate
+// (more generous than the signed-in 4/day cap — an attractive "taste" that hooks anonymous
+// visitors before nudging them to sign in. Server backstop IP_HOURLY_LIMIT=12/h still applies.)
 // Flip to true ONLY after the web Apple OAuth is configured (Apple Services ID + .p8 key uploaded to
 // Firebase Console → Auth → Apple). Until then signInWithPopup('apple.com') returns operation-not-allowed,
 // so the button is hidden to avoid a broken option. Native iOS/Android Apple sign-in is unaffected.
