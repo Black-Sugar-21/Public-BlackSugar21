@@ -1109,7 +1109,7 @@ export class CoachWidgetComponent implements OnDestroy {
       }
     } catch {
       this.messages.update((m) => [...m, { role: 'coach', text: this.connErrMsg() }]);
-    } finally { this.busy.set(false); this.thinking.set(false); this.scroll(); }
+    } finally { this.stopDebateSteps(); this.busy.set(false); this.thinking.set(false); this.scroll(); }
   }
 
   /**
