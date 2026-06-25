@@ -310,15 +310,25 @@ export class CoachWidgetComponent implements OnDestroy {
     }
   }
 
+  private _initialScrollDone = false;
+
   private setupScrollObserver(el: HTMLElement) {
     this.cleanupScrollObserver();
-    // Scroll to bottom immediately when container is mounted
-    this.scrollToBottom(el, true);
+    this._initialScrollDone = false;
+    // Instant jump to bottom on mount (no animation — like WhatsApp/Instagram)
+    this.snapToBottom(el);
     // Also scroll on mutations (new messages, typing state, place cards)
     this.scrollObserver = new MutationObserver(() => {
-      this.scrollToBottom(el, false);
+      if (!this._initialScrollDone) {
+        // Still in initial load: keep snapping instantly, no animation
+        this.snapToBottom(el);
+      } else {
+        this.scrollToBottom(el);
+      }
     });
     this.scrollObserver.observe(el, { childList: true, subtree: true });
+    // After first paint settles, mark initial load done
+    setTimeout(() => { this._initialScrollDone = true; }, 300);
   }
 
   private cleanupScrollObserver() {
@@ -328,16 +338,26 @@ export class CoachWidgetComponent implements OnDestroy {
     }
   }
 
-  private scrollToBottom(el: HTMLElement, force = false) {
+  /** Instantly jumps to bottom with NO animation whatsoever (for initial load) */
+  private snapToBottom(el: HTMLElement) {
+    // Override any inherited scroll-behavior for this operation
+    const prev = el.style.scrollBehavior;
+    el.style.scrollBehavior = 'auto';
+    el.scrollTop = el.scrollHeight;
+    // Staggered to catch late DOM insertions (images/cards loading)
+    setTimeout(() => { el.style.scrollBehavior = 'auto'; el.scrollTop = el.scrollHeight; }, 0);
+    setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+    setTimeout(() => { el.scrollTop = el.scrollHeight; el.style.scrollBehavior = prev; }, 150);
+  }
+
+  /** Scrolls to bottom for new messages — also instant (no smooth animation) */
+  private scrollToBottom(el: HTMLElement) {
     const msgs = this.messages();
     const lastMsg = msgs[msgs.length - 1];
-    // Scroll if forced (mount/reload), if last message is from user, if typing, or if already near bottom
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (force || lastMsg?.role === 'user' || lastMsg?.typing || isNearBottom) {
+    if (lastMsg?.role === 'user' || lastMsg?.typing || isNearBottom) {
       el.scrollTop = el.scrollHeight;
-      setTimeout(() => { el.scrollTop = el.scrollHeight; }, 10);
       setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
-      setTimeout(() => { el.scrollTop = el.scrollHeight; }, 150);
     }
   }
   readonly open = signal(false);
