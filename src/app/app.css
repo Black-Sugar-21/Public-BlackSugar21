@@ -905,6 +905,40 @@ a:hover {
     margin: 0;
 }
 
+/* "Nuevo/New" highlighted cards */
+.whatsnew-card--new {
+    border-color: rgba(131, 27, 252, 0.35);
+    background: linear-gradient(135deg, rgba(131, 27, 252, 0.08) 0%, rgba(212, 175, 55, 0.04) 100%);
+    position: relative;
+    overflow: hidden;
+}
+.whatsnew-card--new::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(131, 27, 252, 0.06), transparent);
+    pointer-events: none;
+}
+.whatsnew-card--new:hover {
+    border-color: rgba(131, 27, 252, 0.6);
+    box-shadow: 0 22px 55px rgba(131, 27, 252, 0.32), 0 0 0 1px rgba(131, 27, 252, 0.25);
+}
+.whatsnew-new-badge {
+    display: inline-block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(90deg, #831bfc, #a855f7);
+    border-radius: 999px;
+    padding: 2px 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(131, 27, 252, 0.4);
+}
+
 @media (max-width: 960px) {
     .whatsnew-grid {
         grid-template-columns: repeat(2, 1fr);
