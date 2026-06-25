@@ -535,14 +535,28 @@ export class CoachWidgetComponent implements OnDestroy {
         this.sessionId = localStorage.getItem('bs21_demo_sid') || '';
         if (!this.sessionId) { this.sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bs21_demo_sid', this.sessionId); }
       } catch { this.sessionId = 's_' + Date.now().toString(36); }
-      // Restore the active conversation (or the most recent) so nothing is lost across visits.
+      // Restore the active conversation so nothing is lost across visits.
+      // If LS_ACTIVE points to a new empty session (not yet in LS_CONVOS), honor it —
+      // don't fall back to the most-recent session (which would clobber "Nueva conversación").
       try {
         const saved = localStorage.getItem(CoachWidgetComponent.LS_ACTIVE) || '';
         const convos = this.loadConvos().sort((a, b) => b.updatedAt - a.updatedAt);
-        const active = convos.find((c) => c.id === saved) || convos[0];
-        if (active) {
-          this.activeId = active.id;
-          if (Array.isArray(active.msgs) && active.msgs.length) this.messages.set(active.msgs);
+        if (saved) {
+          const foundConvo = convos.find((c) => c.id === saved);
+          if (foundConvo) {
+            this.activeId = foundConvo.id;
+            if (Array.isArray(foundConvo.msgs) && foundConvo.msgs.length) this.messages.set(foundConvo.msgs);
+          } else {
+            // New empty session explicitly created by the user — keep it empty
+            this.activeId = saved;
+          }
+        } else {
+          // No active ID saved → restore most recent existing conversation
+          const mostRecent = convos[0];
+          if (mostRecent) {
+            this.activeId = mostRecent.id;
+            if (Array.isArray(mostRecent.msgs) && mostRecent.msgs.length) this.messages.set(mostRecent.msgs);
+          }
         }
       } catch { /* noop */ }
       // ALWAYS have an active id (even if the read above threw) so persistence can't silently break.
@@ -665,13 +679,32 @@ export class CoachWidgetComponent implements OnDestroy {
   /** On login, load the user's most-recent Firestore session (unless mid-chat anonymously). */
   private async restoreFromFirestore() {
     if (this.messages().some((x) => x.role === 'user')) return; // don't clobber an in-progress chat
+    // If the user explicitly pressed "Nueva conversación", honor that new empty session.
+    let isNewSession = false;
+    try { isNewSession = sessionStorage.getItem('bs21_new_session') === '1'; } catch { /* noop */ }
+    if (isNewSession) {
+      try { sessionStorage.removeItem('bs21_new_session'); } catch { /* noop */ }
+      return;
+    }
+    // If LS_ACTIVE points to a known new empty session, don't overwrite it either.
+    try {
+      const savedId = localStorage.getItem(CoachWidgetComponent.LS_ACTIVE);
+      if (savedId && savedId === this.activeId && !this.messages().some((x) => x.role === 'user')) {
+        // activeId is already set — only proceed if it doesn't exist in Firestore (could be new)
+      }
+    } catch { /* noop */ }
     this.chatLoading.set(true);
     try {
       const sessions = await this.firebase.loadCoachSessions();
       if (!sessions.length) return;
+      // Check if the current activeId is a newly-created empty session not yet in Firestore
+      const savedId = (() => { try { return localStorage.getItem(CoachWidgetComponent.LS_ACTIVE) || ''; } catch { return ''; } })();
+      const existsInFirestore = sessions.some((s) => s.id === savedId);
+      if (savedId && !existsInFirestore && savedId === this.activeId) return; // new empty session
       const recent = sessions[0];
       const msgs = await this.firebase.loadCoachMessages(recent.id);
       this.activeId = recent.id;
+      try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, recent.id); } catch { /* noop */ }
       if (msgs.length) {
         this.messages.set(msgs as unknown as Msg[]);
         this.persistedCounts.set(recent.id, msgs.length);
@@ -684,8 +717,12 @@ export class CoachWidgetComponent implements OnDestroy {
   newConversation() {
     this.activeId = this.newConvoId();
     this.persistedCounts.set(this.activeId, 0);
-    if (!this.firebase.currentUser()) { try { localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId); } catch { /* noop */ } }
-    this.messages.set([{ role: 'coach', text: this.t().greeting }]);
+    // Save for ALL users (anonymous + logged-in) so a page reload restores this new empty session.
+    try {
+      localStorage.setItem(CoachWidgetComponent.LS_ACTIVE, this.activeId);
+      sessionStorage.setItem('bs21_new_session', '1'); // tells restoreFromFirestore to skip
+    } catch { /* noop */ }
+    this.messages.set([]); // truly empty — isWelcome() shows the welcome screen
     this.historyOpen.set(false);
     this.ga('coach_demo_new_conversation');
   }
