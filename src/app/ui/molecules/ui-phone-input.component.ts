@@ -162,15 +162,107 @@ export class UiPhoneInputComponent {
 
   constructor(@Inject(PLATFORM_ID) platformId: object, private hostRef: ElementRef) {
     if (isPlatformBrowser(platformId)) {
+      const valid = getCountries() as string[];
+      let detected = false;
+
+      // 1. Instant offline detection: Timezone city mapping
       try {
-        const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
-        const valid = getCountries() as string[];
-        for (const l of langs) {
-          const m = /[-_]([A-Za-z]{2})(?:[-_]|$)/.exec(l || '');
-          if (m && valid.includes(m[1].toUpperCase())) { this.country.set(m[1].toUpperCase() as CountryCode); break; }
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) {
+          const part = tz.split('/').pop()?.toLowerCase();
+          const tzMap: Record<string, string> = {
+            'santiago': 'CL',
+            'buenos_aires': 'AR',
+            'bogota': 'CO',
+            'mexico_city': 'MX',
+            'monterrey': 'MX',
+            'tijuana': 'MX',
+            'lima': 'PE',
+            'caracas': 'VE',
+            'madrid': 'ES',
+            'montevideo': 'UY',
+            'guayaquil': 'EC',
+            'quito': 'EC',
+            'asuncion': 'PY',
+            'la_paz': 'BO',
+            'guatemala': 'GT',
+            'el_salvador': 'SV',
+            'tegucigalpa': 'HN',
+            'managua': 'NI',
+            'costa_rica': 'CR',
+            'panama': 'PA',
+            'havana': 'CU',
+            'santo_domingo': 'DO',
+            'puerto_rico': 'PR',
+            'sao_paulo': 'BR',
+            'rio_de_janeiro': 'BR',
+            'lisbon': 'PT',
+            'london': 'GB',
+            'paris': 'FR',
+            'rome': 'IT',
+            'berlin': 'DE',
+            'tokyo': 'JP',
+            'seoul': 'KR',
+            'sydney': 'AU',
+            'toronto': 'CA',
+            'vancouver': 'CA',
+          };
+          if (part && tzMap[part]) {
+            this.country.set(tzMap[part] as CountryCode);
+            detected = true;
+          }
         }
-      } catch { /* keep default US */ }
+      } catch { /* noop */ }
+
+      // 2. Instant offline fallback: Browser locales with smart Spanish default (CL)
+      if (!detected) {
+        try {
+          const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
+          for (const l of langs) {
+            const m = /[-_]([A-Za-z]{2})(?:[-_]|$)/.exec(l || '');
+            if (m && valid.includes(m[1].toUpperCase())) {
+              this.country.set(m[1].toUpperCase() as CountryCode);
+              detected = true;
+              break;
+            }
+          }
+          if (!detected) {
+            const primaryLang = (langs[0] || '').split('-')[0].toLowerCase();
+            if (primaryLang === 'es') {
+              this.country.set('CL');
+              detected = true;
+            }
+          }
+        } catch { /* noop */ }
+      }
+
+      // 3. Async online enhancement: Fast free IP geolocation with fallbacks
+      try {
+        fetch('https://freeipapi.com/api/json')
+          .then((res) => {
+            if (!res.ok) throw new Error();
+            return res.json();
+          })
+          .then((data) => {
+            const code = data?.countryCode?.toUpperCase();
+            if (code && valid.includes(code)) {
+              this.country.set(code as CountryCode);
+            }
+          })
+          .catch(() => {
+            fetch('https://ipapi.co/country/')
+              .then((res) => res.text())
+              .then((codeStr) => {
+                const code = codeStr.trim().toUpperCase();
+                if (code && code.length === 2 && valid.includes(code)) {
+                  this.country.set(code as CountryCode);
+                }
+              })
+              .catch(() => { /* completely silent fallback */ });
+          });
+      } catch { /* completely silent */ }
     }
+
     // Emit whenever the assembled number or its validity changes (signal-driven).
     effect(() => { this.valueChange.emit({ e164: this.e164(), valid: this.isValid() }); });
   }

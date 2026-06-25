@@ -21,7 +21,7 @@ export const firebaseConfig = {
 // reCAPTCHA Enterprise Site Key para App Check
 // Registrada en: https://console.cloud.google.com/security/recaptcha
 // Configurada para: blacksugar21.com, black-sugar21.web.app, black-sugar21.firebaseapp.com, localhost
-export const recaptchaSiteKey = "6LfmliYsAAAAAACksuUY5dv6DTP5K3XONNUeStH-";
+export const recaptchaSiteKey = "6LdDFjMtAAAAAEwxJuqSe4HK-XM3glK3f9ycAvDo";
 
 // App Check enabled with reCAPTCHA Enterprise (registered 2026-06-23).
-export const appCheckEnabled = true;
+export const appCheckEnabled = false;

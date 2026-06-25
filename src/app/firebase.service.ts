@@ -47,7 +47,7 @@ import {
 } from 'firebase/remote-config';
 import {
   initializeAppCheck,
-  ReCaptchaEnterpriseProvider
+  ReCaptchaV3Provider
 } from 'firebase/app-check';
 import {
   getAnalytics,
@@ -145,7 +145,7 @@ export class FirebaseService {
         }
 
         initializeAppCheck(this.app, {
-          provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+          provider: new ReCaptchaV3Provider(recaptchaSiteKey),
           isTokenAutoRefreshEnabled: true
         });
       } catch (error) {

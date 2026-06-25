@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -296,6 +296,48 @@ export class CoachWidgetComponent implements OnDestroy {
       clearTimeout(this.signInWatchdog);
       this.stopOtpAutoRead();
       this.stopDebateSteps();
+      this.cleanupScrollObserver();
+    }
+  }
+
+  private scrollObserver: MutationObserver | null = null;
+
+  @ViewChild('body') set bodyElement(ref: ElementRef) {
+    if (ref && this.isBrowser) {
+      this.setupScrollObserver(ref.nativeElement);
+    } else {
+      this.cleanupScrollObserver();
+    }
+  }
+
+  private setupScrollObserver(el: HTMLElement) {
+    this.cleanupScrollObserver();
+    // Scroll to bottom immediately when container is mounted
+    this.scrollToBottom(el, true);
+    // Also scroll on mutations (new messages, typing state, place cards)
+    this.scrollObserver = new MutationObserver(() => {
+      this.scrollToBottom(el, false);
+    });
+    this.scrollObserver.observe(el, { childList: true, subtree: true });
+  }
+
+  private cleanupScrollObserver() {
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+      this.scrollObserver = null;
+    }
+  }
+
+  private scrollToBottom(el: HTMLElement, force = false) {
+    const msgs = this.messages();
+    const lastMsg = msgs[msgs.length - 1];
+    // Scroll if forced (mount/reload), if last message is from user, if typing, or if already near bottom
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (force || lastMsg?.role === 'user' || lastMsg?.typing || isNearBottom) {
+      el.scrollTop = el.scrollHeight;
+      setTimeout(() => { el.scrollTop = el.scrollHeight; }, 10);
+      setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+      setTimeout(() => { el.scrollTop = el.scrollHeight; }, 150);
     }
   }
   readonly open = signal(false);
