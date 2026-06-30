@@ -496,6 +496,17 @@ export class FirebaseService {
     return res.data;
   }
 
+  // R150: learning signal — record that a signed-in web user copied/shared/used a coach
+  // suggestion. Feeds the SAME learningProfile as the apps so the coach personalizes future
+  // suggestions. Fire-and-forget, auth-only (callable needs auth.uid), never throws to the UI.
+  async trackCoachSuggestionAction(action: 'copied' | 'shared' | 'used', category?: string): Promise<void> {
+    if (!this.currentUser()) return; // demo/anonymous visitors have no learning profile
+    try {
+      const fn = httpsCallable(this.functions, 'trackCoachSuggestionAction');
+      await fn(category ? { action, category } : { action });
+    } catch { /* non-critical */ }
+  }
+
   /**
    * AI image moderation (Gemini Vision) — same CF the iOS/Android apps call before accepting a
    * profile photo. Returns {approved, reason}. Fail-OPEN on error (server-side R17 trigger is the

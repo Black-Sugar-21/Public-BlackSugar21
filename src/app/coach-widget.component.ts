@@ -1935,6 +1935,7 @@ export class CoachWidgetComponent implements OnDestroy {
   async copyPhrase(text: string, i: any) {
     if (!this.isBrowser) return;
     try { await navigator.clipboard.writeText(text); this.copiedIdx.set(i); setTimeout(() => this.copiedIdx.set(null), 1800); } catch { /* noop */ }
+    this.firebase.trackCoachSuggestionAction('copied'); // R150 learning signal (auth-only, fire-and-forget)
   }
 
   // ── Phrase BottomSheet ──────────────────────────────────────────────────────
@@ -2028,6 +2029,7 @@ export class CoachWidgetComponent implements OnDestroy {
     try {
       if ((navigator as any).share) { await (navigator as any).share({ title: 'Black Sugar 21', text, url: SITE }); }
       else { await navigator.clipboard.writeText(text); this.justShared.set(true); setTimeout(() => this.justShared.set(false), 2200); }
+      this.firebase.trackCoachSuggestionAction('shared'); // R150 learning signal (auth-only, fire-and-forget)
     } catch { /* user cancelled */ }
   }
   trackDownload() { this.ga('coach_demo_download', { store: this.isBrowser && /android/i.test(navigator.userAgent) ? 'android' : 'ios' }); }
