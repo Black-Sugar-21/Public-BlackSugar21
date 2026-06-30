@@ -299,11 +299,12 @@ exports.getDiscoveryFeed = onCall(
 
       // ── 6. Build response ──
       const profiles = candidateUsers.map(({uid, data}) => {
-        const photoEntries = photoUrlsMap[uid] || [];
+        // Derive pictures + pictureNames from the SAME filtered set so length/order
+        // parity is STRUCTURAL (not coincidental): an entry missing a fileName is dropped
+        // from both arrays at once, never just one — no index shift / misalignment.
+        const photoEntries = (photoUrlsMap[uid] || []).filter((p) => p.fileName);
         const pictures = photoEntries.map((p) => ({url: p.url, thumbUrl: p.thumbUrl || null}));
-        // File names in the SAME order as `pictures` (only photos that resolved a signed
-        // URL), so clients can key their picture-state slots by name without misalignment.
-        const pictureNames = photoEntries.map((p) => p.fileName).filter(Boolean);
+        const pictureNames = photoEntries.map((p) => p.fileName);
         const personalStories = storiesMap[uid] || [];
         return {
           userId: uid,
