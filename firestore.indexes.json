@@ -403,6 +403,21 @@
                     }
                 }
             ]
+        },
+        {
+            "_comment": "R150: scheduledCoachJudge (coach-learning.js) coachJudgeQueue where status==pending orderBy submittedAt asc — FAILED_PRECONDITION 2026-06-28",
+            "collectionGroup": "coachJudgeQueue",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "submittedAt",
+                    "order": "ASCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": [

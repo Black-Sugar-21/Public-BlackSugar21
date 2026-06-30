@@ -299,7 +299,11 @@ exports.getDiscoveryFeed = onCall(
 
       // ── 6. Build response ──
       const profiles = candidateUsers.map(({uid, data}) => {
-        const pictures = (photoUrlsMap[uid] || []).map((p) => ({url: p.url, thumbUrl: p.thumbUrl || null}));
+        const photoEntries = photoUrlsMap[uid] || [];
+        const pictures = photoEntries.map((p) => ({url: p.url, thumbUrl: p.thumbUrl || null}));
+        // File names in the SAME order as `pictures` (only photos that resolved a signed
+        // URL), so clients can key their picture-state slots by name without misalignment.
+        const pictureNames = photoEntries.map((p) => p.fileName).filter(Boolean);
         const personalStories = storiesMap[uid] || [];
         return {
           userId: uid,
@@ -311,7 +315,7 @@ exports.getDiscoveryFeed = onCall(
           interests: data.interests || [],
           latitude: data.latitude || 0,
           longitude: data.longitude || 0,
-          pictureNames: data.pictures || data.pictureNames || [],
+          pictureNames,
           pictures,
           personalStories,
           hasActiveStories: personalStories.length > 0,

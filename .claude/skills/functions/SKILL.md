@@ -1260,3 +1260,49 @@ if (!picName || picName.includes('..') || picName.includes('/')) continue;
 Lanzar 3 agentes paralelos en background divididos por **dimensión de riesgo** (no por archivo). R128–R129: (1) seguridad/inyección/auth, (2) concurrencia/integridad/límites-Firestore, (3) crash/recursos/lógica. R130–R132b: ángulos nuevos por ronda (timezone/lógica-negocio, i18n/regex, scheduled-starvation, validación-inputs, contrato-CF↔cliente, deploy/config). Cada agente barre los 37 archivos completos desde su ángulo y verifica adversarialmente cada hallazgo. El agente principal aplica fixes en foreground (serializado: edit → node --check → npm test → deploy → live probe 130/130 → commit). Esta metodología encuentra clases sistémicas que el barrido archivo-por-archivo pierde.
 
 - AIWingmanService.generateSmartReply: guard let suggestionsData → if let con fallback SmartReplySuggestions vacío
+
+## Session 2026-06-22 (R2) — Web client parity: all coach-chat CFs now consumed from Angular
+
+The following CFs, previously only called from iOS/Android, are now also called from the **Angular web app-shell**
+(`firebase.service.ts`) with full iOS color-token parity and atomic-design UI:
+
+| CF | Web method in firebase.service.ts | Notes |
+|---|---|---|
+| `generateIcebreakers` | `generateIcebreakers(otherUid, lang)` | Sends `language` + `userLanguage` (both) to avoid English fallback |
+| `generateSmartReply` | `generateSmartReply(matchId, lastMessage, lang)` | Triggered after each received message |
+| `getRealtimeCoachTips` | `getRealtimeCoachTips(matchId, lang)` | 45s cooldown on client |
+| `getDateSuggestions` | `getDateSuggestions(matchId, lang, category?, opts?)` | `loadCount/excludePlaceIds/hasMore` pagination |
+| `generateDateBlueprint` | `generateDateBlueprint(matchId, lang, duration)` | Bottom sheet; result is editable before send |
+
+`sendPlaceMessage` and `sendBlueprintMessage` are **direct Firestore writes** (not CFs) from `firebase.service.ts` —
+they write `type:'place'` and `type:'date_blueprint'` messages directly (same as iOS `chatViewModel.sendBlueprintMessage`).
+
+**Hard delete** (backend): `deleteUserData` in `users.js` (CoachFish) reverted to immediate full purge
+(user doc → purgeMatch each match → subcollections → reports → coachChats → discoveryState → dateCheckIns →
+stories → Storage → Auth.deleteUser). One-off purge script `scripts/purge-soft-deleted.js` cleaned accounts
+with `scheduledForDeletion==true` left from the soft-delete period.
+
+## Session 2026-06-22 (R2-b) — psychWhy/psychTip field separation
+
+### File
+`CoachFish/lib/places/places.js` — `applyVenueDebate()` function
+
+### Change
+- **Before**: `s.psychTip = r.why || r.tip`
+  - `r.why` (explanation sentence) and `r.tip` (actionable advice) were merged with `||`
+  - `r.tip` was silently lost whenever `r.why` was truthy (almost always)
+- **After**: `s.psychWhy = r.why` and `s.psychTip = r.tip` (separate fields, always populated independently)
+
+### debateVenues() return shape
+`{ name, score, why, perspectives[], tip }`
+- `why` = explanation sentence (why this venue psychologically fits the match)
+- `tip` = actionable date advice (what to actually do there)
+
+### Deploy
+`getDateSuggestions` CF redeployed via `firebase deploy --only functions:getDateSuggestions --force`
+
+### Client updates
+All clients updated to read both fields independently:
+- Web (`app-shell.component.html`): renders `psychWhy` in green + `psychTip` in gold card
+- iOS (`PlaceSuggestionsView.swift`): `var psychWhy: String?` added + green text rendering
+- Android (`PlaceSuggestionsSheet.kt` + `ChatViewModel.kt`): `val psychWhy: String? = null` + `LikeGreen1` text rendering

@@ -212,22 +212,11 @@
                 }
 
                 @if (m.phrases?.length) {
-                  <div class="cw-phrases">
-                    @for (ph of m.phrases!; track ph; let i = $index) {
-                      <div class="cw-phrase">
-                        <div class="cw-phrase-body">
-                          <span>{{ ph }}</span>
-                          @if (m.phraseMeta?.[i]; as pm) {
-                            <div class="cw-phrase-meta">
-                              <span class="cw-phrase-lens">{{ pm.perspective }}</span>
-                              @if (pm.why) { <span class="cw-phrase-why">· {{ pm.why }}</span> }
-                            </div>
-                          }
-                        </div>
-                        <button class="cw-copy" (click)="copyPhrase(ph, i)">{{ copiedIdx() === i ? t().copied : t().copy }}</button>
-                      </div>
-                    }
-                  </div>
+                  <button class="cw-phrases-trigger" (click)="openPhraseSheet(m)">
+                    <span class="cw-phrases-trigger-icon">✨</span>
+                    <span class="cw-phrases-trigger-label">{{ m.phrases!.length }} {{ t().phrasesSheetTitle }}</span>
+                    <span class="cw-phrases-trigger-arr">↑</span>
+                  </button>
                 }
 
                 @if (m.sim) {
@@ -418,6 +407,67 @@
           <a class="cw-discover-hint" [href]="storeLink" target="_blank" rel="noopener">{{ ui('discoverHint') }}</a>
         }
         <div class="cw-foot">{{ t().footer }}</div>
+
+        <!-- ── Phrase BottomSheet ── -->
+        @if (phraseSheetOpen()) {
+          <div class="cw-ps-backdrop" (click)="closePhraseSheet()"></div>
+          <div class="cw-ps" role="dialog" [attr.aria-label]="t().phrasesSheetTitle || 'Frases sugeridas'">
+            <div class="cw-ps-handle"></div>
+            <div class="cw-ps-head">
+              <span class="cw-ps-head-icon">✨</span>
+              <span class="cw-ps-head-title">{{ t().phrasesSheetTitle || 'Frases sugeridas' }}</span>
+              @if (phraseSheetMsg()?.phrases?.length) {
+                <span class="cw-ps-count">{{ phraseSheetMsg().phrases.length }}</span>
+              }
+              <button class="cw-ps-close" (click)="closePhraseSheet()" [attr.aria-label]="ui('ariaClose')">✕</button>
+            </div>
+            <div class="cw-ps-scroll">
+              @for (item of phraseSheetVisible(); track item.text; let i = $index) {
+                <div class="cw-ps-card" [class.ps-best]="i === 0 && phraseSheetSorted().length > 1">
+                  <div class="cw-ps-tags">
+                    @if (item.bestFor) {
+                      <span class="cw-ps-tag">{{ item.bestFor }}</span>
+                    }
+                    @if (toneLabel(item.tone)) {
+                      <span class="cw-ps-tag">{{ toneLabel(item.tone) }}</span>
+                    }
+                    @if (item.score != null) {
+                      <span class="cw-ps-score">{{ item.score }}% ✦</span>
+                    }
+                  </div>
+                  <p class="cw-ps-text" dir="auto">{{ item.text }}</p>
+                  @if (item.why) {
+                    <p class="cw-ps-reason">💡 {{ item.why }}</p>
+                  }
+                  <div class="cw-ps-actions">
+                    <button class="cw-ps-copy" (click)="copyPhrase(item.text, 'ps' + i)">
+                      @if (copiedIdx() === 'ps' + i) {
+                        <span>✓</span><span>{{ t().copied || 'Copiado' }}</span>
+                      } @else {
+                        <span>📋</span><span>{{ t().copy || 'Copiar frase' }}</span>
+                      }
+                    </button>
+                  </div>
+                </div>
+              }
+              @if (!phraseSheetExpanded() && phraseSheetHiddenCount() > 0) {
+                <button class="cw-ps-expand" (click)="phraseSheetExpanded.set(true)">
+                  {{ phraseSheetMoreLabel() }}
+                </button>
+              }
+              <button class="cw-ps-load-more" (click)="loadMorePhrases()" [disabled]="phraseSheetLoading()">
+                @if (phraseSheetLoading()) {
+                  <span class="cw-ps-spin">⟳</span>
+                } @else {
+                  ✨ {{ t().loadMore || 'Generar más frases' }}
+                }
+              </button>
+              @if (phraseSheetSorted().length === 0) {
+                <div class="cw-ps-empty">{{ t().noSuggestions || 'No hay frases disponibles' }}</div>
+              }
+            </div>
+          </div>
+        }
       </section>
     }
   }

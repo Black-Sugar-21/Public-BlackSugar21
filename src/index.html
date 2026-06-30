@@ -179,6 +179,12 @@
   <!-- DNS Prefetch -->
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
+
+  <!-- LCP image preload — prevents render-blocking on the hero coach image -->
+  <link rel="preload" as="image" href="coachIA-es.png" fetchpriority="high">
+
+  <!-- TODO: Add Google Search Console verification tag below once verified -->
+  <!-- <meta name="google-site-verification" content="REPLACE_WITH_REAL_VALUE"> -->
 </head>
 <body>
   <app-root></app-root>

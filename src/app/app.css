@@ -2636,4 +2636,131 @@ button:focus-visible,
 .coach-fab-spark { font-size: 17px; }
 @keyframes coachFabPing { 0% { transform: scale(1); opacity: .45; } 75%,100% { transform: scale(1.45); opacity: 0; } }
 @keyframes coachFabNudge { 0%,86%,100% { transform: translateY(0) scale(1); } 90% { transform: translateY(-2px) scale(1.06); } 94% { transform: scale(.97); } 97% { transform: scale(1); } }
+
+/* ── How it works section ─────────────────────────────────────────────── */
+.how-section {
+  padding: 72px 24px 64px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.how-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 48px;
+}
+.how-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.how-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 0 16px;
+}
+.how-step-num {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(212,175,55,.15), rgba(131,27,252,.15));
+  border: 1.5px solid rgba(212,175,55,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.how-connector {
+  flex: 0 0 40px;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(212,175,55,.3), rgba(131,27,252,.3));
+  margin-top: 26px;
+  align-self: flex-start;
+}
+.how-step-body { display: flex; flex-direction: column; gap: 6px; }
+.how-step-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.how-step-desc {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,.55);
+  line-height: 1.6;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .how-steps { flex-direction: column; align-items: center; gap: 8px; }
+  .how-connector { width: 1.5px; height: 32px; flex: 0 0 32px; margin-top: 0; background: linear-gradient(180deg, rgba(212,175,55,.3), rgba(131,27,252,.3)); }
+  .how-step { flex-direction: row; text-align: left; align-items: flex-start; width: 100%; max-width: 400px; }
+  .how-step-body { text-align: left; }
+}
+
+/* ── FAQ section ──────────────────────────────────────────────────────── */
+.faq-section {
+  padding: 72px 24px 80px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.faq-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 40px;
+}
+.faq-list { display: flex; flex-direction: column; gap: 12px; }
+.faq-item {
+  border-radius: 16px;
+  border: 1px solid rgba(131,27,252,.18);
+  background: rgba(255,255,255,.03);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.faq-item[open] { border-color: rgba(212,175,55,.3); }
+.faq-q {
+  padding: 18px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+.faq-q::-webkit-details-marker { display: none; }
+.faq-q::after {
+  content: '✦';
+  font-size: .75rem;
+  color: var(--gold);
+  flex-shrink: 0;
+  transition: transform .25s;
+}
+.faq-item[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 20px 18px;
+  border-top: 1px solid rgba(131,27,252,.12);
+}
+.faq-a p {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,.65);
+  line-height: 1.7;
+  margin: 14px 0 0;
+}
 @media (prefers-reduced-motion: reduce) { .coach-fab-link, .coach-fab-link::before, .coach-fab-link::after { animation: none !important; } }

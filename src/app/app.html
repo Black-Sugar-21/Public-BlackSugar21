@@ -231,6 +231,39 @@
       </div>
     </section>
 
+    <!-- How it works — 3-step conversion section -->
+    <section class="how-section animate-in" id="how-it-works" itemscope itemtype="https://schema.org/HowTo">
+      <meta itemprop="name" content="How to use Black Sugar 21">
+      <div class="how-inner">
+        <h2 class="how-title" itemprop="description">{{ t('how.title') }}</h2>
+        <div class="how-steps">
+          <div class="how-step animate-in delay-1" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
+            <div class="how-step-num">{{ t('how.step1.num') }}</div>
+            <div class="how-step-body">
+              <h3 class="how-step-title" itemprop="name">{{ t('how.step1.title') }}</h3>
+              <p class="how-step-desc" itemprop="text">{{ t('how.step1.desc') }}</p>
+            </div>
+          </div>
+          <div class="how-connector" aria-hidden="true"></div>
+          <div class="how-step animate-in delay-2" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
+            <div class="how-step-num">{{ t('how.step2.num') }}</div>
+            <div class="how-step-body">
+              <h3 class="how-step-title" itemprop="name">{{ t('how.step2.title') }}</h3>
+              <p class="how-step-desc" itemprop="text">{{ t('how.step2.desc') }}</p>
+            </div>
+          </div>
+          <div class="how-connector" aria-hidden="true"></div>
+          <div class="how-step animate-in delay-3" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
+            <div class="how-step-num">{{ t('how.step3.num') }}</div>
+            <div class="how-step-body">
+              <h3 class="how-step-title" itemprop="name">{{ t('how.step3.title') }}</h3>
+              <p class="how-step-desc" itemprop="text">{{ t('how.step3.desc') }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Why we're not a swipe app (2026-05-31): owns the anti-fatigue narrative the
          press is naming for free. Placed right after the trust band so it reframes the
          whole page premise before the product tour. -->
@@ -525,6 +558,39 @@
       </div>
     </section>
 
+    <!-- FAQ section — visible content matches FAQPage structured data for SEO -->
+    <section class="faq-section" id="faq" itemscope itemtype="https://schema.org/FAQPage">
+      <div class="faq-inner">
+        <h2 class="faq-title">{{ t('faq.title') }}</h2>
+        <div class="faq-list">
+          <details class="faq-item glass-panel" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+            <summary class="faq-q" itemprop="name">{{ t('faq.q1') }}</summary>
+            <div class="faq-a" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
+              <p itemprop="text">{{ t('faq.a1') }}</p>
+            </div>
+          </details>
+          <details class="faq-item glass-panel" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+            <summary class="faq-q" itemprop="name">{{ t('faq.q2') }}</summary>
+            <div class="faq-a" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
+              <p itemprop="text">{{ t('faq.a2') }}</p>
+            </div>
+          </details>
+          <details class="faq-item glass-panel" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+            <summary class="faq-q" itemprop="name">{{ t('faq.q3') }}</summary>
+            <div class="faq-a" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
+              <p itemprop="text">{{ t('faq.a3') }}</p>
+            </div>
+          </details>
+          <details class="faq-item glass-panel" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+            <summary class="faq-q" itemprop="name">{{ t('faq.q4') }}</summary>
+            <div class="faq-a" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
+              <p itemprop="text">{{ t('faq.a4') }}</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
     <footer class="elegant-footer">
       <div class="footer-content">
         <div class="footer-logo">
@@ -539,6 +605,8 @@
           <a routerLink="/terms">{{ t('footer.terms') }}</a>
           <a routerLink="/privacy">{{ t('footer.privacy') }}</a>
           <a routerLink="/moderation-policy">{{ t('footer.moderation') }}</a>
+          <a routerLink="/features">{{ getCurrentLanguage() === 'es' ? 'Funciones' : 'Features' }}</a>
+          <a routerLink="/safety-standards">{{ getCurrentLanguage() === 'es' ? 'Seguridad infantil' : 'Child Safety' }}</a>
         </div>
         <div class="footer-copyright">
           <p>{{ t('footer.copyright') }}</p>

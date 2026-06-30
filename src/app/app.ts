@@ -1,6 +1,7 @@
 import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { TranslationService, LANGUAGES, LanguageOption, Language } from './translation.service';
@@ -109,6 +110,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     public translate: TranslationService,
     public firebase: FirebaseService,
     private router: Router,
+    private meta: Meta,
+    private titleService: Title,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -128,6 +131,46 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           this.redirectedToApp = true;
           this.router.navigate(['/app']);
         }
+      });
+
+      // Dynamic SEO — update <html lang>, meta description, and <title> when language changes.
+      effect(() => {
+        const lang = this.translate.currentLanguage();
+        const descriptions: Record<string, string> = {
+          es: 'Black Sugar 21 es un coach de inteligencia emocional con IA. Psicología real (Gottman, Goleman, Bowlby) para conectar de verdad — no swipe sin sentido. 13 idiomas, gratis.',
+          en: 'Black Sugar 21 is an AI emotional intelligence coach. Real psychology (Gottman, Goleman, Bowlby) to connect for real — not endless swiping. 13 languages, free.',
+          pt: 'Black Sugar 21 é um coach de inteligência emocional com IA. Psicologia real para se conectar de verdade — não swipe sem sentido. 13 idiomas, grátis.',
+          fr: "Black Sugar 21 est un coach d'intelligence émotionnelle propulsé par l'IA. Psychologie réelle pour de vraies connexions — pas de swipe sans fin. 13 langues, gratuit.",
+          de: 'Black Sugar 21 ist ein KI-Coach für emotionale Intelligenz. Echte Psychologie für echte Verbindungen — kein sinnloses Swipen. 13 Sprachen, kostenlos.',
+          it: 'Black Sugar 21 è un coach di intelligenza emotiva con IA. Psicologia reale per connessioni vere — niente swipe senza senso. 13 lingue, gratuito.',
+          zh: 'Black Sugar 21 是一款AI情商教练App。基于真实心理学（Gottman, Goleman, Bowlby）帮助你建立真实连接。13种语言，免费。',
+          ja: 'Black Sugar 21はAI感情知能コーチです。本物の心理学で本当のつながりを。13言語対応、無料。',
+          ko: 'Black Sugar 21은 AI 감성 지능 코치입니다. 진짜 심리학으로 진짜 연결을 만드세요. 13개 언어, 무료.',
+          ru: 'Black Sugar 21 — ИИ-коуч эмоционального интеллекта. Настоящая психология для настоящих связей. 13 языков, бесплатно.',
+          ar: 'Black Sugar 21 مدرب ذكاء عاطفي بالذكاء الاصطناعي. علم نفس حقيقي للتواصل الحقيقي. 13 لغة، مجاناً.',
+          id: 'Black Sugar 21 adalah coach kecerdasan emosional bertenaga AI. Psikologi nyata untuk koneksi nyata. 13 bahasa, gratis.',
+          tr: "Black Sugar 21, yapay zekâ destekli duygusal zekâ koçudur. Gerçek psikolojiyle gerçek bağlar kurun. 13 dil, ücretsiz.",
+        };
+        const titles: Record<string, string> = {
+          es: 'Black Sugar 21 – Coach IA de Inteligencia Emocional',
+          en: 'Black Sugar 21 – AI Emotional Intelligence Coach',
+          pt: 'Black Sugar 21 – Coach IA de Inteligência Emocional',
+          fr: "Black Sugar 21 – Coach IA d'Intelligence Émotionnelle",
+          de: 'Black Sugar 21 – KI-Coach für Emotionale Intelligenz',
+          it: 'Black Sugar 21 – Coach IA di Intelligenza Emotiva',
+          zh: 'Black Sugar 21 – AI情商教练',
+          ja: 'Black Sugar 21 – AI感情知能コーチ',
+          ko: 'Black Sugar 21 – AI 감성 지능 코치',
+          ru: 'Black Sugar 21 – ИИ-коуч Эмоционального Интеллекта',
+          ar: 'Black Sugar 21 – مدرب الذكاء العاطفي بالذكاء الاصطناعي',
+          id: 'Black Sugar 21 – Coach Kecerdasan Emosional AI',
+          tr: 'Black Sugar 21 – Yapay Zekâ Duygusal Zekâ Koçu',
+        };
+        document.documentElement.lang = lang;
+        const desc = descriptions[lang] || descriptions['en'];
+        const pageTitle = titles[lang] || titles['en'];
+        this.meta.updateTag({ name: 'description', content: desc });
+        this.titleService.setTitle(pageTitle);
       });
     }
   }

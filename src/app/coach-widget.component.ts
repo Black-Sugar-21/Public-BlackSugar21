@@ -11,16 +11,23 @@ import { UiSkeletonComponent } from './ui/atoms/ui-skeleton.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 import { UiPhoneInputComponent } from './ui/molecules/ui-phone-input.component';
 
-interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; venueOffer?: string | null; upcomingEvents?: string[] | null; }
+interface PlaceCard { name: string; address: string; rating: number | null; mapsUrl: string; emoji?: string | null; why?: string | null; perspectives?: string[]; score?: number | null; tip?: string | null; website?: string | null; instagram?: string | null; instagramHandle?: string | null; venueOffer?: string | null; upcomingEvents?: string[] | null; description?: string | null; distanceKm?: number | null; isOpenNow?: boolean | null; reviewCount?: number | null; priceLevel?: string | null; isEvent?: boolean; eventInfo?: string | null; promoInfo?: string | null; category?: string | null; bestFor?: string | null; photos?: Array<{url: string; width: number; height: number}> | null; }
 interface SimApproach { toneKey?: string; tone: string; phrase: string; why: string; perspectives: string[]; confidence: number | null; }
 interface SimResult { stage: string; approaches: SimApproach[]; perspectiveNames: string[]; perspectivesUsed: number; }
 interface MvStage { stageId: string; emoji: string; label: string; narrative: string; bestPhrase: string; score: number | null; tip: string; }
 interface MvResult { compatibilityScore: number | null; compatibilityStars: number | null; compatibilityLabel: string; stages: MvStage[]; keyInsights: string[]; }
 type SimMode = '' | 'situation' | 'multiverse';
 interface AreaEvent { title: string; date: string; time: string; venue: string; description: string; category: string; instagram: string | null; }
+interface SuggestionItem {
+  text: string;
+  tone?: string | null;
+  why?: string | null;
+  bestFor?: string | null;
+  score?: number | null;
+}
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
-  places?: PlaceCard[]; phrases?: string[]; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
+  places?: PlaceCard[]; phrases?: SuggestionItem[]; phrasesInitialVisible?: number; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
   areaEvents?: AreaEvent[]; // distinct "events near you" card (Google-grounded, no IG needed)
   ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
 }
@@ -121,7 +128,8 @@ const I18N: Record<string, any> = {
     download: 'Descargar la app', share: 'Compartir', shared: '¡Copiado!',
     shareText: 'Probé el Coach IA de Black Sugar 21 y me dio este consejo 👀',
     footer: 'Generado por IA · versión beta',
-    useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver en mapa', webSite: 'Sitio web',
+    useLoc: '📍 Usar mi ubicación', cityPh: 'o escribe tu ciudad…', copy: 'Copiar frase', copied: '✓ Copiado', viewMap: 'Ver en mapa', webSite: 'Sitio web',
+    phrasesSheetTitle: 'Frases sugeridas', noSuggestions: 'No hay frases disponibles', showMore: 'Ver {n} más ↓', loadMore: 'Generar más frases',
     simChip: '🔮 Simular una situación', simHint: 'Describe tu situación y mis 5 perspectivas la analizan',
     simAnalyzing: 'Analizando enfoques…', simThinking: '5 perspectivas pensando…', simBy: 'Analizado por', simStage: 'Etapa', simWhy: 'Por qué funciona', simBest: 'Recomendada',
     // two simulations + simple explanation of the difference
@@ -166,7 +174,8 @@ const I18N: Record<string, any> = {
     download: 'Download the app', share: 'Share', shared: 'Copied!',
     shareText: 'I tried Black Sugar 21’s AI Coach and it gave me this advice 👀',
     footer: 'AI-generated · beta version',
-    useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy', copied: '✓ Copied', viewMap: 'View on map', webSite: 'Website',
+    useLoc: '📍 Use my location', cityPh: 'or type your city…', copy: 'Copy phrase', copied: '✓ Copied', viewMap: 'View on map', webSite: 'Website',
+    phrasesSheetTitle: 'Suggested phrases', noSuggestions: 'No phrases available', showMore: 'See {n} more ↓', loadMore: 'Generate more phrases',
     simChip: '🔮 Simulate a situation', simHint: 'Describe your situation and my 5 perspectives analyze it',
     simAnalyzing: 'Analyzing approaches…', simThinking: '5 perspectives thinking…', simBy: 'Analyzed by', simStage: 'Stage', simWhy: 'Why it works', simBest: 'Recommended',
     simTitle: '🔮 Simulate a situation', simDesc: 'What to say RIGHT NOW in a specific moment · 5 perspectives give you ready phrases.',
@@ -210,7 +219,8 @@ const I18N: Record<string, any> = {
     download: 'Baixar o app', share: 'Compartilhar', shared: 'Copiado!',
     shareText: 'Testei o Coach IA do Black Sugar 21 e ele me deu este conselho 👀',
     footer: 'Gerado por IA · versão beta',
-    useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar', copied: '✓ Copiado', viewMap: 'Ver no mapa', webSite: 'Site',
+    useLoc: '📍 Usar minha localização', cityPh: 'ou escreva sua cidade…', copy: 'Copiar frase', copied: '✓ Copiado', viewMap: 'Ver no mapa', webSite: 'Site',
+    phrasesSheetTitle: 'Frases sugeridas', noSuggestions: 'Nenhuma frase disponível', showMore: 'Ver {n} mais ↓', loadMore: 'Gerar mais frases',
     simChip: '🔮 Simular uma situação', simHint: 'Descreva sua situação e minhas 5 perspectivas a analisam',
     simAnalyzing: 'Analisando abordagens…', simThinking: '5 perspectivas pensando…', simBy: 'Analisado por', simStage: 'Etapa', simWhy: 'Por que funciona', simBest: 'Recomendada',
     simTitle: '🔮 Simular uma situação', simDesc: 'O que dizer AGORA num momento específico · 5 perspectivas te dão frases prontas.',
@@ -239,6 +249,456 @@ const I18N: Record<string, any> = {
     locRequesting: 'Obtendo sua localização 📍…',
     locBlocked: 'Seu navegador está com a localização bloqueada 🔒 Habilite no cadeado da barra de endereço, ou escreva sua cidade aqui embaixo e te recomendo lugares 👇',
     needCity: 'Me diga em que cidade você está e te recomendo lugares 👇',
+  },
+  fr: {
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Version bêta', newChat: 'Nouvelle conversation', showPrev: 'Voir la conversation précédente', historyTitle: 'Tes conversations', historyEmpty: 'Aucune conversation enregistrée.', morning: 'Bonjour', afternoon: 'Bon après-midi', evening: 'Bonsoir', discoverHint: '✨ Dans l\'app : découvre des personnes compatibles',
+    greeting: 'Bonjour 👋 Je suis ton coach d\'intelligence émotionnelle pour les rencontres. Dis-moi ta situation et je te donne une idée concrète pour ta prochaine conversation.',
+    chips: ['Comment débuter une conversation ?', 'Je suis laissé·e sur vu 😅', 'Comment proposer un rendez-vous ?'],
+    placeholder: 'Décris ta situation…', send: 'Envoyer',
+    ctaTitle: 'Tu as essayé Coach IA ✦',
+    ctaSubtitle: 'Dans l\'app tu as 4 questions par jour, il te mémorise et simule ta relation.',
+    ctaText: 'Dans l\'app c\'est 4 questions par jour : il te mémorise, connaît tes matchs et simule ta relation.',
+    ctaDismiss: 'Continuer à tester',
+    freeCounterOf: 'sur', freeCounterSuffix: 'gratuites', freeCounterPrefix: 'Question',
+    taste2: 'questions gratuites pour tester', taste1: '✦ Il te reste 1 question gratuite',
+    download: 'Télécharger l\'app', share: 'Partager', shared: 'Copié !',
+    shareText: 'J\'ai essayé Coach IA de Black Sugar 21 et il m\'a donné ce conseil 👀',
+    footer: 'Généré par IA · version bêta',
+    useLoc: '📍 Utiliser ma localisation', cityPh: 'ou tape ta ville…', copy: 'Copier la phrase', copied: '✓ Copié', viewMap: 'Voir sur la carte', webSite: 'Site web',
+    phrasesSheetTitle: 'Phrases suggérées', noSuggestions: 'Aucune phrase disponible', showMore: 'Voir {n} de plus ↓', loadMore: 'Générer plus de phrases',
+    simChip: '🔮 Simuler une situation', simHint: 'Décris ta situation et mes 5 perspectives l\'analysent',
+    simAnalyzing: 'Analyse des approches…', simThinking: '5 perspectives en réflexion…', simBy: 'Analysé par', simStage: 'Étape', simWhy: 'Pourquoi ça marche', simBest: 'Recommandé',
+    simTitle: '🔮 Simuler une situation', simDesc: 'Quoi dire MAINTENANT dans un moment précis · 5 perspectives te donnent des phrases prêtes.',
+    mvTitle: '🌌 Simuler la relation', mvDesc: 'Comment la relation évoluerait en 5 étapes + ta compatibilité.',
+    mvHint: 'Décris-moi la personne ou la connexion et je simule les 5 étapes de la relation',
+    mvAnalyzing: 'Simulation de 5 univers…', mvCompat: 'Compatibilité', mvInsights: 'Clés de cette connexion',
+    fbAsk: 'C\'était utile ?', fbThanks: 'Merci pour ton feedback ! 💛',
+    placeChip: '📍 Endroits pour un rendez-vous', placeQuery: 'Quels endroits recommandes-tu pour un premier rendez-vous près de moi ?',
+    planLabel: 'Planifie ton rendez-vous', suggested: 'suggéré maintenant',
+    placeCats: [
+      { key: 'cafe', t: '☕ Café', q: 'Quels cafés cosy y a-t-il près de moi pour un rendez-vous ?' },
+      { key: 'restaurant', t: '🍽️ Restaurant', q: 'Quels restaurants avec bonne ambiance y a-t-il près de moi ?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Quels bons bars y a-t-il près de moi pour un rendez-vous ?' },
+      { key: 'night_club', t: '💃 Club', q: 'Quels bons clubs y a-t-il près de moi pour danser ?' },
+    ],
+    areaEventsTitle: 'Événements près de toi', areaEventsSoon: 'Bientôt',
+    thinking: 'Le coach réfléchit…', placesLoading: 'Recherche d\'endroits près de toi 📍…',
+    debateSteps: [
+      'Analyse des lieux proches…',
+      'Dynamique sociale · lecture de l\'ambiance…',
+      'Communication · vérification des avis…',
+      'Intelligence émotionnelle · évaluation de la connexion…',
+      'Présence numérique · recherche d\'Instagram et stories…',
+      'Synthèse des meilleures options pour toi…',
+    ],
+    locRequesting: 'Obtention de ta localisation 📍…',
+    locBlocked: 'Ton navigateur a bloqué la localisation 🔒 Active-la depuis l\'icône cadenas dans la barre d\'adresse, ou tape ta ville ci-dessous et je te suggère des endroits 👇',
+    needCity: 'Dis-moi dans quelle ville tu es et je te suggère des endroits 👇',
+  },
+  de: {
+    fab: 'KI-Coach', title: 'KI-Coach', demo: 'Beta-Version', newChat: 'Neues Gespräch', showPrev: 'Vorheriges Gespräch anzeigen', historyTitle: 'Deine Gespräche', historyEmpty: 'Noch keine gespeicherten Gespräche.', morning: 'Guten Morgen', afternoon: 'Guten Tag', evening: 'Guten Abend', discoverHint: '✨ In der App: entdecke kompatible Menschen',
+    greeting: 'Hallo 👋 Ich bin dein emotionaler Dating-Coach. Erzähl mir deine Situation und ich gebe dir eine konkrete Idee für dein nächstes Gespräch.',
+    chips: ['Wie starte ich ein Gespräch?', 'Ich wurde auf gelesen gelassen 😅', 'Wie schlage ich ein Date vor?'],
+    placeholder: 'Beschreib deine Situation…', send: 'Senden',
+    ctaTitle: 'Du hast Coach IA getestet ✦',
+    ctaSubtitle: 'In der App hast du 4 Fragen am Tag, sie erinnert sich an dich und simuliert deine Beziehung.',
+    ctaText: 'In der App sind es 4 Fragen täglich: sie erinnert sich, kennt deine Matches und simuliert deine Beziehung.',
+    ctaDismiss: 'Weiter testen',
+    freeCounterOf: 'von', freeCounterSuffix: 'kostenlos', freeCounterPrefix: 'Frage',
+    taste2: 'kostenlose Fragen zum Testen', taste1: '✦ Noch 1 kostenlose Frage übrig',
+    download: 'App herunterladen', share: 'Teilen', shared: 'Kopiert!',
+    shareText: 'Ich habe Coach IA von Black Sugar 21 ausprobiert und er hat mir diesen Rat gegeben 👀',
+    footer: 'KI-generiert · Beta-Version',
+    useLoc: '📍 Meinen Standort verwenden', cityPh: 'oder gib deine Stadt ein…', copy: 'Satz kopieren', copied: '✓ Kopiert', viewMap: 'Auf Karte ansehen', webSite: 'Webseite',
+    phrasesSheetTitle: 'Vorgeschlagene Sätze', noSuggestions: 'Keine Sätze verfügbar', showMore: '{n} weitere anzeigen ↓', loadMore: 'Mehr generieren',
+    simChip: '🔮 Situation simulieren', simHint: 'Beschreib deine Situation und meine 5 Perspektiven analysieren sie',
+    simAnalyzing: 'Ansätze werden analysiert…', simThinking: '5 Perspektiven denken nach…', simBy: 'Analysiert von', simStage: 'Phase', simWhy: 'Warum es funktioniert', simBest: 'Empfohlen',
+    simTitle: '🔮 Situation simulieren', simDesc: 'Was JETZT in einem bestimmten Moment sagen · 5 Perspektiven geben dir fertige Sätze.',
+    mvTitle: '🌌 Beziehung simulieren', mvDesc: 'Wie sich die Beziehung in 5 Phasen entwickeln würde + deine Kompatibilität.',
+    mvHint: 'Beschreib mir die Person oder Verbindung und ich simuliere die 5 Beziehungsphasen',
+    mvAnalyzing: '5 Universen werden simuliert…', mvCompat: 'Kompatibilität', mvInsights: 'Schlüssel dieser Verbindung',
+    fbAsk: 'War das hilfreich?', fbThanks: 'Danke für dein Feedback! 💛',
+    placeChip: '📍 Orte für ein Date', placeQuery: 'Was empfiehlst du für ein erstes Date in meiner Nähe?',
+    planLabel: 'Dein Date planen', suggested: 'gerade empfohlen',
+    placeCats: [
+      { key: 'cafe', t: '☕ Café', q: 'Welche gemütlichen Cafés gibt es in meiner Nähe für ein Date?' },
+      { key: 'restaurant', t: '🍽️ Restaurant', q: 'Welche Restaurants mit toller Atmosphäre gibt es in meiner Nähe?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Welche guten Bars gibt es in meiner Nähe für ein Date?' },
+      { key: 'night_club', t: '💃 Club', q: 'Welche guten Clubs gibt es in meiner Nähe zum Tanzen?' },
+    ],
+    areaEventsTitle: 'Events in deiner Nähe', areaEventsSoon: 'Bald',
+    thinking: 'Der Coach denkt nach…', placesLoading: 'Suche nach Orten in deiner Nähe 📍…',
+    debateSteps: [
+      'Nahe Orte werden analysiert…',
+      'Soziale Dynamik · Stimmung lesen…',
+      'Kommunikation · Bewertungen prüfen…',
+      'Emotionale Intelligenz · Verbindung messen…',
+      'Digitale Präsenz · Instagram & Stories suchen…',
+      'Die besten Optionen für dich zusammenfassen…',
+    ],
+    locRequesting: 'Deinen Standort ermitteln 📍…',
+    locBlocked: 'Dein Browser hat den Standort gesperrt 🔒 Aktiviere ihn über das Schloss-Symbol in der Adressleiste, oder gib deine Stadt unten ein und ich schlage Orte vor 👇',
+    needCity: 'Sag mir, in welcher Stadt du bist, und ich schlage dir Orte vor 👇',
+  },
+  it: {
+    fab: 'Coach IA', title: 'Coach IA', demo: 'Versione beta', newChat: 'Nuova conversazione', showPrev: 'Vedi conversazione precedente', historyTitle: 'Le tue conversazioni', historyEmpty: 'Nessuna conversazione salvata.', morning: 'Buongiorno', afternoon: 'Buon pomeriggio', evening: 'Buonasera', discoverHint: '✨ Nell\'app: scopri persone compatibili',
+    greeting: 'Ciao 👋 Sono il tuo coach di intelligenza emotiva per gli appuntamenti. Dimmi la tua situazione e ti do un\'idea concreta per la tua prossima conversazione.',
+    chips: ['Come inizio una conversazione?', 'Mi ha lasciato su visto 😅', 'Come propongo un appuntamento?'],
+    placeholder: 'Descrivi la tua situazione…', send: 'Invia',
+    ctaTitle: 'Hai provato Coach IA ✦',
+    ctaSubtitle: 'Nell\'app hai 4 domande al giorno, ti ricorda e simula la tua relazione.',
+    ctaText: 'Nell\'app sono 4 domande al giorno: ti ricorda, conosce i tuoi match e simula la tua relazione.',
+    ctaDismiss: 'Continua a provare',
+    freeCounterOf: 'di', freeCounterSuffix: 'gratis', freeCounterPrefix: 'Domanda',
+    taste2: 'domande gratis per provare', taste1: '✦ Ti rimane 1 domanda gratis',
+    download: 'Scarica l\'app', share: 'Condividi', shared: 'Copiato!',
+    shareText: 'Ho provato Coach IA di Black Sugar 21 e mi ha dato questo consiglio 👀',
+    footer: 'Generato dall\'IA · versione beta',
+    useLoc: '📍 Usa la mia posizione', cityPh: 'o scrivi la tua città…', copy: 'Copia frase', copied: '✓ Copiato', viewMap: 'Vedi sulla mappa', webSite: 'Sito web',
+    phrasesSheetTitle: 'Frasi suggerite', noSuggestions: 'Nessuna frase disponibile', showMore: 'Vedi altri {n} ↓', loadMore: 'Genera altre frasi',
+    simChip: '🔮 Simula una situazione', simHint: 'Descrivi la tua situazione e le mie 5 prospettive la analizzano',
+    simAnalyzing: 'Analisi degli approcci…', simThinking: '5 prospettive in riflessione…', simBy: 'Analizzato da', simStage: 'Fase', simWhy: 'Perché funziona', simBest: 'Consigliato',
+    simTitle: '🔮 Simula una situazione', simDesc: 'Cosa dire ORA in un momento preciso · 5 prospettive ti danno frasi pronte.',
+    mvTitle: '🌌 Simula la relazione', mvDesc: 'Come si evolverebbe la relazione in 5 fasi + la tua compatibilità.',
+    mvHint: 'Descrivimi la persona o la connessione e simulo le 5 fasi della relazione',
+    mvAnalyzing: 'Simulazione di 5 universi…', mvCompat: 'Compatibilità', mvInsights: 'Chiavi di questa connessione',
+    fbAsk: 'È stato utile?', fbThanks: 'Grazie per il tuo feedback! 💛',
+    placeChip: '📍 Posti per un appuntamento', placeQuery: 'Cosa mi consigli per un primo appuntamento vicino a me?',
+    planLabel: 'Pianifica il tuo appuntamento', suggested: 'suggerito ora',
+    placeCats: [
+      { key: 'cafe', t: '☕ Caffè', q: 'Quali caffè accoglienti ci sono vicino a me per un appuntamento?' },
+      { key: 'restaurant', t: '🍽️ Ristorante', q: 'Quali ristoranti con bella atmosfera ci sono vicino a me?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Quali buoni bar ci sono vicino a me per un appuntamento?' },
+      { key: 'night_club', t: '💃 Club', q: 'Quali buoni club ci sono vicino a me per ballare?' },
+    ],
+    areaEventsTitle: 'Eventi vicino a te', areaEventsSoon: 'Presto',
+    thinking: 'Il coach sta pensando…', placesLoading: 'Ricerca posti vicino a te 📍…',
+    debateSteps: [
+      'Analisi dei posti vicini…',
+      'Dinamica sociale · lettura dell\'atmosfera…',
+      'Comunicazione · verifica delle recensioni…',
+      'Intelligenza emotiva · misurazione della connessione…',
+      'Presenza digitale · ricerca di Instagram e storie…',
+      'Sintesi delle migliori opzioni per te…',
+    ],
+    locRequesting: 'Ottenimento della tua posizione 📍…',
+    locBlocked: 'Il tuo browser ha la posizione bloccata 🔒 Abilitala dall\'icona lucchetto nella barra degli indirizzi, o scrivi la tua città qui sotto e ti suggerisco posti 👇',
+    needCity: 'Dimmi in quale città sei e ti suggerisco posti 👇',
+  },
+  ja: {
+    fab: 'AIコーチ', title: 'AIコーチ', demo: 'ベータ版', newChat: '新しい会話', showPrev: '前の会話を見る', historyTitle: '会話履歴', historyEmpty: '保存された会話はまだありません。', morning: 'おはようございます', afternoon: 'こんにちは', evening: 'こんばんは', discoverHint: '✨ アプリで相性の良い人を見つけよう',
+    greeting: 'こんにちは 👋 私はあなたのデートの感情知性コーチです。状況を教えてください。次の会話のための具体的なアイデアをお伝えします。',
+    chips: ['どうやって会話を始める？', '既読無視された 😅', 'どうやってデートに誘う？'],
+    placeholder: '状況を書いてください…', send: '送信',
+    ctaTitle: 'AIコーチを試しましたね ✦',
+    ctaSubtitle: 'アプリでは1日4質問、あなたを覚えてくれてリレーションをシミュレートします。',
+    ctaText: 'アプリでは1日4質問：あなたを覚えてマッチを把握し、関係をシミュレートします。',
+    ctaDismiss: '試し続ける',
+    freeCounterOf: '/', freeCounterSuffix: '無料', freeCounterPrefix: '質問',
+    taste2: '無料で試せる質問', taste1: '✦ 無料質問が残り1つ',
+    download: 'アプリをダウンロード', share: 'シェア', shared: 'コピーしました！',
+    shareText: 'Black Sugar 21のAIコーチを試したらこんなアドバイスをもらいました 👀',
+    footer: 'AI生成 · ベータ版',
+    useLoc: '📍 現在地を使う', cityPh: 'または都市名を入力…', copy: 'フレーズをコピー', copied: '✓ コピー済み', viewMap: '地図で見る', webSite: 'ウェブサイト',
+    phrasesSheetTitle: '提案フレーズ', noSuggestions: 'フレーズがありません', showMore: 'さらに{n}件表示 ↓', loadMore: 'もっと生成',
+    simChip: '🔮 状況をシミュレート', simHint: '状況を説明すると5つの視点で分析します',
+    simAnalyzing: 'アプローチを分析中…', simThinking: '5つの視点が考え中…', simBy: '分析者', simStage: 'ステージ', simWhy: 'なぜ効果的か', simBest: 'おすすめ',
+    simTitle: '🔮 状況をシミュレート', simDesc: '今この瞬間に何を言うか · 5つの視点がすぐ使えるフレーズを提案。',
+    mvTitle: '🌌 関係をシミュレート', mvDesc: '5つのステージで関係がどう発展するか + 相性。',
+    mvHint: '相手や関係を説明してください。5段階の関係をシミュレートします',
+    mvAnalyzing: '5つのユニバースをシミュレート中…', mvCompat: '相性', mvInsights: 'この関係のポイント',
+    fbAsk: '役に立ちましたか？', fbThanks: 'フィードバックありがとう！ 💛',
+    placeChip: '📍 デートスポット', placeQuery: '私の近くで初デートに良い場所を教えてください',
+    planLabel: 'デートを計画', suggested: '今おすすめ',
+    placeCats: [
+      { key: 'cafe', t: '☕ カフェ', q: '近くのデートにぴったりなカフェはどこ？' },
+      { key: 'restaurant', t: '🍽️ レストラン', q: '近くの雰囲気の良いレストランはどこ？' },
+      { key: 'bar', t: '🍸 バー', q: '近くのデートに良いバーはどこ？' },
+      { key: 'night_club', t: '💃 クラブ', q: '近くの踊れるいいクラブはどこ？' },
+    ],
+    areaEventsTitle: '近くのイベント', areaEventsSoon: 'もうすぐ',
+    thinking: 'コーチが考えています…', placesLoading: '近くのデートスポットを探しています 📍…',
+    debateSteps: [
+      '近くの場所を分析中…',
+      'ソーシャルダイナミクス · 雰囲気を読む…',
+      'コミュニケーション · レビューをチェック…',
+      '感情知性 · つながりを測定…',
+      'デジタルプレゼンス · InstagramとStories検索…',
+      'あなたへのベストオプションを合成中…',
+    ],
+    locRequesting: '位置情報を取得中 📍…',
+    locBlocked: 'ブラウザで位置情報がブロックされています 🔒 アドレスバーの鍵アイコンから有効にするか、下に都市名を入力してください 👇',
+    needCity: 'どの都市にいるか教えてください 👇',
+  },
+  zh: {
+    fab: 'AI教练', title: 'AI教练', demo: '测试版', newChat: '新对话', showPrev: '查看上一个对话', historyTitle: '我的对话', historyEmpty: '还没有保存的对话。', morning: '早上好', afternoon: '下午好', evening: '晚上好', discoverHint: '✨ 在应用中：发现合拍的人',
+    greeting: '你好 👋 我是你的约会情商教练。告诉我你的情况，我会给你一个下次对话的具体建议。',
+    chips: ['怎么开始一段对话？', '被已读不回了 😅', '怎么约出去？'],
+    placeholder: '描述你的情况…', send: '发送',
+    ctaTitle: '你已体验过AI教练 ✦',
+    ctaSubtitle: '在应用中每天有4个问题，它记得你并模拟你的关系。',
+    ctaText: '在应用中每天4个问题：它记得你，了解你的匹配对象，模拟你的关系。',
+    ctaDismiss: '继续体验',
+    freeCounterOf: '/', freeCounterSuffix: '免费', freeCounterPrefix: '问题',
+    taste2: '免费体验问题', taste1: '✦ 还剩1个免费问题',
+    download: '下载应用', share: '分享', shared: '已复制！',
+    shareText: '我尝试了Black Sugar 21的AI教练，它给了我这个建议 👀',
+    footer: 'AI生成 · 测试版',
+    useLoc: '📍 使用我的位置', cityPh: '或输入你的城市…', copy: '复制短语', copied: '✓ 已复制', viewMap: '在地图上查看', webSite: '网站',
+    phrasesSheetTitle: '建议短语', noSuggestions: '暂无短语', showMore: '查看另外{n}条 ↓', loadMore: '生成更多',
+    simChip: '🔮 模拟情景', simHint: '描述你的情况，我的5个视角将分析它',
+    simAnalyzing: '分析方法中…', simThinking: '5个视角思考中…', simBy: '分析者', simStage: '阶段', simWhy: '为什么有效', simBest: '推荐',
+    simTitle: '🔮 模拟情景', simDesc: '现在该说什么 · 5个视角给你随时可用的短语。',
+    mvTitle: '🌌 模拟关系', mvDesc: '关系将如何在5个阶段发展 + 你的兼容性。',
+    mvHint: '告诉我这个人或连接，我来模拟5个关系阶段',
+    mvAnalyzing: '模拟5个宇宙中…', mvCompat: '兼容性', mvInsights: '这段连接的关键',
+    fbAsk: '这有帮助吗？', fbThanks: '感谢你的反馈！ 💛',
+    placeChip: '📍 约会地点', placeQuery: '你推荐我附近哪些第一次约会的好地方？',
+    planLabel: '规划你的约会', suggested: '现在推荐',
+    placeCats: [
+      { key: 'cafe', t: '☕ 咖啡厅', q: '附近有什么适合约会的温馨咖啡厅？' },
+      { key: 'restaurant', t: '🍽️ 餐厅', q: '附近有什么气氛好的约会餐厅？' },
+      { key: 'bar', t: '🍸 酒吧', q: '附近有什么适合约会的好酒吧？' },
+      { key: 'night_club', t: '💃 夜店', q: '附近有什么可以跳舞的好夜店？' },
+    ],
+    areaEventsTitle: '附近活动', areaEventsSoon: '即将',
+    thinking: '教练正在思考…', placesLoading: '正在寻找附近的约会地点 📍…',
+    debateSteps: [
+      '分析附近地点…',
+      '社交动态 · 读取氛围…',
+      '沟通 · 检查评价…',
+      '情商 · 衡量连接…',
+      '数字形象 · 搜索Instagram和Stories…',
+      '为你整合最佳选项…',
+    ],
+    locRequesting: '获取你的位置 📍…',
+    locBlocked: '你的浏览器已禁用位置权限 🔒 请在地址栏的锁定图标处启用，或在下方输入你的城市，我来推荐地方 👇',
+    needCity: '告诉我你在哪个城市，我来推荐地方 👇',
+  },
+  ko: {
+    fab: 'AI 코치', title: 'AI 코치', demo: '베타 버전', newChat: '새 대화', showPrev: '이전 대화 보기', historyTitle: '내 대화', historyEmpty: '저장된 대화가 아직 없어요.', morning: '좋은 아침이에요', afternoon: '좋은 오후예요', evening: '좋은 저녁이에요', discoverHint: '✨ 앱에서 잘 맞는 사람을 만나보세요',
+    greeting: '안녕하세요 👋 저는 당신의 데이트 감성 지능 코치예요. 상황을 알려주시면 다음 대화를 위한 구체적인 아이디어를 드릴게요.',
+    chips: ['어떻게 대화를 시작하지?', '읽씹 당했어요 😅', '어떻게 데이트 신청해?'],
+    placeholder: '상황을 적어주세요…', send: '보내기',
+    ctaTitle: 'AI 코치를 경험했어요 ✦',
+    ctaSubtitle: '앱에서는 하루 4개 질문, 나를 기억하고 관계를 시뮬레이션해요.',
+    ctaText: '앱에서는 하루 4개 질문: 나를 기억하고, 매치를 파악하고, 관계를 시뮬레이션해요.',
+    ctaDismiss: '계속 체험하기',
+    freeCounterOf: '/', freeCounterSuffix: '무료', freeCounterPrefix: '질문',
+    taste2: '무료로 체험할 질문', taste1: '✦ 무료 질문 1개 남았어요',
+    download: '앱 다운로드', share: '공유', shared: '복사됐어요!',
+    shareText: 'Black Sugar 21 AI 코치를 써봤는데 이런 조언을 해줬어요 👀',
+    footer: 'AI 생성 · 베타 버전',
+    useLoc: '📍 내 위치 사용', cityPh: '또는 도시 입력…', copy: '문구 복사', copied: '✓ 복사됨', viewMap: '지도에서 보기', webSite: '웹사이트',
+    phrasesSheetTitle: '추천 문구', noSuggestions: '사용 가능한 문구가 없어요', showMore: '{n}개 더 보기 ↓', loadMore: '더 생성하기',
+    simChip: '🔮 상황 시뮬레이션', simHint: '상황을 설명하면 5가지 관점이 분석해요',
+    simAnalyzing: '접근법 분석 중…', simThinking: '5가지 관점 생각 중…', simBy: '분석자', simStage: '단계', simWhy: '왜 효과적인가', simBest: '추천',
+    simTitle: '🔮 상황 시뮬레이션', simDesc: '지금 이 순간 무슨 말을 할지 · 5가지 관점이 즉시 사용 가능한 문구를 제공해요.',
+    mvTitle: '🌌 관계 시뮬레이션', mvDesc: '관계가 5단계에 걸쳐 어떻게 발전할지 + 궁합.',
+    mvHint: '상대방이나 관계를 설명해 주시면 5단계 관계를 시뮬레이션할게요',
+    mvAnalyzing: '5개 우주 시뮬레이션 중…', mvCompat: '궁합', mvInsights: '이 연결의 핵심',
+    fbAsk: '도움이 됐나요?', fbThanks: '피드백 감사해요! 💛',
+    placeChip: '📍 데이트 스팟', placeQuery: '내 근처에서 첫 데이트하기 좋은 곳 추천해줄 수 있어?',
+    planLabel: '데이트 계획', suggested: '지금 추천',
+    placeCats: [
+      { key: 'cafe', t: '☕ 카페', q: '근처에 데이트하기 좋은 아늑한 카페가 어디 있어?' },
+      { key: 'restaurant', t: '🍽️ 레스토랑', q: '근처에 분위기 좋은 데이트 식당이 어디 있어?' },
+      { key: 'bar', t: '🍸 바', q: '근처에 데이트하기 좋은 바가 어디 있어?' },
+      { key: 'night_club', t: '💃 클럽', q: '근처에 춤출 수 있는 좋은 클럽이 어디 있어?' },
+    ],
+    areaEventsTitle: '내 근처 이벤트', areaEventsSoon: '곧',
+    thinking: '코치가 생각 중이에요…', placesLoading: '근처 데이트 스팟 찾는 중 📍…',
+    debateSteps: [
+      '근처 장소 분석 중…',
+      '사회적 역학 · 분위기 파악…',
+      '소통 · 리뷰 확인…',
+      '감성 지능 · 연결감 측정…',
+      '디지털 존재감 · Instagram과 스토리 검색…',
+      '최적의 옵션 종합 중…',
+    ],
+    locRequesting: '위치 정보 가져오는 중 📍…',
+    locBlocked: '브라우저에서 위치가 차단됐어요 🔒 주소 표시줄의 자물쇠 아이콘에서 활성화하거나, 아래에 도시를 입력하면 장소를 추천해 드릴게요 👇',
+    needCity: '어느 도시에 계신지 알려주시면 장소를 추천해 드릴게요 👇',
+  },
+  ru: {
+    fab: 'ИИ-коуч', title: 'ИИ-коуч', demo: 'Бета-версия', newChat: 'Новый разговор', showPrev: 'Показать предыдущий разговор', historyTitle: 'Твои разговоры', historyEmpty: 'Пока нет сохранённых разговоров.', morning: 'Доброе утро', afternoon: 'Добрый день', evening: 'Добрый вечер', discoverHint: '✨ В приложении: знакомься с подходящими людьми',
+    greeting: 'Привет 👋 Я твой коуч эмоционального интеллекта для свиданий. Расскажи мне свою ситуацию, и я дам конкретную идею для следующего разговора.',
+    chips: ['Как начать разговор?', 'Меня оставили на «читал» 😅', 'Как пригласить на свидание?'],
+    placeholder: 'Опиши свою ситуацию…', send: 'Отправить',
+    ctaTitle: 'Ты попробовал ИИ-коуча ✦',
+    ctaSubtitle: 'В приложении у тебя 4 вопроса в день, он запоминает тебя и симулирует твои отношения.',
+    ctaText: 'В приложении 4 вопроса в день: он помнит тебя, знает твои мэтчи и симулирует отношения.',
+    ctaDismiss: 'Продолжить пробовать',
+    freeCounterOf: 'из', freeCounterSuffix: 'бесплатно', freeCounterPrefix: 'Вопрос',
+    taste2: 'бесплатных вопроса для пробы', taste1: '✦ Остался 1 бесплатный вопрос',
+    download: 'Скачать приложение', share: 'Поделиться', shared: 'Скопировано!',
+    shareText: 'Я попробовал ИИ-коуча Black Sugar 21, и он дал мне этот совет 👀',
+    footer: 'Сгенерировано ИИ · бета-версия',
+    useLoc: '📍 Использовать моё местоположение', cityPh: 'или введи свой город…', copy: 'Скопировать фразу', copied: '✓ Скопировано', viewMap: 'Посмотреть на карте', webSite: 'Веб-сайт',
+    phrasesSheetTitle: 'Предложенные фразы', noSuggestions: 'Нет доступных фраз', showMore: 'Ещё {n} ↓', loadMore: 'Сгенерировать ещё',
+    simChip: '🔮 Симулировать ситуацию', simHint: 'Опиши ситуацию, и мои 5 перспектив её проанализируют',
+    simAnalyzing: 'Анализ подходов…', simThinking: '5 перспектив думают…', simBy: 'Проанализировано', simStage: 'Этап', simWhy: 'Почему это работает', simBest: 'Рекомендуется',
+    simTitle: '🔮 Симулировать ситуацию', simDesc: 'Что сказать СЕЙЧАС в конкретный момент · 5 перспектив дают готовые фразы.',
+    mvTitle: '🌌 Симулировать отношения', mvDesc: 'Как развивались бы отношения в 5 этапах + ваша совместимость.',
+    mvHint: 'Опиши мне человека или связь, и я симулирую 5 этапов отношений',
+    mvAnalyzing: 'Симуляция 5 вселенных…', mvCompat: 'Совместимость', mvInsights: 'Ключи этой связи',
+    fbAsk: 'Было полезно?', fbThanks: 'Спасибо за отзыв! 💛',
+    placeChip: '📍 Места для свидания', placeQuery: 'Что посоветуешь для первого свидания рядом со мной?',
+    planLabel: 'Планируй свидание', suggested: 'сейчас рекомендуется',
+    placeCats: [
+      { key: 'cafe', t: '☕ Кафе', q: 'Какие уютные кафе есть рядом для свидания?' },
+      { key: 'restaurant', t: '🍽️ Ресторан', q: 'Какие рестораны с хорошей атмосферой есть рядом?' },
+      { key: 'bar', t: '🍸 Бар', q: 'Какие хорошие бары есть рядом для свидания?' },
+      { key: 'night_club', t: '💃 Клуб', q: 'Какие хорошие клубы есть рядом потанцевать?' },
+    ],
+    areaEventsTitle: 'События рядом', areaEventsSoon: 'Скоро',
+    thinking: 'Коуч думает…', placesLoading: 'Ищу места для свидания 📍…',
+    debateSteps: [
+      'Анализ ближайших мест…',
+      'Социальная динамика · читаю атмосферу…',
+      'Коммуникация · проверяю отзывы…',
+      'Эмоциональный интеллект · измеряю связь…',
+      'Цифровое присутствие · ищу Instagram и истории…',
+      'Синтезирую лучшие варианты для тебя…',
+    ],
+    locRequesting: 'Получаю твоё местоположение 📍…',
+    locBlocked: 'В браузере заблокирован доступ к местоположению 🔒 Разреши в настройках значка замка в адресной строке, или напиши свой город внизу и я посоветую места 👇',
+    needCity: 'Напиши, в каком городе ты находишься, и я посоветую места 👇',
+  },
+  ar: {
+    fab: 'مدرّب الذكاء', title: 'مدرّب الذكاء', demo: 'إصدار تجريبي', newChat: 'محادثة جديدة', showPrev: 'عرض المحادثة السابقة', historyTitle: 'محادثاتك', historyEmpty: 'لا توجد محادثات محفوظة بعد.', morning: 'صباح الخير', afternoon: 'مساء الخير', evening: 'مساء النور', discoverHint: '✨ في التطبيق: اكتشف أشخاصاً متوافقين',
+    greeting: 'مرحباً 👋 أنا مدرّب ذكاءك العاطفي في المواعدة. أخبرني بوضعك وسأعطيك فكرة محددة لمحادثتك القادمة.',
+    chips: ['كيف أبدأ محادثة؟', 'رأى الرسالة ولم يرد 😅', 'كيف أدعوه/ها لموعد؟'],
+    placeholder: 'اكتب وضعك…', send: 'إرسال',
+    ctaTitle: 'جرّبت مدرّب الذكاء ✦',
+    ctaSubtitle: 'في التطبيق لديك 4 أسئلة يومياً، ويتذكّرك ويحاكي علاقتك.',
+    ctaText: 'في التطبيق 4 أسئلة يومياً: يتذكّرك، يعرف مطابقاتك ويحاكي علاقتك.',
+    ctaDismiss: 'الاستمرار في التجربة',
+    freeCounterOf: 'من', freeCounterSuffix: 'مجاني', freeCounterPrefix: 'سؤال',
+    taste2: 'أسئلة مجانية للتجربة', taste1: '✦ سؤال مجاني واحد متبقٍ',
+    download: 'تحميل التطبيق', share: 'مشاركة', shared: 'تم النسخ!',
+    shareText: 'جرّبت مدرّب الذكاء من Black Sugar 21 وأعطاني هذه النصيحة 👀',
+    footer: 'مُنشأ بالذكاء الاصطناعي · إصدار تجريبي',
+    useLoc: '📍 استخدام موقعي', cityPh: 'أو اكتب مدينتك…', copy: 'نسخ العبارة', copied: '✓ تم النسخ', viewMap: 'عرض على الخريطة', webSite: 'الموقع',
+    phrasesSheetTitle: 'عبارات مقترحة', noSuggestions: 'لا توجد عبارات متاحة', showMore: 'عرض {n} أخرى ↓', loadMore: 'توليد المزيد',
+    simChip: '🔮 محاكاة موقف', simHint: 'صف وضعك و5 وجهات نظر ستحلّله',
+    simAnalyzing: 'تحليل المقاربات…', simThinking: '5 وجهات نظر تفكّر…', simBy: 'تحليل بواسطة', simStage: 'مرحلة', simWhy: 'لماذا يعمل', simBest: 'موصى به',
+    simTitle: '🔮 محاكاة موقف', simDesc: 'ماذا تقول الآن في لحظة معينة · 5 وجهات نظر تعطيك عبارات جاهزة.',
+    mvTitle: '🌌 محاكاة العلاقة', mvDesc: 'كيف ستتطور العلاقة في 5 مراحل + توافقك.',
+    mvHint: 'صف لي الشخص أو الاتصال وسأحاكي 5 مراحل للعلاقة',
+    mvAnalyzing: 'محاكاة 5 أكوان…', mvCompat: 'التوافق', mvInsights: 'مفاتيح هذا الاتصال',
+    fbAsk: 'هل كان مفيداً؟', fbThanks: 'شكراً على ملاحظاتك! 💛',
+    placeChip: '📍 أماكن للقاء', placeQuery: 'ما الأماكن التي توصي بها لأول موعد بالقرب مني؟',
+    planLabel: 'خطّط لموعدك', suggested: 'مقترح الآن',
+    placeCats: [
+      { key: 'cafe', t: '☕ مقهى', q: 'ما المقاهي الدافئة القريبة مني لموعد؟' },
+      { key: 'restaurant', t: '🍽️ مطعم', q: 'ما المطاعم ذات الأجواء الجيدة القريبة مني؟' },
+      { key: 'bar', t: '🍸 بار', q: 'ما البارات الجيدة القريبة مني لموعد؟' },
+      { key: 'night_club', t: '💃 نادٍ', q: 'ما النوادي الجيدة القريبة مني للرقص؟' },
+    ],
+    areaEventsTitle: 'فعاليات قريبة', areaEventsSoon: 'قريباً',
+    thinking: 'المدرّب يفكّر…', placesLoading: 'البحث عن أماكن قريبة منك 📍…',
+    debateSteps: [
+      'تحليل الأماكن القريبة…',
+      'الديناميكيات الاجتماعية · قراءة الأجواء…',
+      'التواصل · مراجعة التقييمات…',
+      'الذكاء العاطفي · قياس الاتصال…',
+      'الحضور الرقمي · البحث عن Instagram والقصص…',
+      'تجميع أفضل الخيارات لك…',
+    ],
+    locRequesting: 'جلب موقعك 📍…',
+    locBlocked: 'متصفحك يحظر الوصول إلى موقعك 🔒 فعّله من أيقونة القفل في شريط العناوين، أو اكتب مدينتك أدناه وسأقترح أماكن 👇',
+    needCity: 'أخبرني في أي مدينة أنت وسأقترح أماكن 👇',
+  },
+  id: {
+    fab: 'Coach AI', title: 'Coach AI', demo: 'Versi beta', newChat: 'Percakapan baru', showPrev: 'Lihat percakapan sebelumnya', historyTitle: 'Percakapanmu', historyEmpty: 'Belum ada percakapan tersimpan.', morning: 'Selamat pagi', afternoon: 'Selamat siang', evening: 'Selamat malam', discoverHint: '✨ Di app: temukan orang yang cocok',
+    greeting: 'Halo 👋 Aku adalah Coach kecerdasan emosional kencanmu. Ceritakan situasimu dan aku akan memberikan ide konkret untuk percakapan berikutmu.',
+    chips: ['Gimana caranya mulai percakapan?', 'Di-ghosting deh 😅', 'Gimana caranya ngajak kencan?'],
+    placeholder: 'Ceritakan situasimu…', send: 'Kirim',
+    ctaTitle: 'Kamu sudah coba Coach AI ✦',
+    ctaSubtitle: 'Di app kamu punya 4 pertanyaan sehari, dia ingat kamu dan mensimulasikan hubunganmu.',
+    ctaText: 'Di app ada 4 pertanyaan sehari: dia ingat kamu, tahu match-mu, dan mensimulasikan hubunganmu.',
+    ctaDismiss: 'Lanjut coba',
+    freeCounterOf: 'dari', freeCounterSuffix: 'gratis', freeCounterPrefix: 'Pertanyaan',
+    taste2: 'pertanyaan gratis untuk dicoba', taste1: '✦ Tersisa 1 pertanyaan gratis',
+    download: 'Unduh app', share: 'Bagikan', shared: 'Disalin!',
+    shareText: 'Aku coba Coach AI dari Black Sugar 21 dan dia kasih saran ini 👀',
+    footer: 'Dibuat AI · versi beta',
+    useLoc: '📍 Gunakan lokasimu', cityPh: 'atau ketik kotamu…', copy: 'Salin kalimat', copied: '✓ Disalin', viewMap: 'Lihat di peta', webSite: 'Situs web',
+    phrasesSheetTitle: 'Kalimat yang disarankan', noSuggestions: 'Tidak ada kalimat tersedia', showMore: 'Lihat {n} lagi ↓', loadMore: 'Buat lebih banyak',
+    simChip: '🔮 Simulasikan situasi', simHint: 'Ceritakan situasimu dan 5 perspektifku akan menganalisisnya',
+    simAnalyzing: 'Menganalisis pendekatan…', simThinking: '5 perspektif sedang berpikir…', simBy: 'Dianalisis oleh', simStage: 'Tahap', simWhy: 'Kenapa berhasil', simBest: 'Direkomendasikan',
+    simTitle: '🔮 Simulasikan situasi', simDesc: 'Apa yang harus dikatakan SEKARANG dalam momen tertentu · 5 perspektif memberimu kalimat siap pakai.',
+    mvTitle: '🌌 Simulasikan hubungan', mvDesc: 'Bagaimana hubungan akan berkembang dalam 5 tahap + kompatibilitasmu.',
+    mvHint: 'Ceritakan orang atau koneksinya dan aku akan mensimulasikan 5 tahap hubungan',
+    mvAnalyzing: 'Mensimulasikan 5 alam semesta…', mvCompat: 'Kompatibilitas', mvInsights: 'Kunci koneksi ini',
+    fbAsk: 'Apakah ini membantu?', fbThanks: 'Terima kasih atas masukkanmu! 💛',
+    placeChip: '📍 Tempat kencan', placeQuery: 'Tempat apa yang kamu rekomendasikan untuk kencan pertama di dekatku?',
+    planLabel: 'Rencanakan kencanmu', suggested: 'disarankan sekarang',
+    placeCats: [
+      { key: 'cafe', t: '☕ Kafe', q: 'Kafe mana yang nyaman di dekatku untuk kencan?' },
+      { key: 'restaurant', t: '🍽️ Restoran', q: 'Restoran mana dengan suasana bagus di dekatku?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Bar mana yang bagus di dekatku untuk kencan?' },
+      { key: 'night_club', t: '💃 Klub', q: 'Klub mana yang bagus di dekatku untuk menari?' },
+    ],
+    areaEventsTitle: 'Acara di dekatmu', areaEventsSoon: 'Segera',
+    thinking: 'Coach sedang berpikir…', placesLoading: 'Mencari tempat kencan di dekatmu 📍…',
+    debateSteps: [
+      'Menganalisis tempat terdekat…',
+      'Dinamika sosial · membaca suasana…',
+      'Komunikasi · memeriksa ulasan…',
+      'Kecerdasan emosional · mengukur koneksi…',
+      'Kehadiran digital · mencari Instagram dan stories…',
+      'Mensintesis opsi terbaik untukmu…',
+    ],
+    locRequesting: 'Mendapatkan lokasimu 📍…',
+    locBlocked: 'Browsermu memblokir lokasi 🔒 Aktifkan dari ikon gembok di bilah alamat, atau ketik kotamu di bawah dan aku sarankan tempat 👇',
+    needCity: 'Beritahu aku di kota mana kamu dan aku sarankan tempat 👇',
+  },
+  tr: {
+    fab: 'Coach AI', title: 'Coach AI', demo: 'Beta sürümü', newChat: 'Yeni sohbet', showPrev: 'Önceki sohbetleri gör', historyTitle: 'Sohbetlerin', historyEmpty: 'Henüz kayıtlı sohbet yok.', morning: 'Günaydın', afternoon: 'İyi günler', evening: 'İyi akşamlar', discoverHint: '✨ Uygulamada: uyumlu kişileri keşfet',
+    greeting: 'Merhaba 👋 Ben senin duygusal zeka flört koçunum. Durumunu anlat, bir sonraki konuşman için somut fikirler vereyim.',
+    chips: ['Nasıl konuşmaya başlarım?', 'Okundu ama cevap yok 😅', 'Nasıl randevuya davet ederim?'],
+    placeholder: 'Durumunu anlat…', send: 'Gönder',
+    ctaTitle: 'Coach AI\'yı denedin ✦',
+    ctaSubtitle: 'Uygulamada günde 4 sorun var, seni hatırlıyor ve ilişkini simüle ediyor.',
+    ctaText: 'Uygulamada günde 4 soru: seni hatırlıyor, eşleşmeni tanıyor ve ilişkini simüle ediyor.',
+    ctaDismiss: 'Denemeye devam et',
+    freeCounterOf: 'tanesi', freeCounterSuffix: 'ücretsiz', freeCounterPrefix: 'Soru',
+    taste2: 'ücretsiz soru denemesi', taste1: '✦ 1 ücretsiz soru kaldı',
+    download: 'Uygulamayı indir', share: 'Paylaş', shared: 'Kopyalandı!',
+    shareText: 'Black Sugar 21\'in Coach AI\'sını denedim ve bu tavsiyeyi aldım 👀',
+    footer: 'Yapay Zeka tarafından oluşturuldu · beta',
+    useLoc: '📍 Konumumu kullan', cityPh: 'ya da şehrini yaz…', copy: 'İfadeyi kopyala', copied: '✓ Kopyalandı', viewMap: 'Haritada gör', webSite: 'Web sitesi',
+    phrasesSheetTitle: 'Önerilen ifadeler', noSuggestions: 'Kullanılabilir ifade yok', showMore: '{n} tane daha gör ↓', loadMore: 'Daha fazla ifade oluştur',
+    simChip: '🔮 Durumu simüle et', simHint: 'Durumunu açıkla, 5 perspektifim analiz etsin',
+    simAnalyzing: 'Yaklaşımlar analiz ediliyor…', simThinking: '5 perspektif düşünüyor…', simBy: 'Analiz eden', simStage: 'Aşama', simWhy: 'Neden işe yarıyor', simBest: 'Önerilen',
+    simTitle: '🔮 Durumu simüle et', simDesc: 'ŞİMDİ ne söyleneceği · 5 perspektif sana kullanıma hazır ifadeler sunuyor.',
+    mvTitle: '🌌 İlişkiyi simüle et', mvDesc: 'İlişki 5 aşamada nasıl gelişir + uyumunuz.',
+    mvHint: 'Kişiyi ya da bağlantıyı anlat, ilişkinin 5 aşamasını simüle edeyim',
+    mvAnalyzing: '5 evren simüle ediliyor…', mvCompat: 'Uyumluluk', mvInsights: 'Bu bağlantının anahtarları',
+    fbAsk: 'Bu faydalı oldu mu?', fbThanks: 'Geri bildiriminiz için teşekkürler! 💛',
+    placeChip: '📍 Randevu yerleri', placeQuery: 'Yakınımda ilk randevu için ne tavsiye edersin?',
+    planLabel: 'Randevunu planla', suggested: 'şu an önerilen',
+    placeCats: [
+      { key: 'cafe', t: '☕ Kafe', q: 'Randevu için yakınımda hangi kafeler var?' },
+      { key: 'restaurant', t: '🍽️ Restoran', q: 'Yakınımda atmosferi iyi hangi restoranlar var?' },
+      { key: 'bar', t: '🍸 Bar', q: 'Randevu için yakınımda hangi barlar var?' },
+      { key: 'night_club', t: '💃 Kulüp', q: 'Geceleri dans etmek için yakınımda hangi kulüpler var?' },
+    ],
+    areaEventsTitle: 'Yakınındaki etkinlikler', areaEventsSoon: 'Yakında',
+    thinking: 'Coach düşünüyor…', placesLoading: 'Yakındaki randevu yerleri aranıyor 📍…',
+    debateSteps: [
+      'En yakın yerler analiz ediliyor…',
+      'Sosyal dinamikler · atmosfer okunuyor…',
+      'İletişim · yorumlar inceleniyor…',
+      'Duygusal zeka · bağlantı değerlendiriliyor…',
+      'Dijital varlık · Instagram ve stories aranıyor…',
+      'Senin için en iyi seçenekler sentezleniyor…',
+    ],
+    locRequesting: 'Konumun alınıyor 📍…',
+    locBlocked: 'Tarayıcın konumu engelliyor 🔒 Adres çubuğundaki kilit simgesinden etkinleştir ya da aşağıya şehrini yaz, yer önereyim 👇',
+    needCity: 'Hangi şehirde olduğunu söyle, yer önereceğim 👇',
   },
 };
 
@@ -387,7 +847,8 @@ export class CoachWidgetComponent implements OnDestroy {
   private static readonly LS_OAUTH_PENDING = 'bs21_oauth_redirect';
   readonly busy = signal(false);
   readonly justShared = signal(false);
-  readonly copiedIdx = signal<number | null>(null);
+  readonly copiedIdx = signal<number | string | null>(null);
+  readonly expandedPhraseMessages = new Set<number>();
   readonly simMode = signal<SimMode>('');
   readonly simLoading = signal(false);
   readonly loadingMode = signal<SimMode>('');
@@ -896,9 +1357,22 @@ export class CoachWidgetComponent implements OnDestroy {
 
   // ── carousel + sim card helpers ──
   msgKey(i: number) { return (i + 1) * 100; }
-  toneEmoji(toneKey?: string) {
-    const m: Record<string, string> = { direct: '💬', playful: '😏', romantic_vulnerable: '💕', vulnerable: '🫧', grounded_honest: '🌱', warm: '🌷' };
-    return (toneKey && m[toneKey]) || '✨';
+  toneEmoji(toneKey?: string | null): string {
+    const m: Record<string, string> = {
+      warm: '🤗', playful: '😄', direct: '⚡', curious: '🤔', flirty: '😏', vulnerable: '💙',
+      // legacy sim keys kept for backward compat
+      romantic_vulnerable: '💕', grounded_honest: '🌱',
+    };
+    return (toneKey && m[toneKey]) || '💬';
+  }
+  toneLabel(toneKey?: string | null): string {
+    const m: Record<string, string> = {
+      warm: 'Warm', playful: 'Playful', direct: 'Direct',
+      curious: 'Curious', flirty: 'Flirty', vulnerable: 'Vulnerable',
+      romantic_vulnerable: 'Romantic', grounded_honest: 'Honest',
+    };
+    const label = (toneKey && m[toneKey]) || toneKey || '';
+    return label ? `${this.toneEmoji(toneKey)} ${label}` : '';
   }
   stars(confidence: number | null) { return confidence == null ? 4 : Math.max(1, Math.min(5, Math.round(confidence / 20))); }
   mvStars(s: number | null) { return s == null ? 3 : Math.max(0, Math.min(5, Math.round(s))); }
@@ -1168,13 +1642,40 @@ export class CoachWidgetComponent implements OnDestroy {
     const acts = Array.isArray(r?.activitySuggestions) ? r.activitySuggestions : [];
     const places = acts.map((a: any) => ({
       name: a.title || a.name || '', address: a.address || '', rating: typeof a.rating === 'number' ? a.rating : null,
-      mapsUrl: a.googleMapsUrl || '', why: a.psychWhy || null,
+      mapsUrl: a.googleMapsUrl || '', emoji: a.emoji || null, why: a.psychWhy || null,
       perspectives: Array.isArray(a.psychPerspectives) ? a.psychPerspectives : [],
       score: typeof a.psychFit === 'number' ? a.psychFit : null, tip: a.psychTip || null,
       website: a.website || null, instagram: a.instagram || null, instagramHandle: a.instagramHandle || null,
       venueOffer: a.venueOffer || null, upcomingEvents: Array.isArray(a.upcomingEvents) ? a.upcomingEvents : null,
+      description: a.description || null,
+      distanceKm: typeof a.distanceKm === 'number' ? a.distanceKm : null,
+      isOpenNow: typeof a.isOpenNow === 'boolean' ? a.isOpenNow : null,
+      reviewCount: typeof a.reviewCount === 'number' ? a.reviewCount : null,
+      priceLevel: a.priceLevel || null,
+      isEvent: a.isEvent === true,
+      eventInfo: a.eventInfo || null,
+      promoInfo: a.promoInfo || null,
+      category: a.category || null,
+      bestFor: a.bestFor || null,
+      photos: Array.isArray(a.photos) ? a.photos : null,
     })).filter((p: any) => p.name);
-    const suggestions = Array.isArray(r?.suggestions) ? r.suggestions.filter((s: any) => typeof s === 'string' && s.trim()) : [];
+    const initialVisible: number = typeof r?.suggestionsInitialVisible === 'number' ? r.suggestionsInitialVisible : 3;
+    const rawSuggestions = Array.isArray(r?.suggestions) ? r.suggestions : [];
+    const suggestions: SuggestionItem[] = rawSuggestions
+      .map((s: any) => {
+        if (typeof s === 'string' && s.trim()) return { text: s.trim() };
+        if (s && typeof s === 'object' && typeof s.text === 'string' && s.text.trim()) {
+          return {
+            text: s.text.trim(),
+            tone: s.tone || null,
+            why: s.why || null,
+            bestFor: s.bestFor || null,
+            score: typeof s.score === 'number' ? s.score : null,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as SuggestionItem[];
     // Distinct "events near you" card — Google-grounded area events (Instagram-independent).
     const areaEvents = Array.isArray(r?.areaEvents)
       ? r.areaEvents.filter((e: any) => e && typeof e.title === 'string' && e.title.trim()).slice(0, 4).map((e: any) => ({
@@ -1186,7 +1687,8 @@ export class CoachWidgetComponent implements OnDestroy {
     return {
       reply: (r && typeof r.reply === 'string') ? r.reply : '',
       places: places.length ? places : undefined,
-      phrases: (!places.length && suggestions.length) ? suggestions : undefined,
+      phrases: suggestions.length ? suggestions : undefined,
+      phrasesInitialVisible: initialVisible,
       areaEvents: areaEvents.length ? areaEvents : undefined,
     };
   }
@@ -1210,6 +1712,7 @@ export class CoachWidgetComponent implements OnDestroy {
             message: payload.message,
             userLanguage: this.coachLang(),
             city: payload.city || undefined,
+            ...(this.shownPhrases.size ? { excludePhrases: [...this.shownPhrases] } : {}),
             // Pass browser GPS directly so the CF uses fresh coords even when the
             // Firestore profile still has stale ones (async update hasn't landed yet).
             ...(payload.lat != null && payload.lng != null ? { lat: payload.lat, lng: payload.lng } : {}),
@@ -1234,8 +1737,19 @@ export class CoachWidgetComponent implements OnDestroy {
         for (const p of data.places) { if (p?.name) this.shownPlaces.add(p.name); }
       }
       if (data?.phrases?.length) {
-        if (data?.exhausted) this.shownPhrases.clear(); // saw all fresh phrases → recycle next time
-        for (const p of data.phrases) { if (typeof p === 'string') this.shownPhrases.add(p); }
+        // Normalize: demo endpoint returns string[], auth returns SuggestionItem[]. Unify to objects.
+        if (typeof data.phrases[0] === 'string') {
+          const meta: any[] = Array.isArray(data.phraseMeta) ? data.phraseMeta : [];
+          data.phrases = (data.phrases as string[]).map((text: string, i: number) => ({
+            text,
+            tone: null,
+            score: null,
+            why: meta[i]?.why ?? null,
+            bestFor: meta[i]?.perspective ?? null,
+          }));
+        }
+        if (data?.exhausted) this.shownPhrases.clear();
+        for (const p of data.phrases) { if (p?.text) this.shownPhrases.add(p.text); }
       }
       // Never leave the user with a blank/echoed greeting — if the reply is empty, ask them to retry.
       const retry = this.lang() === 'en' ? "I didn't quite catch that — tell me a bit more and I'll help." : 'No te entendí del todo — cuéntame un poco más y te ayudo.';
@@ -1248,7 +1762,7 @@ export class CoachWidgetComponent implements OnDestroy {
       if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation || data?.areaEvents?.length) {
         // structured result — show immediately with attachments (no typewriter)
-        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, areaEvents: data.areaEvents, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phrasesInitialVisible: data.phrasesInitialVisible, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, areaEvents: data.areaEvents, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
         this.scroll();
       } else {
         await this.typewrite(reply);
@@ -1405,9 +1919,89 @@ export class CoachWidgetComponent implements OnDestroy {
     this.messages.update((m) => [...m, { role: 'user', text: c }]);
     this.askWithLocation({ city: c });
   }
-  async copyPhrase(text: string, i: number) {
+  expandPhrases(msgIdx: number): void {
+    this.expandedPhraseMessages.add(msgIdx);
+  }
+  visiblePhrases(msg: Msg, msgIdx: number): SuggestionItem[] {
+    const sorted = [...(msg.phrases ?? [])].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    const initialVisible = msg.phrasesInitialVisible ?? 3;
+    return this.expandedPhraseMessages.has(msgIdx) ? sorted : sorted.slice(0, initialVisible);
+  }
+  hiddenPhrasesCount(msg: Msg, msgIdx: number): number {
+    const initialVisible = msg.phrasesInitialVisible ?? 3;
+    return Math.max(0, (msg.phrases?.length ?? 0) - initialVisible);
+  }
+
+  async copyPhrase(text: string, i: any) {
     if (!this.isBrowser) return;
     try { await navigator.clipboard.writeText(text); this.copiedIdx.set(i); setTimeout(() => this.copiedIdx.set(null), 1800); } catch { /* noop */ }
+  }
+
+  // ── Phrase BottomSheet ──────────────────────────────────────────────────────
+  readonly phraseSheetOpen = signal(false);
+  readonly phraseSheetMsg = signal<any>(null);
+  readonly phraseSheetExpanded = signal(false);
+  readonly phraseSheetLoading = signal(false);
+
+  openPhraseSheet(msg: any): void {
+    this.phraseSheetMsg.set(msg);
+    this.phraseSheetExpanded.set(false);
+    this.phraseSheetOpen.set(true);
+  }
+  closePhraseSheet(): void { this.phraseSheetOpen.set(false); }
+
+  phraseSheetSorted(): SuggestionItem[] {
+    return [...((this.phraseSheetMsg()?.phrases as SuggestionItem[]) ?? [])].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  }
+  phraseSheetVisible(): SuggestionItem[] {
+    const all = this.phraseSheetSorted();
+    const initial = this.phraseSheetMsg()?.phrasesInitialVisible ?? 3;
+    return this.phraseSheetExpanded() ? all : all.slice(0, initial);
+  }
+  phraseSheetHiddenCount(): number {
+    const all = this.phraseSheetSorted();
+    const initial = this.phraseSheetMsg()?.phrasesInitialVisible ?? 3;
+    return Math.max(0, all.length - initial);
+  }
+  phraseSheetMoreLabel(): string {
+    const n = this.phraseSheetHiddenCount();
+    const tpl = this.t().showMore as string | undefined;
+    return tpl ? tpl.replace('{n}', String(n)) : `Ver ${n} más ↓`;
+  }
+
+  async loadMorePhrases(): Promise<void> {
+    const msg = this.phraseSheetMsg();
+    if (!msg || this.phraseSheetLoading()) return;
+    const current: SuggestionItem[] = this.phraseSheetSorted();
+    const excludeTexts = current.map(p => p.text);
+    this.phraseSheetLoading.set(true);
+    try {
+      let added: SuggestionItem[] = [];
+      if (this.user()) {
+        const r = await this.firebase.coachChat({
+          message: msg.q || msg.text || '',
+          userLanguage: this.coachLang(),
+          loadMoreSuggestions: true,
+          excludePhrases: excludeTexts,
+        });
+        added = (this.mapAuthCoachResponse(r) as any).phrases ?? [];
+      } else {
+        const res = await fetch(ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg.q || msg.text || '', userLanguage: this.coachLang(), sessionId: this.sessionId, excludePhrases: excludeTexts }),
+        });
+        const data = await res.json().catch(() => ({}));
+        added = (Array.isArray(data?.phrases) ? data.phrases : [])
+          .filter((s: any) => s?.text)
+          .map((s: any) => ({ text: String(s.text).trim(), tone: s.tone ?? null, why: s.why ?? null, bestFor: s.bestFor ?? null, score: typeof s.score === 'number' ? s.score : null }));
+      }
+      if (added.length) {
+        this.phraseSheetMsg.set({ ...msg, phrases: [...current, ...added] });
+        this.phraseSheetExpanded.set(true);
+        for (const p of added) { if (p?.text) this.shownPhrases.add(p.text); }
+      }
+    } catch { /* silent — user can retry */ }
+    finally { this.phraseSheetLoading.set(false); }
   }
 
   /** ChatGPT/Claude-style word-by-word reveal. */
