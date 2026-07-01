@@ -432,6 +432,31 @@
                     "order": "ASCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "coachJudgeQueue",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "judgedAt", "order": "DESCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "coachJudgeQueue",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "userId", "order": "ASCENDING" },
+                { "fieldPath": "submittedAt", "order": "ASCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "messages",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                { "fieldPath": "sender", "order": "ASCENDING" },
+                { "fieldPath": "userLanguage", "order": "ASCENDING" },
+                { "fieldPath": "timestamp", "order": "DESCENDING" }
+            ]
         }
     ],
     "fieldOverrides": [
