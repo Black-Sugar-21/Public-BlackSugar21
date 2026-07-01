@@ -91,5 +91,20 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/guias/swipe-fatigue.component').then(m => m.SwipeFatigueGuideComponent),
     title: 'Swipe fatigue: qué es y cómo superarla · Black Sugar 21'
   },
+  {
+    path: 'guia/como-empezar-conversacion',
+    loadComponent: () => import('./pages/guias/conversacion.component').then(m => m.ConversacionGuideComponent),
+    title: 'Cómo empezar una conversación en apps de citas · Black Sugar 21'
+  },
+  {
+    path: 'guia/primera-cita',
+    loadComponent: () => import('./pages/guias/primera-cita.component').then(m => m.PrimeraCitaGuideComponent),
+    title: 'Consejos para la primera cita · Black Sugar 21'
+  },
+  {
+    path: 'guia/psicologia-apego-citas',
+    loadComponent: () => import('./pages/guias/apego.component').then(m => m.ApegoGuideComponent),
+    title: 'Psicología del apego en las citas · Black Sugar 21'
+  },
   { path: '**', redirectTo: '/' }
 ];
