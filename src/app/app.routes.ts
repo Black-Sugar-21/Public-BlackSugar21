@@ -86,5 +86,10 @@ export const routes: Routes = [
     loadComponent: () => import('./coach-page.component').then(m => m.CoachPageComponent),
     title: 'Coach IA · Black Sugar 21'
   },
+  {
+    path: 'guia/swipe-fatigue',
+    loadComponent: () => import('./pages/guias/swipe-fatigue.component').then(m => m.SwipeFatigueGuideComponent),
+    title: 'Swipe fatigue: qué es y cómo superarla · Black Sugar 21'
+  },
   { path: '**', redirectTo: '/' }
 ];
