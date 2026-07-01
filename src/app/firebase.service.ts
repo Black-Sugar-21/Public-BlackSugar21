@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import {
   getAuth,
@@ -87,12 +88,14 @@ export interface UserProfile {
   providedIn: 'root'
 })
 export class FirebaseService {
-  private app: FirebaseApp;
-  private auth: Auth;
-  private db: Firestore;
-  private remoteConfig: RemoteConfig;
-  private analytics: Analytics;
-  private functions: Functions;
+  // Definite assignment: only initialized in the browser (see constructor guard). On the
+  // server (SSG prerender) these stay unset — no Firebase call runs during prerender.
+  private app!: FirebaseApp;
+  private auth!: Auth;
+  private db!: Firestore;
+  private remoteConfig!: RemoteConfig;
+  private analytics!: Analytics;
+  private functions!: Functions;
   private storage!: ReturnType<typeof getStorage>;
 
   currentUser = signal<User | null>(null);
@@ -109,6 +112,12 @@ export class FirebaseService {
   requestOpenCoach(): void { this.coachOpenRequest.update((n) => n + 1); }
 
   constructor() {
+    // Firebase (Auth, Firestore, Analytics, RemoteConfig, Storage, App Check, window.location,
+    // auth listeners) is browser-only. During SSG prerender there is no window/document — skip
+    // init entirely; every Firebase call is behind a user interaction that only runs client-side
+    // after hydration. This keeps the prerender bootstrap from throwing (getAnalytics needs DOM).
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+
     this.app = initializeApp(firebaseConfig);
     this.auth = getAuth(this.app);
     this.db = getFirestore(this.app);

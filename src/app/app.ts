@@ -166,7 +166,9 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           id: 'Black Sugar 21 – Coach Kecerdasan Emosional AI',
           tr: 'Black Sugar 21 – Yapay Zekâ Duygusal Zekâ Koçu',
         };
-        document.documentElement.lang = lang;
+        // Meta/Title are SSR-safe (Angular DOM abstraction) → keep them so the prerendered
+        // HTML carries the right title/description. Only the raw document access is browser-only.
+        if (this.isBrowser) document.documentElement.lang = lang;
         const desc = descriptions[lang] || descriptions['en'];
         const pageTitle = titles[lang] || titles['en'];
         this.meta.updateTag({ name: 'description', content: desc });
@@ -474,6 +476,13 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit() {
+    // Every side effect here (Firebase Remote Config, Analytics, window/navigator, GSAP) is
+    // browser-only. During SSG prerender there is no window — skip them so the home route
+    // renders its static content instead of throwing ("window is not defined") and falling
+    // back to CSR. Template content uses seeded defaults (store links, legalAge=18), then the
+    // real values hydrate client-side.
+    if (!this.isBrowser) return;
+
     // Carousel starts when visible (IntersectionObserver in initGsapAnimations)
 
     // Detect legal age from Remote Config + timezone
