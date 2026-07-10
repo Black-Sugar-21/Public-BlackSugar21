@@ -106,5 +106,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/guias/apego.component').then(m => m.ApegoGuideComponent),
     title: 'Psicología del apego en las citas · Black Sugar 21'
   },
+  {
+    path: 'guia/apps-citas-ia',
+    loadComponent: () => import('./pages/guias/ia-dating.component').then(m => m.IaDatingGuideComponent),
+    title: 'Apps de citas con inteligencia artificial: guía 2026 · Black Sugar 21'
+  },
   { path: '**', redirectTo: '/' }
 ];

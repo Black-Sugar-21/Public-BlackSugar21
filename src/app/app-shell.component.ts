@@ -169,6 +169,8 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   likesRemainingToday: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
   coachQuestions: {"es":"Coach IA","en":"AI Coach","pt":"Coach IA","fr":"Coach IA","de":"KI-Coach","it":"Coach IA","zh":"AI教练","ja":"AIコーチ","ko":"AI 코치","ru":"ИИ Коуч","ar":"مدرب الذكاء","id":"Coach AI","tr":"AI Koç"},
   coachQuestionsRemaining: {"es":"restantes hoy","en":"remaining today","pt":"restantes hoje","fr":"restants aujourd'hui","de":"heute übrig","it":"rimasti oggi","zh":"今日剩余","ja":"今日の残り","ko":"오늘 남은 횟수","ru":"осталось сегодня","ar":"المتبقي اليوم","id":"tersisa hari ini","tr":"bugün kalan"},
+  journeyLevelWord: {"es":"Nivel","en":"Level","pt":"Nível","fr":"Niveau","de":"Level","it":"Livello","zh":"等级","ja":"レベル","ko":"레벨","ru":"Уровень","ar":"المستوى","id":"Level","tr":"Seviye"},
+  journeyKeepGoing: {"es":"Sigue avanzando para subir de nivel","en":"Keep going to level up","pt":"Continue para subir de nível","fr":"Continue pour monter de niveau","de":"Mach weiter, um aufzusteigen","it":"Continua per salire di livello","zh":"继续努力升级","ja":"続けてレベルアップしよう","ko":"계속해서 레벨을 올리세요","ru":"Продолжай, чтобы повысить уровень","ar":"واصل للارتقاء بالمستوى","id":"Terus lanjut untuk naik level","tr":"Seviye atlamak için devam et"},
   like: {"es":"Me gusta","en":"Like","pt":"Curtir","fr":"J'aime","de":"Gefällt mir","it":"Mi piace","zh":"喜欢","ja":"いいね","ko":"좋아요","ru":"Нравится","ar":"إعجاب","id":"Suka","tr":"Beğen"},
   typeElite: {"es":"Elite","en":"Elite","pt":"Elite","fr":"Elite","de":"Elite","it":"Elite","zh":"Elite","ja":"Elite","ko":"Elite","ru":"Elite","ar":"إيليت","id":"Elite","tr":"Elite"},
   typePrime: {"es":"Prime","en":"Prime","pt":"Prime","fr":"Prime","de":"Prime","it":"Prime","zh":"Prime","ja":"Prime","ko":"Prime","ru":"Prime","ar":"برايم","id":"Prime","tr":"Prime"},
@@ -608,7 +610,37 @@ export class AppShellComponent implements OnDestroy {
     if (sec === 'profile' && this.profileComplete()) {
       if (!this.profilePhotos().length) this.loadProfilePhotos();
       if (!this.limitsLoaded()) this.loadProfileLimits();
+      if (!this.journey() && !this.journeyLoading()) this.loadJourney();
     }
+  }
+  // R150 Dating Journey — level badge + XP progress bar (iOS/Android DatingJourneyCard parity).
+  readonly journey = signal<{ level: number; progress: number; completenessPct: number } | null>(null);
+  readonly journeyLoading = signal(false);
+  coachStreak(): number { return (this.firebase.userProfile() as any)?.coachStreakDays ?? 0; }
+  journeyCompleteText(pct: number): string {
+    const m: Record<string, string> = {
+      es: `Perfil ${pct}% completo`, en: `Profile ${pct}% complete`, pt: `Perfil ${pct}% completo`,
+      fr: `Profil ${pct}% complété`, de: `Profil zu ${pct}% vollständig`, it: `Profilo ${pct}% completo`,
+      zh: `资料完成度 ${pct}%`, ja: `プロフィール ${pct}% 完成`, ko: `프로필 ${pct}% 완성`,
+      ru: `Профиль заполнен на ${pct}%`, ar: `اكتمل الملف ${pct}%`, id: `Profil ${pct}% lengkap`, tr: `Profil ${pct}% tamamlandı`,
+    };
+    return m[this.lang()] ?? m['en'];
+  }
+  streakText(count: number): string {
+    const m: Record<string, string> = {
+      es: `🔥 ${count} días de racha`, en: `🔥 ${count} day${count !== 1 ? 's' : ''} streak`, pt: `🔥 ${count} dias seguidos`,
+      fr: `🔥 ${count} jours de suite`, de: `🔥 ${count} Tage Streak`, it: `🔥 ${count} giorni di fila`,
+      zh: `🔥 连续 ${count} 天`, ja: `🔥 ${count}日連続`, ko: `🔥 ${count}일 연속`,
+      ru: `🔥 ${count} дн. подряд`, ar: `🔥 ${count} أيام`, id: `🔥 ${count} hari beruntun`, tr: `🔥 ${count} günlük seri`,
+    };
+    return m[this.lang()] ?? m['en'];
+  }
+  private async loadJourney() {
+    if (!this.firebase.currentUser() || this.journeyLoading()) return;
+    this.journeyLoading.set(true);
+    try { this.journey.set(await this.firebase.getDatingJourney(this.lang())); }
+    catch { /* noop */ }
+    finally { this.journeyLoading.set(false); }
   }
   // Profile-tab limits (X / Y) — homologado con iOS ProfileView (daily likes + coach credits).
   readonly dailyLikesLimit = signal(100);

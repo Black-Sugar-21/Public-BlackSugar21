@@ -618,6 +618,30 @@
                   </div>
                 </div>
 
+                <!-- R150 Dating Journey card + streak (iOS/Android DatingJourneyCard parity) -->
+                @if (journeyLoading()) {
+                  <div class="pf-journey-skel"></div>
+                } @else if (journey(); as j) {
+                  @if (j.level > 1) {
+                    <div class="pf-journey">
+                      <div class="pf-journey-head">
+                        <div class="pf-journey-badge">🏆</div>
+                        <div class="pf-journey-col">
+                          <div class="pf-journey-level">{{ s('journeyLevelWord') }} {{ j.level }}</div>
+                          <div class="pf-journey-pct">{{ journeyCompleteText(j.completenessPct) }}</div>
+                        </div>
+                        @if (coachStreak() > 1) {
+                          <div class="pf-streak">{{ streakText(coachStreak()) }}</div>
+                        }
+                      </div>
+                      <div class="pf-progress-bg">
+                        <div class="pf-progress-fill" [style.width.%]="j.progress * 100"></div>
+                      </div>
+                      <div class="pf-journey-hint">{{ s('journeyKeepGoing') }}</div>
+                    </div>
+                  }
+                }
+
                 <!-- Bio + intereses (si existen) -->
                 @if ($any(firebase.userProfile())?.bio) { <p class="pf-bio">{{ $any(firebase.userProfile()).bio }}</p> }
                 @if (profileInterests().length) {

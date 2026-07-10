@@ -825,6 +825,24 @@ export class FirebaseService {
     return null;
   }
 
+  /** R150 Dating Journey — same getDatingJourney callable the apps use. Returns level, progress
+   *  (0..1 into the current level), and profile completeness %. null on error or not ready. */
+  async getDatingJourney(lang: string = 'es'): Promise<{ level: number; progress: number; completenessPct: number } | null> {
+    const u = this.currentUser();
+    if (!u) return null;
+    try {
+      const fn = httpsCallable(this.functions, 'getDatingJourney');
+      const res: any = await fn({ userLanguage: lang });
+      const d = res?.data;
+      if (!d) return null;
+      return {
+        level: Number(d.level) || 1,
+        progress: typeof d.progress === 'number' ? Math.max(0, Math.min(1, d.progress)) : 0,
+        completenessPct: Number(d.completenessPct) || 0,
+      };
+    } catch { return null; }
+  }
+
   /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
    *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
   async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {

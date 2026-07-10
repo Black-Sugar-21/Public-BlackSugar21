@@ -469,6 +469,19 @@
       .shell-tab-ic { display:inline-flex; align-items:center; justify-content:center; width:27px; height:27px; }
       .shell-tab.active { color:var(--gold); }
     }
+    /* ── R150 Dating Journey card ────────────────────────────────────────────── */
+    .pf-journey-skel { height:106px; border-radius:18px; background:var(--bg-card); animation:skel-pulse 1.4s ease-in-out infinite; }
+    @keyframes skel-pulse { 0%,100%{opacity:.5} 50%{opacity:.8} }
+    .pf-journey { background:linear-gradient(135deg,rgba(131,27,252,.13),rgba(156,89,234,.08)); border:1px solid rgba(131,27,252,.22); border-radius:18px; padding:16px 14px; display:flex; flex-direction:column; gap:10px; }
+    .pf-journey-head { display:flex; align-items:center; gap:11px; }
+    .pf-journey-badge { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--purple-vivid),var(--purple-light)); display:flex; align-items:center; justify-content:center; font-size:17px; flex:none; }
+    .pf-journey-col { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+    .pf-journey-level { font-size:15px; font-weight:700; color:var(--text-primary); }
+    .pf-journey-pct { font-size:12px; color:var(--text-secondary); }
+    .pf-streak { font-size:13px; font-weight:600; color:var(--purple-light); white-space:nowrap; }
+    .pf-progress-bg { width:100%; height:8px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; }
+    .pf-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--purple-vivid),var(--purple-light)); transition:width .7s cubic-bezier(.25,.46,.45,.94); }
+    .pf-journey-hint { font-size:12px; color:var(--text-muted); }
     /* ── Edge cases across device sizes ─────────────────────────────────────── */
     /* Onboarding + profile + teasers scroll on short screens (landscape phones, small tablets). */
     .ob-wrap, .shell-profile, .shell-teaser { overflow-y:auto; }
