@@ -13,19 +13,19 @@ interface WardrobeItem {
 interface OutfitSuggestion { title: string; itemIds: string[]; why: string; tip: string; }
 
 const W_I18N: Record<string, Record<string, string>> = {
-  es: { title: 'Mi armario', add: 'Agregar prenda', empty: 'Agrega al menos 3 prendas para recibir sugerencias de outfit', suggest: '¿Qué me pongo?', confirmDelete: '¿Eliminar esta prenda?', full: 'Tu armario está lleno (máx. 60 prendas)', noGarment: 'No se detectó una prenda en la foto', rateLimit: 'Demasiadas solicitudes, intenta más tarde', missing: 'Te falta:', advice: 'Consejo', cataloging: 'Analizando prenda…', suggesting: 'Armando outfits…', error: 'Algo salió mal, intenta de nuevo', back: 'Volver al coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Club', park: 'Parque', museum: 'Museo' },
-  en: { title: 'My wardrobe', add: 'Add garment', empty: 'Add at least 3 garments to get outfit suggestions', suggest: 'What should I wear?', confirmDelete: 'Delete this garment?', full: 'Your wardrobe is full (max 60 items)', noGarment: 'No garment detected in the photo', rateLimit: 'Too many requests, try again later', missing: 'Missing:', advice: 'Tip', cataloging: 'Analyzing garment…', suggesting: 'Building outfits…', error: 'Something went wrong, try again', back: 'Back to coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum' },
-  pt: { title: 'Meu guarda-roupa', add: 'Adicionar peça', empty: 'Adicione pelo menos 3 peças para receber sugestões de look', suggest: 'O que eu visto?', confirmDelete: 'Excluir esta peça?', full: 'Seu guarda-roupa está cheio (máx. 60 peças)', noGarment: 'Nenhuma peça detectada na foto', rateLimit: 'Muitas solicitações, tente mais tarde', missing: 'Falta:', advice: 'Dica', cataloging: 'Analisando peça…', suggesting: 'Montando looks…', error: 'Algo deu errado, tente novamente', back: 'Voltar ao coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Balada', park: 'Parque', museum: 'Museu' },
-  fr: { title: 'Ma garde-robe', add: 'Ajouter un vêtement', empty: 'Ajoute au moins 3 vêtements pour recevoir des suggestions de tenue', suggest: 'Je mets quoi ?', confirmDelete: 'Supprimer ce vêtement ?', full: 'Ta garde-robe est pleine (max 60 pièces)', noGarment: 'Aucun vêtement détecté sur la photo', rateLimit: 'Trop de demandes, réessaie plus tard', missing: 'Il manque :', advice: 'Conseil', cataloging: 'Analyse du vêtement…', suggesting: 'Création des tenues…', error: 'Une erreur est survenue, réessaie', back: 'Retour au coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Parc', museum: 'Musée' },
-  de: { title: 'Mein Kleiderschrank', add: 'Kleidungsstück hinzufügen', empty: 'Füge mindestens 3 Teile hinzu, um Outfit-Vorschläge zu erhalten', suggest: 'Was ziehe ich an?', confirmDelete: 'Dieses Teil löschen?', full: 'Dein Schrank ist voll (max. 60 Teile)', noGarment: 'Kein Kleidungsstück im Foto erkannt', rateLimit: 'Zu viele Anfragen, versuche es später', missing: 'Es fehlt:', advice: 'Tipp', cataloging: 'Analysiere Kleidungsstück…', suggesting: 'Erstelle Outfits…', error: 'Etwas ist schiefgelaufen, versuche es erneut', back: 'Zurück zum Coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum' },
-  it: { title: 'Il mio guardaroba', add: 'Aggiungi capo', empty: 'Aggiungi almeno 3 capi per ricevere suggerimenti di outfit', suggest: 'Cosa mi metto?', confirmDelete: 'Eliminare questo capo?', full: 'Il tuo guardaroba è pieno (max 60 capi)', noGarment: 'Nessun capo rilevato nella foto', rateLimit: 'Troppe richieste, riprova più tardi', missing: 'Manca:', advice: 'Consiglio', cataloging: 'Analisi del capo…', suggesting: 'Creazione outfit…', error: 'Qualcosa è andato storto, riprova', back: 'Torna al coach', cafe: 'Caffè', restaurant: 'Ristorante', bar: 'Bar', night_club: 'Club', park: 'Parco', museum: 'Museo' },
-  zh: { title: '我的衣橱', add: '添加服装', empty: '添加至少3件服装以获取穿搭建议', suggest: '我该穿什么？', confirmDelete: '删除这件服装？', full: '你的衣橱已满（最多60件）', noGarment: '照片中未检测到服装', rateLimit: '请求过多，请稍后再试', missing: '缺少：', advice: '建议', cataloging: '正在分析服装…', suggesting: '正在搭配…', error: '出错了，请重试', back: '返回教练', cafe: '咖啡馆', restaurant: '餐厅', bar: '酒吧', night_club: '夜店', park: '公园', museum: '博物馆' },
-  ja: { title: 'マイクローゼット', add: '服を追加', empty: 'コーデ提案を受けるには3着以上追加してください', suggest: '何を着る？', confirmDelete: 'この服を削除しますか？', full: 'クローゼットがいっぱいです（最大60着）', noGarment: '写真から服が検出されませんでした', rateLimit: 'リクエストが多すぎます。後でもう一度', missing: '足りない：', advice: 'アドバイス', cataloging: '服を分析中…', suggesting: 'コーデ作成中…', error: 'エラーが発生しました。再試行してください', back: 'コーチに戻る', cafe: 'カフェ', restaurant: 'レストラン', bar: 'バー', night_club: 'クラブ', park: '公園', museum: '美術館' },
-  ko: { title: '내 옷장', add: '옷 추가', empty: '코디 추천을 받으려면 3벌 이상 추가하세요', suggest: '뭐 입지?', confirmDelete: '이 옷을 삭제할까요?', full: '옷장이 가득 찼어요 (최대 60벌)', noGarment: '사진에서 옷을 찾지 못했어요', rateLimit: '요청이 너무 많아요. 나중에 다시 시도하세요', missing: '부족한 것:', advice: '팁', cataloging: '옷 분석 중…', suggesting: '코디 만드는 중…', error: '문제가 발생했어요. 다시 시도하세요', back: '코치로 돌아가기', cafe: '카페', restaurant: '레스토랑', bar: '바', night_club: '클럽', park: '공원', museum: '미술관' },
-  ru: { title: 'Мой гардероб', add: 'Добавить вещь', empty: 'Добавьте минимум 3 вещи, чтобы получать подборки образов', suggest: 'Что надеть?', confirmDelete: 'Удалить эту вещь?', full: 'Гардероб заполнен (макс. 60 вещей)', noGarment: 'На фото не найдена одежда', rateLimit: 'Слишком много запросов, попробуйте позже', missing: 'Не хватает:', advice: 'Совет', cataloging: 'Анализ вещи…', suggesting: 'Собираем образы…', error: 'Что-то пошло не так, попробуйте ещё раз', back: 'Назад к коучу', cafe: 'Кафе', restaurant: 'Ресторан', bar: 'Бар', night_club: 'Клуб', park: 'Парк', museum: 'Музей' },
-  ar: { title: 'خزانتي', add: 'إضافة قطعة', empty: 'أضف 3 قطع على الأقل للحصول على اقتراحات الإطلالات', suggest: 'ماذا أرتدي؟', confirmDelete: 'حذف هذه القطعة؟', full: 'خزانتك ممتلئة (60 قطعة كحد أقصى)', noGarment: 'لم يتم العثور على ملابس في الصورة', rateLimit: 'طلبات كثيرة جدًا، حاول لاحقًا', missing: 'ينقصك:', advice: 'نصيحة', cataloging: 'جارٍ تحليل القطعة…', suggesting: 'جارٍ تنسيق الإطلالات…', error: 'حدث خطأ ما، حاول مرة أخرى', back: 'العودة إلى المدرب', cafe: 'مقهى', restaurant: 'مطعم', bar: 'بار', night_club: 'نادٍ ليلي', park: 'حديقة', museum: 'متحف' },
-  id: { title: 'Lemari saya', add: 'Tambah pakaian', empty: 'Tambahkan minimal 3 pakaian untuk mendapat saran outfit', suggest: 'Pakai apa ya?', confirmDelete: 'Hapus pakaian ini?', full: 'Lemari penuh (maks. 60 item)', noGarment: 'Tidak ada pakaian terdeteksi di foto', rateLimit: 'Terlalu banyak permintaan, coba lagi nanti', missing: 'Kurang:', advice: 'Tips', cataloging: 'Menganalisis pakaian…', suggesting: 'Menyusun outfit…', error: 'Ada yang salah, coba lagi', back: 'Kembali ke coach', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Klub', park: 'Taman', museum: 'Museum' },
-  tr: { title: 'Gardırobum', add: 'Kıyafet ekle', empty: 'Kombin önerileri için en az 3 parça ekle', suggest: 'Ne giysem?', confirmDelete: 'Bu parçayı sil?', full: 'Gardırobun dolu (en fazla 60 parça)', noGarment: 'Fotoğrafta kıyafet bulunamadı', rateLimit: 'Çok fazla istek, daha sonra dene', missing: 'Eksik:', advice: 'İpucu', cataloging: 'Kıyafet analiz ediliyor…', suggesting: 'Kombinler hazırlanıyor…', error: 'Bir şeyler ters gitti, tekrar dene', back: 'Koça dön', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Kulüp', park: 'Park', museum: 'Müze' },
+  es: { title: 'Mi armario', emptyTitle: 'Tu armario te espera', deleteQ: '¿Eliminar?', add: 'Agregar prenda', empty: 'Agrega al menos 3 prendas para recibir sugerencias de outfit', suggest: '¿Qué me pongo?', confirmDelete: '¿Eliminar esta prenda?', full: 'Tu armario está lleno (máx. 60 prendas)', noGarment: 'No se detectó una prenda en la foto', rateLimit: 'Demasiadas solicitudes, intenta más tarde', missing: 'Te falta:', advice: 'Consejo', cataloging: 'Analizando prenda…', suggesting: 'Armando outfits…', error: 'Algo salió mal, intenta de nuevo', back: 'Volver al coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Club', park: 'Parque', museum: 'Museo' },
+  en: { title: 'My wardrobe', emptyTitle: 'Your wardrobe awaits', deleteQ: 'Delete?', add: 'Add garment', empty: 'Add at least 3 garments to get outfit suggestions', suggest: 'What should I wear?', confirmDelete: 'Delete this garment?', full: 'Your wardrobe is full (max 60 items)', noGarment: 'No garment detected in the photo', rateLimit: 'Too many requests, try again later', missing: 'Missing:', advice: 'Tip', cataloging: 'Analyzing garment…', suggesting: 'Building outfits…', error: 'Something went wrong, try again', back: 'Back to coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum' },
+  pt: { title: 'Meu guarda-roupa', emptyTitle: 'Seu guarda-roupa espera por você', deleteQ: 'Excluir?', add: 'Adicionar peça', empty: 'Adicione pelo menos 3 peças para receber sugestões de look', suggest: 'O que eu visto?', confirmDelete: 'Excluir esta peça?', full: 'Seu guarda-roupa está cheio (máx. 60 peças)', noGarment: 'Nenhuma peça detectada na foto', rateLimit: 'Muitas solicitações, tente mais tarde', missing: 'Falta:', advice: 'Dica', cataloging: 'Analisando peça…', suggesting: 'Montando looks…', error: 'Algo deu errado, tente novamente', back: 'Voltar ao coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Balada', park: 'Parque', museum: 'Museu' },
+  fr: { title: 'Ma garde-robe', emptyTitle: 'Ta garde-robe t\'attend', deleteQ: 'Supprimer ?', add: 'Ajouter un vêtement', empty: 'Ajoute au moins 3 vêtements pour recevoir des suggestions de tenue', suggest: 'Je mets quoi ?', confirmDelete: 'Supprimer ce vêtement ?', full: 'Ta garde-robe est pleine (max 60 pièces)', noGarment: 'Aucun vêtement détecté sur la photo', rateLimit: 'Trop de demandes, réessaie plus tard', missing: 'Il manque :', advice: 'Conseil', cataloging: 'Analyse du vêtement…', suggesting: 'Création des tenues…', error: 'Une erreur est survenue, réessaie', back: 'Retour au coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Parc', museum: 'Musée' },
+  de: { title: 'Mein Kleiderschrank', emptyTitle: 'Dein Kleiderschrank wartet', deleteQ: 'Löschen?', add: 'Kleidungsstück hinzufügen', empty: 'Füge mindestens 3 Teile hinzu, um Outfit-Vorschläge zu erhalten', suggest: 'Was ziehe ich an?', confirmDelete: 'Dieses Teil löschen?', full: 'Dein Schrank ist voll (max. 60 Teile)', noGarment: 'Kein Kleidungsstück im Foto erkannt', rateLimit: 'Zu viele Anfragen, versuche es später', missing: 'Es fehlt:', advice: 'Tipp', cataloging: 'Analysiere Kleidungsstück…', suggesting: 'Erstelle Outfits…', error: 'Etwas ist schiefgelaufen, versuche es erneut', back: 'Zurück zum Coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum' },
+  it: { title: 'Il mio guardaroba', emptyTitle: 'Il tuo guardaroba ti aspetta', deleteQ: 'Eliminare?', add: 'Aggiungi capo', empty: 'Aggiungi almeno 3 capi per ricevere suggerimenti di outfit', suggest: 'Cosa mi metto?', confirmDelete: 'Eliminare questo capo?', full: 'Il tuo guardaroba è pieno (max 60 capi)', noGarment: 'Nessun capo rilevato nella foto', rateLimit: 'Troppe richieste, riprova più tardi', missing: 'Manca:', advice: 'Consiglio', cataloging: 'Analisi del capo…', suggesting: 'Creazione outfit…', error: 'Qualcosa è andato storto, riprova', back: 'Torna al coach', cafe: 'Caffè', restaurant: 'Ristorante', bar: 'Bar', night_club: 'Club', park: 'Parco', museum: 'Museo' },
+  zh: { title: '我的衣橱', emptyTitle: '你的衣橱在等你', deleteQ: '删除？', add: '添加服装', empty: '添加至少3件服装以获取穿搭建议', suggest: '我该穿什么？', confirmDelete: '删除这件服装？', full: '你的衣橱已满（最多60件）', noGarment: '照片中未检测到服装', rateLimit: '请求过多，请稍后再试', missing: '缺少：', advice: '建议', cataloging: '正在分析服装…', suggesting: '正在搭配…', error: '出错了，请重试', back: '返回教练', cafe: '咖啡馆', restaurant: '餐厅', bar: '酒吧', night_club: '夜店', park: '公园', museum: '博物馆' },
+  ja: { title: 'マイクローゼット', emptyTitle: 'クローゼットがあなたを待っています', deleteQ: '削除する？', add: '服を追加', empty: 'コーデ提案を受けるには3着以上追加してください', suggest: '何を着る？', confirmDelete: 'この服を削除しますか？', full: 'クローゼットがいっぱいです（最大60着）', noGarment: '写真から服が検出されませんでした', rateLimit: 'リクエストが多すぎます。後でもう一度', missing: '足りない：', advice: 'アドバイス', cataloging: '服を分析中…', suggesting: 'コーデ作成中…', error: 'エラーが発生しました。再試行してください', back: 'コーチに戻る', cafe: 'カフェ', restaurant: 'レストラン', bar: 'バー', night_club: 'クラブ', park: '公園', museum: '美術館' },
+  ko: { title: '내 옷장', emptyTitle: '옷장이 기다리고 있어요', deleteQ: '삭제할까요?', add: '옷 추가', empty: '코디 추천을 받으려면 3벌 이상 추가하세요', suggest: '뭐 입지?', confirmDelete: '이 옷을 삭제할까요?', full: '옷장이 가득 찼어요 (최대 60벌)', noGarment: '사진에서 옷을 찾지 못했어요', rateLimit: '요청이 너무 많아요. 나중에 다시 시도하세요', missing: '부족한 것:', advice: '팁', cataloging: '옷 분석 중…', suggesting: '코디 만드는 중…', error: '문제가 발생했어요. 다시 시도하세요', back: '코치로 돌아가기', cafe: '카페', restaurant: '레스토랑', bar: '바', night_club: '클럽', park: '공원', museum: '미술관' },
+  ru: { title: 'Мой гардероб', emptyTitle: 'Ваш гардероб ждёт', deleteQ: 'Удалить?', add: 'Добавить вещь', empty: 'Добавьте минимум 3 вещи, чтобы получать подборки образов', suggest: 'Что надеть?', confirmDelete: 'Удалить эту вещь?', full: 'Гардероб заполнен (макс. 60 вещей)', noGarment: 'На фото не найдена одежда', rateLimit: 'Слишком много запросов, попробуйте позже', missing: 'Не хватает:', advice: 'Совет', cataloging: 'Анализ вещи…', suggesting: 'Собираем образы…', error: 'Что-то пошло не так, попробуйте ещё раз', back: 'Назад к коучу', cafe: 'Кафе', restaurant: 'Ресторан', bar: 'Бар', night_club: 'Клуб', park: 'Парк', museum: 'Музей' },
+  ar: { title: 'خزانتي', emptyTitle: 'خزانتك بانتظارك', deleteQ: 'حذف؟', add: 'إضافة قطعة', empty: 'أضف 3 قطع على الأقل للحصول على اقتراحات الإطلالات', suggest: 'ماذا أرتدي؟', confirmDelete: 'حذف هذه القطعة؟', full: 'خزانتك ممتلئة (60 قطعة كحد أقصى)', noGarment: 'لم يتم العثور على ملابس في الصورة', rateLimit: 'طلبات كثيرة جدًا، حاول لاحقًا', missing: 'ينقصك:', advice: 'نصيحة', cataloging: 'جارٍ تحليل القطعة…', suggesting: 'جارٍ تنسيق الإطلالات…', error: 'حدث خطأ ما، حاول مرة أخرى', back: 'العودة إلى المدرب', cafe: 'مقهى', restaurant: 'مطعم', bar: 'بار', night_club: 'نادٍ ليلي', park: 'حديقة', museum: 'متحف' },
+  id: { title: 'Lemari saya', emptyTitle: 'Lemari menantimu', deleteQ: 'Hapus?', add: 'Tambah pakaian', empty: 'Tambahkan minimal 3 pakaian untuk mendapat saran outfit', suggest: 'Pakai apa ya?', confirmDelete: 'Hapus pakaian ini?', full: 'Lemari penuh (maks. 60 item)', noGarment: 'Tidak ada pakaian terdeteksi di foto', rateLimit: 'Terlalu banyak permintaan, coba lagi nanti', missing: 'Kurang:', advice: 'Tips', cataloging: 'Menganalisis pakaian…', suggesting: 'Menyusun outfit…', error: 'Ada yang salah, coba lagi', back: 'Kembali ke coach', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Klub', park: 'Taman', museum: 'Museum' },
+  tr: { title: 'Gardırobum', emptyTitle: 'Gardırobun seni bekliyor', deleteQ: 'Silinsin mi?', add: 'Kıyafet ekle', empty: 'Kombin önerileri için en az 3 parça ekle', suggest: 'Ne giysem?', confirmDelete: 'Bu parçayı sil?', full: 'Gardırobun dolu (en fazla 60 parça)', noGarment: 'Fotoğrafta kıyafet bulunamadı', rateLimit: 'Çok fazla istek, daha sonra dene', missing: 'Eksik:', advice: 'İpucu', cataloging: 'Kıyafet analiz ediliyor…', suggesting: 'Kombinler hazırlanıyor…', error: 'Bir şeyler ters gitti, tekrar dene', back: 'Koça dön', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Kulüp', park: 'Park', museum: 'Müze' },
 };
 
 const VENUES = ['cafe', 'restaurant', 'bar', 'night_club', 'park', 'museum'] as const;
@@ -41,35 +41,46 @@ const VENUE_EMOJI: Record<string, string> = { cafe: '☕', restaurant: '🍽️'
       <h2>👗 {{ t('title') }}</h2>
       <label class="wd-add" [class.busy]="cataloging()">
         {{ cataloging() ? t('cataloging') : '+ ' + t('add') }}
-        <input type="file" accept="image/*" (change)="onFile($event)" [disabled]="cataloging()" hidden>
+        <input id="wdFile" class="wd-file" type="file" accept="image/*" (change)="onFile($event)" [disabled]="cataloging()">
       </label>
     </div>
     @if (errMsg()) { <p class="wd-err">{{ errMsg() }}</p> }
 
     @if (items().length === 0 && !cataloging()) {
-      <div class="wd-empty"><span>🧺</span><p>{{ t('empty') }}</p></div>
+      <div class="wd-empty">
+        <span class="wd-empty-glow" aria-hidden="true">🧺</span>
+        <h3 class="wd-empty-title">{{ t('emptyTitle') }}</h3>
+        <p class="wd-empty-sub">{{ t('empty') }}</p>
+        <label class="wd-cta" for="wdFile">+ {{ t('add') }}</label>
+      </div>
     } @else {
       <div class="wd-grid">
-        @for (it of items(); track it.id) {
-          <div class="wd-item">
+        @for (it of items(); track it.id; let i = $index) {
+          <div class="wd-item" [class.confirming]="deleteId() === it.id" [style.animation-delay.ms]="riseDelay(i)">
             <button class="wd-del" (click)="askDelete(it.id)" aria-label="delete">✕</button>
             <span class="wd-emoji">{{ it.emoji || '👕' }}</span>
             <span class="wd-name">{{ it.name }}</span>
             <div class="wd-colors">
               @for (c of it.colors; track c) { <span class="wd-chip">{{ c }}</span> }
             </div>
+            @if (deleteId() === it.id) {
+              <div class="wd-item-confirm" role="alertdialog" [attr.aria-label]="t('confirmDelete')">
+                <p>{{ t('deleteQ') }}</p>
+                <div class="wd-item-confirm-btns">
+                  <button class="wd-btn-danger" (click)="confirmDelete()" [attr.aria-label]="t('confirmDelete')">✓</button>
+                  <button class="wd-btn-ghost" (click)="deleteId.set(null)" aria-label="cancel">✕</button>
+                </div>
+              </div>
+            }
           </div>
         }
-      </div>
-    }
-
-    @if (deleteId(); as did) {
-      <div class="wd-confirm">
-        <p>{{ t('confirmDelete') }}</p>
-        <div>
-          <button class="wd-btn-danger" (click)="confirmDelete()">✓</button>
-          <button class="wd-btn-ghost" (click)="deleteId.set(null)">✕</button>
-        </div>
+        @if (cataloging()) {
+          <div class="wd-item wd-skel" aria-live="polite">
+            <span class="wd-skel-circle"></span>
+            <span class="wd-skel-bar"></span>
+            <span class="wd-skel-txt">{{ t('cataloging') }}</span>
+          </div>
+        }
       </div>
     }
 
@@ -84,16 +95,17 @@ const VENUE_EMOJI: Record<string, string> = { cafe: '☕', restaurant: '🍽️'
           }
         </div>
         @if (suggesting()) { <p class="wd-loading">{{ t('suggesting') }}</p> }
-        @for (o of outfits(); track o.title) {
-          <div class="wd-outfit">
+        @for (o of outfits(); track o.title; let i = $index) {
+          <div class="wd-outfit" [style.animation-delay.ms]="riseDelay(i)">
             <h4>{{ o.title }}</h4>
+            <div class="wd-outfit-div" aria-hidden="true"></div>
             <div class="wd-outfit-items">
               @for (id of o.itemIds; track id) {
                 @if (itemById(id); as it) { <span class="wd-chip big">{{ it.emoji }} {{ it.name }}</span> }
               }
             </div>
             <p class="wd-why">{{ o.why }}</p>
-            <p class="wd-tip">💡 {{ o.tip }}</p>
+            <p class="wd-tip"><span class="wd-tip-ic" aria-hidden="true">💡</span><span>{{ o.tip }}</span></p>
           </div>
         }
         @if (generalAdvice()) { <p class="wd-advice"><b>{{ t('advice') }}:</b> {{ generalAdvice() }}</p> }
@@ -103,37 +115,91 @@ const VENUE_EMOJI: Record<string, string> = { cafe: '☕', restaurant: '🍽️'
   </div>
   `,
   styles: [`
-    .wd { max-width: 680px; margin: 0 auto; padding: 16px; color: #EDEDF2; }
+    :host { --wd-ease: cubic-bezier(0.16, 1, 0.3, 1); }
+    .wd { max-width: 680px; margin: 0 auto; padding: 16px; color: var(--text-primary, #EDEDF2); }
     .wd-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .wd-head h2 { font-size: 22px; margin: 0; }
-    .wd-add { background: linear-gradient(135deg,#D4AF37,#B8860B); color: #1A1206; padding: 10px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; }
+
+    /* Add garment — gold gradient pill wrapping a visually-hidden (still focusable) file input */
+    .wd-add { position: relative; background: var(--gradient-gold, linear-gradient(135deg,#B8860B,#D4AF37)); color: var(--on-gold, #1A1206); padding: 10px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: transform 200ms var(--wd-ease), box-shadow 200ms var(--wd-ease); }
+    .wd-add:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(212,175,55,.25); }
+    .wd-add:focus-within { outline: 2px solid var(--gold, #D4AF37); outline-offset: 2px; }
     .wd-add.busy { opacity: .6; pointer-events: none; }
+    .wd-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
     .wd-err { color: #ff8080; font-size: 14px; margin: 10px 0; }
-    .wd-empty { text-align: center; padding: 40px 16px; color: #C9C9D4; }
-    .wd-empty span { font-size: 44px; display: block; margin-bottom: 10px; }
+
+    /* Empty state — glow circle + headline + gold CTA (labels the hidden input) */
+    .wd-empty { text-align: center; padding: 48px 16px 40px; }
+    .wd-empty-glow { display: grid; place-items: center; width: 96px; height: 96px; margin: 0 auto 18px; font-size: 44px; border-radius: 50%; background: radial-gradient(circle at 50% 42%, rgba(212,175,55,.16), rgba(131,27,252,.12) 62%, transparent 78%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .wd-empty-title { margin: 0 0 8px; font-size: 19px; font-weight: 700; color: var(--text-primary, #FFF); }
+    .wd-empty-sub { margin: 0 auto 22px; max-width: 38ch; font-size: 14px; line-height: 1.5; color: var(--text-muted, #B0B0B0); }
+    .wd-cta { display: inline-block; background: var(--gradient-gold, linear-gradient(135deg,#B8860B,#D4AF37)); color: var(--on-gold, #1A1206); font-weight: 700; font-size: 15px; padding: 13px 28px; border-radius: 999px; cursor: pointer; box-shadow: 0 8px 24px rgba(212,175,55,.22); transition: transform 200ms var(--wd-ease), box-shadow 200ms var(--wd-ease); }
+    .wd-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212,175,55,.32); }
+
+    /* Item grid */
     .wd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
-    .wd-item { position: relative; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .wd-del { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #8A8A99; cursor: pointer; font-size: 12px; }
-    .wd-emoji { font-size: 34px; }
+    .wd-item { position: relative; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform 200ms var(--wd-ease), box-shadow 200ms var(--wd-ease), border-color 200ms var(--wd-ease); }
+    .wd-item:hover { transform: translateY(-2px); border-color: rgba(212,175,55,.25); box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 4px 18px rgba(212,175,55,.12); }
+    .wd-item.confirming { transform: none; }
+    .wd-del { position: absolute; top: 6px; right: 6px; z-index: 1; background: none; border: none; color: #8A8A99; cursor: pointer; font-size: 12px; padding: 4px; border-radius: 8px; transition: color 200ms var(--wd-ease); }
+    .wd-del:hover { color: var(--app-red, #FF4457); }
+    .wd-del:focus-visible { outline: 2px solid var(--gold, #D4AF37); outline-offset: 1px; }
+    .wd-emoji { display: grid; place-items: center; width: 58px; height: 58px; font-size: 30px; border-radius: 50%; background: radial-gradient(circle at 50% 42%, rgba(212,175,55,.12), rgba(131,27,252,.12) 62%, transparent 80%); }
     .wd-name { font-size: 13px; text-align: center; }
     .wd-colors { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
     .wd-chip { background: rgba(156,89,234,.2); border-radius: 8px; padding: 2px 8px; font-size: 11px; }
     .wd-chip.big { font-size: 13px; padding: 4px 10px; }
-    .wd-confirm { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #2A2233; border: 1px solid rgba(255,255,255,.15); border-radius: 14px; padding: 14px 18px; display: flex; gap: 14px; align-items: center; z-index: 30; }
-    .wd-btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; cursor: pointer; margin-right: 8px; }
-    .wd-btn-ghost { background: none; color: #EDEDF2; border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
-    .wd-suggest { margin-top: 28px; border-top: 1px solid rgba(255,255,255,.1); padding-top: 18px; }
+
+    /* Inline delete confirm — overlay on the card itself */
+    .wd-item-confirm { position: absolute; inset: 0; z-index: 2; border-radius: 16px; background: rgba(14,10,18,.9); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 10px; box-shadow: inset 0 0 0 1px rgba(212,175,55,.28); }
+    .wd-item-confirm p { margin: 0; font-size: 13.5px; font-weight: 600; text-align: center; }
+    .wd-item-confirm-btns { display: flex; gap: 10px; }
+    .wd-btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; cursor: pointer; transition: transform 200ms var(--wd-ease), filter 200ms var(--wd-ease); }
+    .wd-btn-danger:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .wd-btn-ghost { background: none; color: var(--text-primary, #EDEDF2); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 8px 14px; cursor: pointer; transition: background 200ms var(--wd-ease); }
+    .wd-btn-ghost:hover { background: rgba(255,255,255,.08); }
+    .wd-btn-danger:focus-visible, .wd-btn-ghost:focus-visible { outline: 2px solid var(--gold, #D4AF37); outline-offset: 2px; }
+
+    /* Cataloging skeleton card — gradient sweep shimmer */
+    .wd-skel { overflow: hidden; justify-content: center; min-height: 128px; }
+    .wd-skel-circle { width: 58px; height: 58px; border-radius: 50%; background: var(--skeleton-base, rgba(255,255,255,.06)); }
+    .wd-skel-bar { width: 70%; height: 10px; border-radius: 6px; background: var(--skeleton-base, rgba(255,255,255,.06)); }
+    .wd-skel-txt { font-size: 11.5px; color: var(--text-muted, #B0B0B0); }
+    .wd-skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(105deg, transparent 25%, var(--skeleton-sheen, rgba(255,255,255,.14)) 50%, transparent 75%); }
+
+    /* Suggestions */
+    .wd-suggest { margin-top: 28px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 18px; }
     .wd-suggest h3 { font-size: 18px; margin: 0 0 12px; }
     .wd-venues { display: flex; gap: 8px; flex-wrap: wrap; }
-    .wd-venue { background: rgba(255,255,255,.06); color: #EDEDF2; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
-    .wd-venue.sel { background: rgba(212,175,55,.25); border-color: #D4AF37; }
-    .wd-loading { color: #C9C9D4; font-size: 14px; margin-top: 12px; }
-    .wd-outfit { background: rgba(255,255,255,.05); border-radius: 14px; padding: 14px; margin-top: 12px; }
-    .wd-outfit h4 { margin: 0 0 8px; font-size: 15px; color: #D4AF37; }
+    .wd-venue { background: rgba(255,255,255,.05); color: var(--text-primary, #EDEDF2); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-family: inherit; transition: transform 200ms var(--wd-ease), background 200ms var(--wd-ease), border-color 200ms var(--wd-ease), color 200ms var(--wd-ease), box-shadow 200ms var(--wd-ease); }
+    .wd-venue:hover:not(:disabled):not(.sel) { background: rgba(255,255,255,.09); border-color: rgba(212,175,55,.4); transform: translateY(-1px); }
+    .wd-venue:focus-visible { outline: 2px solid var(--gold, #D4AF37); outline-offset: 2px; }
+    .wd-venue:disabled { opacity: .55; cursor: default; }
+    .wd-venue.sel { background: var(--gradient-gold, linear-gradient(135deg,#B8860B,#D4AF37)); color: var(--on-gold, #1A1206); border-color: transparent; font-weight: 700; transform: scale(1.05); box-shadow: 0 4px 16px rgba(212,175,55,.28); }
+    .wd-loading { color: var(--text-muted, #C9C9D4); font-size: 14px; margin-top: 12px; }
+
+    /* Outfit result cards */
+    .wd-outfit { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 14px; margin-top: 12px; transition: transform 200ms var(--wd-ease), box-shadow 200ms var(--wd-ease), border-color 200ms var(--wd-ease); }
+    .wd-outfit:hover { transform: translateY(-2px); border-color: rgba(212,175,55,.22); box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 4px 18px rgba(212,175,55,.1); }
+    .wd-outfit h4 { margin: 0 0 8px; font-size: 15px; color: var(--gold, #D4AF37); }
+    .wd-outfit-div { height: 1px; margin: 0 0 10px; background: linear-gradient(90deg, rgba(212,175,55,.5), rgba(131,27,252,.35), transparent); }
     .wd-outfit-items { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-    .wd-why { font-size: 13px; color: #C9C9D4; margin: 4px 0; }
-    .wd-tip { font-size: 13px; margin: 4px 0 0; }
-    .wd-advice, .wd-missing { font-size: 13px; color: #C9C9D4; margin-top: 12px; }
+    .wd-why { font-size: 13px; color: var(--text-muted, #C9C9D4); margin: 4px 0; }
+    .wd-tip { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(212,175,55,.08); border: 1px solid rgba(212,175,55,.14); }
+    .wd-tip-ic { flex: none; }
+    .wd-advice, .wd-missing { font-size: 13px; color: var(--text-muted, #C9C9D4); margin-top: 12px; }
+
+    /* Entrance + shimmer motion — only when the user hasn't asked for reduced motion */
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes wdRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes wdFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes wdSweep { to { transform: translateX(100%); } }
+      .wd-item { animation: wdRise 450ms var(--wd-ease) backwards; }
+      .wd-outfit { animation: wdRise 400ms var(--wd-ease) backwards; }
+      .wd-item-confirm { animation: wdFadeIn 180ms var(--wd-ease) backwards; }
+      .wd-skel::after { animation: wdSweep 1.4s ease-in-out infinite; }
+    }
   `],
 })
 export class WardrobePanelComponent implements OnInit, OnDestroy {
@@ -160,6 +226,8 @@ export class WardrobePanelComponent implements OnInit, OnDestroy {
   }
   t(key: string): string { return W_I18N[this.lang()]?.[key] || W_I18N['es'][key] || key; }
   itemById(id: string): WardrobeItem | undefined { return this.itemMap().get(id); }
+  /** Staggered entrance delay per grid index, capped so late items don't lag. */
+  riseDelay(i: number): number { return Math.min(i * 40, 480); }
 
   async onFile(ev: Event) {
     const input = ev.target as HTMLInputElement;
