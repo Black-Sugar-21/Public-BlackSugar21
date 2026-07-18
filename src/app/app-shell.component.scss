@@ -12,8 +12,10 @@
     .shell-acct img, .shell-acct-i { width:30px; height:30px; border-radius:50%; flex:none; }
     .shell-acct-i { display:inline-flex; align-items:center; justify-content:center; background:var(--gradient-gold); color:var(--bg-dark); font-weight:700; }
     .shell-acct-n { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .shell-main { flex:1; min-width:0; display:flex; }
+    .shell-main { flex:1; min-width:0; display:flex; position:relative; }
     .shell-coach { flex:1; display:flex; min-height:0; }
+    // R151: wardrobe toggle floating over the coach section (signed-in only)
+    .shell-wardrobe-toggle { position:absolute; top:14px; right:16px; z-index:20; background:rgba(42,34,51,.85); color:#EDEDF2; border:1px solid rgba(255,255,255,.18); border-radius:20px; padding:8px 14px; cursor:pointer; font-size:15px; backdrop-filter:blur(6px); }
     .shell-coach app-coach-widget { flex:1; display:flex; min-width:0; }
     .shell-teaser, .shell-profile { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px; }
     .shell-teaser-ic { font-size:54px; }

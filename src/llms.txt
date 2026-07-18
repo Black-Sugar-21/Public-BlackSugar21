@@ -1,0 +1,71 @@
+# Black Sugar 21 — AI Dating Coach
+
+> Black Sugar 21 es una app de coach de inteligencia emocional con IA para iOS y Android. No es solo una app de citas: es un asistente de psicología aplicada a las relaciones.
+
+## What Black Sugar 21 Does
+
+Black Sugar 21 combines a dating platform with a real-time AI coach powered by Google Gemini. The coach applies 6 evidence-based psychology frameworks (Bowlby attachment theory, Gottman's relationship research, Goleman's emotional intelligence, Hofstede's cultural intelligence, Seligman's positive psychology, and Fisher's neuroscience of attraction) to help users navigate modern dating.
+
+## Key Features
+
+- **AI Dating Coach**: Real-time conversation coaching in 13 languages. Suggests what to say, when to say it, and how to recover difficult situations.
+- **Icebreakers & Smart Replies**: Personalized opening lines and 3-tone reply suggestions (casual / flirty / deep) based on the conversation context.
+- **Multi-Universe Simulation**: Predicts how a conversation or date scenario could evolve across multiple outcomes, powered by 5 AI psychology agents debating in parallel.
+- **Venue Discovery**: Suggests real date spots near the user (restaurants, cafés, parks, cultural venues) using Google Places.
+- **Chemistry Score**: Real-time compatibility analysis updated every 5 messages, rated 0–100 with trend indicators (rising/falling/stable).
+- **Safety Shield**: AI moderation, content filtering, emergency check-in system for first dates, and SOS escalation.
+- **Photo Coach**: Gemini Vision analysis of profile photos with scoring and ranked photo order suggestions.
+- **Dating Journey**: Progression system tracking milestones in a user's dating life.
+
+## Who It's For
+
+Singles aged 20–40 in Latin America (Chile, Mexico, Argentina), Spain, and US Hispanics. Available in Spanish, English, Portuguese, French, German, Japanese, Chinese, Russian, Arabic, Indonesian, Korean, and Italian.
+
+## Pricing
+
+- **Free**: Full access to all core features including AI coach (3 credits/day), venue discovery, icebreakers, smart replies, chemistry score, and safety tools.
+- **No paid tier**: All features are free to use.
+
+## Download
+
+- iOS: https://apps.apple.com/app/id6470783901
+- Android: https://play.google.com/store/apps/details?id=com.black.sugar21
+
+## Key Pages
+
+- Home: https://www.blacksugar21.com/
+- AI Coach: https://www.blacksugar21.com/coach
+- Features: https://www.blacksugar21.com/features
+- Dating Guides (Spanish): see "Dating Guides Published" section below
+- Privacy Policy: https://www.blacksugar21.com/privacy
+- Terms of Use: https://www.blacksugar21.com/terms
+
+## Dating Guides Published
+
+- Swipe fatigue: https://www.blacksugar21.com/guia/swipe-fatigue
+- How to start a conversation: https://www.blacksugar21.com/guia/como-empezar-conversacion
+- First date tips: https://www.blacksugar21.com/guia/primera-cita
+- Attachment psychology in dating: https://www.blacksugar21.com/guia/psicologia-apego-citas
+- AI dating apps guide 2026: https://www.blacksugar21.com/guia/apps-citas-ia
+- What to do when ghosted: https://www.blacksugar21.com/guia/ghosting-que-hacer
+- Red flags in dating apps: https://www.blacksugar21.com/guia/red-flags-apps-citas
+- How to move from chat to date: https://www.blacksugar21.com/guia/como-pasar-chat-a-cita
+- Messages to revive a cold conversation: https://www.blacksugar21.com/guia/mensajes-para-retomar-conversacion
+- Best AI dating app 2026: https://www.blacksugar21.com/guia/mejor-app-citas-ia-2026
+
+## Psychology Research Base
+
+The AI coach is grounded in peer-reviewed research:
+- Attachment theory (Bowlby, 1969; Ainsworth, 1978; Mikulincer & Shaver, 2007)
+- Relationship science (Gottman & Silver, 1994; Gottman's 5:1 ratio)
+- Emotional intelligence (Goleman, 1995; Brackett & Salovey, 2006)
+- Neuroscience of attraction (Fisher, 2004; Aron's 36 Questions, 1997)
+- Cultural intelligence (Hofstede, 1980; Earley & Ang, 2003)
+- Positive psychology (Seligman, 2011)
+
+## Contact
+
+- Email: hello@blacksugar21.com
+- Instagram: @blacksugar21app
+- TikTok: @blacksugar21
+- Website: https://www.blacksugar21.com

@@ -377,6 +377,17 @@ service cloud.firestore {
         allow write: if false; // CF runTransaction
       }
 
+      // R151 Virtual Wardrobe: catálogo de prendas del usuario. Los items los
+      // escribe SOLO catalogWardrobeItem CF (admin SDK — metadata validada por
+      // Gemini). Cliente (Android/iOS/web logueado) lee el grid y borra items.
+      // create/update client-side bloqueados: evita inyectar metadata falsa
+      // que luego alimenta el prompt de suggestDateOutfit.
+      match /wardrobe/{itemId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if false; // CF-only (catalogWardrobeItem)
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
       // AI preferences learning: solo propietario lee, solo CF escribe
       match /aiPreferences/{prefId} {
         allow read: if request.auth != null && request.auth.uid == userId;

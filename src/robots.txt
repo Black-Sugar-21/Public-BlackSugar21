@@ -3,4 +3,26 @@ Allow: /
 Disallow: /analytics
 Disallow: /data-deletion
 
+# Allow AI crawlers to index and cite this content
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
 Sitemap: https://www.blacksugar21.com/sitemap.xml

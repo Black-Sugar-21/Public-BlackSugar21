@@ -917,6 +917,38 @@ export class FirebaseService {
     } catch { return ''; }
   }
 
+  // ── R151 Virtual Wardrobe — same Firestore schema + CFs as the apps ──────────
+  /** Live wardrobe items for the current user (users/{uid}/wardrobe). Returns unsub fn. */
+  listenWardrobe(cb: (items: any[]) => void): () => void {
+    const u = this.currentUser();
+    if (!u) { cb([]); return () => {}; }
+    const q = query(collection(this.db, 'users', u.uid, 'wardrobe'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snap) => {
+      cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, () => cb([]));
+  }
+
+  /** Catalog one garment photo via the catalogWardrobeItem CF (Gemini Vision). */
+  async wardrobeCatalog(photoBase64: string, userLanguage: string): Promise<any> {
+    const fn = httpsCallable(this.functions, 'catalogWardrobeItem');
+    const res = await fn({ photoBase64, userLanguage });
+    return res.data;
+  }
+
+  /** Ask suggestDateOutfit CF for outfit combos from the cataloged wardrobe. */
+  async wardrobeSuggest(venueType: string, userLanguage: string): Promise<any> {
+    const fn = httpsCallable(this.functions, 'suggestDateOutfit');
+    const res = await fn({ venueType, occasion: 'date', userLanguage });
+    return res.data;
+  }
+
+  /** Delete one wardrobe item (rules allow owner delete; create/update are CF-only). */
+  async wardrobeDelete(itemId: string): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    await deleteDoc(doc(this.db, 'users', u.uid, 'wardrobe', itemId));
+  }
+
   // ── Matches + chat (web) — same Firestore schema the apps use ────────────────
   /** Live matches for the current user (matches where usersMatched contains me). Returns unsub fn. */
   listenMatches(cb: (matches: any[]) => void): () => void {

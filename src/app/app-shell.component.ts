@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { CoachWidgetComponent } from './coach-widget.component';
+import { WardrobePanelComponent } from './wardrobe-panel.component';
 import { ShellNavIconComponent } from './shell-nav-icon.component';
 import { UiButtonComponent } from './ui/atoms/ui-button.component';
 import { UiOptionComponent } from './ui/atoms/ui-option.component';
@@ -290,7 +291,7 @@ const PLACE_CAT_LABELS: Record<string, Record<string, string>> = {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent, UiInputComponent, UiSkeletonComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CoachWidgetComponent, WardrobePanelComponent, ShellNavIconComponent, UiButtonComponent, UiOptionComponent, UiInputComponent, UiSkeletonComponent],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -298,6 +299,10 @@ const PLACE_CAT_LABELS: Record<string, Record<string, string>> = {
 export class AppShellComponent implements OnDestroy {
   private isBrowser: boolean;
   readonly section = signal<Section>('coach');
+  // R151: wardrobe sub-view inside the coach section (parity with the apps'
+  // wardrobe entry in the coach top bar). Signed-in only — the toggle button
+  // is hidden for anonymous visitors.
+  readonly showWardrobe = signal(false);
   readonly showConfirm = signal(false);
   // Discovery feed state (real feed via getDiscoveryFeed, like/pass via recordSwipe)
   readonly discoProfiles = signal<any[]>([]);

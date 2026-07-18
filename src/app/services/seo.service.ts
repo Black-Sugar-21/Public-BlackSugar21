@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
+import { DOCUMENT } from '@angular/common';
 
 interface SeoConfig {
   title: string;
@@ -12,7 +13,11 @@ interface SeoConfig {
 export class SeoService {
   private baseUrl = 'https://www.blacksugar21.com';
 
-  constructor(private meta: Meta, private title: Title) {}
+  constructor(
+    private meta: Meta,
+    private title: Title,
+    @Inject(DOCUMENT) private doc: Document,
+  ) {}
 
   update(config: SeoConfig): void {
     const fullTitle = config.title.includes('Black Sugar')
@@ -44,10 +49,24 @@ export class SeoService {
     this.updateCanonical(url);
   }
 
+  setJsonLd(data: object): void {
+    const existing = this.doc.head.querySelector('script[data-page-ld]');
+    if (existing) existing.remove();
+    const s = this.doc.createElement('script');
+    s.type = 'application/ld+json';
+    s.setAttribute('data-page-ld', '');
+    s.textContent = JSON.stringify(data);
+    this.doc.head.appendChild(s);
+  }
+
   private updateCanonical(url: string): void {
-    let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (link) {
-      link.href = url;
+    // Injected DOCUMENT (not the global) so this also runs during SSR prerender.
+    let link = this.doc.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = this.doc.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      this.doc.head.appendChild(link);
     }
+    link.href = url;
   }
 }

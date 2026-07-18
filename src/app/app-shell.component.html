@@ -49,7 +49,16 @@
       <main class="shell-main">
         @switch (section()) {
           @case ('coach') {
-            <div class="shell-coach"><app-coach-widget [embedded]="true"></app-coach-widget></div>
+            @if (firebase.currentUser()) {
+              <button class="shell-wardrobe-toggle" (click)="showWardrobe.set(!showWardrobe())">
+                {{ showWardrobe() ? '← Coach' : '👗' }}
+              </button>
+            }
+            @if (showWardrobe() && firebase.currentUser()) {
+              <div class="shell-coach"><app-wardrobe-panel></app-wardrobe-panel></div>
+            } @else {
+              <div class="shell-coach"><app-coach-widget [embedded]="true"></app-coach-widget></div>
+            }
           }
           @case ('discovery') {
             @if (!firebase.currentUser()) {

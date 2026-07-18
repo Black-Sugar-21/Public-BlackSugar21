@@ -111,5 +111,30 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/guias/ia-dating.component').then(m => m.IaDatingGuideComponent),
     title: 'Apps de citas con inteligencia artificial: guía 2026 · Black Sugar 21'
   },
+  {
+    path: 'guia/ghosting-que-hacer',
+    loadComponent: () => import('./pages/guias/ghosting.component').then(m => m.GhostingGuideComponent),
+    title: 'Ghosting: qué hacer cuando te ignoran en apps de citas · Black Sugar 21'
+  },
+  {
+    path: 'guia/red-flags-apps-citas',
+    loadComponent: () => import('./pages/guias/red-flags.component').then(m => m.RedFlagsGuideComponent),
+    title: '12 red flags en apps de citas · Black Sugar 21'
+  },
+  {
+    path: 'guia/como-pasar-chat-a-cita',
+    loadComponent: () => import('./pages/guias/chat-a-cita.component').then(m => m.ChatACitaGuideComponent),
+    title: 'Cómo pasar del chat a la cita · Black Sugar 21'
+  },
+  {
+    path: 'guia/mensajes-para-retomar-conversacion',
+    loadComponent: () => import('./pages/guias/mensajes-retomar.component').then(m => m.MensajesRetomarGuideComponent),
+    title: 'Cómo retomar una conversación fría en apps de citas · Black Sugar 21'
+  },
+  {
+    path: 'guia/mejor-app-citas-ia-2026',
+    loadComponent: () => import('./pages/guias/mejor-app-ia.component').then(m => m.MejorAppIaGuideComponent),
+    title: 'Mejor app de citas con IA en 2026 · Black Sugar 21'
+  },
   { path: '**', redirectTo: '/' }
 ];
