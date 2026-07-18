@@ -942,6 +942,30 @@ export class FirebaseService {
     return res.data;
   }
 
+  /** Own profile gender (users/{uid}.male). null when signed out or the field is missing.
+   *  Prefers the already-loaded userProfile signal (loadUserProfile spreads the raw doc) to
+   *  avoid an extra Firestore read; falls back to a one-shot doc get. */
+  async getMyGender(): Promise<boolean | null> {
+    const u = this.currentUser();
+    if (!u) return null;
+    const p: any = this.userProfile();
+    if (p && typeof p.male === 'boolean') return p.male;
+    try {
+      const snap = await getDoc(doc(this.db, 'users', u.uid));
+      const m = snap.data()?.['male'];
+      return typeof m === 'boolean' ? m : null;
+    } catch { return null; }
+  }
+
+  /** AI garment 360° preview via the generateWardrobePreview CF.
+   *  Success: {success:true, previewUrl, cached}; errors: invalid_item | item_not_found |
+   *  rate_limit_exceeded | generation_failed. First generation 10-30s; cached <2s. */
+  async wardrobePreview(itemId: string, userLanguage: string): Promise<any> {
+    const fn = httpsCallable(this.functions, 'generateWardrobePreview');
+    const res = await fn({ itemId, userLanguage });
+    return res.data;
+  }
+
   /** Delete one wardrobe item (rules allow owner delete; create/update are CF-only). */
   async wardrobeDelete(itemId: string): Promise<void> {
     const u = this.currentUser();

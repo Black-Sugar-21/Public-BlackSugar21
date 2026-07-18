@@ -51,7 +51,7 @@
           @case ('coach') {
             @if (firebase.currentUser()) {
               <button class="shell-wardrobe-toggle" (click)="showWardrobe.set(!showWardrobe())">
-                {{ showWardrobe() ? '← Coach' : '👗' }}
+                {{ showWardrobe() ? '← Coach' : '🧥' }}
               </button>
             }
             @if (showWardrobe() && firebase.currentUser()) {
