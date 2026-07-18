@@ -57,7 +57,7 @@
             @if (showWardrobe() && firebase.currentUser()) {
               <div class="shell-coach"><app-wardrobe-panel></app-wardrobe-panel></div>
             } @else {
-              <div class="shell-coach"><app-coach-widget [embedded]="true"></app-coach-widget></div>
+              <div class="shell-coach"><app-coach-widget [embedded]="true" (openWardrobe)="showWardrobe.set(true)"></app-coach-widget></div>
             }
           }
           @case ('discovery') {

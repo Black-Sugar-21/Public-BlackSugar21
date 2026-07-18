@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Inject, Input, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Input, Output, EventEmitter, PLATFORM_ID, signal, computed, effect, untracked, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -30,6 +30,10 @@ interface Msg {
   places?: PlaceCard[]; phrases?: SuggestionItem[]; phrasesInitialVisible?: number; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
   areaEvents?: AreaEvent[]; // distinct "events near you" card (Google-grounded, no IG needed)
   ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
+  // R153: wardrobe outfit card — shown under place suggestions for signed-in users.
+  // Cost-safe: suggestDateOutfit only fires when the user taps the CTA.
+  outfitVenue?: string;
+  outfit?: { state: 'idle' | 'loading' | 'done' | 'empty' | 'error'; outfits?: { title: string; why: string; tip: string; itemIds: string[] }[]; advice?: string; dismissed?: boolean };
 }
 
 const ENDPOINT = 'https://us-central1-black-sugar21.cloudfunctions.net/coachDemoChat';
@@ -115,6 +119,7 @@ const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {
   es: {
+    outfitTitle: '¿Qué me pongo para esta cita?', outfitSub: 'Tu coach puede sugerirte un outfit con tu ropa', outfitCta: 'Sugerir outfit', outfitEmpty: 'Crea tu armario para recibir sugerencias de outfit', outfitOpen: 'Abrir Mi armario', outfitLoading: 'Armando outfits…', outfitErr: 'No se pudo sugerir el outfit, intenta de nuevo',
     fab: 'Coach IA', title: 'Coach IA', demo: 'Versión beta de prueba', newChat: 'Nueva conversación', showPrev: 'Ver conversación anterior', historyTitle: 'Tus conversaciones', historyEmpty: 'Aún no tienes conversaciones guardadas.', morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', discoverHint: '✨ En la app: descubre personas compatibles',
     greeting: 'Hola 👋 Soy tu Coach de inteligencia emocional para citas. Cuéntame qué situación tienes y te doy una idea concreta para tu próxima conversación.',
     chips: ['¿Cómo inicio una conversación?', 'Me dejaron en visto 😅', '¿Cómo propongo una cita?'],
@@ -161,6 +166,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dime en qué ciudad estás y te recomiendo lugares 👇',
   },
   en: {
+    outfitTitle: 'What should I wear for this date?', outfitSub: 'Your coach can suggest an outfit from your clothes', outfitCta: 'Suggest outfit', outfitEmpty: 'Create your wardrobe to get outfit suggestions', outfitOpen: 'Open My Wardrobe', outfitLoading: 'Building outfits…', outfitErr: 'Couldn\'t suggest an outfit, try again',
     fab: 'AI Coach', title: 'AI Coach', demo: 'Beta version', newChat: 'New conversation', showPrev: 'Show previous conversation', historyTitle: 'Your conversations', historyEmpty: 'No saved conversations yet.', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', discoverHint: '✨ In the app: discover compatible people',
     greeting: "Hi 👋 I'm your emotional-intelligence dating coach. Tell me your situation and I'll give you one concrete idea for your next conversation.",
     chips: ['How do I start a conversation?', 'They left me on read 😅', 'How do I ask them out?'],
@@ -206,6 +212,7 @@ const I18N: Record<string, any> = {
     needCity: "Tell me what city you're in and I'll suggest places 👇",
   },
   pt: {
+    outfitTitle: 'O que eu visto para esse encontro?', outfitSub: 'Seu coach pode sugerir um look com suas roupas', outfitCta: 'Sugerir look', outfitEmpty: 'Crie seu guarda-roupa para receber sugestões de look', outfitOpen: 'Abrir Meu guarda-roupa', outfitLoading: 'Montando looks…', outfitErr: 'Não foi possível sugerir o look, tente novamente',
     fab: 'Coach IA', title: 'Coach IA', demo: 'Versão beta de teste', newChat: 'Nova conversa', showPrev: 'Ver conversa anterior', historyTitle: 'Suas conversas', historyEmpty: 'Ainda não há conversas salvas.', morning: 'Bom dia', afternoon: 'Boa tarde', evening: 'Boa noite', discoverHint: '✨ No app: descubra pessoas compatíveis',
     greeting: 'Oi 👋 Sou seu Coach de inteligência emocional para encontros. Me conta sua situação e te dou uma ideia concreta para a sua próxima conversa.',
     chips: ['Como inicio uma conversa?', 'Me deixaram no vácuo 😅', 'Como chamo para um encontro?'],
@@ -251,6 +258,7 @@ const I18N: Record<string, any> = {
     needCity: 'Me diga em que cidade você está e te recomendo lugares 👇',
   },
   fr: {
+    outfitTitle: 'Je mets quoi pour ce rendez-vous ?', outfitSub: 'Ton coach peut te suggérer une tenue avec tes vêtements', outfitCta: 'Suggérer une tenue', outfitEmpty: 'Crée ta garde-robe pour recevoir des suggestions de tenue', outfitOpen: 'Ouvrir Ma garde-robe', outfitLoading: 'Création des tenues…', outfitErr: 'Impossible de suggérer une tenue, réessaie',
     fab: 'Coach IA', title: 'Coach IA', demo: 'Version bêta', newChat: 'Nouvelle conversation', showPrev: 'Voir la conversation précédente', historyTitle: 'Tes conversations', historyEmpty: 'Aucune conversation enregistrée.', morning: 'Bonjour', afternoon: 'Bon après-midi', evening: 'Bonsoir', discoverHint: '✨ Dans l\'app : découvre des personnes compatibles',
     greeting: 'Bonjour 👋 Je suis ton coach d\'intelligence émotionnelle pour les rencontres. Dis-moi ta situation et je te donne une idée concrète pour ta prochaine conversation.',
     chips: ['Comment débuter une conversation ?', 'Je suis laissé·e sur vu 😅', 'Comment proposer un rendez-vous ?'],
@@ -296,6 +304,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dis-moi dans quelle ville tu es et je te suggère des endroits 👇',
   },
   de: {
+    outfitTitle: 'Was ziehe ich zu diesem Date an?', outfitSub: 'Dein Coach kann dir ein Outfit aus deiner Kleidung vorschlagen', outfitCta: 'Outfit vorschlagen', outfitEmpty: 'Erstelle deinen Kleiderschrank für Outfit-Vorschläge', outfitOpen: 'Meinen Kleiderschrank öffnen', outfitLoading: 'Erstelle Outfits…', outfitErr: 'Outfit konnte nicht vorgeschlagen werden, versuche es erneut',
     fab: 'KI-Coach', title: 'KI-Coach', demo: 'Beta-Version', newChat: 'Neues Gespräch', showPrev: 'Vorheriges Gespräch anzeigen', historyTitle: 'Deine Gespräche', historyEmpty: 'Noch keine gespeicherten Gespräche.', morning: 'Guten Morgen', afternoon: 'Guten Tag', evening: 'Guten Abend', discoverHint: '✨ In der App: entdecke kompatible Menschen',
     greeting: 'Hallo 👋 Ich bin dein emotionaler Dating-Coach. Erzähl mir deine Situation und ich gebe dir eine konkrete Idee für dein nächstes Gespräch.',
     chips: ['Wie starte ich ein Gespräch?', 'Ich wurde auf gelesen gelassen 😅', 'Wie schlage ich ein Date vor?'],
@@ -341,6 +350,7 @@ const I18N: Record<string, any> = {
     needCity: 'Sag mir, in welcher Stadt du bist, und ich schlage dir Orte vor 👇',
   },
   it: {
+    outfitTitle: 'Cosa mi metto per questo appuntamento?', outfitSub: 'Il tuo coach può suggerirti un outfit con i tuoi vestiti', outfitCta: 'Suggerisci outfit', outfitEmpty: 'Crea il tuo guardaroba per ricevere suggerimenti di outfit', outfitOpen: 'Apri Il mio guardaroba', outfitLoading: 'Creazione outfit…', outfitErr: 'Impossibile suggerire un outfit, riprova',
     fab: 'Coach IA', title: 'Coach IA', demo: 'Versione beta', newChat: 'Nuova conversazione', showPrev: 'Vedi conversazione precedente', historyTitle: 'Le tue conversazioni', historyEmpty: 'Nessuna conversazione salvata.', morning: 'Buongiorno', afternoon: 'Buon pomeriggio', evening: 'Buonasera', discoverHint: '✨ Nell\'app: scopri persone compatibili',
     greeting: 'Ciao 👋 Sono il tuo coach di intelligenza emotiva per gli appuntamenti. Dimmi la tua situazione e ti do un\'idea concreta per la tua prossima conversazione.',
     chips: ['Come inizio una conversazione?', 'Mi ha lasciato su visto 😅', 'Come propongo un appuntamento?'],
@@ -386,6 +396,7 @@ const I18N: Record<string, any> = {
     needCity: 'Dimmi in quale città sei e ti suggerisco posti 👇',
   },
   ja: {
+    outfitTitle: 'このデートに何を着る？', outfitSub: 'コーチがあなたの服からコーデを提案します', outfitCta: 'コーデを提案', outfitEmpty: 'クローゼットを作るとコーデ提案が受けられます', outfitOpen: 'マイクローゼットを開く', outfitLoading: 'コーデ作成中…', outfitErr: 'コーデを提案できませんでした。再試行してください',
     fab: 'AIコーチ', title: 'AIコーチ', demo: 'ベータ版', newChat: '新しい会話', showPrev: '前の会話を見る', historyTitle: '会話履歴', historyEmpty: '保存された会話はまだありません。', morning: 'おはようございます', afternoon: 'こんにちは', evening: 'こんばんは', discoverHint: '✨ アプリで相性の良い人を見つけよう',
     greeting: 'こんにちは 👋 私はあなたのデートの感情知性コーチです。状況を教えてください。次の会話のための具体的なアイデアをお伝えします。',
     chips: ['どうやって会話を始める？', '既読無視された 😅', 'どうやってデートに誘う？'],
@@ -431,6 +442,7 @@ const I18N: Record<string, any> = {
     needCity: 'どの都市にいるか教えてください 👇',
   },
   zh: {
+    outfitTitle: '这次约会穿什么？', outfitSub: '教练可以用你的衣服搭配穿搭', outfitCta: '推荐穿搭', outfitEmpty: '创建衣橱以获取穿搭建议', outfitOpen: '打开我的衣橱', outfitLoading: '正在搭配…', outfitErr: '无法推荐穿搭，请重试',
     fab: 'AI教练', title: 'AI教练', demo: '测试版', newChat: '新对话', showPrev: '查看上一个对话', historyTitle: '我的对话', historyEmpty: '还没有保存的对话。', morning: '早上好', afternoon: '下午好', evening: '晚上好', discoverHint: '✨ 在应用中：发现合拍的人',
     greeting: '你好 👋 我是你的约会情商教练。告诉我你的情况，我会给你一个下次对话的具体建议。',
     chips: ['怎么开始一段对话？', '被已读不回了 😅', '怎么约出去？'],
@@ -476,6 +488,7 @@ const I18N: Record<string, any> = {
     needCity: '告诉我你在哪个城市，我来推荐地方 👇',
   },
   ko: {
+    outfitTitle: '이 데이트에 뭐 입지?', outfitSub: '코치가 내 옷으로 코디를 추천해줘요', outfitCta: '코디 추천', outfitEmpty: '옷장을 만들면 코디 추천을 받을 수 있어요', outfitOpen: '내 옷장 열기', outfitLoading: '코디 만드는 중…', outfitErr: '코디를 추천하지 못했어요. 다시 시도하세요',
     fab: 'AI 코치', title: 'AI 코치', demo: '베타 버전', newChat: '새 대화', showPrev: '이전 대화 보기', historyTitle: '내 대화', historyEmpty: '저장된 대화가 아직 없어요.', morning: '좋은 아침이에요', afternoon: '좋은 오후예요', evening: '좋은 저녁이에요', discoverHint: '✨ 앱에서 잘 맞는 사람을 만나보세요',
     greeting: '안녕하세요 👋 저는 당신의 데이트 감성 지능 코치예요. 상황을 알려주시면 다음 대화를 위한 구체적인 아이디어를 드릴게요.',
     chips: ['어떻게 대화를 시작하지?', '읽씹 당했어요 😅', '어떻게 데이트 신청해?'],
@@ -521,6 +534,7 @@ const I18N: Record<string, any> = {
     needCity: '어느 도시에 계신지 알려주시면 장소를 추천해 드릴게요 👇',
   },
   ru: {
+    outfitTitle: 'Что надеть на это свидание?', outfitSub: 'Коуч может подобрать образ из вашей одежды', outfitCta: 'Подобрать образ', outfitEmpty: 'Создайте гардероб, чтобы получать подборки образов', outfitOpen: 'Открыть Мой гардероб', outfitLoading: 'Собираем образы…', outfitErr: 'Не удалось подобрать образ, попробуйте ещё раз',
     fab: 'ИИ-коуч', title: 'ИИ-коуч', demo: 'Бета-версия', newChat: 'Новый разговор', showPrev: 'Показать предыдущий разговор', historyTitle: 'Твои разговоры', historyEmpty: 'Пока нет сохранённых разговоров.', morning: 'Доброе утро', afternoon: 'Добрый день', evening: 'Добрый вечер', discoverHint: '✨ В приложении: знакомься с подходящими людьми',
     greeting: 'Привет 👋 Я твой коуч эмоционального интеллекта для свиданий. Расскажи мне свою ситуацию, и я дам конкретную идею для следующего разговора.',
     chips: ['Как начать разговор?', 'Меня оставили на «читал» 😅', 'Как пригласить на свидание?'],
@@ -566,6 +580,7 @@ const I18N: Record<string, any> = {
     needCity: 'Напиши, в каком городе ты находишься, и я посоветую места 👇',
   },
   ar: {
+    outfitTitle: 'ماذا أرتدي في هذا الموعد؟', outfitSub: 'يمكن لمدربك اقتراح إطلالة من ملابسك', outfitCta: 'اقتراح إطلالة', outfitEmpty: 'أنشئ خزانتك للحصول على اقتراحات الإطلالات', outfitOpen: 'فتح خزانتي', outfitLoading: 'جارٍ تنسيق الإطلالات…', outfitErr: 'تعذّر اقتراح الإطلالة، حاول مرة أخرى',
     fab: 'مدرّب الذكاء', title: 'مدرّب الذكاء', demo: 'إصدار تجريبي', newChat: 'محادثة جديدة', showPrev: 'عرض المحادثة السابقة', historyTitle: 'محادثاتك', historyEmpty: 'لا توجد محادثات محفوظة بعد.', morning: 'صباح الخير', afternoon: 'مساء الخير', evening: 'مساء النور', discoverHint: '✨ في التطبيق: اكتشف أشخاصاً متوافقين',
     greeting: 'مرحباً 👋 أنا مدرّب ذكاءك العاطفي في المواعدة. أخبرني بوضعك وسأعطيك فكرة محددة لمحادثتك القادمة.',
     chips: ['كيف أبدأ محادثة؟', 'رأى الرسالة ولم يرد 😅', 'كيف أدعوه/ها لموعد؟'],
@@ -611,6 +626,7 @@ const I18N: Record<string, any> = {
     needCity: 'أخبرني في أي مدينة أنت وسأقترح أماكن 👇',
   },
   id: {
+    outfitTitle: 'Pakai apa untuk kencan ini?', outfitSub: 'Coach bisa menyarankan outfit dari pakaianmu', outfitCta: 'Sarankan outfit', outfitEmpty: 'Buat lemari untuk mendapat saran outfit', outfitOpen: 'Buka Lemari saya', outfitLoading: 'Menyusun outfit…', outfitErr: 'Gagal menyarankan outfit, coba lagi',
     fab: 'Coach AI', title: 'Coach AI', demo: 'Versi beta', newChat: 'Percakapan baru', showPrev: 'Lihat percakapan sebelumnya', historyTitle: 'Percakapanmu', historyEmpty: 'Belum ada percakapan tersimpan.', morning: 'Selamat pagi', afternoon: 'Selamat siang', evening: 'Selamat malam', discoverHint: '✨ Di app: temukan orang yang cocok',
     greeting: 'Halo 👋 Aku adalah Coach kecerdasan emosional kencanmu. Ceritakan situasimu dan aku akan memberikan ide konkret untuk percakapan berikutmu.',
     chips: ['Gimana caranya mulai percakapan?', 'Di-ghosting deh 😅', 'Gimana caranya ngajak kencan?'],
@@ -656,6 +672,7 @@ const I18N: Record<string, any> = {
     needCity: 'Beritahu aku di kota mana kamu dan aku sarankan tempat 👇',
   },
   tr: {
+    outfitTitle: 'Bu buluşmada ne giysem?', outfitSub: 'Koçun kıyafetlerinden kombin önerebilir', outfitCta: 'Kombin öner', outfitEmpty: 'Kombin önerileri için gardırobunu oluştur', outfitOpen: 'Gardırobumu aç', outfitLoading: 'Kombinler hazırlanıyor…', outfitErr: 'Kombin önerilemedi, tekrar dene',
     fab: 'Coach AI', title: 'Coach AI', demo: 'Beta sürümü', newChat: 'Yeni sohbet', showPrev: 'Önceki sohbetleri gör', historyTitle: 'Sohbetlerin', historyEmpty: 'Henüz kayıtlı sohbet yok.', morning: 'Günaydın', afternoon: 'İyi günler', evening: 'İyi akşamlar', discoverHint: '✨ Uygulamada: uyumlu kişileri keşfet',
     greeting: 'Merhaba 👋 Ben senin duygusal zeka flört koçunum. Durumunu anlat, bir sonraki konuşman için somut fikirler vereyim.',
     chips: ['Nasıl konuşmaya başlarım?', 'Okundu ama cevap yok 😅', 'Nasıl randevuya davet ederim?'],
@@ -826,6 +843,8 @@ export class CoachWidgetComponent implements OnDestroy {
   private _embedded = false;
   @Input() set embedded(v: boolean) { this._embedded = v; if (v) this.open.set(true); }
   get embedded(): boolean { return this._embedded; }
+  // R153: outfit card's "Abrir Mi armario" → the shell swaps the coach for the wardrobe panel.
+  @Output() openWardrobe = new EventEmitter<void>();
 
   readonly messages = signal<Msg[]>([]);
   // Multi-conversation (ChatGPT-style): every chat is saved to localStorage so nothing is lost and
@@ -1690,8 +1709,52 @@ export class CoachWidgetComponent implements OnDestroy {
       phrases: suggestions.length ? suggestions : undefined,
       phrasesInitialVisible: initialVisible,
       areaEvents: areaEvents.length ? areaEvents : undefined,
+      // R153: venue category powering the "¿Qué me pongo?" outfit card (auth users only)
+      outfitVenue: (places.length && typeof r?.dominantCategory === 'string' && r.dominantCategory) ? r.dominantCategory : undefined,
     };
   }
+
+  // ── R153: outfit card (wardrobe integration) ────────────────────────────────
+  /** One-shot wardrobe item map (id → {emoji,name}) for resolving outfit chips. */
+  private wardrobeCache: Map<string, { emoji: string; name: string }> | null = null;
+
+  isAuthed(): boolean { return !!this.firebase.currentUser(); }
+
+  /** Immutable outfit-state update — messages is an OnPush signal, so replace the Msg. */
+  private setOutfit(m: Msg, outfit: NonNullable<Msg['outfit']>) {
+    this.messages.update((arr) => arr.map((x) => x === m ? Object.assign(x, { outfit }) : x).slice());
+  }
+
+  async suggestOutfitFor(m: Msg) {
+    if (!m.outfitVenue || m.outfit?.state === 'loading') return;
+    this.setOutfit(m, { state: 'loading' });
+    try {
+      const res = await this.firebase.wardrobeSuggest(m.outfitVenue, this.lang());
+      if (res?.success && Array.isArray(res.outfits) && res.outfits.length) {
+        if (!this.wardrobeCache) {
+          // capture once; unsubscribe immediately after first snapshot
+          await new Promise<void>((done) => {
+            const unsub = this.firebase.listenWardrobe((rows) => {
+              this.wardrobeCache = new Map(rows.map((r: any) => [r.id, { emoji: r.emoji || '👕', name: r.name || '' }]));
+              unsub(); done();
+            });
+          });
+        }
+        this.setOutfit(m, { state: 'done', outfits: res.outfits, advice: res.generalAdvice || '' });
+      } else if (res?.error === 'wardrobe_empty') {
+        this.setOutfit(m, { state: 'empty' });
+      } else {
+        this.setOutfit(m, { state: 'error' });
+      }
+    } catch { this.setOutfit(m, { state: 'error' }); }
+  }
+
+  outfitItemLabel(id: string): string {
+    const it = this.wardrobeCache?.get(id);
+    return it ? `${it.emoji} ${it.name}` : '';
+  }
+
+  dismissOutfitCard(m: Msg) { this.setOutfit(m, { ...(m.outfit || { state: 'idle' as const }), dismissed: true }); }
 
   private async ask(payload: { message: string; lat?: number; lng?: number; city?: string }) {
     // R65: anonymous visitors get FREE_TASTE (3) questions; to reach the default 4/day they sign in.

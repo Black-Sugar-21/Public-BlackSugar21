@@ -183,6 +183,43 @@
                   </div>
                 }
 
+                <!-- R153: "¿Qué me pongo?" outfit card — signed-in users, under place suggestions -->
+                @if (m.outfitVenue && isAuthed() && !m.outfit?.dismissed) {
+                  <div class="cw-outfit">
+                    <button class="cw-outfit-x" (click)="dismissOutfitCard(m)" aria-label="✕">✕</button>
+                    @switch (m.outfit?.state || 'idle') {
+                      @case ('idle') {
+                        <div class="cw-outfit-head"><span class="cw-outfit-ic">🧥</span>
+                          <div><b>{{ t().outfitTitle }}</b><p>{{ t().outfitSub }}</p></div>
+                        </div>
+                        <button class="cw-outfit-cta" (click)="suggestOutfitFor(m)">{{ t().outfitCta }}</button>
+                      }
+                      @case ('loading') { <p class="cw-outfit-loading">{{ t().outfitLoading }}</p> }
+                      @case ('done') {
+                        <div class="cw-outfit-head"><span class="cw-outfit-ic">🧥</span><b>{{ t().outfitTitle }}</b></div>
+                        @for (o of m.outfit!.outfits!; track o.title) {
+                          <div class="cw-outfit-look">
+                            <h5>{{ o.title }}</h5>
+                            <div class="cw-outfit-chips">
+                              @for (id of o.itemIds; track id) {
+                                @if (outfitItemLabel(id); as lbl) { <span class="cw-outfit-chip">{{ lbl }}</span> }
+                              }
+                            </div>
+                            <p class="cw-outfit-why">{{ o.why }}</p>
+                            <p class="cw-outfit-tip">💡 {{ o.tip }}</p>
+                          </div>
+                        }
+                        @if (m.outfit!.advice) { <p class="cw-outfit-advice">{{ m.outfit!.advice }}</p> }
+                      }
+                      @case ('empty') {
+                        <div class="cw-outfit-head"><span class="cw-outfit-ic">🧥</span><p>{{ t().outfitEmpty }}</p></div>
+                        <button class="cw-outfit-cta" (click)="openWardrobe.emit()">{{ t().outfitOpen }}</button>
+                      }
+                      @case ('error') { <p class="cw-outfit-err">{{ t().outfitErr }}</p> }
+                    }
+                  </div>
+                }
+
                 <!-- Distinct "events near you" card — gold-accented, NOT mixed with venue cards. -->
                 @if (m.areaEvents?.length) {
                   <div class="cw-events">

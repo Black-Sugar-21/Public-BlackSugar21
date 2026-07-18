@@ -411,3 +411,21 @@
     .cw-event-title { font-size:13px; font-weight:600; color:var(--cw-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .cw-event-meta { font-size:11.5px; color:var(--cw-gold); opacity:.85; }
     .cw-event-desc { font-size:11.5px; color:var(--cw-muted); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+    /* R153: "¿Qué me pongo?" outfit card — wardrobe integration under place suggestions */
+    .cw-outfit { position:relative; margin-top:10px; background:color-mix(in srgb,var(--cw-gold) 6%,var(--cw-card)); border:1px solid color-mix(in srgb,var(--cw-gold) 32%,transparent); border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:9px; }
+    .cw-outfit-x { position:absolute; top:8px; inset-inline-end:10px; background:none; border:none; color:var(--cw-muted); font-size:12px; cursor:pointer; padding:2px 4px; }
+    .cw-outfit-head { display:flex; align-items:center; gap:10px; }
+    .cw-outfit-head b { font-size:13.5px; color:var(--cw-text); }
+    .cw-outfit-head p { margin:2px 0 0; font-size:12px; color:var(--cw-muted); }
+    .cw-outfit-ic { flex:none; width:34px; height:34px; display:grid; place-items:center; font-size:19px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--cw-gold) 18%,transparent), transparent 70%); }
+    .cw-outfit-cta { align-self:flex-start; background:linear-gradient(135deg,#E9CE6B,#D4AF37,#B8860B); color:#1A1206; border:none; border-radius:11px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer; }
+    .cw-outfit-cta:focus-visible { outline:2px solid var(--cw-gold); outline-offset:2px; }
+    .cw-outfit-loading, .cw-outfit-err { font-size:12.5px; color:var(--cw-muted); margin:0; }
+    .cw-outfit-look { border-top:1px solid color-mix(in srgb,var(--cw-gold) 20%,transparent); padding-top:9px; display:flex; flex-direction:column; gap:5px; }
+    .cw-outfit-look h5 { margin:0; font-size:13px; color:var(--cw-gold); }
+    .cw-outfit-chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .cw-outfit-chip { font-size:11.5px; background:color-mix(in srgb,var(--cw-gold) 12%,transparent); border:1px solid color-mix(in srgb,var(--cw-gold) 25%,transparent); border-radius:9px; padding:3px 8px; color:var(--cw-text); }
+    .cw-outfit-why { margin:0; font-size:12px; color:var(--cw-muted); }
+    .cw-outfit-tip { margin:0; font-size:12px; color:var(--cw-text); }
+    .cw-outfit-advice { margin:0; font-size:12px; color:var(--cw-muted); border-top:1px solid color-mix(in srgb,var(--cw-gold) 20%,transparent); padding-top:8px; }
