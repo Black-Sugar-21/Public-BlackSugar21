@@ -13,19 +13,19 @@ interface WardrobeItem {
 interface OutfitSuggestion { title: string; itemIds: string[]; why: string; tip: string; }
 
 const W_I18N: Record<string, Record<string, string>> = {
-  es: { intimate_dinner: 'Cena íntima', cinema: 'Cine', theater: 'Teatro', viewpoint: 'Mirador', hiking: 'Senderismo', bowling_alley: 'Bolera', escape_room: 'Escape room', bookstore: 'Librería', formal: 'Formal', celebration: 'Celebración', trip: 'Viaje', at_home: 'En casa', unclearTitle: 'No pudimos analizar la prenda', unclearMsg: 'Toma una foto más clara: buena luz, la prenda completa y un fondo simple', title: 'Mi armario', emptyTitle: 'Tu armario te espera', deleteQ: '¿Eliminar?', add: 'Agregar prenda', empty: 'Agrega al menos 3 prendas para recibir sugerencias de outfit', suggest: '¿Qué me pongo?', confirmDelete: '¿Eliminar esta prenda?', full: 'Tu armario está lleno (máx. 60 prendas)', noGarment: 'No se detectó una prenda en la foto', rateLimit: 'Demasiadas solicitudes, intenta más tarde', missing: 'Te falta:', advice: 'Consejo', cataloging: 'Analizando prenda…', suggesting: 'Armando outfits…', error: 'Algo salió mal, intenta de nuevo', back: 'Volver al coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Club', park: 'Parque', museum: 'Museo', previewTitle: 'Vista de la prenda', previewGenerating: 'Generando vista 360°…', previewHint: 'Vista frontal, lateral y trasera generada con IA', previewError: 'No se pudo generar la vista', previewRetry: 'Reintentar', previewLimit: 'Ya usaste tus vistas de ejemplo (máx. {n})' },
-  en: { intimate_dinner: 'Intimate dinner', cinema: 'Cinema', theater: 'Theater', viewpoint: 'Viewpoint', hiking: 'Hiking', bowling_alley: 'Bowling', escape_room: 'Escape room', bookstore: 'Bookstore', formal: 'Formal', celebration: 'Celebration', trip: 'Trip', at_home: 'At home', unclearTitle: 'We couldn\'t analyze the garment', unclearMsg: 'Take a clearer photo: good light, the full garment and a simple background', title: 'My wardrobe', emptyTitle: 'Your wardrobe awaits', deleteQ: 'Delete?', add: 'Add garment', empty: 'Add at least 3 garments to get outfit suggestions', suggest: 'What should I wear?', confirmDelete: 'Delete this garment?', full: 'Your wardrobe is full (max 60 items)', noGarment: 'No garment detected in the photo', rateLimit: 'Too many requests, try again later', missing: 'Missing:', advice: 'Tip', cataloging: 'Analyzing garment…', suggesting: 'Building outfits…', error: 'Something went wrong, try again', back: 'Back to coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum', previewTitle: 'Garment view', previewGenerating: 'Generating 360° view…', previewHint: 'Front, side and back view generated with AI', previewError: 'Couldn\'t generate the view', previewRetry: 'Retry', previewLimit: 'You\'ve used your sample previews (max {n})' },
-  pt: { intimate_dinner: 'Jantar íntimo', cinema: 'Cinema', theater: 'Teatro', viewpoint: 'Mirante', hiking: 'Trilha', bowling_alley: 'Boliche', escape_room: 'Escape room', bookstore: 'Livraria', formal: 'Formal', celebration: 'Celebração', trip: 'Viagem', at_home: 'Em casa', unclearTitle: 'Não conseguimos analisar a peça', unclearMsg: 'Tire uma foto mais clara: boa luz, a peça inteira e um fundo simples', title: 'Meu guarda-roupa', emptyTitle: 'Seu guarda-roupa espera por você', deleteQ: 'Excluir?', add: 'Adicionar peça', empty: 'Adicione pelo menos 3 peças para receber sugestões de look', suggest: 'O que eu visto?', confirmDelete: 'Excluir esta peça?', full: 'Seu guarda-roupa está cheio (máx. 60 peças)', noGarment: 'Nenhuma peça detectada na foto', rateLimit: 'Muitas solicitações, tente mais tarde', missing: 'Falta:', advice: 'Dica', cataloging: 'Analisando peça…', suggesting: 'Montando looks…', error: 'Algo deu errado, tente novamente', back: 'Voltar ao coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Balada', park: 'Parque', museum: 'Museu', previewTitle: 'Visualização da peça', previewGenerating: 'Gerando visão 360°…', previewHint: 'Vista frontal, lateral e traseira gerada com IA', previewError: 'Não foi possível gerar a visualização', previewRetry: 'Tentar novamente', previewLimit: 'Você já usou suas visualizações de exemplo (máx. {n})' },
-  fr: { intimate_dinner: 'Dîner intime', cinema: 'Cinéma', theater: 'Théâtre', viewpoint: 'Point de vue', hiking: 'Randonnée', bowling_alley: 'Bowling', escape_room: 'Escape game', bookstore: 'Librairie', formal: 'Formel', celebration: 'Célébration', trip: 'Voyage', at_home: 'À la maison', unclearTitle: 'Nous n\'avons pas pu analyser le vêtement', unclearMsg: 'Prends une photo plus claire : bonne lumière, le vêtement entier et un fond simple', title: 'Ma garde-robe', emptyTitle: 'Ta garde-robe t\'attend', deleteQ: 'Supprimer ?', add: 'Ajouter un vêtement', empty: 'Ajoute au moins 3 vêtements pour recevoir des suggestions de tenue', suggest: 'Je mets quoi ?', confirmDelete: 'Supprimer ce vêtement ?', full: 'Ta garde-robe est pleine (max 60 pièces)', noGarment: 'Aucun vêtement détecté sur la photo', rateLimit: 'Trop de demandes, réessaie plus tard', missing: 'Il manque :', advice: 'Conseil', cataloging: 'Analyse du vêtement…', suggesting: 'Création des tenues…', error: 'Une erreur est survenue, réessaie', back: 'Retour au coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Parc', museum: 'Musée', previewTitle: 'Aperçu du vêtement', previewGenerating: 'Génération de la vue 360°…', previewHint: 'Vue de face, de profil et de dos générée par IA', previewError: 'Impossible de générer l\'aperçu', previewRetry: 'Réessayer', previewLimit: 'Tu as utilisé tes aperçus d\'exemple (max {n})' },
-  de: { intimate_dinner: 'Intimes Abendessen', cinema: 'Kino', theater: 'Theater', viewpoint: 'Aussichtspunkt', hiking: 'Wandern', bowling_alley: 'Bowling', escape_room: 'Escape Room', bookstore: 'Buchhandlung', formal: 'Formell', celebration: 'Feier', trip: 'Reise', at_home: 'Zu Hause', unclearTitle: 'Wir konnten das Kleidungsstück nicht analysieren', unclearMsg: 'Mach ein klareres Foto: gutes Licht, das ganze Teil und ein einfacher Hintergrund', title: 'Mein Kleiderschrank', emptyTitle: 'Dein Kleiderschrank wartet', deleteQ: 'Löschen?', add: 'Kleidungsstück hinzufügen', empty: 'Füge mindestens 3 Teile hinzu, um Outfit-Vorschläge zu erhalten', suggest: 'Was ziehe ich an?', confirmDelete: 'Dieses Teil löschen?', full: 'Dein Schrank ist voll (max. 60 Teile)', noGarment: 'Kein Kleidungsstück im Foto erkannt', rateLimit: 'Zu viele Anfragen, versuche es später', missing: 'Es fehlt:', advice: 'Tipp', cataloging: 'Analysiere Kleidungsstück…', suggesting: 'Erstelle Outfits…', error: 'Etwas ist schiefgelaufen, versuche es erneut', back: 'Zurück zum Coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum', previewTitle: 'Ansicht des Kleidungsstücks', previewGenerating: '360°-Ansicht wird erstellt…', previewHint: 'Vorder-, Seiten- und Rückansicht per KI erstellt', previewError: 'Ansicht konnte nicht erstellt werden', previewRetry: 'Erneut versuchen', previewLimit: 'Du hast deine Beispiel-Ansichten aufgebraucht (max. {n})' },
-  it: { intimate_dinner: 'Cena intima', cinema: 'Cinema', theater: 'Teatro', viewpoint: 'Punto panoramico', hiking: 'Escursione', bowling_alley: 'Bowling', escape_room: 'Escape room', bookstore: 'Libreria', formal: 'Formale', celebration: 'Festa', trip: 'Viaggio', at_home: 'A casa', unclearTitle: 'Non siamo riusciti ad analizzare il capo', unclearMsg: 'Scatta una foto più chiara: buona luce, il capo intero e uno sfondo semplice', title: 'Il mio guardaroba', emptyTitle: 'Il tuo guardaroba ti aspetta', deleteQ: 'Eliminare?', add: 'Aggiungi capo', empty: 'Aggiungi almeno 3 capi per ricevere suggerimenti di outfit', suggest: 'Cosa mi metto?', confirmDelete: 'Eliminare questo capo?', full: 'Il tuo guardaroba è pieno (max 60 capi)', noGarment: 'Nessun capo rilevato nella foto', rateLimit: 'Troppe richieste, riprova più tardi', missing: 'Manca:', advice: 'Consiglio', cataloging: 'Analisi del capo…', suggesting: 'Creazione outfit…', error: 'Qualcosa è andato storto, riprova', back: 'Torna al coach', cafe: 'Caffè', restaurant: 'Ristorante', bar: 'Bar', night_club: 'Club', park: 'Parco', museum: 'Museo', previewTitle: 'Vista del capo', previewGenerating: 'Generazione vista 360°…', previewHint: 'Vista frontale, laterale e posteriore generata con IA', previewError: 'Impossibile generare la vista', previewRetry: 'Riprova', previewLimit: 'Hai usato le tue viste di esempio (max {n})' },
-  zh: { intimate_dinner: '烛光晚餐', cinema: '电影院', theater: '剧院', viewpoint: '观景台', hiking: '徒步', bowling_alley: '保龄球', escape_room: '密室逃脱', bookstore: '书店', formal: '正式场合', celebration: '庆祝', trip: '旅行', at_home: '在家', unclearTitle: '无法分析这件服装', unclearMsg: '请拍摄更清晰的照片：光线充足、完整服装、简单背景', title: '我的衣橱', emptyTitle: '你的衣橱在等你', deleteQ: '删除？', add: '添加服装', empty: '添加至少3件服装以获取穿搭建议', suggest: '我该穿什么？', confirmDelete: '删除这件服装？', full: '你的衣橱已满（最多60件）', noGarment: '照片中未检测到服装', rateLimit: '请求过多，请稍后再试', missing: '缺少：', advice: '建议', cataloging: '正在分析服装…', suggesting: '正在搭配…', error: '出错了，请重试', back: '返回教练', cafe: '咖啡馆', restaurant: '餐厅', bar: '酒吧', night_club: '夜店', park: '公园', museum: '博物馆', previewTitle: '服装预览', previewGenerating: '正在生成360°视图…', previewHint: 'AI生成的正面、侧面和背面视图', previewError: '无法生成视图', previewRetry: '重试', previewLimit: '你已用完示例预览（最多{n}次）' },
-  ja: { intimate_dinner: 'ディナーデート', cinema: '映画館', theater: '劇場', viewpoint: '展望台', hiking: 'ハイキング', bowling_alley: 'ボウリング', escape_room: '脱出ゲーム', bookstore: '書店', formal: 'フォーマル', celebration: 'お祝い', trip: '旅行', at_home: '自宅', unclearTitle: '服を分析できませんでした', unclearMsg: 'より鮮明な写真を撮ってください：明るい場所で、服全体、シンプルな背景', title: 'マイクローゼット', emptyTitle: 'クローゼットがあなたを待っています', deleteQ: '削除する？', add: '服を追加', empty: 'コーデ提案を受けるには3着以上追加してください', suggest: '何を着る？', confirmDelete: 'この服を削除しますか？', full: 'クローゼットがいっぱいです（最大60着）', noGarment: '写真から服が検出されませんでした', rateLimit: 'リクエストが多すぎます。後でもう一度', missing: '足りない：', advice: 'アドバイス', cataloging: '服を分析中…', suggesting: 'コーデ作成中…', error: 'エラーが発生しました。再試行してください', back: 'コーチに戻る', cafe: 'カフェ', restaurant: 'レストラン', bar: 'バー', night_club: 'クラブ', park: '公園', museum: '美術館', previewTitle: 'アイテムプレビュー', previewGenerating: '360°ビューを生成中…', previewHint: 'AIが生成した正面・側面・背面ビュー', previewError: 'ビューを生成できませんでした', previewRetry: '再試行', previewLimit: 'サンプルビューを使い切りました（最大{n}回）' },
-  ko: { intimate_dinner: '근사한 저녁', cinema: '영화관', theater: '극장', viewpoint: '전망대', hiking: '하이킹', bowling_alley: '볼링', escape_room: '방탈출', bookstore: '서점', formal: '포멀', celebration: '기념일', trip: '여행', at_home: '집에서', unclearTitle: '옷을 분석하지 못했어요', unclearMsg: '더 선명한 사진을 찍어주세요: 밝은 곳에서, 옷 전체가 나오게, 단순한 배경으로', title: '내 옷장', emptyTitle: '옷장이 기다리고 있어요', deleteQ: '삭제할까요?', add: '옷 추가', empty: '코디 추천을 받으려면 3벌 이상 추가하세요', suggest: '뭐 입지?', confirmDelete: '이 옷을 삭제할까요?', full: '옷장이 가득 찼어요 (최대 60벌)', noGarment: '사진에서 옷을 찾지 못했어요', rateLimit: '요청이 너무 많아요. 나중에 다시 시도하세요', missing: '부족한 것:', advice: '팁', cataloging: '옷 분석 중…', suggesting: '코디 만드는 중…', error: '문제가 발생했어요. 다시 시도하세요', back: '코치로 돌아가기', cafe: '카페', restaurant: '레스토랑', bar: '바', night_club: '클럽', park: '공원', museum: '미술관', previewTitle: '옷 미리보기', previewGenerating: '360° 뷰 생성 중…', previewHint: 'AI가 생성한 정면·측면·후면 뷰', previewError: '뷰를 생성하지 못했어요', previewRetry: '다시 시도', previewLimit: '샘플 미리보기를 모두 사용했어요 (최대 {n}회)' },
-  ru: { intimate_dinner: 'Романтический ужин', cinema: 'Кино', theater: 'Театр', viewpoint: 'Смотровая', hiking: 'Поход', bowling_alley: 'Боулинг', escape_room: 'Квест', bookstore: 'Книжный', formal: 'Формально', celebration: 'Праздник', trip: 'Путешествие', at_home: 'Дома', unclearTitle: 'Не удалось распознать вещь', unclearMsg: 'Сделайте более чёткое фото: хороший свет, вся вещь целиком и простой фон', title: 'Мой гардероб', emptyTitle: 'Ваш гардероб ждёт', deleteQ: 'Удалить?', add: 'Добавить вещь', empty: 'Добавьте минимум 3 вещи, чтобы получать подборки образов', suggest: 'Что надеть?', confirmDelete: 'Удалить эту вещь?', full: 'Гардероб заполнен (макс. 60 вещей)', noGarment: 'На фото не найдена одежда', rateLimit: 'Слишком много запросов, попробуйте позже', missing: 'Не хватает:', advice: 'Совет', cataloging: 'Анализ вещи…', suggesting: 'Собираем образы…', error: 'Что-то пошло не так, попробуйте ещё раз', back: 'Назад к коучу', cafe: 'Кафе', restaurant: 'Ресторан', bar: 'Бар', night_club: 'Клуб', park: 'Парк', museum: 'Музей', previewTitle: 'Просмотр вещи', previewGenerating: 'Создаём обзор 360°…', previewHint: 'Вид спереди, сбоку и сзади, созданный ИИ', previewError: 'Не удалось создать обзор', previewRetry: 'Повторить', previewLimit: 'Вы использовали все пробные обзоры (макс. {n})' },
-  ar: { intimate_dinner: 'عشاء حميم', cinema: 'سينما', theater: 'مسرح', viewpoint: 'إطلالة', hiking: 'تنزه', bowling_alley: 'بولينغ', escape_room: 'غرفة هروب', bookstore: 'مكتبة', formal: 'رسمي', celebration: 'احتفال', trip: 'رحلة', at_home: 'في المنزل', unclearTitle: 'لم نتمكن من تحليل القطعة', unclearMsg: 'التقط صورة أوضح: إضاءة جيدة، القطعة كاملة وخلفية بسيطة', title: 'خزانتي', emptyTitle: 'خزانتك بانتظارك', deleteQ: 'حذف؟', add: 'إضافة قطعة', empty: 'أضف 3 قطع على الأقل للحصول على اقتراحات الإطلالات', suggest: 'ماذا أرتدي؟', confirmDelete: 'حذف هذه القطعة؟', full: 'خزانتك ممتلئة (60 قطعة كحد أقصى)', noGarment: 'لم يتم العثور على ملابس في الصورة', rateLimit: 'طلبات كثيرة جدًا، حاول لاحقًا', missing: 'ينقصك:', advice: 'نصيحة', cataloging: 'جارٍ تحليل القطعة…', suggesting: 'جارٍ تنسيق الإطلالات…', error: 'حدث خطأ ما، حاول مرة أخرى', back: 'العودة إلى المدرب', cafe: 'مقهى', restaurant: 'مطعم', bar: 'بار', night_club: 'نادٍ ليلي', park: 'حديقة', museum: 'متحف', previewTitle: 'عرض القطعة', previewGenerating: 'جارٍ إنشاء عرض 360°…', previewHint: 'عرض أمامي وجانبي وخلفي مُنشأ بالذكاء الاصطناعي', previewError: 'تعذّر إنشاء العرض', previewRetry: 'إعادة المحاولة', previewLimit: 'استخدمت جميع عروض العينة (بحد أقصى {n})' },
-  id: { intimate_dinner: 'Makan malam romantis', cinema: 'Bioskop', theater: 'Teater', viewpoint: 'Titik pandang', hiking: 'Hiking', bowling_alley: 'Boling', escape_room: 'Escape room', bookstore: 'Toko buku', formal: 'Formal', celebration: 'Perayaan', trip: 'Perjalanan', at_home: 'Di rumah', unclearTitle: 'Kami tidak bisa menganalisis pakaian', unclearMsg: 'Ambil foto yang lebih jelas: cahaya bagus, pakaian utuh, dan latar sederhana', title: 'Lemari saya', emptyTitle: 'Lemari menantimu', deleteQ: 'Hapus?', add: 'Tambah pakaian', empty: 'Tambahkan minimal 3 pakaian untuk mendapat saran outfit', suggest: 'Pakai apa ya?', confirmDelete: 'Hapus pakaian ini?', full: 'Lemari penuh (maks. 60 item)', noGarment: 'Tidak ada pakaian terdeteksi di foto', rateLimit: 'Terlalu banyak permintaan, coba lagi nanti', missing: 'Kurang:', advice: 'Tips', cataloging: 'Menganalisis pakaian…', suggesting: 'Menyusun outfit…', error: 'Ada yang salah, coba lagi', back: 'Kembali ke coach', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Klub', park: 'Taman', museum: 'Museum', previewTitle: 'Tampilan pakaian', previewGenerating: 'Membuat tampilan 360°…', previewHint: 'Tampilan depan, samping, dan belakang dibuat dengan AI', previewError: 'Gagal membuat tampilan', previewRetry: 'Coba lagi', previewLimit: 'Kamu sudah memakai semua pratinjau contoh (maks. {n})' },
-  tr: { intimate_dinner: 'Samimi akşam yemeği', cinema: 'Sinema', theater: 'Tiyatro', viewpoint: 'Manzara', hiking: 'Doğa yürüyüşü', bowling_alley: 'Bovling', escape_room: 'Kaçış odası', bookstore: 'Kitapçı', formal: 'Resmi', celebration: 'Kutlama', trip: 'Seyahat', at_home: 'Evde', unclearTitle: 'Kıyafeti analiz edemedik', unclearMsg: 'Daha net bir fotoğraf çek: iyi ışık, kıyafetin tamamı ve sade bir arka plan', title: 'Gardırobum', emptyTitle: 'Gardırobun seni bekliyor', deleteQ: 'Silinsin mi?', add: 'Kıyafet ekle', empty: 'Kombin önerileri için en az 3 parça ekle', suggest: 'Ne giysem?', confirmDelete: 'Bu parçayı sil?', full: 'Gardırobun dolu (en fazla 60 parça)', noGarment: 'Fotoğrafta kıyafet bulunamadı', rateLimit: 'Çok fazla istek, daha sonra dene', missing: 'Eksik:', advice: 'İpucu', cataloging: 'Kıyafet analiz ediliyor…', suggesting: 'Kombinler hazırlanıyor…', error: 'Bir şeyler ters gitti, tekrar dene', back: 'Koça dön', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Kulüp', park: 'Park', museum: 'Müze', previewTitle: 'Kıyafet görünümü', previewGenerating: '360° görünüm oluşturuluyor…', previewHint: 'Ön, yan ve arka görünüm yapay zekâ ile oluşturuldu', previewError: 'Görünüm oluşturulamadı', previewRetry: 'Tekrar dene', previewLimit: 'Örnek görünümlerini kullandın (en fazla {n})' },
+  es: { cropTitle: 'Ajusta la prenda', cropHint: 'Encuadra la prenda para que la IA la lea mejor', cropDone: 'Listo', cropCancel: 'Cancelar', intimate_dinner: 'Cena íntima', cinema: 'Cine', theater: 'Teatro', viewpoint: 'Mirador', hiking: 'Senderismo', bowling_alley: 'Bolera', escape_room: 'Escape room', bookstore: 'Librería', formal: 'Formal', celebration: 'Celebración', trip: 'Viaje', at_home: 'En casa', unclearTitle: 'No pudimos analizar la prenda', unclearMsg: 'Toma una foto más clara: buena luz, la prenda completa y un fondo simple', title: 'Mi armario', emptyTitle: 'Tu armario te espera', deleteQ: '¿Eliminar?', add: 'Agregar prenda', empty: 'Agrega al menos 3 prendas para recibir sugerencias de outfit', suggest: '¿Qué me pongo?', confirmDelete: '¿Eliminar esta prenda?', full: 'Tu armario está lleno (máx. 60 prendas)', noGarment: 'No se detectó una prenda en la foto', rateLimit: 'Demasiadas solicitudes, intenta más tarde', missing: 'Te falta:', advice: 'Consejo', cataloging: 'Analizando prenda…', suggesting: 'Armando outfits…', error: 'Algo salió mal, intenta de nuevo', back: 'Volver al coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Club', park: 'Parque', museum: 'Museo', previewTitle: 'Vista de la prenda', previewGenerating: 'Generando vista 360°…', previewHint: 'Vista frontal, lateral y trasera generada con IA', previewError: 'No se pudo generar la vista', previewRetry: 'Reintentar', previewLimit: 'Ya usaste tus vistas de ejemplo (máx. {n})' },
+  en: { cropTitle: 'Frame the garment', cropHint: 'Frame the garment so the AI reads it better', cropDone: 'Done', cropCancel: 'Cancel', intimate_dinner: 'Intimate dinner', cinema: 'Cinema', theater: 'Theater', viewpoint: 'Viewpoint', hiking: 'Hiking', bowling_alley: 'Bowling', escape_room: 'Escape room', bookstore: 'Bookstore', formal: 'Formal', celebration: 'Celebration', trip: 'Trip', at_home: 'At home', unclearTitle: 'We couldn\'t analyze the garment', unclearMsg: 'Take a clearer photo: good light, the full garment and a simple background', title: 'My wardrobe', emptyTitle: 'Your wardrobe awaits', deleteQ: 'Delete?', add: 'Add garment', empty: 'Add at least 3 garments to get outfit suggestions', suggest: 'What should I wear?', confirmDelete: 'Delete this garment?', full: 'Your wardrobe is full (max 60 items)', noGarment: 'No garment detected in the photo', rateLimit: 'Too many requests, try again later', missing: 'Missing:', advice: 'Tip', cataloging: 'Analyzing garment…', suggesting: 'Building outfits…', error: 'Something went wrong, try again', back: 'Back to coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum', previewTitle: 'Garment view', previewGenerating: 'Generating 360° view…', previewHint: 'Front, side and back view generated with AI', previewError: 'Couldn\'t generate the view', previewRetry: 'Retry', previewLimit: 'You\'ve used your sample previews (max {n})' },
+  pt: { cropTitle: 'Ajuste a peça', cropHint: 'Enquadre a peça para a IA ler melhor', cropDone: 'Pronto', cropCancel: 'Cancelar', intimate_dinner: 'Jantar íntimo', cinema: 'Cinema', theater: 'Teatro', viewpoint: 'Mirante', hiking: 'Trilha', bowling_alley: 'Boliche', escape_room: 'Escape room', bookstore: 'Livraria', formal: 'Formal', celebration: 'Celebração', trip: 'Viagem', at_home: 'Em casa', unclearTitle: 'Não conseguimos analisar a peça', unclearMsg: 'Tire uma foto mais clara: boa luz, a peça inteira e um fundo simples', title: 'Meu guarda-roupa', emptyTitle: 'Seu guarda-roupa espera por você', deleteQ: 'Excluir?', add: 'Adicionar peça', empty: 'Adicione pelo menos 3 peças para receber sugestões de look', suggest: 'O que eu visto?', confirmDelete: 'Excluir esta peça?', full: 'Seu guarda-roupa está cheio (máx. 60 peças)', noGarment: 'Nenhuma peça detectada na foto', rateLimit: 'Muitas solicitações, tente mais tarde', missing: 'Falta:', advice: 'Dica', cataloging: 'Analisando peça…', suggesting: 'Montando looks…', error: 'Algo deu errado, tente novamente', back: 'Voltar ao coach', cafe: 'Café', restaurant: 'Restaurante', bar: 'Bar', night_club: 'Balada', park: 'Parque', museum: 'Museu', previewTitle: 'Visualização da peça', previewGenerating: 'Gerando visão 360°…', previewHint: 'Vista frontal, lateral e traseira gerada com IA', previewError: 'Não foi possível gerar a visualização', previewRetry: 'Tentar novamente', previewLimit: 'Você já usou suas visualizações de exemplo (máx. {n})' },
+  fr: { cropTitle: 'Cadre le vêtement', cropHint: 'Cadre le vêtement pour que l\'IA le lise mieux', cropDone: 'Terminé', cropCancel: 'Annuler', intimate_dinner: 'Dîner intime', cinema: 'Cinéma', theater: 'Théâtre', viewpoint: 'Point de vue', hiking: 'Randonnée', bowling_alley: 'Bowling', escape_room: 'Escape game', bookstore: 'Librairie', formal: 'Formel', celebration: 'Célébration', trip: 'Voyage', at_home: 'À la maison', unclearTitle: 'Nous n\'avons pas pu analyser le vêtement', unclearMsg: 'Prends une photo plus claire : bonne lumière, le vêtement entier et un fond simple', title: 'Ma garde-robe', emptyTitle: 'Ta garde-robe t\'attend', deleteQ: 'Supprimer ?', add: 'Ajouter un vêtement', empty: 'Ajoute au moins 3 vêtements pour recevoir des suggestions de tenue', suggest: 'Je mets quoi ?', confirmDelete: 'Supprimer ce vêtement ?', full: 'Ta garde-robe est pleine (max 60 pièces)', noGarment: 'Aucun vêtement détecté sur la photo', rateLimit: 'Trop de demandes, réessaie plus tard', missing: 'Il manque :', advice: 'Conseil', cataloging: 'Analyse du vêtement…', suggesting: 'Création des tenues…', error: 'Une erreur est survenue, réessaie', back: 'Retour au coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Parc', museum: 'Musée', previewTitle: 'Aperçu du vêtement', previewGenerating: 'Génération de la vue 360°…', previewHint: 'Vue de face, de profil et de dos générée par IA', previewError: 'Impossible de générer l\'aperçu', previewRetry: 'Réessayer', previewLimit: 'Tu as utilisé tes aperçus d\'exemple (max {n})' },
+  de: { cropTitle: 'Kleidungsstück ausrichten', cropHint: 'Rahme das Teil ein, damit die KI es besser erkennt', cropDone: 'Fertig', cropCancel: 'Abbrechen', intimate_dinner: 'Intimes Abendessen', cinema: 'Kino', theater: 'Theater', viewpoint: 'Aussichtspunkt', hiking: 'Wandern', bowling_alley: 'Bowling', escape_room: 'Escape Room', bookstore: 'Buchhandlung', formal: 'Formell', celebration: 'Feier', trip: 'Reise', at_home: 'Zu Hause', unclearTitle: 'Wir konnten das Kleidungsstück nicht analysieren', unclearMsg: 'Mach ein klareres Foto: gutes Licht, das ganze Teil und ein einfacher Hintergrund', title: 'Mein Kleiderschrank', emptyTitle: 'Dein Kleiderschrank wartet', deleteQ: 'Löschen?', add: 'Kleidungsstück hinzufügen', empty: 'Füge mindestens 3 Teile hinzu, um Outfit-Vorschläge zu erhalten', suggest: 'Was ziehe ich an?', confirmDelete: 'Dieses Teil löschen?', full: 'Dein Schrank ist voll (max. 60 Teile)', noGarment: 'Kein Kleidungsstück im Foto erkannt', rateLimit: 'Zu viele Anfragen, versuche es später', missing: 'Es fehlt:', advice: 'Tipp', cataloging: 'Analysiere Kleidungsstück…', suggesting: 'Erstelle Outfits…', error: 'Etwas ist schiefgelaufen, versuche es erneut', back: 'Zurück zum Coach', cafe: 'Café', restaurant: 'Restaurant', bar: 'Bar', night_club: 'Club', park: 'Park', museum: 'Museum', previewTitle: 'Ansicht des Kleidungsstücks', previewGenerating: '360°-Ansicht wird erstellt…', previewHint: 'Vorder-, Seiten- und Rückansicht per KI erstellt', previewError: 'Ansicht konnte nicht erstellt werden', previewRetry: 'Erneut versuchen', previewLimit: 'Du hast deine Beispiel-Ansichten aufgebraucht (max. {n})' },
+  it: { cropTitle: 'Inquadra il capo', cropHint: 'Inquadra il capo così l\'IA lo legge meglio', cropDone: 'Fatto', cropCancel: 'Annulla', intimate_dinner: 'Cena intima', cinema: 'Cinema', theater: 'Teatro', viewpoint: 'Punto panoramico', hiking: 'Escursione', bowling_alley: 'Bowling', escape_room: 'Escape room', bookstore: 'Libreria', formal: 'Formale', celebration: 'Festa', trip: 'Viaggio', at_home: 'A casa', unclearTitle: 'Non siamo riusciti ad analizzare il capo', unclearMsg: 'Scatta una foto più chiara: buona luce, il capo intero e uno sfondo semplice', title: 'Il mio guardaroba', emptyTitle: 'Il tuo guardaroba ti aspetta', deleteQ: 'Eliminare?', add: 'Aggiungi capo', empty: 'Aggiungi almeno 3 capi per ricevere suggerimenti di outfit', suggest: 'Cosa mi metto?', confirmDelete: 'Eliminare questo capo?', full: 'Il tuo guardaroba è pieno (max 60 capi)', noGarment: 'Nessun capo rilevato nella foto', rateLimit: 'Troppe richieste, riprova più tardi', missing: 'Manca:', advice: 'Consiglio', cataloging: 'Analisi del capo…', suggesting: 'Creazione outfit…', error: 'Qualcosa è andato storto, riprova', back: 'Torna al coach', cafe: 'Caffè', restaurant: 'Ristorante', bar: 'Bar', night_club: 'Club', park: 'Parco', museum: 'Museo', previewTitle: 'Vista del capo', previewGenerating: 'Generazione vista 360°…', previewHint: 'Vista frontale, laterale e posteriore generata con IA', previewError: 'Impossibile generare la vista', previewRetry: 'Riprova', previewLimit: 'Hai usato le tue viste di esempio (max {n})' },
+  zh: { cropTitle: '调整服装', cropHint: '将服装框好以便AI更好识别', cropDone: '完成', cropCancel: '取消', intimate_dinner: '烛光晚餐', cinema: '电影院', theater: '剧院', viewpoint: '观景台', hiking: '徒步', bowling_alley: '保龄球', escape_room: '密室逃脱', bookstore: '书店', formal: '正式场合', celebration: '庆祝', trip: '旅行', at_home: '在家', unclearTitle: '无法分析这件服装', unclearMsg: '请拍摄更清晰的照片：光线充足、完整服装、简单背景', title: '我的衣橱', emptyTitle: '你的衣橱在等你', deleteQ: '删除？', add: '添加服装', empty: '添加至少3件服装以获取穿搭建议', suggest: '我该穿什么？', confirmDelete: '删除这件服装？', full: '你的衣橱已满（最多60件）', noGarment: '照片中未检测到服装', rateLimit: '请求过多，请稍后再试', missing: '缺少：', advice: '建议', cataloging: '正在分析服装…', suggesting: '正在搭配…', error: '出错了，请重试', back: '返回教练', cafe: '咖啡馆', restaurant: '餐厅', bar: '酒吧', night_club: '夜店', park: '公园', museum: '博物馆', previewTitle: '服装预览', previewGenerating: '正在生成360°视图…', previewHint: 'AI生成的正面、侧面和背面视图', previewError: '无法生成视图', previewRetry: '重试', previewLimit: '你已用完示例预览（最多{n}次）' },
+  ja: { cropTitle: '服を調整', cropHint: 'AIが読み取りやすいように服を枠に収めてください', cropDone: '完了', cropCancel: 'キャンセル', intimate_dinner: 'ディナーデート', cinema: '映画館', theater: '劇場', viewpoint: '展望台', hiking: 'ハイキング', bowling_alley: 'ボウリング', escape_room: '脱出ゲーム', bookstore: '書店', formal: 'フォーマル', celebration: 'お祝い', trip: '旅行', at_home: '自宅', unclearTitle: '服を分析できませんでした', unclearMsg: 'より鮮明な写真を撮ってください：明るい場所で、服全体、シンプルな背景', title: 'マイクローゼット', emptyTitle: 'クローゼットがあなたを待っています', deleteQ: '削除する？', add: '服を追加', empty: 'コーデ提案を受けるには3着以上追加してください', suggest: '何を着る？', confirmDelete: 'この服を削除しますか？', full: 'クローゼットがいっぱいです（最大60着）', noGarment: '写真から服が検出されませんでした', rateLimit: 'リクエストが多すぎます。後でもう一度', missing: '足りない：', advice: 'アドバイス', cataloging: '服を分析中…', suggesting: 'コーデ作成中…', error: 'エラーが発生しました。再試行してください', back: 'コーチに戻る', cafe: 'カフェ', restaurant: 'レストラン', bar: 'バー', night_club: 'クラブ', park: '公園', museum: '美術館', previewTitle: 'アイテムプレビュー', previewGenerating: '360°ビューを生成中…', previewHint: 'AIが生成した正面・側面・背面ビュー', previewError: 'ビューを生成できませんでした', previewRetry: '再試行', previewLimit: 'サンプルビューを使い切りました（最大{n}回）' },
+  ko: { cropTitle: '옷 맞추기', cropHint: 'AI가 더 잘 읽도록 옷을 프레임에 맞춰주세요', cropDone: '완료', cropCancel: '취소', intimate_dinner: '근사한 저녁', cinema: '영화관', theater: '극장', viewpoint: '전망대', hiking: '하이킹', bowling_alley: '볼링', escape_room: '방탈출', bookstore: '서점', formal: '포멀', celebration: '기념일', trip: '여행', at_home: '집에서', unclearTitle: '옷을 분석하지 못했어요', unclearMsg: '더 선명한 사진을 찍어주세요: 밝은 곳에서, 옷 전체가 나오게, 단순한 배경으로', title: '내 옷장', emptyTitle: '옷장이 기다리고 있어요', deleteQ: '삭제할까요?', add: '옷 추가', empty: '코디 추천을 받으려면 3벌 이상 추가하세요', suggest: '뭐 입지?', confirmDelete: '이 옷을 삭제할까요?', full: '옷장이 가득 찼어요 (최대 60벌)', noGarment: '사진에서 옷을 찾지 못했어요', rateLimit: '요청이 너무 많아요. 나중에 다시 시도하세요', missing: '부족한 것:', advice: '팁', cataloging: '옷 분석 중…', suggesting: '코디 만드는 중…', error: '문제가 발생했어요. 다시 시도하세요', back: '코치로 돌아가기', cafe: '카페', restaurant: '레스토랑', bar: '바', night_club: '클럽', park: '공원', museum: '미술관', previewTitle: '옷 미리보기', previewGenerating: '360° 뷰 생성 중…', previewHint: 'AI가 생성한 정면·측면·후면 뷰', previewError: '뷰를 생성하지 못했어요', previewRetry: '다시 시도', previewLimit: '샘플 미리보기를 모두 사용했어요 (최대 {n}회)' },
+  ru: { cropTitle: 'Настройте кадр', cropHint: 'Поместите вещь в рамку, чтобы ИИ лучше её распознал', cropDone: 'Готово', cropCancel: 'Отмена', intimate_dinner: 'Романтический ужин', cinema: 'Кино', theater: 'Театр', viewpoint: 'Смотровая', hiking: 'Поход', bowling_alley: 'Боулинг', escape_room: 'Квест', bookstore: 'Книжный', formal: 'Формально', celebration: 'Праздник', trip: 'Путешествие', at_home: 'Дома', unclearTitle: 'Не удалось распознать вещь', unclearMsg: 'Сделайте более чёткое фото: хороший свет, вся вещь целиком и простой фон', title: 'Мой гардероб', emptyTitle: 'Ваш гардероб ждёт', deleteQ: 'Удалить?', add: 'Добавить вещь', empty: 'Добавьте минимум 3 вещи, чтобы получать подборки образов', suggest: 'Что надеть?', confirmDelete: 'Удалить эту вещь?', full: 'Гардероб заполнен (макс. 60 вещей)', noGarment: 'На фото не найдена одежда', rateLimit: 'Слишком много запросов, попробуйте позже', missing: 'Не хватает:', advice: 'Совет', cataloging: 'Анализ вещи…', suggesting: 'Собираем образы…', error: 'Что-то пошло не так, попробуйте ещё раз', back: 'Назад к коучу', cafe: 'Кафе', restaurant: 'Ресторан', bar: 'Бар', night_club: 'Клуб', park: 'Парк', museum: 'Музей', previewTitle: 'Просмотр вещи', previewGenerating: 'Создаём обзор 360°…', previewHint: 'Вид спереди, сбоку и сзади, созданный ИИ', previewError: 'Не удалось создать обзор', previewRetry: 'Повторить', previewLimit: 'Вы использовали все пробные обзоры (макс. {n})' },
+  ar: { cropTitle: 'اضبط القطعة', cropHint: 'ضع القطعة داخل الإطار ليقرأها الذكاء الاصطناعي بشكل أفضل', cropDone: 'تم', cropCancel: 'إلغاء', intimate_dinner: 'عشاء حميم', cinema: 'سينما', theater: 'مسرح', viewpoint: 'إطلالة', hiking: 'تنزه', bowling_alley: 'بولينغ', escape_room: 'غرفة هروب', bookstore: 'مكتبة', formal: 'رسمي', celebration: 'احتفال', trip: 'رحلة', at_home: 'في المنزل', unclearTitle: 'لم نتمكن من تحليل القطعة', unclearMsg: 'التقط صورة أوضح: إضاءة جيدة، القطعة كاملة وخلفية بسيطة', title: 'خزانتي', emptyTitle: 'خزانتك بانتظارك', deleteQ: 'حذف؟', add: 'إضافة قطعة', empty: 'أضف 3 قطع على الأقل للحصول على اقتراحات الإطلالات', suggest: 'ماذا أرتدي؟', confirmDelete: 'حذف هذه القطعة؟', full: 'خزانتك ممتلئة (60 قطعة كحد أقصى)', noGarment: 'لم يتم العثور على ملابس في الصورة', rateLimit: 'طلبات كثيرة جدًا، حاول لاحقًا', missing: 'ينقصك:', advice: 'نصيحة', cataloging: 'جارٍ تحليل القطعة…', suggesting: 'جارٍ تنسيق الإطلالات…', error: 'حدث خطأ ما، حاول مرة أخرى', back: 'العودة إلى المدرب', cafe: 'مقهى', restaurant: 'مطعم', bar: 'بار', night_club: 'نادٍ ليلي', park: 'حديقة', museum: 'متحف', previewTitle: 'عرض القطعة', previewGenerating: 'جارٍ إنشاء عرض 360°…', previewHint: 'عرض أمامي وجانبي وخلفي مُنشأ بالذكاء الاصطناعي', previewError: 'تعذّر إنشاء العرض', previewRetry: 'إعادة المحاولة', previewLimit: 'استخدمت جميع عروض العينة (بحد أقصى {n})' },
+  id: { cropTitle: 'Sesuaikan pakaian', cropHint: 'Posisikan pakaian agar AI membacanya lebih baik', cropDone: 'Selesai', cropCancel: 'Batal', intimate_dinner: 'Makan malam romantis', cinema: 'Bioskop', theater: 'Teater', viewpoint: 'Titik pandang', hiking: 'Hiking', bowling_alley: 'Boling', escape_room: 'Escape room', bookstore: 'Toko buku', formal: 'Formal', celebration: 'Perayaan', trip: 'Perjalanan', at_home: 'Di rumah', unclearTitle: 'Kami tidak bisa menganalisis pakaian', unclearMsg: 'Ambil foto yang lebih jelas: cahaya bagus, pakaian utuh, dan latar sederhana', title: 'Lemari saya', emptyTitle: 'Lemari menantimu', deleteQ: 'Hapus?', add: 'Tambah pakaian', empty: 'Tambahkan minimal 3 pakaian untuk mendapat saran outfit', suggest: 'Pakai apa ya?', confirmDelete: 'Hapus pakaian ini?', full: 'Lemari penuh (maks. 60 item)', noGarment: 'Tidak ada pakaian terdeteksi di foto', rateLimit: 'Terlalu banyak permintaan, coba lagi nanti', missing: 'Kurang:', advice: 'Tips', cataloging: 'Menganalisis pakaian…', suggesting: 'Menyusun outfit…', error: 'Ada yang salah, coba lagi', back: 'Kembali ke coach', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Klub', park: 'Taman', museum: 'Museum', previewTitle: 'Tampilan pakaian', previewGenerating: 'Membuat tampilan 360°…', previewHint: 'Tampilan depan, samping, dan belakang dibuat dengan AI', previewError: 'Gagal membuat tampilan', previewRetry: 'Coba lagi', previewLimit: 'Kamu sudah memakai semua pratinjau contoh (maks. {n})' },
+  tr: { cropTitle: 'Kıyafeti hizala', cropHint: 'Yapay zekânın daha iyi okuması için kıyafeti çerçevele', cropDone: 'Bitti', cropCancel: 'İptal', intimate_dinner: 'Samimi akşam yemeği', cinema: 'Sinema', theater: 'Tiyatro', viewpoint: 'Manzara', hiking: 'Doğa yürüyüşü', bowling_alley: 'Bovling', escape_room: 'Kaçış odası', bookstore: 'Kitapçı', formal: 'Resmi', celebration: 'Kutlama', trip: 'Seyahat', at_home: 'Evde', unclearTitle: 'Kıyafeti analiz edemedik', unclearMsg: 'Daha net bir fotoğraf çek: iyi ışık, kıyafetin tamamı ve sade bir arka plan', title: 'Gardırobum', emptyTitle: 'Gardırobun seni bekliyor', deleteQ: 'Silinsin mi?', add: 'Kıyafet ekle', empty: 'Kombin önerileri için en az 3 parça ekle', suggest: 'Ne giysem?', confirmDelete: 'Bu parçayı sil?', full: 'Gardırobun dolu (en fazla 60 parça)', noGarment: 'Fotoğrafta kıyafet bulunamadı', rateLimit: 'Çok fazla istek, daha sonra dene', missing: 'Eksik:', advice: 'İpucu', cataloging: 'Kıyafet analiz ediliyor…', suggesting: 'Kombinler hazırlanıyor…', error: 'Bir şeyler ters gitti, tekrar dene', back: 'Koça dön', cafe: 'Kafe', restaurant: 'Restoran', bar: 'Bar', night_club: 'Kulüp', park: 'Park', museum: 'Müze', previewTitle: 'Kıyafet görünümü', previewGenerating: '360° görünüm oluşturuluyor…', previewHint: 'Ön, yan ve arka görünüm yapay zekâ ile oluşturuldu', previewError: 'Görünüm oluşturulamadı', previewRetry: 'Tekrar dene', previewLimit: 'Örnek görünümlerini kullandın (en fazla {n})' },
 };
 
 // R153: full venue set — parity with Android/iOS wardrobe chips (18 categories).
@@ -152,10 +152,46 @@ const VENUE_EMOJI: Record<string, string> = { cafe: '☕', restaurant: '🍽️'
         </div>
       </div>
     }
+
+    <!-- R154: crop step — pan/zoom the photo under a fixed gold frame before the AI call -->
+    @if (cropOpen()) {
+      <div class="wd-crop-scrim" role="dialog" aria-modal="true">
+        <div class="wd-crop-head">
+          <b>{{ t('cropTitle') }}</b>
+          <p>{{ t('cropHint') }}</p>
+        </div>
+        <div class="wd-crop-stage"
+             [style.width.px]="cropFramePx()" [style.height.px]="cropFramePx()"
+             (pointerdown)="cropPointerDown($event)" (pointermove)="cropPointerMove($event)"
+             (pointerup)="cropPointerUp($event)" (pointercancel)="cropPointerUp($event)"
+             (wheel)="cropWheel($event)">
+          <img [src]="cropUrl" [style.transform]="cropTransform()" alt="" draggable="false">
+          <div class="wd-crop-grid"></div>
+        </div>
+        <div class="wd-crop-actions">
+          <button class="wd-btn-ghost" (click)="cancelCrop()">{{ t('cropCancel') }}</button>
+          <button class="wd-crop-done" (click)="confirmCrop()">{{ t('cropDone') }}</button>
+        </div>
+      </div>
+    }
   </div>
   `,
   styles: [`
     :host { --wd-ease: cubic-bezier(0.16, 1, 0.3, 1); }
+    /* R154: crop overlay */
+    .wd-crop-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(10,6,16,.96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; }
+    .wd-crop-head { text-align: center; }
+    .wd-crop-head b { font-size: 18px; }
+    .wd-crop-head p { margin: 6px 0 0; font-size: 13px; color: #C9C9D4; }
+    .wd-crop-stage { position: relative; overflow: hidden; border-radius: 16px; border: 2px solid #D4AF37; box-shadow: 0 0 40px rgba(212,175,55,.18); touch-action: none; cursor: grab; }
+    .wd-crop-stage:active { cursor: grabbing; }
+    .wd-crop-stage img { position: absolute; top: 50%; left: 50%; transform-origin: center; max-width: none; user-select: none; pointer-events: none; }
+    .wd-crop-grid { position: absolute; inset: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.16) 1px, transparent 1px);
+      background-size: 33.34% 33.34%; background-position: -1px -1px; }
+    .wd-crop-actions { display: flex; gap: 14px; }
+    .wd-crop-done { background: linear-gradient(135deg,#E9CE6B,#D4AF37,#B8860B); color: #1A1206; border: none; border-radius: 12px; padding: 11px 26px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .wd-crop-done:focus-visible, .wd-crop-scrim .wd-btn-ghost:focus-visible { outline: 2px solid #D4AF37; outline-offset: 2px; }
     .wd { max-width: 680px; margin: 0 auto; padding: 16px; color: var(--text-primary, #EDEDF2); }
     .wd-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .wd-head h2 { font-size: 22px; margin: 0; }
@@ -320,6 +356,18 @@ export class WardrobePanelComponent implements OnInit, OnDestroy {
   // photo) instead of a passive error line. Decode failures route there too.
   readonly unclearPhoto = signal(false);
 
+  // ── R154: elegant crop step (Instagram-style: pan/zoom under a fixed gold frame)
+  // so the garment fills the shot and Gemini reads it better. All add-photo paths
+  // route through the crop before the AI call.
+  readonly cropOpen = signal(false);
+  cropUrl = '';                       // objectURL for the <img>
+  private cropImg: HTMLImageElement | null = null;
+  cropScale = 1;                      // user zoom (1..5) on top of cover-fit
+  cropOffX = 0; cropOffY = 0;         // pan offsets in display px
+  private cropFrame = 320;            // frame side in display px (set on open)
+  private pointers = new Map<number, { x: number; y: number }>();
+  private lastPinchDist = 0;
+
   async onFile(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -327,9 +375,112 @@ export class WardrobePanelComponent implements OnInit, OnDestroy {
     if (!file) return;
     this.errMsg.set('');
     this.unclearPhoto.set(false);
+    try {
+      const url = URL.createObjectURL(file);
+      const img = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+        i.src = url;
+      });
+      this.cropImg = img;
+      this.cropUrl = url;
+      this.cropScale = 1; this.cropOffX = 0; this.cropOffY = 0;
+      this.cropFrame = Math.min(Math.round(Math.min(window.innerWidth * 0.85, 420)), 420);
+      this.cropOpen.set(true);
+    } catch {
+      this.unclearPhoto.set(true);
+    }
+  }
+
+  /** Base cover-fit scale: the image always fills the square frame at zoom 1. */
+  private baseScale(): number {
+    const img = this.cropImg;
+    return img ? this.cropFrame / Math.min(img.naturalWidth, img.naturalHeight) : 1;
+  }
+  cropTransform(): string {
+    const s = this.baseScale() * this.cropScale;
+    return `translate(calc(-50% + ${this.cropOffX}px), calc(-50% + ${this.cropOffY}px)) scale(${s})`;
+  }
+  cropFramePx(): number { return this.cropFrame; }
+
+  private clampCrop() {
+    const img = this.cropImg;
+    if (!img) return;
+    const s = this.baseScale() * this.cropScale;
+    const maxX = Math.max(0, (img.naturalWidth * s - this.cropFrame) / 2);
+    const maxY = Math.max(0, (img.naturalHeight * s - this.cropFrame) / 2);
+    this.cropOffX = Math.min(maxX, Math.max(-maxX, this.cropOffX));
+    this.cropOffY = Math.min(maxY, Math.max(-maxY, this.cropOffY));
+  }
+
+  cropPointerDown(e: PointerEvent) {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.pointers.size === 2) {
+      const [a, b] = [...this.pointers.values()];
+      this.lastPinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  }
+  cropPointerMove(e: PointerEvent) {
+    const prev = this.pointers.get(e.pointerId);
+    if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY };
+    if (this.pointers.size === 2) {
+      this.pointers.set(e.pointerId, cur);
+      const [a, b] = [...this.pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (this.lastPinchDist > 0) {
+        this.cropScale = Math.min(5, Math.max(1, this.cropScale * (d / this.lastPinchDist)));
+      }
+      this.lastPinchDist = d;
+    } else {
+      this.cropOffX += cur.x - prev.x;
+      this.cropOffY += cur.y - prev.y;
+      this.pointers.set(e.pointerId, cur);
+    }
+    this.clampCrop();
+  }
+  cropPointerUp(e: PointerEvent) {
+    this.pointers.delete(e.pointerId);
+    this.lastPinchDist = 0;
+  }
+  cropWheel(e: WheelEvent) {
+    e.preventDefault();
+    this.cropScale = Math.min(5, Math.max(1, this.cropScale * (e.deltaY < 0 ? 1.08 : 0.93)));
+    this.clampCrop();
+  }
+
+  cancelCrop() {
+    this.cropOpen.set(false);
+    if (this.cropUrl) URL.revokeObjectURL(this.cropUrl);
+    this.cropUrl = ''; this.cropImg = null;
+  }
+
+  async confirmCrop() {
+    const img = this.cropImg;
+    if (!img) { this.cancelCrop(); return; }
+    const s = this.baseScale() * this.cropScale;
+    // Frame rect mapped back to source pixels (image center sits at frame center + offset).
+    const srcSide = this.cropFrame / s;
+    let srcX = img.naturalWidth / 2 - this.cropOffX / s - srcSide / 2;
+    let srcY = img.naturalHeight / 2 - this.cropOffY / s - srcSide / 2;
+    srcX = Math.min(Math.max(0, srcX), Math.max(0, img.naturalWidth - srcSide));
+    srcY = Math.min(Math.max(0, srcY), Math.max(0, img.naturalHeight - srcSide));
+    const out = Math.min(1024, Math.round(srcSide));
+    const canvas = document.createElement('canvas');
+    canvas.width = out; canvas.height = out;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { this.cancelCrop(); this.errMsg.set(this.t('error')); return; }
+    ctx.drawImage(img, srcX, srcY, srcSide, srcSide, 0, 0, out, out);
+    const b64 = canvas.toDataURL('image/jpeg', 0.85).replace(/^data:image\/jpeg;base64,/, '');
+    this.cancelCrop();
+    await this.catalogBase64(b64);
+  }
+
+  private async catalogBase64(b64: string) {
     this.cataloging.set(true);
     try {
-      const b64 = await this.toJpegBase64(file, 1024);
       const res = await this.fb.wardrobeCatalog(b64, this.lang());
       if (!res?.success) {
         if (res?.error === 'no_garment_detected') {
@@ -340,11 +491,7 @@ export class WardrobePanelComponent implements OnInit, OnDestroy {
         }
       }
       // Grid updates via the live listener — no manual insert needed.
-    } catch (e) {
-      // Image decode failure → same "clearer photo" flow; network/CF errors → generic.
-      if (e instanceof Error && (e.message === 'img' || e.message === 'canvas')) this.unclearPhoto.set(true);
-      else this.errMsg.set(this.t('error'));
-    }
+    } catch { this.errMsg.set(this.t('error')); }
     finally { this.cataloging.set(false); }
   }
 
@@ -412,24 +559,4 @@ export class WardrobePanelComponent implements OnInit, OnDestroy {
     finally { this.suggesting.set(false); }
   }
 
-  /** Downscale + strip data-uri prefix → raw base64 JPEG (CF contract). */
-  private toJpegBase64(file: File, maxDim: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('canvas'));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85).replace(/^data:image\/jpeg;base64,/, ''));
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
-      img.src = url;
-    });
-  }
 }
