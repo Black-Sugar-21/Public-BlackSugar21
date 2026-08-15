@@ -82,6 +82,35 @@
             } @else if (discoLoading()) {
               <div class="shell-teaser"><div class="disco-spin"></div><p>{{ s('discoLoading') }}</p></div>
             } @else if (currentProfile(); as p) {
+              <div class="disco-col">
+              <!-- ✨ Tus 3 del día — AI daily picks strip (getDailyPicks). Hidden when empty/error. -->
+              @if (picksLoading() || dailyPicks().length) {
+                <section class="picks-strip">
+                  <div class="picks-head">
+                    <h3>{{ s('dailyPicksTitle') }}</h3>
+                    <span>{{ s('dailyPicksSub') }}</span>
+                  </div>
+                  <div class="picks-row">
+                    @if (picksLoading()) {
+                      @for (i of [0, 1, 2]; track i) {
+                        <div class="picks-card"><div class="picks-photo skel"></div></div>
+                      }
+                    } @else {
+                      @for (pk of dailyPicks(); track pk.uid) {
+                        <div class="picks-card">
+                          <div class="picks-photo" [style.background-image]="(pk.thumbUrl || pk.photoUrl) ? 'url(' + (pk.thumbUrl || pk.photoUrl) + ')' : null">
+                            @if (!pk.thumbUrl && !pk.photoUrl) { <div class="picks-nophoto">✦</div> }
+                            @if (pk.compatibilityScore != null) { <span class="picks-score">{{ pk.compatibilityScore }}%</span> }
+                          </div>
+                          <div class="picks-name">{{ pk.name }}@if (pk.age) { <span>, {{ pk.age }}</span> }</div>
+                          @if (pk.distanceKm != null) { <span class="picks-km">📍 {{ picksKm(pk.distanceKm) }}</span> }
+                          @if (pk.reason) { <p class="picks-reason">{{ pk.reason }}</p> }
+                        </div>
+                      }
+                    }
+                  </div>
+                </section>
+              }
               <div class="disco-wrap">
                 <!-- Vertical pager (TikTok-style): the deck stacks CURRENT + NEXT; advancing slides
                      both up together. Swipe up / tap ♥ to advance; you can't go back. -->
@@ -131,6 +160,7 @@
                 </div>
                 <!-- Can't-go-back notice (shown briefly when the user drags down) -->
                 @if (cantGoBack()) { <div class="disco-noback">{{ s('discoNoBack') }}</div> }
+              </div>
               </div>
             } @else {
               <div class="shell-teaser">

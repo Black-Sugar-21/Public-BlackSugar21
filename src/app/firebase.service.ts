@@ -955,6 +955,14 @@ export class FirebaseService {
     return res.data;
   }
 
+  /** "Tus 3 del día" — getDailyPicks CF. {success, date, cached, picks:[{uid, name, age, photoUrl,
+   *  thumbUrl, distanceKm, compatibilityScore, reason}]}. Empty picks is a valid response. */
+  async getDailyPicks(userLanguage: string): Promise<any> {
+    const fn = httpsCallable(this.functions, 'getDailyPicks');
+    const res = await fn({ userLanguage });
+    return res.data;
+  }
+
   /** Own profile gender (users/{uid}.male). null when signed out or the field is missing.
    *  Prefers the already-loaded userProfile signal (loadUserProfile spreads the raw doc) to
    *  avoid an extra Firestore read; falls back to a one-shot doc get. */

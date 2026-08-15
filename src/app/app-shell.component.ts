@@ -42,6 +42,9 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   discoLocBody: {"es":"La usamos solo para mostrarte personas cerca de ti. Nunca la compartimos con nadie.","en":"We use it only to show you people near you. We never share it with anyone.","pt":"Usamos apenas para mostrar pessoas perto de você. Nunca compartilhamos.","fr":"Nous l'utilisons uniquement pour te montrer des personnes près de toi. Jamais partagée.","de":"Wir nutzen ihn nur, um dir Menschen in deiner Nähe zu zeigen. Niemals geteilt.","it":"La usiamo solo per mostrarti persone vicine. Mai condivisa.","zh":"仅用于向你展示附近的人，绝不分享。","ja":"近くの人を表示するためだけに使用します。共有しません。","ko":"근처 사람을 보여주기 위해서만 사용해요. 공유하지 않습니다.","ru":"Используем только чтобы показать людей рядом. Никогда не передаём.","ar":"نستخدمه فقط لعرض أشخاص قريبين منك. لا نشاركه أبداً.","id":"Hanya untuk menampilkan orang di dekatmu. Tidak pernah dibagikan.","tr":"Yalnızca yakınındaki kişileri göstermek için kullanırız. Asla paylaşmayız."},
   discoLocBtn: {"es":"Activar ubicación","en":"Enable location","pt":"Ativar localização","fr":"Activer la localisation","de":"Standort aktivieren","it":"Attiva posizione","zh":"开启位置","ja":"位置情報をオンにする","ko":"위치 켜기","ru":"Включить геолокацию","ar":"تفعيل الموقع","id":"Aktifkan lokasi","tr":"Konumu aç"},
   discoLocDenied: {"es":"Activa la ubicación desde los ajustes de tu navegador para ver personas cerca.","en":"Enable location in your browser settings to see people nearby.","pt":"Ative a localização nas configurações do navegador para ver pessoas perto.","fr":"Active la localisation dans les réglages du navigateur pour voir des personnes proches.","de":"Aktiviere den Standort in den Browser-Einstellungen, um Menschen in der Nähe zu sehen.","it":"Attiva la posizione nelle impostazioni del browser per vedere persone vicine.","zh":"请在浏览器设置中开启位置以查看附近的人。","ja":"近くの人を見るにはブラウザ設定で位置情報をオンにしてください。","ko":"근처 사람을 보려면 브라우저 설정에서 위치를 켜세요.","ru":"Включите геолокацию в настройках браузера, чтобы видеть людей рядом.","ar":"فعّل الموقع من إعدادات المتصفح لرؤية أشخاص قريبين.","id":"Aktifkan lokasi di pengaturan browser untuk melihat orang di dekatmu.","tr":"Yakındaki kişileri görmek için tarayıcı ayarlarından konumu aç."},
+  dailyPicksTitle: {"es":"✨ Tus 3 del día","en":"✨ Your 3 of the day","pt":"✨ Seus 3 do dia","fr":"✨ Tes 3 du jour","de":"✨ Deine 3 des Tages","it":"✨ I tuoi 3 del giorno","zh":"✨ 今日为你精选 3 位","ja":"✨ 今日のおすすめ3人","ko":"✨ 오늘의 추천 3인","ru":"✨ Твоя тройка дня","ar":"✨ ثلاثتك لليوم","id":"✨ 3 pilihanmu hari ini","tr":"✨ Günün 3 seçimin"},
+  dailyPicksSub: {"es":"Elegidos por tu coach","en":"Picked by your coach","pt":"Escolhidos pelo seu coach","fr":"Choisis par ton coach","de":"Von deinem Coach ausgewählt","it":"Scelti dal tuo coach","zh":"由你的教练精选","ja":"コーチが選びました","ko":"코치가 골랐어요","ru":"Выбраны твоим коучем","ar":"اختارهم مدرّبك","id":"Dipilih oleh coach-mu","tr":"Koçun tarafından seçildi"},
+  dailyPicksKm: {"es":"a {n} km","en":"{n} km away","pt":"a {n} km","fr":"à {n} km","de":"{n} km entfernt","it":"a {n} km","zh":"距离 {n} 公里","ja":"{n}km先","ko":"{n}km 거리","ru":"в {n} км","ar":"على بُعد {n} كم","id":"{n} km jauhnya","tr":"{n} km uzakta"},
   discoSignIn: {"es":"Inicia sesión para descubrir personas","en":"Sign in to discover people","pt":"Entre para descobrir pessoas","fr":"Connecte-toi pour découvrir des gens","de":"Melde dich an, um Leute zu entdecken","it":"Accedi per scoprire persone","zh":"登录以发现新朋友","ja":"ログインして人を見つけよう","ko":"로그인하고 사람을 만나보세요","ru":"Войдите, чтобы знакомиться","ar":"سجّل الدخول لاكتشاف أشخاص","id":"Masuk untuk menemukan orang","tr":"İnsanları keşfetmek için giriş yap"},
   chemistry: {"es":"Química","en":"Chemistry","pt":"Química","fr":"Alchimie","de":"Chemie","it":"Affinità","zh":"默契","ja":"相性","ko":"케미","ru":"Химия","ar":"كيمياء","id":"Kimia","tr":"Kimya"},
   near: {"es":"Cerca","en":"Near","pt":"Perto","fr":"Proche","de":"In der Nähe","it":"Vicino","zh":"附近","ja":"近く","ko":"근처","ru":"Рядом","ar":"قريب","id":"Dekat","tr":"Yakın"},
@@ -313,6 +316,21 @@ export class AppShellComponent implements OnDestroy {
   readonly discoLoaded = signal(false);
   readonly discoError = signal(false);
   readonly chatError = signal('');
+  // "Tus 3 del día" (getDailyPicks CF) — stable all day server-side; fetched once per session.
+  readonly dailyPicks = signal<any[]>([]);
+  readonly picksLoading = signal(false);
+  private picksFetched = false;
+  private async loadDailyPicks() {
+    if (this.picksFetched || !this.firebase.currentUser() || !this.hasLocation()) return;
+    this.picksFetched = true;   // once per session — the backend caches per day anyway
+    this.picksLoading.set(true);
+    try {
+      const res = await this.firebase.getDailyPicks(this.lang());
+      this.dailyPicks.set(res?.success && Array.isArray(res.picks) ? res.picks.slice(0, 3) : []);
+    } catch { this.dailyPicks.set([]); }   // error → strip hides entirely
+    finally { this.picksLoading.set(false); }
+  }
+  picksKm(n: number): string { return this.s('dailyPicksKm').replace('{n}', String(Math.round(n))); }
   readonly discoLocStatus = signal<'idle' | 'loading' | 'denied'>('idle');
   /** Discovery needs a location to rank nearby people. True once the profile has lat/lng. */
   hasLocation(): boolean { const p: any = this.firebase.userProfile(); return typeof p?.latitude === 'number' && typeof p?.longitude === 'number'; }
@@ -326,6 +344,7 @@ export class AppShellComponent implements OnDestroy {
       this.track('location_enabled');
       this.discoLocStatus.set('idle');
       this.discoLoaded.set(false);
+      this.loadDailyPicks();          // location just became available → picks can load now
       await this.loadDiscovery();
     } catch { this.discoLocStatus.set('denied'); }
   }
@@ -617,6 +636,7 @@ export class AppShellComponent implements OnDestroy {
     this.section.set(sec);
     this.track('screen_view', { firebase_screen: sec, screen_name: sec });
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser() && this.hasLocation()) this.loadDiscovery();
+    if (sec === 'discovery') this.loadDailyPicks();   // internally guarded: signed-in + location + once
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
     if (sec === 'profile' && this.profileComplete()) {
       if (!this.profilePhotos().length) this.loadProfilePhotos();
