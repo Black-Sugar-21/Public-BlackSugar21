@@ -44,6 +44,7 @@ import {
   fetchAndActivate,
   getString,
   getNumber,
+  getBoolean,
   RemoteConfig
 } from 'firebase/remote-config';
 import {
@@ -137,7 +138,9 @@ export class FirebaseService {
       // Homologado con iOS/Android RemoteConfigService (daily_likes_limit / coach_daily_credits).
       daily_likes_limit: 100,
       coach_daily_credits: 4,
-      daily_super_likes_limit: 5
+      daily_super_likes_limit: 5,
+      // R155: simplicity pass — wardrobe hidden by default (homologado con iOS/Android).
+      wardrobe_enabled: false
     };
 
     // Inicializar App Check con reCAPTCHA Enterprise.
@@ -480,6 +483,16 @@ export class FirebaseService {
   async getLanguagePreference(uid: string): Promise<string | null> {
     const profile = this.userProfile();
     return profile?.preferences?.language || null;
+  }
+
+  /** R155: wardrobe visibility kill-switch — RC `wardrobe_enabled`, default false (simplicity pass). */
+  async isWardrobeEnabled(): Promise<boolean> {
+    try {
+      await fetchAndActivate(this.remoteConfig);
+      return getBoolean(this.remoteConfig, 'wardrobe_enabled');
+    } catch {
+      return false;
+    }
   }
 
   // Minimum Age by Country (from Remote Config)

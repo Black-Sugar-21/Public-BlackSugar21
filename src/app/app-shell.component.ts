@@ -303,6 +303,8 @@ export class AppShellComponent implements OnDestroy {
   // wardrobe entry in the coach top bar). Signed-in only — the toggle button
   // is hidden for anonymous visitors.
   readonly showWardrobe = signal(false);
+  // R155: RC `wardrobe_enabled` kill-switch (simplicity pass, default hidden). Loaded once.
+  readonly wardrobeEnabled = signal(false);
   readonly showConfirm = signal(false);
   // Discovery feed state (real feed via getDiscoveryFeed, like/pass via recordSwipe)
   readonly discoProfiles = signal<any[]>([]);
@@ -579,6 +581,10 @@ export class AppShellComponent implements OnDestroy {
       if (links?.ios) this.storeIos.set(links.ios);
       if (links?.android) this.storeAndroid.set(links.android);
     }).catch(() => { /* fallback values already set */ });
+    // R155: wardrobe visibility flag (simplicity pass) — hidden unless RC enables it.
+    if (this.isBrowser) {
+      this.firebase.isWardrobeEnabled().then((on) => this.wardrobeEnabled.set(on)).catch(() => { /* stays hidden */ });
+    }
   }
 
   private autoLocDone = false;

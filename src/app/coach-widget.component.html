@@ -184,7 +184,7 @@
                 }
 
                 <!-- R153: "¿Qué me pongo?" outfit card — signed-in users, under place suggestions -->
-                @if (m.outfitVenue && isAuthed() && !m.outfit?.dismissed) {
+                @if (wardrobeOn() && m.outfitVenue && isAuthed() && !m.outfit?.dismissed) {
                   <div class="cw-outfit">
                     <button class="cw-outfit-x" (click)="dismissOutfitCard(m)" aria-label="✕">✕</button>
                     @switch (m.outfit?.state || 'idle') {

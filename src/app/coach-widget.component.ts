@@ -1000,6 +1000,7 @@ export class CoachWidgetComponent implements OnDestroy {
   constructor(@Inject(PLATFORM_ID) platformId: object, private translation: TranslationService, private firebase: FirebaseService, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
     if (this.isBrowser) {
+      this.loadWardrobeFlag(); // R155: outfit-card visibility (RC wardrobe_enabled)
       const vv: any = (window as any).visualViewport;
       if (vv) { vv.addEventListener('resize', this.vvHandler); vv.addEventListener('scroll', this.vvHandler); }
       // Un-stick a hung "Signing you in…" overlay when the user returns from the OAuth screen
@@ -1719,6 +1720,15 @@ export class CoachWidgetComponent implements OnDestroy {
   private wardrobeCache: Map<string, { emoji: string; name: string }> | null = null;
 
   isAuthed(): boolean { return !!this.firebase.currentUser(); }
+
+  // R155: wardrobe kill-switch (RC `wardrobe_enabled`, default hidden) — gates the outfit card.
+  readonly wardrobeOn = signal(false);
+  private wardrobeFlagLoaded = false;
+  private loadWardrobeFlag() {
+    if (this.wardrobeFlagLoaded) return;
+    this.wardrobeFlagLoaded = true;
+    this.firebase.isWardrobeEnabled().then((on) => this.wardrobeOn.set(on)).catch(() => { /* stays hidden */ });
+  }
 
   /** Immutable outfit-state update — messages is an OnPush signal, so replace the Msg. */
   private setOutfit(m: Msg, outfit: NonNullable<Msg['outfit']>) {

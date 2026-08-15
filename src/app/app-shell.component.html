@@ -49,12 +49,13 @@
       <main class="shell-main">
         @switch (section()) {
           @case ('coach') {
-            @if (firebase.currentUser()) {
+            <!-- R155: wardrobe gated behind RC wardrobe_enabled (simplicity pass) -->
+            @if (wardrobeEnabled() && firebase.currentUser()) {
               <button class="shell-wardrobe-toggle" (click)="showWardrobe.set(!showWardrobe())">
                 {{ showWardrobe() ? '← Coach' : '🧥' }}
               </button>
             }
-            @if (showWardrobe() && firebase.currentUser()) {
+            @if (wardrobeEnabled() && showWardrobe() && firebase.currentUser()) {
               <div class="shell-coach"><app-wardrobe-panel></app-wardrobe-panel></div>
             } @else {
               <div class="shell-coach"><app-coach-widget [embedded]="true" (openWardrobe)="showWardrobe.set(true)"></app-coach-widget></div>
