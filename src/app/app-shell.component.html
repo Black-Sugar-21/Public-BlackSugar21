@@ -201,6 +201,46 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z"/><path d="M9 4v14M15 6v14"/></svg>
                   </button>
                 </div>
+                <!-- "Pregunta del día" — blind daily question card (hidden when the fetch fails). -->
+                @if (dqState(); as dq) {
+                  @if (dqIsCollapsed()) {
+                    <button class="dq-chip" (click)="dqExpand()" [attr.aria-label]="s('dqTitle')" [attr.title]="s('dqTitle')">✨</button>
+                  } @else {
+                    <div class="dq-card">
+                      <div class="dq-head">
+                        <span class="dq-eyebrow">{{ s('dqTitle') }}</span>
+                        <button class="dq-x" (click)="dqCollapse()" aria-label="✕">✕</button>
+                      </div>
+                      <div class="dq-q">{{ dq.question }}</div>
+                      @if (dq.revealed) {
+                        <!-- State 3: both answered → reveal + insight -->
+                        <div class="dq-answers">
+                          <div class="dq-ans">
+                            <span class="dq-ans-who">{{ s('dqYou') }}</span>
+                            <p>{{ dqMy() }}</p>
+                          </div>
+                          <div class="dq-ans">
+                            <span class="dq-ans-who">{{ dqOtherLabel(m.otherUid) }}</span>
+                            <p>{{ dqOther() }}</p>
+                          </div>
+                        </div>
+                        @if (dq.insight) { <div class="dq-insight">💡 {{ dq.insight }}</div> }
+                      } @else if (dqMy()) {
+                        <!-- State 2: I answered, waiting for the match (blind) -->
+                        <div class="dq-mine">{{ dqMy() }}</div>
+                        <div class="dq-wait"><span class="dq-dot"></span> {{ s('dqWaiting') }}</div>
+                      } @else {
+                        <!-- State 1: not answered yet → blind hint + composer -->
+                        <div class="dq-hint">{{ s('dqHint') }}</div>
+                        <form class="dq-form" (submit)="$event.preventDefault(); submitDailyAnswer()">
+                          <textarea [(ngModel)]="dqDraft" name="dqAnswer" rows="2" maxlength="500" [placeholder]="s('dqPlaceholder')" [attr.aria-label]="s('dqPlaceholder')" [disabled]="dqSubmitting()"></textarea>
+                          <button type="submit" class="dq-send" [disabled]="!dqDraft.trim() || dqSubmitting()">{{ dqSubmitting() ? '…' : s('dqSend') }}</button>
+                        </form>
+                        @if (dqError()) { <div class="dq-err">{{ s('dqError') }}</div> }
+                      }
+                    </div>
+                  }
+                }
                 <div class="chat-msgs">
                   @if (chatHasMore()) {
                     <button class="chat-loadmore" [disabled]="chatLoadingOlder()" (click)="loadOlderChat()">{{ chatLoadingOlder() ? '…' : s('chatLoadOlder') }}</button>

@@ -38,6 +38,14 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   viewOnMaps: {"es":"Ver en Maps","en":"View on Maps","pt":"Ver no Maps","fr":"Voir sur Maps","de":"Auf Maps ansehen","it":"Vedi su Maps","zh":"在地图查看","ja":"マップで見る","ko":"지도에서 보기","ru":"Открыть на карте","ar":"عرض على الخرائط","id":"Lihat di Maps","tr":"Haritalarda gör"},
   getTickets: {"es":"Entradas","en":"Get tickets","pt":"Ingressos","fr":"Billets","de":"Tickets","it":"Biglietti","zh":"购票","ja":"チケット","ko":"티켓 구매","ru":"Билеты","ar":"التذاكر","id":"Tiket","tr":"Biletler"},
   chatSendErr: {"es":"No se pudo enviar el mensaje. Inténtalo de nuevo.","en":"Couldn't send the message. Try again.","pt":"Não foi possível enviar. Tente de novo.","fr":"Échec de l'envoi. Réessaie.","de":"Nachricht konnte nicht gesendet werden. Versuch es erneut.","it":"Invio non riuscito. Riprova.","zh":"消息发送失败，请重试。","ja":"送信できませんでした。もう一度お試しください。","ko":"메시지를 보내지 못했어요. 다시 시도하세요.","ru":"Не удалось отправить. Повторите.","ar":"تعذّر إرسال الرسالة. حاول مجدداً.","id":"Gagal mengirim pesan. Coba lagi.","tr":"Mesaj gönderilemedi. Tekrar dene."},
+  // "Pregunta del día" — blind daily question card in the 1:1 chat (13 languages)
+  dqTitle: {"es":"✨ Pregunta del día","en":"✨ Question of the day","pt":"✨ Pergunta do dia","fr":"✨ Question du jour","de":"✨ Frage des Tages","it":"✨ Domanda del giorno","zh":"✨ 每日一问","ja":"✨ 今日の質問","ko":"✨ 오늘의 질문","ru":"✨ Вопрос дня","ar":"✨ سؤال اليوم","id":"✨ Pertanyaan hari ini","tr":"✨ Günün sorusu"},
+  dqHint: {"es":"Ambos responden a ciegas — se revela cuando los dos contesten","en":"You both answer blind — revealed once you both reply","pt":"Os dois respondem às cegas — revela-se quando ambos responderem","fr":"Vous répondez à l'aveugle — révélé quand vous avez tous deux répondu","de":"Ihr antwortet beide blind — aufgedeckt, sobald beide geantwortet haben","it":"Rispondete entrambi alla cieca — si rivela quando entrambi rispondono","zh":"双方盲答——两人都回答后才会公开","ja":"ふたりとも見えない状態で回答——両方が答えると公開されます","ko":"둘 다 모르는 채로 답해요 — 두 사람이 답하면 공개돼요","ru":"Вы оба отвечаете вслепую — ответы откроются, когда ответят оба","ar":"كلاكما يجيب دون رؤية الآخر — تُكشف الإجابات عندما يجيب الاثنان","id":"Kalian berdua menjawab tanpa melihat — terungkap saat keduanya menjawab","tr":"İkiniz de görmeden yanıtlarsınız — ikiniz de yanıtlayınca açılır"},
+  dqWaiting: {"es":"Esperando su respuesta…","en":"Waiting for their answer…","pt":"Aguardando a resposta…","fr":"En attente de sa réponse…","de":"Warten auf die Antwort…","it":"In attesa della risposta…","zh":"等待对方回答…","ja":"相手の回答を待っています…","ko":"상대의 답을 기다리는 중…","ru":"Ждём ответа собеседника…","ar":"بانتظار إجابته…","id":"Menunggu jawabannya…","tr":"Yanıtı bekleniyor…"},
+  dqYou: {"es":"Tú","en":"You","pt":"Você","fr":"Toi","de":"Du","it":"Tu","zh":"你","ja":"あなた","ko":"나","ru":"Вы","ar":"أنت","id":"Kamu","tr":"Sen"},
+  dqPlaceholder: {"es":"Escribe tu respuesta…","en":"Write your answer…","pt":"Escreva sua resposta…","fr":"Écris ta réponse…","de":"Schreib deine Antwort…","it":"Scrivi la tua risposta…","zh":"写下你的回答…","ja":"回答を入力…","ko":"답을 입력하세요…","ru":"Напишите свой ответ…","ar":"اكتب إجابتك…","id":"Tulis jawabanmu…","tr":"Cevabını yaz…"},
+  dqSend: {"es":"Responder","en":"Answer","pt":"Responder","fr":"Répondre","de":"Antworten","it":"Rispondi","zh":"回答","ja":"回答する","ko":"답하기","ru":"Ответить","ar":"أجب","id":"Jawab","tr":"Yanıtla"},
+  dqError: {"es":"No se pudo enviar, intenta de nuevo","en":"Couldn't send, try again","pt":"Não foi possível enviar, tente de novo","fr":"Échec de l'envoi, réessaie","de":"Senden fehlgeschlagen, versuch es erneut","it":"Invio non riuscito, riprova","zh":"发送失败，请重试","ja":"送信できませんでした。もう一度お試しください","ko":"보내지 못했어요. 다시 시도하세요","ru":"Не удалось отправить, попробуйте снова","ar":"تعذّر الإرسال، حاول مجدداً","id":"Gagal mengirim, coba lagi","tr":"Gönderilemedi, tekrar dene"},
   discoLocTitle: {"es":"Activa tu ubicación","en":"Enable your location","pt":"Ative sua localização","fr":"Active ta localisation","de":"Standort aktivieren","it":"Attiva la posizione","zh":"开启你的位置","ja":"位置情報をオンに","ko":"위치를 켜세요","ru":"Включите геолокацию","ar":"فعّل موقعك","id":"Aktifkan lokasimu","tr":"Konumunu aç"},
   discoLocBody: {"es":"La usamos solo para mostrarte personas cerca de ti. Nunca la compartimos con nadie.","en":"We use it only to show you people near you. We never share it with anyone.","pt":"Usamos apenas para mostrar pessoas perto de você. Nunca compartilhamos.","fr":"Nous l'utilisons uniquement pour te montrer des personnes près de toi. Jamais partagée.","de":"Wir nutzen ihn nur, um dir Menschen in deiner Nähe zu zeigen. Niemals geteilt.","it":"La usiamo solo per mostrarti persone vicine. Mai condivisa.","zh":"仅用于向你展示附近的人，绝不分享。","ja":"近くの人を表示するためだけに使用します。共有しません。","ko":"근처 사람을 보여주기 위해서만 사용해요. 공유하지 않습니다.","ru":"Используем только чтобы показать людей рядом. Никогда не передаём.","ar":"نستخدمه فقط لعرض أشخاص قريبين منك. لا نشاركه أبداً.","id":"Hanya untuk menampilkan orang di dekatmu. Tidak pernah dibagikan.","tr":"Yalnızca yakınındaki kişileri göstermek için kullanırız. Asla paylaşmayız."},
   discoLocBtn: {"es":"Activar ubicación","en":"Enable location","pt":"Ativar localização","fr":"Activer la localisation","de":"Standort aktivieren","it":"Attiva posizione","zh":"开启位置","ja":"位置情報をオンにする","ko":"위치 켜기","ru":"Включить геолокацию","ar":"تفعيل الموقع","id":"Aktifkan lokasi","tr":"Konumu aç"},
@@ -442,6 +450,65 @@ export class AppShellComponent implements OnDestroy {
   toggleCoachInsights() { this.coachInsightsExpanded.update((v) => !v); }
   dismissCoachInsights() { this.coachInsightsDismissed = this.selectedMatch()?.id || ''; this.coachInsights.set(null); this.coachInsightsExpanded.set(false); }
   useCoachAction(text: string) { this.chatText = text; }
+  // ── "Pregunta del día" (blind daily question, getDailyQuestion/answerDailyQuestion CFs) ────────
+  // Loaded ONCE per matchId per session (cache map). Fetch failure → dqState=null → card hidden;
+  // the daily question NEVER blocks the chat. ✕ collapses per session; the ✨ chip re-expands.
+  readonly dqState = signal<any | null>(null);
+  readonly dqLoading = signal(false);
+  readonly dqSubmitting = signal(false);
+  readonly dqError = signal(false);
+  readonly dqCollapsed = signal<ReadonlySet<string>>(new Set<string>());
+  dqDraft = '';
+  private dqCache = new Map<string, any | null>();
+  private dqFor = '';
+  private loadDailyQuestion(matchId: string) {
+    this.dqFor = matchId;
+    this.dqError.set(false); this.dqSubmitting.set(false); this.dqDraft = '';
+    if (this.dqCache.has(matchId)) { this.dqState.set(this.dqCache.get(matchId) ?? null); this.dqLoading.set(false); return; }
+    this.dqState.set(null);
+    this.dqLoading.set(true);
+    this.firebase.getDailyQuestion(matchId, this.lang())
+      .then((v) => { this.dqCache.set(matchId, v); if (this.dqFor === matchId) this.dqState.set(v); })
+      .catch(() => { this.dqCache.set(matchId, null); })   // hidden — never blocks the chat
+      .finally(() => { if (this.dqFor === matchId) this.dqLoading.set(false); });
+  }
+  /** My answer — pre-reveal it comes as myAnswer; post-reveal it's in answers[] by uid. */
+  dqMy(): string {
+    const q = this.dqState(); if (!q) return '';
+    if (q.myAnswer) return String(q.myAnswer);
+    const a = (Array.isArray(q.answers) ? q.answers : []).find((x: any) => x?.uid === this.myUid());
+    return a?.answer ? String(a.answer) : '';
+  }
+  /** The match's answer (revealed only). */
+  dqOther(): string {
+    const q = this.dqState();
+    const a = (Array.isArray(q?.answers) ? q.answers : []).find((x: any) => x?.uid && x.uid !== this.myUid());
+    return a?.answer ? String(a.answer) : '';
+  }
+  /** Label for the match's answer: their name if resolved, else a neutral "Match". */
+  dqOtherLabel(uid: string): string { return this.matchNames()[uid] || 'Match'; }
+  async submitDailyAnswer() {
+    const m = this.selectedMatch(); const q = this.dqState();
+    const t = this.dqDraft.trim();
+    if (!m || !q || !t || this.dqSubmitting()) return;
+    this.dqSubmitting.set(true); this.dqError.set(false);
+    try {
+      const v = await this.firebase.answerDailyQuestion(m.id, q.date, t, this.lang());
+      this.dqCache.set(m.id, v);
+      if (this.selectedMatch()?.id === m.id) { this.dqState.set(v); this.dqDraft = ''; }
+      this.track('daily_question_answered');
+    } catch { if (this.selectedMatch()?.id === m.id) this.dqError.set(true); }  // inline error + retry (draft kept)
+    finally { this.dqSubmitting.set(false); }
+  }
+  dqIsCollapsed(): boolean { const m = this.selectedMatch(); return !!m && this.dqCollapsed().has(m.id); }
+  dqCollapse() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.dqCollapsed.update((s) => { const n = new Set(s); n.add(m.id); return n; });
+  }
+  dqExpand() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.dqCollapsed.update((s) => { const n = new Set(s); n.delete(m.id); return n; });
+  }
   // AI Coach DATE-SPOT suggestions (iOS PlaceSuggestionsView parity): a sheet of nearby venues to
   // share into the chat as a place card.
   readonly placeSheetOpen = signal(false);
@@ -895,6 +962,7 @@ export class AppShellComponent implements OnDestroy {
     this.firebase.markMatchRead(match.id);
     this.firebase.setActiveChat(match.id);
     this.loadIcebreakers(match); // AI Coach openers for an empty conversation (shown only when no messages yet)
+    this.loadDailyQuestion(match.id); // "Pregunta del día" card (cached once per matchId per session)
     this.resetSmartReplies();
     this.resetCoachInsights();
     this.placeSheetOpen.set(false); this.placeSuggestions.set([]); this.placesLoading.set(false); this.placeCatSel.set('');

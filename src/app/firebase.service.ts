@@ -1083,6 +1083,35 @@ export class FirebaseService {
     } catch { /* off / rate-limited — caller shows nothing */ }
     return { suggestions: [], hasMore: false };
   }
+  // ── "Pregunta del día" (daily blind question between the two matched users) ──
+  /** Fetch today's daily question for a match — SAME getDailyQuestion callable iOS/Android use.
+   *  Returns {success, date, question, myAnswer, otherAnswered, revealed, answers?, insight?}.
+   *  null on error/off — the caller hides the card and NEVER blocks the chat. */
+  async getDailyQuestion(matchId: string, lang: string): Promise<any | null> {
+    const u = this.currentUser();
+    if (!u || !matchId) return null;
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    try {
+      const fn = httpsCallable(this.functions, 'getDailyQuestion');
+      const res: any = await fn({ matchId, userLanguage: l });
+      const d = res?.data;
+      if (d?.success && d.question) return d;
+    } catch { /* off / rate-limited — card hidden */ }
+    return null;
+  }
+  /** Submit my blind answer (≤500 chars) — returns the refreshed daily-question view (same shape as
+   *  getDailyQuestion). THROWS on failure so the card can show an inline error + retry. */
+  async answerDailyQuestion(matchId: string, date: string, answer: string, lang: string): Promise<any> {
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    const fn = httpsCallable(this.functions, 'answerDailyQuestion');
+    const res: any = await fn({ matchId, date, answer: answer.trim().slice(0, 500), userLanguage: l });
+    const d = res?.data;
+    if (d?.success && d.question) return d;
+    throw new Error('answer-daily-question-failed');
+  }
+
   /** AI Coach Date Blueprint — SAME generateDateBlueprint callable iOS/Android use. Returns a full
    *  date plan (title, totalDuration, icebreaker, ranked steps with places). null on error/off. */
   async generateDateBlueprint(matchId: string, lang: string, duration: 'quick' | 'standard' | 'full' = 'standard'): Promise<any | null> {
