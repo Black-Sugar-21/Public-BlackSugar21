@@ -104,6 +104,7 @@
                           </div>
                           <div class="picks-name">{{ pk.name }}@if (pk.age) { <span>, {{ pk.age }}</span> }</div>
                           @if (pk.distanceKm != null) { <span class="picks-km">📍 {{ picksKm(pk.distanceKm) }}</span> }
+                          @if (pk.readyToMeet) { <span class="picks-ready">{{ s('readyBadge') }}</span> }
                           @if (pk.reason) { <p class="picks-reason">{{ pk.reason }}</p> }
                         </div>
                       }
@@ -131,6 +132,8 @@
                         <div class="disco-name">{{ p.name }}@if (p.age) { <span> {{ p.age }}</span> }
                           @if (discoTypeLabel(p)) { <span class="disco-badge" [class.elite]="discoIsElite(p)">{{ discoIsElite(p) ? '💎' : '🌟' }} {{ discoTypeLabel(p) }}</span> }
                         </div>
+                        <!-- R160: ready-to-meet pill (safe access — old cached payloads won't have it) -->
+                        @if (p.readyToMeet === true) { <div class="disco-ready">{{ s('readyBadge') }}</div> }
                         <div class="disco-meta near">↗ {{ s('near') }}</div>
                         @if (p.compatibilityScore != null) {
                           <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
@@ -696,6 +699,19 @@
                     <div class="pf-stat-num"><b>{{ coachMessagesRemaining() }}</b><span class="pf-stat-den">/ {{ coachDailyCredits() }}</span></div>
                     <div class="pf-stat-sub">{{ s('coachQuestionsRemaining') }}</div>
                   </div>
+                </div>
+
+                <!-- R160: "Con ganas de salir esta semana" — weekly ready-to-meet toggle (expires Sunday) -->
+                <div class="pf-ready">
+                  <div class="pf-ready-col">
+                    <div class="pf-ready-title">{{ s('readyTitle') }}</div>
+                    <div class="pf-ready-hint">{{ s('readyHint') }}</div>
+                  </div>
+                  <button class="pf-ready-switch" type="button" role="switch"
+                          [attr.aria-checked]="readyOn()" [class.on]="readyOn()"
+                          [disabled]="readySaving()" (click)="toggleReady()">
+                    <span class="pf-ready-knob"></span>
+                  </button>
                 </div>
 
                 <!-- R150 Dating Journey card + streak (iOS/Android DatingJourneyCard parity) -->

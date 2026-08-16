@@ -211,6 +211,10 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   epUpdateLocation: {"es":"Actualizar ubicación","en":"Update location","pt":"Atualizar localização","fr":"Mettre à jour la position","de":"Standort aktualisieren","it":"Aggiorna posizione","zh":"更新位置","ja":"位置を更新","ko":"위치 업데이트","ru":"Обновить местоположение","ar":"تحديث الموقع","id":"Perbarui lokasi","tr":"Konumu güncelle"},
   epLocDone: {"es":"Ubicación actualizada","en":"Location updated","pt":"Localização atualizada","fr":"Position mise à jour","de":"Standort aktualisiert","it":"Posizione aggiornata","zh":"位置已更新","ja":"位置を更新しました","ko":"위치가 업데이트됨","ru":"Местоположение обновлено","ar":"تم تحديث الموقع","id":"Lokasi diperbarui","tr":"Konum güncellendi"},
   epLocError: {"es":"No se pudo obtener la ubicación","en":"Couldn't get your location","pt":"Não foi possível obter a localização","fr":"Impossible d'obtenir la position","de":"Standort konnte nicht ermittelt werden","it":"Impossibile ottenere la posizione","zh":"无法获取位置","ja":"位置を取得できませんでした","ko":"위치를 가져올 수 없습니다","ru":"Не удалось определить местоположение","ar":"تعذّر تحديد الموقع","id":"Tidak bisa mendapatkan lokasi","tr":"Konum alınamadı"},
+  // R160 "Con ganas de salir esta semana" — weekly ready-to-meet toggle + badge (13 languages)
+  readyTitle: {"es":"✨ Con ganas de salir esta semana","en":"✨ Up for going out this week","pt":"✨ A fim de sair esta semana","fr":"✨ Envie de sortir cette semaine","de":"✨ Diese Woche Lust auszugehen","it":"✨ Voglia di uscire questa settimana","zh":"✨ 本周想出去约会","ja":"✨ 今週は出かけたい気分","ko":"✨ 이번 주에 만나고 싶어요","ru":"✨ Хочу встретиться на этой неделе","ar":"✨ متحمس للخروج هذا الأسبوع","id":"✨ Ingin jalan minggu ini","tr":"✨ Bu hafta çıkmaya hazırım"},
+  readyHint: {"es":"Se muestra en tu perfil y expira el domingo","en":"Shown on your profile — expires on Sunday","pt":"Aparece no seu perfil e expira no domingo","fr":"Affiché sur ton profil — expire dimanche","de":"Wird in deinem Profil angezeigt und läuft am Sonntag ab","it":"Appare sul tuo profilo e scade domenica","zh":"会显示在你的资料上，周日到期","ja":"プロフィールに表示され、日曜日に期限切れになります","ko":"프로필에 표시되며 일요일에 만료돼요","ru":"Показывается в профиле и истекает в воскресенье","ar":"يظهر في ملفك الشخصي وينتهي يوم الأحد","id":"Ditampilkan di profilmu dan berakhir hari Minggu","tr":"Profilinde gösterilir, pazar günü sona erer"},
+  readyBadge: {"es":"✨ Con ganas de salir","en":"✨ Up for going out","pt":"✨ A fim de sair","fr":"✨ Envie de sortir","de":"✨ Lust auszugehen","it":"✨ Voglia di uscire","zh":"✨ 想出去约会","ja":"✨ 出かけたい気分","ko":"✨ 만나고 싶어요","ru":"✨ Хочу встретиться","ar":"✨ متحمس للخروج","id":"✨ Ingin jalan","tr":"✨ Çıkmaya hazır"},
 };
 
 // Curated interest catalog — IDENTICAL ids + categories to iOS UserInterest.swift (interest_*), so
@@ -759,6 +763,26 @@ export class AppShellComponent implements OnDestroy {
   coachMessagesRemaining(): number {
     const v = (this.firebase.userProfile() as any)?.coachMessagesRemaining;
     return typeof v === 'number' ? v : this.coachDailyCredits();
+  }
+  // R160 "Con ganas de salir esta semana" — weekly ready-to-meet toggle (own users doc).
+  // State is DERIVED from the userProfile signal (readyToMeetUntil > now), so an expired timestamp
+  // renders as OFF and a failed write auto-reverts (the signal only refreshes on success).
+  readonly readySaving = signal(false);
+  readyOn(): boolean {
+    const v: any = (this.firebase.userProfile() as any)?.readyToMeetUntil;
+    if (!v) return false;
+    const ms = typeof v.toMillis === 'function' ? v.toMillis() : (typeof v.seconds === 'number' ? v.seconds * 1000 : 0);
+    return ms > Date.now();
+  }
+  async toggleReady() {
+    if (this.readySaving()) return;                    // double-click guard while in flight
+    const next = !this.readyOn();
+    this.readySaving.set(true);
+    try {
+      await this.firebase.setReadyToMeet(next);
+      this.track('ready_to_meet_toggle', { on: next });
+    } catch { /* write failed → profile signal untouched → switch stays in its previous state */ }
+    finally { this.readySaving.set(false); }
   }
   readonly profilePhotos = signal<string[]>([]);
   readonly photosLoading = signal(false);

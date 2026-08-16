@@ -69,6 +69,14 @@ service cloud.firestore {
       // No permitir eliminar
       allow delete: if false;
 
+      // R158 "La Pregunta del Día": CF-only en LECTURA y escritura. Una lectura
+      // directa del cliente filtraría la respuesta del otro ANTES de contestar
+      // (rompe la mecánica a-ciegas). getDailyQuestion/answerDailyQuestion (admin
+      // SDK) median todo el acceso y ocultan la respuesta ajena hasta el reveal.
+      match /dailyQuestion/{dateKey} {
+        allow read, write: if false; // CF-only (privacy: blind answers)
+      }
+
       // Subcolección de MESSAGES dentro de cada match
       match /messages/{messageId} {
         // Los participantes del match pueden leer mensajes
@@ -375,6 +383,15 @@ service cloud.firestore {
       match /aiRateLimits/{fnName} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false; // CF runTransaction
+      }
+
+      // (dailyQuestion vive bajo matches/ — ver ese bloque)
+      // R157 "Tus 3 del día": shortlist diaria curada (slow dating). El doc lo escribe
+      // SOLO getDailyPicks CF (admin SDK) — cliente lee su día. create/update/delete
+      // client-side bloqueados: evita fabricar picks o razones falsas.
+      match /dailyPicks/{dateKey} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // CF-only (getDailyPicks)
       }
 
       // R151 Virtual Wardrobe: catálogo de prendas del usuario. Los items los

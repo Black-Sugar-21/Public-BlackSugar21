@@ -27,6 +27,7 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
+  deleteField,
   arrayUnion,
   serverTimestamp,
   increment,
@@ -754,6 +755,26 @@ export class FirebaseService {
     if (!u) return;
     const gh = this.encodeGeohash(lat, lng);
     await updateDoc(doc(this.db, 'users', u.uid), { latitude: lat, longitude: lng, g: gh, geohash: gh });
+    await this.refreshProfile();
+  }
+
+  /** R160 "Con ganas de salir esta semana" — weekly ready-to-meet flag (owner writes own doc).
+   *  ON → readyToMeetUntil = upcoming Monday 00:00 UTC (if today IS Monday → next Monday), so the
+   *  badge expires Sunday night. OFF → deleteField(). Refreshes the local profile signal so the
+   *  toggle reflects the new state immediately; throws on failure so the caller can revert. */
+  async setReadyToMeet(on: boolean): Promise<void> {
+    const u = this.currentUser();
+    if (!u) return;
+    if (on) {
+      const now = new Date();
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      // Days until the NEXT Monday (dow 1). Today Monday → 7 (next week's Monday).
+      const add = ((8 - d.getUTCDay()) % 7) || 7;
+      d.setUTCDate(d.getUTCDate() + add);
+      await updateDoc(doc(this.db, 'users', u.uid), { readyToMeetUntil: Timestamp.fromDate(d) });
+    } else {
+      await updateDoc(doc(this.db, 'users', u.uid), { readyToMeetUntil: deleteField() });
+    }
     await this.refreshProfile();
   }
 
