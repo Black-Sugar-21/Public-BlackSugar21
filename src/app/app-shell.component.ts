@@ -46,6 +46,14 @@ const SHELL_I18N: Record<string, Record<string, string>> = {
   dqPlaceholder: {"es":"Escribe tu respuesta…","en":"Write your answer…","pt":"Escreva sua resposta…","fr":"Écris ta réponse…","de":"Schreib deine Antwort…","it":"Scrivi la tua risposta…","zh":"写下你的回答…","ja":"回答を入力…","ko":"답을 입력하세요…","ru":"Напишите свой ответ…","ar":"اكتب إجابتك…","id":"Tulis jawabanmu…","tr":"Cevabını yaz…"},
   dqSend: {"es":"Responder","en":"Answer","pt":"Responder","fr":"Répondre","de":"Antworten","it":"Rispondi","zh":"回答","ja":"回答する","ko":"답하기","ru":"Ответить","ar":"أجب","id":"Jawab","tr":"Yanıtla"},
   dqError: {"es":"No se pudo enviar, intenta de nuevo","en":"Couldn't send, try again","pt":"Não foi possível enviar, tente de novo","fr":"Échec de l'envoi, réessaie","de":"Senden fehlgeschlagen, versuch es erneut","it":"Invio non riuscito, riprova","zh":"发送失败，请重试","ja":"送信できませんでした。もう一度お試しください","ko":"보내지 못했어요. 다시 시도하세요","ru":"Не удалось отправить, попробуйте снова","ar":"تعذّر الإرسال، حاول مجدداً","id":"Gagal mengirim, coba lagi","tr":"Gönderilemedi, tekrar dene"},
+  // R161 "La segunda opinión" — one-tap bestie verdict link + zero-click verdict chip (13 languages)
+  soAsk: {"es":"Segunda opinión","en":"Second opinion","pt":"Segunda opinião","fr":"Deuxième avis","de":"Zweite Meinung","it":"Seconda opinione","zh":"第二意见","ja":"セカンドオピニオン","ko":"세컨드 오피니언","ru":"Второе мнение","ar":"رأي ثانٍ","id":"Opini kedua","tr":"İkinci görüş"},
+  soCopied: {"es":"Enlace copiado — envíaselo a tu bestie","en":"Link copied — send it to your bestie","pt":"Link copiado — envie para sua bestie","fr":"Lien copié — envoie-le à ta bestie","de":"Link kopiert — schick ihn deiner Bestie","it":"Link copiato — mandalo alla tua bestie","zh":"链接已复制——发给你的闺蜜吧","ja":"リンクをコピーしました — 親友に送ろう","ko":"링크가 복사됐어요 — 베프에게 보내세요","ru":"Ссылка скопирована — отправь её бести","ar":"تم نسخ الرابط — أرسله لصديقك المقرّب","id":"Tautan disalin — kirim ke bestie-mu","tr":"Bağlantı kopyalandı — bestie'ne gönder"},
+  soBestieFire: {"es":"Tu bestie dice: ¡Dale! 🔥","en":"Your bestie says: Go for it! 🔥","pt":"Sua bestie diz: Vai! 🔥","fr":"Ta bestie dit : Fonce ! 🔥","de":"Deine Bestie sagt: Los! 🔥","it":"La tua bestie dice: Vai! 🔥","zh":"你的闺蜜说：冲！🔥","ja":"親友の判定：アリ！🔥","ko":"베프의 한마디: 가자! 🔥","ru":"Твоя бести говорит: Действуй! 🔥","ar":"صديقك المقرّب يقول: انطلق! 🔥","id":"Bestie-mu bilang: Gas! 🔥","tr":"Bestie'n diyor ki: Yürü! 🔥"},
+  soBestieHmm: {"es":"Tu bestie dice: Mmm… 🤔","en":"Your bestie says: Hmm… 🤔","pt":"Sua bestie diz: Hmm… 🤔","fr":"Ta bestie dit : Hmm… 🤔","de":"Deine Bestie sagt: Hmm… 🤔","it":"La tua bestie dice: Mmm… 🤔","zh":"你的闺蜜说：嗯……🤔","ja":"親友の判定：うーん…🤔","ko":"베프의 한마디: 음… 🤔","ru":"Твоя бести говорит: Хм… 🤔","ar":"صديقك المقرّب يقول: همم… 🤔","id":"Bestie-mu bilang: Hmm… 🤔","tr":"Bestie'n diyor ki: Hmm… 🤔"},
+  soBestieFlag: {"es":"Tu bestie dice: Cuidado 🚩","en":"Your bestie says: Careful 🚩","pt":"Sua bestie diz: Cuidado 🚩","fr":"Ta bestie dit : Attention 🚩","de":"Deine Bestie sagt: Vorsicht 🚩","it":"La tua bestie dice: Attenzione 🚩","zh":"你的闺蜜说：小心 🚩","ja":"親友の判定：要注意 🚩","ko":"베프의 한마디: 조심해 🚩","ru":"Твоя бести говорит: Осторожно 🚩","ar":"صديقك المقرّب يقول: احذر 🚩","id":"Bestie-mu bilang: Hati-hati 🚩","tr":"Bestie'n diyor ki: Dikkat 🚩"},
+  soErr: {"es":"No se pudo crear el enlace","en":"Couldn't create the link","pt":"Não foi possível criar o link","fr":"Impossible de créer le lien","de":"Link konnte nicht erstellt werden","it":"Impossibile creare il link","zh":"无法创建链接","ja":"リンクを作成できませんでした","ko":"링크를 만들지 못했어요","ru":"Не удалось создать ссылку","ar":"تعذّر إنشاء الرابط","id":"Gagal membuat tautan","tr":"Bağlantı oluşturulamadı"},
+  soLimit: {"es":"Demasiados enlaces por ahora, intenta más tarde","en":"Too many links for now, try again later","pt":"Muitos links por agora, tente mais tarde","fr":"Trop de liens pour l'instant, réessaie plus tard","de":"Gerade zu viele Links, versuch es später","it":"Troppi link per ora, riprova più tardi","zh":"链接创建太频繁，请稍后再试","ja":"リンクの作成が多すぎます。後でお試しください","ko":"지금은 링크가 너무 많아요. 나중에 다시 시도하세요","ru":"Слишком много ссылок, попробуйте позже","ar":"روابط كثيرة الآن، حاول لاحقاً","id":"Terlalu banyak tautan, coba lagi nanti","tr":"Şimdilik çok fazla bağlantı, sonra tekrar dene"},
   discoLocTitle: {"es":"Activa tu ubicación","en":"Enable your location","pt":"Ative sua localização","fr":"Active ta localisation","de":"Standort aktivieren","it":"Attiva la posizione","zh":"开启你的位置","ja":"位置情報をオンに","ko":"위치를 켜세요","ru":"Включите геолокацию","ar":"فعّل موقعك","id":"Aktifkan lokasimu","tr":"Konumunu aç"},
   discoLocBody: {"es":"La usamos solo para mostrarte personas cerca de ti. Nunca la compartimos con nadie.","en":"We use it only to show you people near you. We never share it with anyone.","pt":"Usamos apenas para mostrar pessoas perto de você. Nunca compartilhamos.","fr":"Nous l'utilisons uniquement pour te montrer des personnes près de toi. Jamais partagée.","de":"Wir nutzen ihn nur, um dir Menschen in deiner Nähe zu zeigen. Niemals geteilt.","it":"La usiamo solo per mostrarti persone vicine. Mai condivisa.","zh":"仅用于向你展示附近的人，绝不分享。","ja":"近くの人を表示するためだけに使用します。共有しません。","ko":"근처 사람을 보여주기 위해서만 사용해요. 공유하지 않습니다.","ru":"Используем только чтобы показать людей рядом. Никогда не передаём.","ar":"نستخدمه فقط لعرض أشخاص قريبين منك. لا نشاركه أبداً.","id":"Hanya untuk menampilkan orang di dekatmu. Tidak pernah dibagikan.","tr":"Yalnızca yakınındaki kişileri göstermek için kullanırız. Asla paylaşmayız."},
   discoLocBtn: {"es":"Activar ubicación","en":"Enable location","pt":"Ativar localização","fr":"Activer la localisation","de":"Standort aktivieren","it":"Attiva posizione","zh":"开启位置","ja":"位置情報をオンにする","ko":"위치 켜기","ru":"Включить геолокацию","ar":"تفعيل الموقع","id":"Aktifkan lokasi","tr":"Konumu aç"},
@@ -513,6 +521,65 @@ export class AppShellComponent implements OnDestroy {
     const m = this.selectedMatch(); if (!m) return;
     this.dqCollapsed.update((s) => { const n = new Set(s); n.delete(m.id); return n; });
   }
+  // ── R161 "La segunda opinión" (one-tap bestie link + zero-click verdict chip) ──────────────────
+  // ONE tap: 👀 → busy → createSecondOpinionLink → native share sheet (or clipboard + toast).
+  // Verdicts arrive at users/{uid}/secondOpinionResults via a session-long listener; the newest
+  // result for the OPEN chat renders as a slim chip above the thread, dismissible per session.
+  readonly soBusy = signal(false);
+  readonly soToast = signal('');
+  readonly soToastUrl = signal('');   // clipboard blocked → the URL itself, selectable in the toast
+  readonly soResults = signal<any[]>([]);
+  readonly soDismissed = signal<ReadonlySet<string>>(new Set<string>());
+  private soUnsub: (() => void) | null = null;
+  private soToastT: ReturnType<typeof setTimeout> | null = null;
+  /** Newest valid verdict for the OPEN chat (null → no chip). Old/malformed payloads are ignored. */
+  readonly soVerdict = computed(() => {
+    const m = this.selectedMatch();
+    if (!m || this.soDismissed().has(m.id)) return null;
+    const rows = this.soResults().filter((r: any) =>
+      r?.matchId === m.id && (r.verdict === 'fire' || r.verdict === 'hmm' || r.verdict === 'flag'));
+    if (!rows.length) return null;
+    return rows.sort((a: any, b: any) =>
+      (b.votedAt?.toMillis?.() || 0) - (a.votedAt?.toMillis?.() || 0))[0];  // newest wins
+  });
+  soVerdictText(v: any): string {
+    return this.s(v?.verdict === 'fire' ? 'soBestieFire' : v?.verdict === 'flag' ? 'soBestieFlag' : 'soBestieHmm');
+  }
+  soDismissVerdict() {
+    const m = this.selectedMatch(); if (!m) return;
+    this.soDismissed.update((s) => { const n = new Set(s); n.add(m.id); return n; });
+  }
+  /** THE one-tap ask: create the link → native share sheet, or copy + toast. Double-tap guarded. */
+  async askSecondOpinion() {
+    const m = this.selectedMatch();
+    if (!m || this.soBusy()) return;
+    this.soBusy.set(true);
+    try {
+      const r: any = await this.firebase.createSecondOpinionLink(m.id, this.lang());
+      if (r?.success && r.url) {
+        this.track('second_opinion_link_created');
+        const nav: any = navigator;
+        if (typeof nav.share === 'function') {
+          try { await nav.share({ url: r.url }); } catch { /* user closed the share sheet — fine */ }
+        } else {
+          try { await nav.clipboard.writeText(r.url); this.showSoToast(this.s('soCopied')); }
+          catch { this.showSoToast(this.s('soAsk'), r.url); }  // clipboard blocked → selectable URL
+        }
+      } else {
+        this.showSoToast(this.s(r?.error === 'rate_limit_exceeded' ? 'soLimit' : 'soErr'));
+      }
+    } catch (e: any) {
+      // HttpsError (auth/membership/resource-exhausted) → localized toast.
+      const msg = String(e?.message || e?.code || '');
+      this.showSoToast(this.s(/rate.?limit|resource.?exhausted/i.test(msg) ? 'soLimit' : 'soErr'));
+    } finally { this.soBusy.set(false); }
+  }
+  private showSoToast(text: string, url = '') {
+    if (this.soToastT) clearTimeout(this.soToastT);
+    this.soToast.set(text); this.soToastUrl.set(url);
+    // URL fallback stays longer — the user has to select+copy it by hand.
+    this.soToastT = setTimeout(() => { this.soToast.set(''); this.soToastUrl.set(''); }, url ? 9000 : 3000);
+  }
   // AI Coach DATE-SPOT suggestions (iOS PlaceSuggestionsView parity): a sheet of nearby venues to
   // share into the chat as a place card.
   readonly placeSheetOpen = signal(false);
@@ -664,6 +731,16 @@ export class AppShellComponent implements OnDestroy {
     effect(() => {
       if (this.firebase.profileChecked() && !!this.firebase.currentUser() && !this.needsOnboarding()) {
         this.refreshLocationIfPermitted();
+      }
+    });
+    // R161: bestie-verdict listener — started ONCE per signed-in session, torn down on sign-out
+    // (and in ngOnDestroy). Zero clicks: verdicts stream in and the chip appears by itself.
+    effect(() => {
+      const u = this.firebase.currentUser();
+      if (u && !this.soUnsub) {
+        this.soUnsub = this.firebase.listenSecondOpinions((rows) => this.soResults.set(rows));
+      } else if (!u && this.soUnsub) {
+        this.soUnsub(); this.soUnsub = null; this.soResults.set([]);
       }
     });
     // Load store links from Remote Config (same source as app.ts and coach-widget).
@@ -1451,5 +1528,5 @@ export class AppShellComponent implements OnDestroy {
     finally { this.obSaving.set(false); }
   }
 
-  ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); if (this.firebase.currentUser()) this.firebase.setActiveChat(null); }
+  ngOnDestroy() { if (this.unsubMatches) this.unsubMatches(); if (this.unsubMsgs) this.unsubMsgs(); if (this.soUnsub) { this.soUnsub(); this.soUnsub = null; } if (this.soToastT) clearTimeout(this.soToastT); if (this.firebase.currentUser()) this.firebase.setActiveChat(null); }
 }

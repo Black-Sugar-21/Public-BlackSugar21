@@ -136,5 +136,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/guias/mejor-app-ia.component').then(m => m.MejorAppIaGuideComponent),
     title: 'Mejor app de citas con IA en 2026 · Black Sugar 21'
   },
+  {
+    path: 'opinion/:token',
+    loadComponent: () => import('./second-opinion-page.component').then(m => m.SecondOpinionPageComponent),
+    title: 'Segunda opinión · Black Sugar 21'
+  },
   { path: '**', redirectTo: '/' }
 ];

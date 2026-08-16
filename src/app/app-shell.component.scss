@@ -418,6 +418,25 @@
       font-size:14px; line-height:1; padding:6px 12px; border-radius:999px; cursor:pointer; transition:background .15s ease; }
     .dq-chip:hover { background:rgba(212,175,55,.2); }
     @media (prefers-reduced-motion: reduce) { .dq-card { animation:none; } .dq-dot { animation:none; opacity:.8; } }
+    /* R161 "La segunda opinión" — 👀 busy spinner + bestie verdict chip + share toast. */
+    .chat-head-btn:disabled { cursor:default; }
+    .so-spin { display:inline-block; width:15px; height:15px; vertical-align:-2px; border-radius:50%;
+      border:2px solid rgba(212,175,55,.25); border-top-color:var(--gold); animation:soSpin .7s linear infinite; }
+    @keyframes soSpin { to { transform:rotate(360deg); } }
+    .so-chip { flex:none; display:flex; align-items:center; gap:8px; max-width:720px; width:calc(100% - 32px); margin:8px auto 0;
+      padding:7px 8px 7px 14px; border-radius:999px; background:rgba(212,175,55,.07); border:1px solid rgba(212,175,55,.28); animation:obFade .25s ease; }
+    .so-chip-text { flex:none; font-size:12.5px; font-weight:700; color:var(--gold); white-space:nowrap; }
+    .so-chip-comment { flex:1; min-width:0; font-size:12.5px; font-style:italic; color:var(--text-secondary);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .so-chip-x { flex:none; margin-left:auto; background:none; border:none; color:var(--text-muted); font-size:13px; cursor:pointer; padding:3px 6px; line-height:1; }
+    .so-chip-x:hover { color:var(--text-primary); }
+    .so-toast { position:fixed; left:50%; bottom:88px; transform:translateX(-50%); z-index:120; display:flex; flex-direction:column; gap:5px; align-items:center;
+      max-width:min(460px, calc(100vw - 32px)); padding:11px 18px; border-radius:14px; background:rgba(18,14,24,.96);
+      border:1px solid rgba(212,175,55,.35); color:var(--text-primary); font-size:13px; line-height:1.4; text-align:center;
+      box-shadow:0 10px 32px rgba(0,0,0,.5); animation:soToastIn .25s ease; }
+    .so-toast-url { user-select:all; -webkit-user-select:all; font-size:12px; color:var(--gold); word-break:break-all; }
+    @keyframes soToastIn { from { opacity:0; transform:translate(-50%, 8px); } to { opacity:1; transform:translate(-50%, 0); } }
+    @media (prefers-reduced-motion: reduce) { .so-chip, .so-toast { animation:none; } .so-spin { animation-duration:1.4s; } }
     /* Date-spots BOTTOM SHEET (iOS PlaceSuggestionsView) — iOS-aligned tokens only. */
     .bsheet-ov { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); animation:obFade .2s ease; }
     .bsheet { position:fixed; left:0; right:0; bottom:0; z-index:81; margin:0 auto; max-width:560px; max-height:78vh; display:flex; flex-direction:column;

@@ -203,7 +203,19 @@
                   <button class="chat-head-btn ic-bp" (click)="openBlueprintSheet()" [attr.aria-label]="s('blueprintTitle')" [attr.title]="s('blueprintTitle')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z"/><path d="M9 4v14M15 6v14"/></svg>
                   </button>
+                  <!-- R161 "La segunda opinión" — ONE tap: create link → share sheet / copy + toast. -->
+                  <button class="chat-head-btn ic-so" (click)="askSecondOpinion()" [disabled]="soBusy()" [attr.aria-label]="s('soAsk')" [attr.title]="s('soAsk')">
+                    @if (soBusy()) { <span class="so-spin" aria-hidden="true"></span> } @else { <span aria-hidden="true">👀</span> }
+                  </button>
                 </div>
+                <!-- R161: zero-click bestie verdict chip — appears by itself when a verdict lands. -->
+                @if (soVerdict(); as sv) {
+                  <div class="so-chip" role="status">
+                    <span class="so-chip-text">{{ soVerdictText(sv) }}</span>
+                    @if (sv.comment) { <em class="so-chip-comment">“{{ sv.comment }}”</em> }
+                    <button class="so-chip-x" (click)="soDismissVerdict()" aria-label="✕">✕</button>
+                  </div>
+                }
                 <!-- "Pregunta del día" — blind daily question card (hidden when the fetch fails). -->
                 @if (dqState(); as dq) {
                   @if (dqIsCollapsed()) {
@@ -993,6 +1005,14 @@
             </button>
           }
         </nav>
+      }
+
+      <!-- R161: elegant auto-hiding toast (link copied / error / selectable-URL fallback) -->
+      @if (soToast()) {
+        <div class="so-toast" role="status">
+          <span>{{ soToast() }}</span>
+          @if (soToastUrl()) { <span class="so-toast-url">{{ soToastUrl() }}</span> }
+        </div>
       }
     </div>
   

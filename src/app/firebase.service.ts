@@ -976,6 +976,29 @@ export class FirebaseService {
     return res.data;
   }
 
+  // ── R161 "La segunda opinión" — bestie verdict link + results ────────────────
+  /** Create a shareable second-opinion link for a match — createSecondOpinionLink CF.
+   *  Success: {success:true, url, expiresAt}; soft errors: {success:false, error:'rate_limit_exceeded'|…}.
+   *  THROWS HttpsError on auth/membership — caller maps it to a generic toast. */
+  async createSecondOpinionLink(matchId: string, lang: string): Promise<any> {
+    let l = (lang || '').split('-')[0];
+    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
+    const fn = httpsCallable(this.functions, 'createSecondOpinionLink');
+    const res = await fn({ matchId, userLanguage: l });
+    return res.data;
+  }
+
+  /** Live bestie verdicts (users/{uid}/secondOpinionResults — owner-only read). Each doc:
+   *  {matchId, verdict:'fire'|'hmm'|'flag', comment, votedAt}. Returns unsub fn; signed-out → cb([]).
+   *  No orderBy — docs missing votedAt must not be silently excluded; callers sort client-side. */
+  listenSecondOpinions(cb: (results: any[]) => void): () => void {
+    const u = this.currentUser();
+    if (!u) { cb([]); return () => {}; }
+    return onSnapshot(collection(this.db, 'users', u.uid, 'secondOpinionResults'), (snap) => {
+      cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, () => cb([]));
+  }
+
   /** "Tus 3 del día" — getDailyPicks CF. {success, date, cached, picks:[{uid, name, age, photoUrl,
    *  thumbUrl, distanceKm, compatibilityScore, reason}]}. Empty picks is a valid response. */
   async getDailyPicks(userLanguage: string): Promise<any> {
