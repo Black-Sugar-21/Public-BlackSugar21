@@ -386,6 +386,13 @@ service cloud.firestore {
       }
 
       // (dailyQuestion vive bajo matches/ — ver ese bloque)
+      // R161 "La segunda opinión": veredictos de amigos espejados por submitSecondOpinion
+      // CF. Solo el dueño lee; escritura CF-only (un cliente no puede fabricar veredictos).
+      match /secondOpinionResults/{token} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // CF-only (submitSecondOpinion mirror)
+      }
+
       // R157 "Tus 3 del día": shortlist diaria curada (slow dating). El doc lo escribe
       // SOLO getDailyPicks CF (admin SDK) — cliente lee su día. create/update/delete
       // client-side bloqueados: evita fabricar picks o razones falsas.
@@ -529,6 +536,13 @@ service cloud.firestore {
     // --- TESTER SIGNUPS (public write for beta enrollment from web) ---
     // Whitelist de campos + validación básica de schema.
     // TODO: añadir App Check enforcement en producción.
+    // R161 "La segunda opinión": tokens de link privado (48h). CF-only en lectura Y
+    // escritura — la página pública del amigo pasa por getSecondOpinion/submitSecondOpinion
+    // (HTTP), nunca por Firestore directo. Una lectura de cliente filtraría snapshots ajenos.
+    match /secondOpinions/{token} {
+      allow read, write: if false; // CF-only (privacy del snapshot + un-voto-por-link)
+    }
+
     match /testerSignups/{signupId} {
       allow create: if request.resource.data.keys().hasAll(['email', 'platform', 'status']) &&
         // R18 (2026-06-01): + 'language' — the web beta-signup form (Public app.ts:565) writes
