@@ -104,3 +104,12 @@ h1 {
   }
 }
 
+
+/* Last-updated stamp under the page title */
+.legal-updated {
+  opacity: 0.55;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: -0.5rem 0 1.75rem;
+  letter-spacing: 0.02em;
+}
