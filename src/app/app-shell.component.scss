@@ -545,12 +545,29 @@
       .shell-side { display:none; }
       .shell { flex-direction:column; }
       /* Bottom-nav height + iOS home-indicator safe area so content never sits under the bar. */
-      .shell-main { padding-bottom:calc(60px + env(safe-area-inset-bottom, 0px)); }
-      .shell-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:60px; padding-bottom:env(safe-area-inset-bottom, 0px);
-        background:var(--bg-sidebar); border-top:1px solid rgba(255,255,255,.1); z-index:50; }
-      .shell-tab { flex:1; display:flex; align-items:center; justify-content:center; background:none; border:none; color:var(--text-muted); cursor:pointer; min-width:0; }
-      .shell-tab-ic { display:inline-flex; align-items:center; justify-content:center; width:27px; height:27px; }
+      .shell-main { padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
+      /* iOS-replica tab bar: translucent blur material + icon-over-label + press feedback. */
+      .shell-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:64px; padding-bottom:env(safe-area-inset-bottom, 0px);
+        background:color-mix(in srgb, var(--bg-sidebar) 78%, transparent); border-top:0.5px solid rgba(255,255,255,.12); z-index:50;
+        -webkit-backdrop-filter:blur(22px) saturate(180%); backdrop-filter:blur(22px) saturate(180%); }
+      @supports not (backdrop-filter: blur(1px)) { .shell-tabs { background:var(--bg-sidebar); } }
+      .shell-tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+        background:none; border:none; color:var(--text-muted); cursor:pointer; min-width:0; padding:6px 0 4px;
+        -webkit-tap-highlight-color:transparent; }
+      .shell-tab-ic { position:relative; display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
+        transition:transform .18s cubic-bezier(.25,.46,.45,.94); }
+      .shell-tab:active .shell-tab-ic { transform:scale(.86); }
+      .shell-tab-lbl { font-size:10px; font-weight:600; letter-spacing:.02em; line-height:1; max-width:100%;
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .shell-tab.active { color:var(--gold); }
+      /* iOS-style red unread badge on the Chats tab. */
+      .shell-tab-badge { position:absolute; top:-4px; right:-9px; min-width:16px; height:16px; padding:0 4px;
+        border-radius:999px; background:#ff3b30; color:#fff; font-size:10px; font-weight:700; line-height:16px;
+        text-align:center; box-shadow:0 0 0 2px color-mix(in srgb, var(--bg-sidebar) 85%, transparent); }
+      /* Native-feel tab switch: each section mounts with a subtle iOS push-fade. */
+      .shell-main > * { animation:tab-in .28s cubic-bezier(.25,.46,.45,.94); }
+      @keyframes tab-in { from { opacity:.0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+      @media (prefers-reduced-motion: reduce) { .shell-main > * { animation:none; } .shell-tab-ic { transition:none; } }
     }
     /* ── R150 Dating Journey card ────────────────────────────────────────────── */
     .pf-journey-skel { height:106px; border-radius:18px; background:var(--bg-card); animation:skel-pulse 1.4s ease-in-out infinite; }

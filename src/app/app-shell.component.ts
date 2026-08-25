@@ -1101,6 +1101,8 @@ export class AppShellComponent implements OnDestroy {
     if (this.unsubMsgs) { this.unsubMsgs(); this.unsubMsgs = null; }
     this.firebase.setActiveChat(null);  // no longer viewing → push resumes
   }
+  /** Total unread chats — red badge on the Chats tab (iOS tab-badge parity). */
+  readonly unreadTabCount = computed(() => this.matches().reduce((n, m) => n + (this.isUnread(m) ? 1 : 0), 0));
   /** Unread = the last message is from the other user and newer than my lastSeen (iOS unread parity). */
   isUnread(m: any): boolean {
     if (!m || !m.lastMessageSenderId || m.lastMessageSenderId === this.myUid()) return false;

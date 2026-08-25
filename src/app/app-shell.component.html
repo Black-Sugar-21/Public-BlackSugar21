@@ -1001,7 +1001,12 @@
         <nav class="shell-tabs">
           @for (it of navItems; track it.key) {
             <button class="shell-tab" [class.active]="section() === it.key" (click)="go(it.key)">
-              <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" /></span>
+              <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" />
+                @if (it.key === 'chats' && unreadTabCount() > 0) {
+                  <span class="shell-tab-badge">{{ unreadTabCount() > 9 ? '9+' : unreadTabCount() }}</span>
+                }
+              </span>
+              <span class="shell-tab-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
             </button>
           }
         </nav>
