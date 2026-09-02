@@ -39,7 +39,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   // Hero carousel (signals for reliable change detection)
   currentSlide = signal(0);
   private carouselInterval: any;
-  private readonly totalSlides = 8;
+  private readonly totalSlides = 7;
 
   showTesterModal = signal(false);
   testerEmail = signal('');
