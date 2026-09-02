@@ -445,3 +445,6 @@
 .cw-profile-like { border-color:rgba(212,175,55,.6); color:var(--gold, #d4af37); }
 .cw-profile-state { font-size:12px; font-weight:600; margin-top:4px; opacity:.9; }
 .cw-profile-matched { color:var(--gold, #d4af37); }
+
+.cw-profile-verified { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px;
+  margin-left:5px; border-radius:50%; background:#3b9eff; color:#fff; font-size:10px; font-weight:800; line-height:1; }

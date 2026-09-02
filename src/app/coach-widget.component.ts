@@ -28,7 +28,7 @@ interface SuggestionItem {
 // R164: AI-curated profile card shown inside the coach chat (authed users only).
 interface CoachProfileCard {
   uid: string; name: string; age: number | null; photoUrl: string | null;
-  reason: string; readyToMeet: boolean; state?: 'idle' | 'liked' | 'passed' | 'matched';
+  reason: string; readyToMeet: boolean; verified: boolean; state?: 'idle' | 'liked' | 'passed' | 'matched';
 }
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
@@ -1741,7 +1741,9 @@ export class CoachWidgetComponent implements OnDestroy {
       ? r.profileSuggestions.filter((x: any) => x && typeof x.uid === 'string').slice(0, 3).map((x: any) => ({
         uid: String(x.uid), name: String(x.name || ''), age: Number.isFinite(x.age) ? x.age : null,
         photoUrl: typeof x.photoUrl === 'string' ? x.photoUrl : null,
-        reason: String(x.reason || ''), readyToMeet: x.readyToMeet === true, state: 'idle' as const,
+        reason: String(x.reason || ''), readyToMeet: x.readyToMeet === true,
+        verified: x.verified === true, // R165 trust badge
+        state: 'idle' as const,
       }))
       : [];
     return {

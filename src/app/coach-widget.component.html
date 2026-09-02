@@ -230,6 +230,7 @@
                         @else { <span class="cw-profile-photo cw-profile-letter">{{ (pr.name || '?').charAt(0) }}</span> }
                         <span class="cw-profile-body">
                           <span class="cw-profile-name">{{ pr.name }}<ng-container *ngIf="pr.age">, {{ pr.age }}</ng-container>
+                            @if (pr.verified) { <span class="cw-profile-verified" title="Verificado">✓</span> }
                             @if (pr.readyToMeet) { <span class="cw-profile-ready">🔥</span> }
                           </span>
                           <span class="cw-profile-reason">{{ pr.reason }}</span>

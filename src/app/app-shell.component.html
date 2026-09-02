@@ -102,7 +102,7 @@
                             @if (!pk.thumbUrl && !pk.photoUrl) { <div class="picks-nophoto">✦</div> }
                             @if (pk.compatibilityScore != null) { <span class="picks-score">{{ pk.compatibilityScore }}%</span> }
                           </div>
-                          <div class="picks-name">{{ pk.name }}@if (pk.age) { <span>, {{ pk.age }}</span> }</div>
+                          <div class="picks-name">{{ pk.name }}@if (pk.age) { <span>, {{ pk.age }}</span> }@if (pk.verified) { <span class="vf-check" [title]="s('verifiedBadge')">✓</span> }</div>
                           @if (pk.distanceKm != null) { <span class="picks-km">📍 {{ picksKm(pk.distanceKm) }}</span> }
                           @if (pk.readyToMeet) { <span class="picks-ready">{{ s('readyBadge') }}</span> }
                           @if (pk.reason) { <p class="picks-reason">{{ pk.reason }}</p> }
@@ -134,6 +134,8 @@
                         </div>
                         <!-- R160: ready-to-meet pill (safe access — old cached payloads won't have it) -->
                         @if (p.readyToMeet === true) { <div class="disco-ready">{{ s('readyBadge') }}</div> }
+                        <!-- R165: trust badge (CF-only field, never client-written) -->
+                        @if (p.verified === true) { <div class="disco-verified">✓ {{ s('verifiedBadge') }}</div> }
                         <div class="disco-meta near">↗ {{ s('near') }}</div>
                         @if (p.compatibilityScore != null) {
                           <div class="disco-meta chem">✦ {{ s('chemistry') }} <b>{{ p.compatibilityScore }}%</b></div>
