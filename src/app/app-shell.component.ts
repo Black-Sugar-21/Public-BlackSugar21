@@ -452,7 +452,16 @@ export class AppShellComponent implements OnDestroy {
   private coachInsightsFor = '';
   private coachInsightsDismissed = '';
   private lastCoachFetch = 0;
-  private resetCoachInsights() { this.coachInsights.set(null); this.coachInsightsLoading.set(false); this.coachInsightsExpanded.set(false); this.coachInsightsFor = ''; this.coachInsightsDismissed = ''; this.lastCoachFetch = 0; }
+  private coachInsightsAutoTimer: ReturnType<typeof setTimeout> | null = null;
+  // Dynamic-chat UX: an ignored info card is a stale fixture, not a message — it self-hides
+  // instead of camping over the conversation. Engaging with it (expand/use) cancels the timer;
+  // it can still resurface on the next natural tips refresh (45s cooldown above).
+  private static readonly COACH_INSIGHTS_AUTO_HIDE_MS = 16000;
+  private resetCoachInsights() {
+    this.coachInsights.set(null); this.coachInsightsLoading.set(false); this.coachInsightsExpanded.set(false);
+    this.coachInsightsFor = ''; this.coachInsightsDismissed = ''; this.lastCoachFetch = 0;
+    if (this.coachInsightsAutoTimer) { clearTimeout(this.coachInsightsAutoTimer); this.coachInsightsAutoTimer = null; }
+  }
   private async maybeFetchCoachInsights(matchId: string) {
     if (!matchId || matchId === this.coachInsightsDismissed) return;
     const now = Date.now();
@@ -460,12 +469,34 @@ export class AppShellComponent implements OnDestroy {
     this.lastCoachFetch = now; this.coachInsightsFor = matchId;
     this.coachInsightsLoading.set(true);
     const r = await this.firebase.getRealtimeCoachTips(matchId, this.lang());
-    if (this.coachInsightsFor === matchId && r && r.tips.length) this.coachInsights.set(r);
+    if (this.coachInsightsFor === matchId && r && r.tips.length) {
+      this.coachInsights.set(r);
+      this.armCoachInsightsAutoHide();
+    }
     this.coachInsightsLoading.set(false);
   }
-  toggleCoachInsights() { this.coachInsightsExpanded.update((v) => !v); }
-  dismissCoachInsights() { this.coachInsightsDismissed = this.selectedMatch()?.id || ''; this.coachInsights.set(null); this.coachInsightsExpanded.set(false); }
-  useCoachAction(text: string) { this.chatText = text; }
+  private armCoachInsightsAutoHide() {
+    if (this.coachInsightsAutoTimer) clearTimeout(this.coachInsightsAutoTimer);
+    this.coachInsightsAutoTimer = setTimeout(() => {
+      // Only auto-hide if the user never engaged (expanding = "I'm reading this now").
+      if (!this.coachInsightsExpanded()) { this.coachInsights.set(null); }
+      this.coachInsightsAutoTimer = null;
+    }, AppShellComponent.COACH_INSIGHTS_AUTO_HIDE_MS);
+  }
+  toggleCoachInsights() {
+    this.coachInsightsExpanded.update((v) => !v);
+    // Engaged with it → stop the countdown; a manual ✕ is now how it goes away.
+    if (this.coachInsightsExpanded() && this.coachInsightsAutoTimer) { clearTimeout(this.coachInsightsAutoTimer); this.coachInsightsAutoTimer = null; }
+  }
+  dismissCoachInsights() {
+    this.coachInsightsDismissed = this.selectedMatch()?.id || ''; this.coachInsights.set(null); this.coachInsightsExpanded.set(false);
+    if (this.coachInsightsAutoTimer) { clearTimeout(this.coachInsightsAutoTimer); this.coachInsightsAutoTimer = null; }
+  }
+  useCoachAction(text: string) {
+    this.chatText = text;
+    // Using the suggested action IS engagement — cancel the auto-hide countdown.
+    if (this.coachInsightsAutoTimer) { clearTimeout(this.coachInsightsAutoTimer); this.coachInsightsAutoTimer = null; }
+  }
   // ── "Pregunta del día" (blind daily question, getDailyQuestion/answerDailyQuestion CFs) ────────
   // Loaded ONCE per matchId per session (cache map). Fetch failure → dqState=null → card hidden;
   // the daily question NEVER blocks the chat. ✕ collapses per session; the ✨ chip re-expands.
