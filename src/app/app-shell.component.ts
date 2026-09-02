@@ -328,6 +328,9 @@ export class AppShellComponent implements OnDestroy {
   readonly showWardrobe = signal(false);
   // R155: RC `wardrobe_enabled` kill-switch (simplicity pass, default hidden). Loaded once.
   readonly wardrobeEnabled = signal(false);
+  // R164: legacy swipe Discover tab hidden by default (RC `discovery_tab_enabled`) — coach matchmaker replaces it.
+  readonly discoveryTabEnabled = signal(false);
+  readonly visibleNavItems = computed(() => this.discoveryTabEnabled() ? this.navItems : this.navItems.filter((it) => it.key !== 'discovery'));
   readonly showConfirm = signal(false);
   // Discovery feed state (real feed via getDiscoveryFeed, like/pass via recordSwipe)
   readonly discoProfiles = signal<any[]>([]);
@@ -751,6 +754,10 @@ export class AppShellComponent implements OnDestroy {
     // R155: wardrobe visibility flag (simplicity pass) — hidden unless RC enables it.
     if (this.isBrowser) {
       this.firebase.isWardrobeEnabled().then((on) => this.wardrobeEnabled.set(on)).catch(() => { /* stays hidden */ });
+      this.firebase.isDiscoveryTabEnabled().then((on) => {
+        this.discoveryTabEnabled.set(on);
+        if (!on && this.section() === 'discovery') this.go('coach'); // tab hidden → never strand the user there
+      }).catch(() => { /* stays hidden */ });
     }
   }
 

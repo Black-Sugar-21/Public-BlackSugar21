@@ -25,8 +25,14 @@ interface SuggestionItem {
   bestFor?: string | null;
   score?: number | null;
 }
+// R164: AI-curated profile card shown inside the coach chat (authed users only).
+interface CoachProfileCard {
+  uid: string; name: string; age: number | null; photoUrl: string | null;
+  reason: string; readyToMeet: boolean; state?: 'idle' | 'liked' | 'passed' | 'matched';
+}
 interface Msg {
   role: 'coach' | 'user'; text: string; typing?: boolean;
+  profiles?: CoachProfileCard[]; // R164 coach matchmaker cards
   places?: PlaceCard[]; phrases?: SuggestionItem[]; phrasesInitialVisible?: number; phraseMeta?: { perspective: string; why: string | null }[]; needLocation?: boolean; sim?: SimResult; mv?: MvResult;
   areaEvents?: AreaEvent[]; // distinct "events near you" card (Google-grounded, no IG needed)
   ask?: boolean; q?: string; fb?: 'up' | 'down'; // feedback affordance on coach answers
@@ -1658,6 +1664,32 @@ export class CoachWidgetComponent implements OnDestroy {
     return h ? 'https://instagram.com/' + h : null;
   }
 
+  // R164: matchmaker card strings (13 langs, neutral register).
+  private static readonly PROFILES_I18N: Record<string, Record<string, string>> = {
+    title: { es: 'Elegidos para ti', en: 'Picked for you', pt: 'Escolhidos para você', fr: 'Choisis pour toi', de: 'Für dich ausgewählt', it: 'Scelti per te', ja: 'あなたのために選びました', zh: '为你精选', ru: 'Выбраны для тебя', ar: 'مختارون لك', id: 'Dipilih untukmu', ko: '당신을 위해 골랐어요', tr: 'Senin için seçildi' },
+    like: { es: 'Me gusta', en: 'Like', pt: 'Curtir', fr: "J'aime", de: 'Gefällt mir', it: 'Mi piace', ja: 'いいね', zh: '喜欢', ru: 'Нравится', ar: 'إعجاب', id: 'Suka', ko: '좋아요', tr: 'Beğen' },
+    pass: { es: 'Pasar', en: 'Pass', pt: 'Passar', fr: 'Passer', de: 'Weiter', it: 'Passa', ja: 'スキップ', zh: '跳过', ru: 'Пропустить', ar: 'تخطّي', id: 'Lewati', ko: '넘기기', tr: 'Geç' },
+    liked: { es: '❤️ Enviado', en: '❤️ Sent', pt: '❤️ Enviado', fr: '❤️ Envoyé', de: '❤️ Gesendet', it: '❤️ Inviato', ja: '❤️ 送信済み', zh: '❤️ 已发送', ru: '❤️ Отправлено', ar: '❤️ أُرسل', id: '❤️ Terkirim', ko: '❤️ 보냈어요', tr: '❤️ Gönderildi' },
+    matched: { es: '¡Es match! 🎉', en: "It's a match! 🎉", pt: 'Deu match! 🎉', fr: "C'est un match ! 🎉", de: 'Ein Match! 🎉', it: 'È un match! 🎉', ja: 'マッチしました！🎉', zh: '配对成功！🎉', ru: 'Это мэтч! 🎉', ar: 'إنه توافق! 🎉', id: 'Match! 🎉', ko: '매치됐어요! 🎉', tr: 'Eşleştiniz! 🎉' },
+  };
+  pfT(key: string): string {
+    const m = (this.constructor as typeof CoachWidgetComponent).PROFILES_I18N[key] || {};
+    return m[this.coachLang()] || m['es'] || '';
+  }
+  /** R164: like/pass a coach-suggested profile — reuses the deck's recordSwipe flow. */
+  async actOnProfile(msg: Msg, p: CoachProfileCard, action: 'like' | 'pass') {
+    if (p.state && p.state !== 'idle') return;
+    const setState = (state: CoachProfileCard['state']) =>
+      this.messages.update((arr) => arr.map((m) => m === msg
+        ? { ...m, profiles: (m.profiles || []).map((x) => x.uid === p.uid ? { ...x, state } : x) }
+        : m));
+    setState(action === 'like' ? 'liked' : 'passed');
+    try {
+      const matchId = await this.firebase.recordSwipe(p.uid, action);
+      if (action === 'like' && matchId) setState('matched');
+    } catch { /* optimistic state kept — swipe is retried naturally on next feed pass */ }
+  }
+
   private mapAuthCoachResponse(r: any): any {
     const acts = Array.isArray(r?.activitySuggestions) ? r.activitySuggestions : [];
     const places = acts.map((a: any) => ({
@@ -1704,8 +1736,17 @@ export class CoachWidgetComponent implements OnDestroy {
         category: String(e.category || ''), instagram: e.instagram ? String(e.instagram) : null,
       }))
       : [];
+    // R164: coach matchmaker — ≤3 AI-vetted profiles with a personal reason each.
+    const profiles: CoachProfileCard[] = Array.isArray(r?.profileSuggestions)
+      ? r.profileSuggestions.filter((x: any) => x && typeof x.uid === 'string').slice(0, 3).map((x: any) => ({
+        uid: String(x.uid), name: String(x.name || ''), age: Number.isFinite(x.age) ? x.age : null,
+        photoUrl: typeof x.photoUrl === 'string' ? x.photoUrl : null,
+        reason: String(x.reason || ''), readyToMeet: x.readyToMeet === true, state: 'idle' as const,
+      }))
+      : [];
     return {
       reply: (r && typeof r.reply === 'string') ? r.reply : '',
+      profiles: profiles.length ? profiles : undefined,
       places: places.length ? places : undefined,
       phrases: suggestions.length ? suggestions : undefined,
       phrasesInitialVisible: initialVisible,
@@ -1791,7 +1832,7 @@ export class CoachWidgetComponent implements OnDestroy {
             ...(payload.lat != null && payload.lng != null ? { lat: payload.lat, lng: payload.lng } : {}),
           });
           const mapped = this.mapAuthCoachResponse(r);
-          if (mapped.reply || mapped.places || mapped.phrases) data = mapped;
+          if (mapped.reply || mapped.places || mapped.phrases || mapped.profiles) data = mapped;
         } catch { /* e.g. web-only account without a profile → fall back to the demo coach */ }
       }
       if (data === null) {
@@ -1835,7 +1876,7 @@ export class CoachWidgetComponent implements OnDestroy {
       if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation || data?.areaEvents?.length) {
         // structured result — show immediately with attachments (no typewriter)
-        this.messages.update((m) => [...m, { role: 'coach', text: reply, places: data.places, phrases: data.phrases, phrasesInitialVisible: data.phrasesInitialVisible, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, areaEvents: data.areaEvents, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
+        this.messages.update((m) => [...m, { role: 'coach', text: reply, profiles: data.profiles, places: data.places, phrases: data.phrases, phrasesInitialVisible: data.phrasesInitialVisible, phraseMeta: Array.isArray(data.phraseMeta) ? data.phraseMeta : undefined, needLocation: data.needLocation, areaEvents: data.areaEvents, ask: !!(data.places?.length || data.phrases?.length), q: this.lastUserMsg }]);
         this.scroll();
       } else {
         await this.typewrite(reply);

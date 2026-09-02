@@ -496,6 +496,16 @@ export class FirebaseService {
     }
   }
 
+  /** R164: legacy swipe Discover tab gate — RC `discovery_tab_enabled`, default false (coach matchmaker replaces it). */
+  async isDiscoveryTabEnabled(): Promise<boolean> {
+    try {
+      await fetchAndActivate(this.remoteConfig);
+      return getBoolean(this.remoteConfig, 'discovery_tab_enabled');
+    } catch {
+      return false;
+    }
+  }
+
   // Minimum Age by Country (from Remote Config)
   async getMinimumAgeByCountry(): Promise<Record<string, number>> {
     try {

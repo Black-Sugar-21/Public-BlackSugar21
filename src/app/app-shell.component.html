@@ -28,7 +28,7 @@
         <a routerLink="/" class="shell-brand"><span class="shell-spark">✦</span> Black Sugar <b>21</b></a>
         @if (!needsOnboarding()) {
           <nav class="shell-nav">
-            @for (it of navItems; track it.key) {
+            @for (it of visibleNavItems(); track it.key) {
               <button class="shell-nav-item" [class.active]="section() === it.key" (click)="go(it.key)">
                 <span class="shell-nav-ic"><app-shell-nav-icon [name]="it.key" /></span><span class="shell-nav-lbl">{{ s(it.key === 'coach' ? 'coach' : it.key) }}</span>
               </button>
@@ -999,7 +999,7 @@
       <!-- Mobile bottom nav (hidden during the onboarding gate) -->
       @if (!needsOnboarding()) {
         <nav class="shell-tabs">
-          @for (it of navItems; track it.key) {
+          @for (it of visibleNavItems(); track it.key) {
             <button class="shell-tab" [class.active]="section() === it.key" (click)="go(it.key)">
               <span class="shell-tab-ic"><app-shell-nav-icon [name]="it.key" />
                 @if (it.key === 'chats' && unreadTabCount() > 0) {
