@@ -1107,6 +1107,13 @@ export class CoachWidgetComponent implements OnDestroy {
           if (this.messages().length === 0) this.messages.set([{ role: 'coach', text: this.t().greeting }]);
         });
       });
+      // R157-rescue: one effect covers every open path (toggle, hero CTA, embedded shell) —
+      // the moment the panel is open AND the user is signed in, greet with today's picks.
+      effect(() => {
+        const u = this.firebase.currentUser();
+        const isOpen = this.open();
+        if (u && isOpen) untracked(() => { this.maybeGreetWithDailyPicks(); });
+      });
     }
   }
 
@@ -1670,12 +1677,39 @@ export class CoachWidgetComponent implements OnDestroy {
     like: { es: 'Me gusta', en: 'Like', pt: 'Curtir', fr: "J'aime", de: 'Gefällt mir', it: 'Mi piace', ja: 'いいね', zh: '喜欢', ru: 'Нравится', ar: 'إعجاب', id: 'Suka', ko: '좋아요', tr: 'Beğen' },
     pass: { es: 'Pasar', en: 'Pass', pt: 'Passar', fr: 'Passer', de: 'Weiter', it: 'Passa', ja: 'スキップ', zh: '跳过', ru: 'Пропустить', ar: 'تخطّي', id: 'Lewati', ko: '넘기기', tr: 'Geç' },
     liked: { es: '❤️ Enviado', en: '❤️ Sent', pt: '❤️ Enviado', fr: '❤️ Envoyé', de: '❤️ Gesendet', it: '❤️ Inviato', ja: '❤️ 送信済み', zh: '❤️ 已发送', ru: '❤️ Отправлено', ar: '❤️ أُرسل', id: '❤️ Terkirim', ko: '❤️ 보냈어요', tr: '❤️ Gönderildi' },
+    dailyIntro: { es: '✨ Tus 3 del día — mira lo que encontré hoy para ti:', en: '✨ Your 3 of the day — look what I found for you today:', pt: '✨ Seus 3 do dia — veja o que encontrei para você hoje:', fr: "✨ Tes 3 du jour — regarde ce que j'ai trouvé pour toi aujourd'hui :", de: '✨ Deine 3 des Tages — schau, was ich heute für dich gefunden habe:', it: '✨ I tuoi 3 del giorno — guarda cosa ho trovato per te oggi:', ja: '✨ 今日の3人 — 今日あなたのために見つけた人たちです：', zh: '✨ 你的每日精选3位——看看我今天为你找到了谁：', ru: '✨ Твоя тройка дня — смотри, кого я сегодня для тебя нашёл:', ar: '✨ اختياراتك الثلاثة اليوم — انظر من وجدت لك اليوم:', id: '✨ 3 pilihanmu hari ini — lihat siapa yang kutemukan untukmu:', ko: '✨ 오늘의 3인 — 오늘 당신을 위해 찾은 사람들이에요:', tr: '✨ Günün 3 seçimin — bugün senin için bulduklarıma bak:' },
     matched: { es: '¡Es match! 🎉', en: "It's a match! 🎉", pt: 'Deu match! 🎉', fr: "C'est un match ! 🎉", de: 'Ein Match! 🎉', it: 'È un match! 🎉', ja: 'マッチしました！🎉', zh: '配对成功！🎉', ru: 'Это мэтч! 🎉', ar: 'إنه توافق! 🎉', id: 'Match! 🎉', ko: '매치됐어요! 🎉', tr: 'Eşleştiniz! 🎉' },
   };
   pfT(key: string): string {
     const m = (this.constructor as typeof CoachWidgetComponent).PROFILES_I18N[key] || {};
     return m[this.coachLang()] || m['es'] || '';
   }
+  // R157-rescue: proactive daily-picks greeting. With the Discover tab hidden (R164),
+  // "Tus 3 del día" lost its surface — the coach now presents them itself on open.
+  // Server-driven lifecycle: getDailyPicks re-filters swiped picks (R159), so once the
+  // user likes/passes all 3 the greeting stops appearing until tomorrow's picks. No
+  // local per-day marker needed — consistent across devices.
+  private pickGreetDone = false;
+  private async maybeGreetWithDailyPicks() {
+    if (this.pickGreetDone || !this.isBrowser || !this.firebase.currentUser()) return;
+    this.pickGreetDone = true; // set BEFORE the await so rapid open/close can't double-fire
+    try {
+      const r = await this.firebase.getDailyPicks(this.coachLang());
+      const picks = Array.isArray(r?.picks) ? r.picks.filter((p: any) => p && typeof p.uid === 'string').slice(0, 3) : [];
+      if (!picks.length) return; // empty pool / all handled → no greeting (never an empty hello)
+      // Same-session dedupe: a restored conversation may already contain today's greeting.
+      if (this.messages().some((m) => m.profiles?.length && m.text === this.pfT('dailyIntro'))) return;
+      const profiles: CoachProfileCard[] = picks.map((p: any) => ({
+        uid: String(p.uid), name: String(p.name || ''), age: Number.isFinite(p.age) ? p.age : null,
+        photoUrl: typeof p.photoUrl === 'string' ? p.photoUrl : null,
+        reason: String(p.reason || ''), readyToMeet: p.readyToMeet === true,
+        verified: p.verified === true, state: 'idle' as const,
+      }));
+      this.messages.update((m) => [...m, { role: 'coach', text: this.pfT('dailyIntro'), profiles }]);
+      setTimeout(() => this.scrollMessagesToBottom(), 80);
+    } catch { this.pickGreetDone = false; /* transient failure → retry on next open */ }
+  }
+
   /** R164: like/pass a coach-suggested profile — reuses the deck's recordSwipe flow. */
   async actOnProfile(msg: Msg, p: CoachProfileCard, action: 'like' | 'pass') {
     if (p.state && p.state !== 'idle') return;
