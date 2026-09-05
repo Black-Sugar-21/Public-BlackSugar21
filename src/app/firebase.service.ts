@@ -1017,6 +1017,47 @@ export class FirebaseService {
     return res.data;
   }
 
+  /** Full public profile behind a coach suggestion card. The card payload is deliberately
+   *  minimal (never birthDate/coords), so the detail is read on demand from users/{uid} and the
+   *  photos are signed through getBatchPhotoUrls — the same pair of reads the apps perform.
+   *  Returns null on ANY failure: a detail we cannot load must never break the conversation. */
+  async getPublicProfile(uid: string): Promise<{ bio: string | null; interests: string[]; photos: string[]; age: number | null; verified: boolean } | null> {
+    try {
+      const snap = await getDoc(doc(this.db, 'users', uid));
+      if (!snap.exists()) return null;
+      const d: any = snap.data();
+      if (d['accountStatus'] && d['accountStatus'] !== 'active') return null;
+      if (d['paused'] === true) return null;
+
+      const pictureNames: string[] = Array.isArray(d['pictures']) ? d['pictures'].filter((x: any) => typeof x === 'string' && x) : [];
+      let photos: string[] = [];
+      if (pictureNames.length) {
+        try {
+          const fn = httpsCallable(this.functions, 'getBatchPhotoUrls');
+          const res: any = await fn({ photoRequests: [{ userId: uid, pictureNames: pictureNames.slice(0, 6), includeThumb: false }] });
+          photos = (res?.data?.urls?.[uid] || []).map((e: any) => e?.url).filter(Boolean);
+        } catch { /* photos are optional — the card photo still shows */ }
+      }
+
+      let age: number | null = null;
+      const bd = d['birthDate']?.toDate?.();
+      if (bd instanceof Date && !isNaN(bd.getTime())) {
+        const now = new Date();
+        age = now.getFullYear() - bd.getFullYear() - (now < new Date(now.getFullYear(), bd.getMonth(), bd.getDate()) ? 1 : 0);
+      }
+
+      return {
+        bio: typeof d['bio'] === 'string' && d['bio'].trim() ? d['bio'].trim() : null,
+        interests: Array.isArray(d['interests']) ? d['interests'].filter((x: any) => typeof x === 'string') : [],
+        photos,
+        age,
+        verified: d['verified'] === true,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   /** Own profile gender (users/{uid}.male). null when signed out or the field is missing.
    *  Prefers the already-loaded userProfile signal (loadUserProfile spreads the raw doc) to
    *  avoid an extra Firestore read; falls back to a one-shot doc get. */

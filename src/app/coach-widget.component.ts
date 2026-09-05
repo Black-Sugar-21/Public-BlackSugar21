@@ -1678,6 +1678,11 @@ export class CoachWidgetComponent implements OnDestroy {
     pass: { es: 'Pasar', en: 'Pass', pt: 'Passar', fr: 'Passer', de: 'Weiter', it: 'Passa', ja: 'スキップ', zh: '跳过', ru: 'Пропустить', ar: 'تخطّي', id: 'Lewati', ko: '넘기기', tr: 'Geç' },
     liked: { es: '❤️ Enviado', en: '❤️ Sent', pt: '❤️ Enviado', fr: '❤️ Envoyé', de: '❤️ Gesendet', it: '❤️ Inviato', ja: '❤️ 送信済み', zh: '❤️ 已发送', ru: '❤️ Отправлено', ar: '❤️ أُرسل', id: '❤️ Terkirim', ko: '❤️ 보냈어요', tr: '❤️ Gönderildi' },
     dailyIntro: { es: '✨ Tus 3 del día — mira lo que encontré hoy para ti:', en: '✨ Your 3 of the day — look what I found for you today:', pt: '✨ Seus 3 do dia — veja o que encontrei para você hoje:', fr: "✨ Tes 3 du jour — regarde ce que j'ai trouvé pour toi aujourd'hui :", de: '✨ Deine 3 des Tages — schau, was ich heute für dich gefunden habe:', it: '✨ I tuoi 3 del giorno — guarda cosa ho trovato per te oggi:', ja: '✨ 今日の3人 — 今日あなたのために見つけた人たちです：', zh: '✨ 你的每日精选3位——看看我今天为你找到了谁：', ru: '✨ Твоя тройка дня — смотри, кого я сегодня для тебя нашёл:', ar: '✨ اختياراتك الثلاثة اليوم — انظر من وجدت لك اليوم:', id: '✨ 3 pilihanmu hari ini — lihat siapa yang kutemukan untukmu:', ko: '✨ 오늘의 3인 — 오늘 당신을 위해 찾은 사람들이에요:', tr: '✨ Günün 3 seçimin — bugün senin için bulduklarıma bak:' },
+    view: { es: 'Ver perfil', en: 'View profile', pt: 'Ver perfil', fr: 'Voir le profil', de: 'Profil ansehen', it: 'Vedi profilo', ja: 'プロフィールを見る', zh: '查看资料', ru: 'Смотреть профиль', ar: 'عرض الملف', id: 'Lihat profil', ko: '프로필 보기', tr: 'Profili gör' },
+    about: { es: 'Sobre mí', en: 'About me', pt: 'Sobre mim', fr: 'À propos', de: 'Über mich', it: 'Su di me', ja: '自己紹介', zh: '关于我', ru: 'Обо мне', ar: 'نبذة عني', id: 'Tentang saya', ko: '자기소개', tr: 'Hakkımda' },
+    interests: { es: 'Intereses', en: 'Interests', pt: 'Interesses', fr: 'Centres d\'intérêt', de: 'Interessen', it: 'Interessi', ja: '興味', zh: '兴趣', ru: 'Интересы', ar: 'الاهتمامات', id: 'Minat', ko: '관심사', tr: 'İlgi alanları' },
+    noBio: { es: 'Todavía no escribió nada sobre sí.', en: "They haven't written anything yet.", pt: 'Ainda não escreveu nada.', fr: "N'a encore rien écrit.", de: 'Hat noch nichts geschrieben.', it: 'Non ha ancora scritto nulla.', ja: 'まだ何も書いていません。', zh: '还没有写任何介绍。', ru: 'Пока ничего не написал(а).', ar: 'لم يكتب شيئًا بعد.', id: 'Belum menulis apa pun.', ko: '아직 아무것도 쓰지 않았어요.', tr: 'Henüz bir şey yazmamış.' },
+    close: { es: 'Cerrar', en: 'Close', pt: 'Fechar', fr: 'Fermer', de: 'Schließen', it: 'Chiudi', ja: '閉じる', zh: '关闭', ru: 'Закрыть', ar: 'إغلاق', id: 'Tutup', ko: '닫기', tr: 'Kapat' },
     matched: { es: '¡Es match! 🎉', en: "It's a match! 🎉", pt: 'Deu match! 🎉', fr: "C'est un match ! 🎉", de: 'Ein Match! 🎉', it: 'È un match! 🎉', ja: 'マッチしました！🎉', zh: '配对成功！🎉', ru: 'Это мэтч! 🎉', ar: 'إنه توافق! 🎉', id: 'Match! 🎉', ko: '매치됐어요! 🎉', tr: 'Eşleştiniz! 🎉' },
   };
   pfT(key: string): string {
@@ -1711,6 +1716,63 @@ export class CoachWidgetComponent implements OnDestroy {
   }
 
   /** R164: like/pass a coach-suggested profile — reuses the deck's recordSwipe flow. */
+  // Tap on a suggestion card → that person's full profile. The card payload is minimal by
+  // design, so bio/interests/photos are fetched on demand and cached per uid for the session.
+  // A failed load is silent: the overlay simply doesn't open and the card stays usable.
+  readonly profileDetail = signal<{ card: CoachProfileCard; msg: Msg; bio: string | null; interests: string[]; photos: string[]; photoIndex: number } | null>(null);
+  readonly profileDetailLoading = signal<string | null>(null);
+  private readonly profileDetailCache = new Map<string, { bio: string | null; interests: string[]; photos: string[]; age: number | null }>();
+
+  async openProfileDetail(msg: Msg, p: CoachProfileCard) {
+    if (this.profileDetailLoading()) return; // one detail load in flight at a time
+    const cached = this.profileDetailCache.get(p.uid);
+    if (cached) {
+      this.profileDetail.set({ card: p, msg, bio: cached.bio, interests: cached.interests, photos: cached.photos, photoIndex: 0 });
+      return;
+    }
+    this.profileDetailLoading.set(p.uid);
+    try {
+      const full = await this.firebase.getPublicProfile(p.uid);
+      if (full) {
+        this.profileDetailCache.set(p.uid, full);
+        this.profileDetail.set({ card: p, msg, bio: full.bio, interests: full.interests, photos: full.photos, photoIndex: 0 });
+      }
+    } finally {
+      this.profileDetailLoading.set(null);
+    }
+  }
+
+  closeProfileDetail() { this.profileDetail.set(null); }
+
+  /** Interest id → readable label. The widget has no catalog of its own, so unknown ids are
+   *  prettified (strip the `interest_` prefix, underscores → spaces) rather than shown raw. */
+  detailInterest(id: string): string {
+    const s = String(id || '').replace(/^interest_/, '').replace(/_/g, ' ').trim();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : id;
+  }
+
+
+  detailPhoto(): string | null {
+    const d = this.profileDetail();
+    if (!d) return null;
+    return d.photos[d.photoIndex] || d.photos[0] || d.card.photoUrl || null;
+  }
+
+  detailPhotoStep(delta: number) {
+    const d = this.profileDetail();
+    if (!d || d.photos.length < 2) return;
+    const next = (d.photoIndex + delta + d.photos.length) % d.photos.length;
+    this.profileDetail.set({ ...d, photoIndex: next });
+  }
+
+  /** Act from inside the detail overlay, then close — same write the card buttons use. */
+  async actFromDetail(action: 'like' | 'pass') {
+    const d = this.profileDetail();
+    if (!d) return;
+    this.closeProfileDetail();
+    await this.actOnProfile(d.msg, d.card, action);
+  }
+
   async actOnProfile(msg: Msg, p: CoachProfileCard, action: 'like' | 'pass') {
     if (p.state && p.state !== 'idle') return;
     const setState = (state: CoachProfileCard['state']) =>

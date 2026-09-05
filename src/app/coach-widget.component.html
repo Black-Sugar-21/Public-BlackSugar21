@@ -226,6 +226,7 @@
                     <div class="cw-profiles-head">💘 {{ pfT('title') }}</div>
                     @for (pr of m.profiles!; track pr.uid) {
                       <div class="cw-profile">
+                        <button type="button" class="cw-profile-open" (click)="openProfileDetail(m, pr)" [attr.aria-label]="pfT('view') + ': ' + pr.name">
                         @if (pr.photoUrl) { <img class="cw-profile-photo" [src]="pr.photoUrl" alt="" loading="lazy" /> }
                         @else { <span class="cw-profile-photo cw-profile-letter">{{ (pr.name || '?').charAt(0) }}</span> }
                         <span class="cw-profile-body">
@@ -234,6 +235,10 @@
                             @if (pr.readyToMeet) { <span class="cw-profile-ready">🔥</span> }
                           </span>
                           <span class="cw-profile-reason">{{ pr.reason }}</span>
+                          <span class="cw-profile-view">{{ pfT('view') }} ›</span>
+                        </span>
+                        </button>
+                        <span class="cw-profile-body cw-profile-actions-wrap">
                           @switch (pr.state) {
                             @case ('matched') { <span class="cw-profile-state cw-profile-matched">{{ pfT('matched') }}</span> }
                             @case ('liked') { <span class="cw-profile-state">{{ pfT('liked') }}</span> }
@@ -532,6 +537,56 @@
               </button>
               @if (phraseSheetSorted().length === 0) {
                 <div class="cw-ps-empty">{{ t().noSuggestions || 'No hay frases disponibles' }}</div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Suggestion card tapped → that person's full profile. Photos + bio + interests are
+             loaded on demand (the card payload is deliberately minimal). The same like/pass
+             writes the card uses are available here, so the sheet is never a dead end. -->
+        @if (profileDetail(); as pd) {
+          <div class="cw-pd" role="dialog" aria-modal="true" (click)="closeProfileDetail()">
+            <div class="cw-pd-panel" (click)="$event.stopPropagation()">
+              <button type="button" class="cw-pd-close" (click)="closeProfileDetail()" [attr.aria-label]="pfT('close')">✕</button>
+              <div class="cw-pd-hero">
+                @if (detailPhoto(); as ph) { <img class="cw-pd-photo" [src]="ph" alt="" /> }
+                @else { <div class="cw-pd-photo cw-pd-nophoto">{{ (pd.card.name || '?').charAt(0) }}</div> }
+                @if (pd.photos.length > 1) {
+                  <button type="button" class="cw-pd-nav cw-pd-prev" (click)="detailPhotoStep(-1)" aria-label="‹">‹</button>
+                  <button type="button" class="cw-pd-nav cw-pd-next" (click)="detailPhotoStep(1)" aria-label="›">›</button>
+                  <div class="cw-pd-dots">
+                    @for (ph of pd.photos; track $index) {
+                      <span class="cw-pd-dot" [class.on]="$index === pd.photoIndex"></span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="cw-pd-body">
+                <div class="cw-pd-name">
+                  {{ pd.card.name }}<ng-container *ngIf="pd.card.age">, {{ pd.card.age }}</ng-container>
+                  @if (pd.card.verified) { <span class="cw-profile-verified" title="Verificado">✓</span> }
+                  @if (pd.card.readyToMeet) { <span class="cw-profile-ready">🔥</span> }
+                </div>
+                <div class="cw-pd-reason">💘 {{ pd.card.reason }}</div>
+
+                <div class="cw-pd-sec">{{ pfT('about') }}</div>
+                <p class="cw-pd-bio" [class.cw-pd-muted]="!pd.bio">{{ pd.bio || pfT('noBio') }}</p>
+
+                @if (pd.interests.length) {
+                  <div class="cw-pd-sec">{{ pfT('interests') }}</div>
+                  <div class="cw-pd-tags">
+                    @for (it of pd.interests.slice(0, 12); track it) {
+                      <span class="cw-pd-tag">{{ detailInterest(it) }}</span>
+                    }
+                  </div>
+                }
+              </div>
+              @if (!pd.card.state || pd.card.state === 'idle') {
+                <div class="cw-pd-actions">
+                  <button type="button" class="cw-pd-btn cw-pd-pass" (click)="actFromDetail('pass')">✕ {{ pfT('pass') }}</button>
+                  <button type="button" class="cw-pd-btn cw-pd-like" (click)="actFromDetail('like')">❤️ {{ pfT('like') }}</button>
+                </div>
               }
             </div>
           </div>
