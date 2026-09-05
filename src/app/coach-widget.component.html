@@ -548,6 +548,7 @@
         @if (profileDetail(); as pd) {
           <div class="cw-pd" role="dialog" aria-modal="true" (click)="closeProfileDetail()">
             <div class="cw-pd-panel" (click)="$event.stopPropagation()">
+              <span class="cw-pd-grip" aria-hidden="true"></span>
               <button type="button" class="cw-pd-close" (click)="closeProfileDetail()" [attr.aria-label]="pfT('close')">✕</button>
               <div class="cw-pd-hero">
                 @if (detailPhoto(); as ph) { <img class="cw-pd-photo" [src]="ph" alt="" /> }
