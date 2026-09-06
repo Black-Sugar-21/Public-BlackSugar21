@@ -49,3 +49,6 @@ scripts/cleanup-log-*.txt
 .claude/worktrees/
 workspace-sa-key.json
 graphify-out/cache/
+
+# Firebase CLI deploy cache — local build artifact, not source.
+.firebase/
