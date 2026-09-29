@@ -1,15 +1,8 @@
 name: CI — Backend Tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'functions/**'
-      - '.github/workflows/ci.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'functions/**'
+  # Sólo manual (dueño 2026-09-29): ningún workflow se dispara solo.
+  workflow_dispatch:
 
 jobs:
   backend-tests:

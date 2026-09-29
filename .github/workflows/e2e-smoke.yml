@@ -14,10 +14,8 @@ name: E2E Smoke — Production Regression Gate
 # actions/github-script if you want alerts.
 
 on:
+  # Sólo manual (dueño 2026-09-29): ningún workflow se dispara solo.
   workflow_dispatch:
-  schedule:
-    # 07:00 UTC nightly (after the dailyAIHealthCheck scheduled CF at 05:00 UTC)
-    - cron: '0 7 * * *'
 
 jobs:
   smoke:
