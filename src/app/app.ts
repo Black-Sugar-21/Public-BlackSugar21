@@ -1,3 +1,5 @@
+import { LottieDirective } from './ui/lottie/lottie.directive';
+import { betaCards } from './ui/lottie/beta-links';
 import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -12,7 +14,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterModule, CoachWidgetComponent],
+  imports: [CommonModule, RouterModule, CoachWidgetComponent, LottieDirective],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -22,13 +24,11 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   private routerSub?: Subscription;
   protected readonly title = signal('Black Sugar 21');
   protected readonly ageVerified = signal(false);
-  // R: seed iOS with the real App Store URL so the badge is never a dead '#' on first
-  // paint / Firebase-slow (the app-id is already known in index.html). Firebase may override.
-  // R: seed with real known URLs so store badges are never '#' on first paint / Firebase-slow.
-  protected readonly storeLinks = signal({
-    ios: 'https://apps.apple.com/app/id6470783901',
-    android: 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21',
-  });
+  /** «Prueba la beta»: one card per channel from src/beta-links.json (the ONLY place for store/tester links).
+   *  null → no button, «Próximamente». The old App Store / Google Play badges pointed at listings that do not exist
+   *  (both 404 on 2026-10-10), so they are hidden until those links are real. */
+  protected readonly beta = betaCards();
+  protected readonly testflightUrl = this.beta.find((c) => c.key === 'testflight')?.href ?? null;
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
   // R(SEO): track the current route so the homepage <main> renders by ROUTE (always in the
@@ -498,12 +498,6 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
-    // Fetch store links
-    this.firebase.getStoreLinks().then(links => {
-      if (links) {
-        this.storeLinks.set(links);
-      }
-    });
 
     // Sync language preference from Firebase if user is logged in
     if (this.firebase.currentUser()) {

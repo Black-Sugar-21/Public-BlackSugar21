@@ -1,0 +1,10 @@
+blacksugar21.com — third-party software and assets added with the product landing (2026-10)
+
+Software
+  lottie-web 5.13.0, light build (public/vendor/lottie_light-5.13.0.min.js) — MIT License, © Airbnb.
+    https://github.com/airbnb/lottie-web/blob/master/LICENSE.md
+    Loaded lazily by src/app/ui/lottie/lottie.directive.ts (browser only; nothing runs during SSR/prerender).
+
+Animations (public/lottie/) — © Bimbask Inc., our own artwork; no third-party animation assets
+  step-profile.json, step-coach.json, step-date.json, hero-spark.json, success.json
+    hand-built with scripts/make-site-lottie.py (scripts/lottie_kit.py, no expressions).
