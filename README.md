@@ -23,6 +23,16 @@ node test-master.js
 
 ---
 
+## Landing de producto y «Prueba la beta» (2026-10)
+
+- Los enlaces de prueba y de tienda viven **solo** en `src/beta-links.json` (`src/app/ui/lottie/beta-links.ts`). Un
+  enlace `null` no muestra botón: la tarjeta dice «Próximamente». Al 2026-10-10: TestFlight público
+  `https://testflight.apple.com/join/gSquX4CT` (verificado con la API de App Store Connect); App Store y Google Play
+  **no tienen ficha pública** (las insignias anteriores llevaban a páginas 404), así que se ocultan; Android sigue con la
+  solicitud por correo (modal de tester).
+- Lottie: `src/app/ui/lottie/lottie.directive.ts` con lottie-web light vendorizado (MIT), carga diferida y solo en el
+  navegador; animaciones propias en `public/lottie/` (`scripts/make-site-lottie.py`). Fuentes en `NOTICE`.
+
 ## Development server
 
 To start a local development server, run:

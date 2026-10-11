@@ -64,7 +64,9 @@
                 </div>
                 <a class="account-item" routerLink="/app" (click)="closeAccountMenu()">✦ {{ getCurrentLanguage()==='es' ? 'Abrir Black Sugar 21' : 'Open Black Sugar 21' }}</a>
                 <button class="account-item" (click)="openProfile()">👤 {{ getCurrentLanguage()==='es' ? 'Mi perfil' : 'My profile' }}</button>
-                <a class="account-item" [href]="storeLinks().ios" target="_blank" rel="noopener" (click)="closeAccountMenu()">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
+                @if (testflightUrl) {
+                <a class="account-item" [href]="testflightUrl" target="_blank" rel="noopener" (click)="closeAccountMenu()">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
+                }
                 <button class="account-item danger" (click)="requestSignOut()">⏻ {{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
               </div>
             }
@@ -120,7 +122,7 @@
           <img src="logo-21.png" alt="Black Sugar 21" width="200" height="200" fetchpriority="high" />
         </div>
 
-        <span class="hero-eyebrow animate-in delay-1"><span class="hero-cta-spark">✦</span> {{ t('hero.eyebrow') }}</span>
+        <span class="hero-eyebrow animate-in delay-1"><span class="hero-spark lot-host" aria-hidden="true"><span class="hero-cta-spark">✦</span><span appLottie="lottie/hero-spark.json" [lottieLoop]="true"></span></span> {{ t('hero.eyebrow') }}</span>
         <h1 class="animate-in delay-2">{{ t('hero.title') }}</h1>
         <p class="tagline animate-in delay-3">{{ t('hero.tagline') }}</p>
         <p class="sub-tagline animate-in delay-3">{{ t('hero.subtitle') }}</p>
@@ -137,16 +139,14 @@
           <span class="hero-trust-chip">{{ t('hero.trustFree') }}</span>
         </div>
 
-        <!-- Secondary: the app stores, demoted (the bot, not the platforms, is the focus). -->
+        <!-- Secondary: try the beta (links only from src/beta-links.json; no store badge until a listing exists). -->
         <div class="download-buttons secondary animate-in delay-4">
-          <span class="also-on-label">{{ t('hero.alsoOn') }}</span>
+          <span class="also-on-label">{{ t('beta.label') }}</span>
           <div class="store-badges-row">
-            <a [href]="storeLinks().ios" class="store-badge app-store" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'hero'})">
-              <img src="app-store-badge.webp" alt="Descárgalo en el App Store">
-            </a>
-            <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'hero'}); $event.preventDefault()" href="#" class="store-badge google-play">
-              <img src="google-play-badge.webp" alt="Disponible en Google Play">
-            </a>
+            @if (testflightUrl) {
+              <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'hero'})">{{ t('beta.iphone') }}</a>
+            }
+            <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'hero'})">{{ t('beta.androidAsk') }}</button>
           </div>
         </div>
        </div>
@@ -234,7 +234,7 @@
         <h2 class="how-title" itemprop="description">{{ t('how.title') }}</h2>
         <div class="how-steps">
           <div class="how-step animate-in delay-1" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
-            <div class="how-step-num">{{ t('how.step1.num') }}</div>
+            <div class="how-step-num lot-host"><span class="how-num-poster">{{ t('how.step1.num') }}</span><span appLottie="lottie/step-profile.json" [lottieLoop]="false"></span></div>
             <div class="how-step-body">
               <h3 class="how-step-title" itemprop="name">{{ t('how.step1.title') }}</h3>
               <p class="how-step-desc" itemprop="text">{{ t('how.step1.desc') }}</p>
@@ -242,7 +242,7 @@
           </div>
           <div class="how-connector" aria-hidden="true"></div>
           <div class="how-step animate-in delay-2" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
-            <div class="how-step-num">{{ t('how.step2.num') }}</div>
+            <div class="how-step-num lot-host"><span class="how-num-poster">{{ t('how.step2.num') }}</span><span appLottie="lottie/step-coach.json" [lottieLoop]="true"></span></div>
             <div class="how-step-body">
               <h3 class="how-step-title" itemprop="name">{{ t('how.step2.title') }}</h3>
               <p class="how-step-desc" itemprop="text">{{ t('how.step2.desc') }}</p>
@@ -250,7 +250,7 @@
           </div>
           <div class="how-connector" aria-hidden="true"></div>
           <div class="how-step animate-in delay-3" itemprop="step" itemscope itemtype="https://schema.org/HowToStep">
-            <div class="how-step-num">{{ t('how.step3.num') }}</div>
+            <div class="how-step-num lot-host"><span class="how-num-poster">{{ t('how.step3.num') }}</span><span appLottie="lottie/step-date.json" [lottieLoop]="false"></span></div>
             <div class="how-step-body">
               <h3 class="how-step-title" itemprop="name">{{ t('how.step3.title') }}</h3>
               <p class="how-step-desc" itemprop="text">{{ t('how.step3.desc') }}</p>
@@ -331,14 +331,12 @@
             <span class="hero-cta-spark">✦</span> {{ t('hero.tryCoach') }}
           </button>
           <div class="coach-cta-buttons secondary">
-            <span class="also-on-label">{{ t('hero.alsoOn') }}</span>
+            <span class="also-on-label">{{ t('beta.label') }}</span>
             <div class="store-badges-row">
-              <a [href]="storeLinks().ios" class="store-badge app-store coach-store-badge" (click)="firebase.logEvent('click_store_badge', {platform: 'ios', section: 'coach'})">
-                <img src="app-store-badge.webp" alt="Download on App Store">
-              </a>
-              <a (click)="showTesterModal.set(true); firebase.logEvent('click_store_badge', {platform: 'android', section: 'coach'}); $event.preventDefault()" href="#" class="store-badge google-play coach-store-badge">
-                <img src="google-play-badge.webp" alt="Get it on Google Play">
-              </a>
+              @if (testflightUrl) {
+                <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'coach'})">{{ t('beta.iphone') }}</a>
+              }
+              <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'coach'})">{{ t('beta.androidAsk') }}</button>
             </div>
           </div>
         </div>
@@ -567,6 +565,27 @@
     </section>
 
     <!-- FAQ section — visible content matches FAQPage structured data for SEO -->
+    <section class="beta-section" id="beta" aria-labelledby="beta-title">
+      <div class="beta-inner">
+        <h2 class="beta-title" id="beta-title">{{ t('beta.title') }}</h2>
+        <p class="beta-sub">{{ t('beta.subtitle') }}</p>
+        <ul class="beta-grid">
+          @for (c of beta; track c.key) {
+            <li class="beta-card glass-panel" [class.beta-card--on]="c.href">
+              <h3>{{ t('beta.ch.' + c.key + '.t') }}</h3>
+              <p>{{ t('beta.ch.' + c.key + '.b') }}</p>
+              @if (c.href) {
+                <a class="beta-pill beta-pill--on" [href]="c.href" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: c.key, section: 'beta'})">{{ t('beta.open') }}</a>
+              } @else {
+                <span class="beta-soon">{{ t('beta.soon') }}</span>
+              }
+            </li>
+          }
+        </ul>
+        <p class="beta-android">{{ t('beta.androidNote') }} <button type="button" class="beta-link" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'beta'})">{{ t('beta.androidAsk') }}</button></p>
+      </div>
+    </section>
+
     <section class="faq-section" id="faq" itemscope itemtype="https://schema.org/FAQPage">
       <div class="faq-inner">
         <h2 class="faq-title">{{ t('faq.title') }}</h2>
@@ -641,7 +660,9 @@
             }
             <div class="profile-row"><span>{{ getCurrentLanguage()==='es' ? 'Idioma' : 'Language' }}</span><b>{{ currentLangOption().flag }} {{ currentLangOption().name }}</b></div>
           </div>
-          <a class="profile-cta" [href]="storeLinks().ios" target="_blank" rel="noopener">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
+          @if (testflightUrl) {
+          <a class="profile-cta" [href]="testflightUrl" target="_blank" rel="noopener">📱 {{ getCurrentLanguage()==='es' ? 'Descargar la app' : 'Download the app' }}</a>
+          }
           <button class="profile-signout" (click)="requestSignOut()">{{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
         </div>
       </div>
@@ -674,7 +695,7 @@
 
         @if (testerStatus() === 'success') {
           <div style="margin-top:20px; text-align:center;">
-            <div style="font-size:48px; margin-bottom:12px;">✅</div>
+            <div class="success-lot lot-host" aria-hidden="true"><span class="success-poster">✅</span><span appLottie="lottie/success.json"></span></div>
             <p class="modal-success-text">{{ t('tester.success') }}</p>
             <p style="color: rgba(255,255,255,0.6); font-size:14px; margin-top:12px; line-height:1.6;">{{ t('tester.instructions') }}</p>
             <button class="modal-button" style="margin-top:20px; width:100%;" (click)="showTesterModal.set(false)">OK</button>

@@ -102,6 +102,13 @@ O usar el script de lanzamiento:
 ./start-workspace.sh
 ```
 
+## Landing: «Prueba la beta» + Lottie (2026-10-10)
+
+Enlaces de tienda/prueba SOLO en `src/beta-links.json` (`src/app/ui/lottie/beta-links.ts`; `null` = «Próximamente», sin
+botón). Ya no se usan `storeLinks` ni `getStoreLinks()` en la landing: las insignias App Store / Google Play apuntaban a
+fichas inexistentes (404). TestFlight público verificado con la API de ASC. Lottie: `ui/lottie/lottie.directive.ts`
+(browser-only, SSR-safe) + `public/vendor/lottie_light-5.13.0.min.js`; animaciones propias `public/lottie/`.
+
 ## Coach IA demo widget (2026-06)
 
 Public, anonymous "taste" of the AI Emotional Intelligence Coach — the public-site embodiment of the Apple 4.3(b) positioning (NOT a dating app; intentionally marked as a DEMO).
