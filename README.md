@@ -1,6 +1,12 @@
 # PublicBlackSugar21
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.0.
+The public site of Black Sugar 21 (`blacksugar21.com`): Angular 21 (`@angular/core ^21.2`, standalone), Firebase Hosting, the Cloud Functions in `functions/`
+(Node 22) and the admin scripts in `scripts/`. Spanish version: [README.es.md](README.es.md).
+
+- **Languages:** 13 in `src/app/translation.service.ts` (`es en pt fr de it ja ko zh ar ru id tr`, 344 keys, identical in all 13; checked 2026-10-11). The owner's
+  standard set has `hi` (Hindi) instead of `id`: **there is no Hindi** here yet (the apps do have both).
+- **Workflows:** all of `.github/workflows/` are `workflow_dispatch` only (nothing runs by itself).
+- **Tests:** `npm test` (`ng test`), `functions/` has its own (`cd functions && npm test`); the scripted system is below.
 
 ## 🎯 Testing System
 
@@ -19,7 +25,7 @@ node test-master.js
 - 🔍 **Diagnostics**: Complete system verification
 - 🧹 **Cleanup**: Selective cleanup with 5 levels
 
-📚 **Full Documentation**: [scripts/README_TESTING.md](scripts/README_TESTING.md)
+📚 **Full Documentation**: [scripts/UAT_TESTING_PLAN.md](scripts/UAT_TESTING_PLAN.md) and [BACKEND_TESTING_PLAN.md](BACKEND_TESTING_PLAN.md) (README_TESTING.md never existed)
 
 ---
 
