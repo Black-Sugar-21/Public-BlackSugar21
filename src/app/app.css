@@ -651,7 +651,7 @@ a:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 18px;   /* 6-8px dots + 18px = 24px pitch: each dot has a 24px-wide touch area */
     margin-top: 24px;
 }
 
@@ -663,8 +663,9 @@ a:hover {
     cursor: pointer;
     transition: all 0.5s cubic-bezier(0.45, 0, 0.15, 1);
     position: relative;
-    overflow: hidden;
 }
+/* The visible dot stays tiny; its touch area is 24x44 (WCAG 2.5.8) via an invisible pseudo-element. */
+.carousel-dot::before { content: ''; position: absolute; inset: -19px -9px; }
 
 .carousel-dot.active {
     width: 36px;
@@ -1551,7 +1552,7 @@ a:hover {
     }
 
     .carousel-dots {
-        gap: 6px;
+        gap: 18px;
         margin-top: 16px;
     }
 
@@ -2795,3 +2796,43 @@ button:focus-visible,
 @media (max-width: 900px) { .beta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .beta-grid { grid-template-columns: 1fr; } .beta-section { padding: 56px 16px; } }
 @media (prefers-reduced-motion: reduce) { .beta-pill { transition: none; } .beta-pill:hover { transform: none; } }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE HARDENING (2026-10) — the toolbar must fit at every width
+   • The desktop nav needs ~1000px; below that the burger takes over (it used to switch at 768px, so
+     tablets and landscape phones overflowed and the language menu left the screen).
+   • The toolbar row can shrink (min-width:0): the brand word gives way, the controls never do.
+   • ≥44px touch targets on phones/tablets; closed drawers are not focusable or hit-testable.
+   ═══════════════════════════════════════════════════════════════════════ */
+.toolbar-content { min-width: 0; padding-left: max(var(--spacing-md), env(safe-area-inset-left)); padding-right: max(var(--spacing-md), env(safe-area-inset-right)); }
+.toolbar-logo { min-width: 0; min-height: 44px; flex-shrink: 1; }
+.toolbar-logo img { flex-shrink: 0; }
+.toolbar-brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang-dropdown { flex-shrink: 0; }
+.lang-trigger { min-height: 44px; }
+.lang-menu { max-width: calc(100vw - 24px); right: auto; inset-inline-end: 0; }  /* logical: the old [dir=rtl] rule never matched (component encapsulation) */
+.mobile-menu { visibility: hidden; transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), visibility 0s linear 0.3s; }
+.mobile-menu.open { visibility: visible; transition-delay: 0s; }
+
+@media (max-width: 1023px) {
+    .toolbar-nav { display: none; }
+    .mobile-menu-btn { display: flex; }
+    .mobile-menu, .mobile-menu-overlay { display: block; }
+    .lang-dropdown { margin-inline-start: auto; }
+    .toolbar-content { gap: 8px; }
+    .bumble-toolbar { height: 60px; }
+    .mobile-menu { top: 60px; height: calc(100vh - 60px); height: calc(100dvh - 60px); }
+}
+@media (max-width: 520px) {
+    .lang-trigger { padding: 7px 10px; min-width: 44px; justify-content: center; }
+    .lang-trigger .lang-text { display: none; }
+}
+@media (max-width: 360px) {
+    .toolbar-brand { display: none; }
+    .toolbar-content { gap: 6px; }
+}
+@media (max-width: 900px), (pointer: coarse) {
+    .account-trigger { width: 44px; height: 44px; }
+    .chat-btn-copy, .chat-btn-use { min-height: 44px; min-width: 44px; padding-inline: 16px; font-size: 12px; }
+    .lang-option, .mobile-lang-chip { min-height: 44px; }
+}

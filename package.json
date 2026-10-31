@@ -9,7 +9,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "npm run build:prod && firebase deploy",
-    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting"
+    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting",
+    "test:responsive": "node scripts/responsive-check.mjs"
   },
   "prettier": {
     "printWidth": 100,
@@ -47,6 +48,7 @@
     "@angular/compiler-cli": "^21.2.16",
     "firebase-admin": "^13.6.0",
     "jsdom": "^27.1.0",
+    "playwright": "^1.55.0",
     "sharp": "^0.34.5",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"

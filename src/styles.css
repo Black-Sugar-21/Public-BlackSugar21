@@ -138,3 +138,23 @@ a:hover {
   background: var(--gold-dark);
   border-radius: 4px;
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   TOUCH TARGETS (2026-10) — every control is at least 44x44 on phones/tablets/coarse pointers.
+   Global on purpose: it reaches the encapsulated component styles (they only set size via padding), and
+   `!important` is used only on display/alignment so text links can grow without moving their text.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px), (pointer: coarse) {
+  .cw-cat, .cw-chip, .cw-new, .cw-snd, .cw-fab, .coach-page-back, .ui-btn, .beta-link,
+  .cw-discover-hint, .back, .back-link, .toolbar-logo, .footer-links a, .nav-back {
+    min-height: 44px; min-width: 44px;
+  }
+  .beta-link, .cw-discover-hint, .back, .back-link, .footer-links a, .nav-back {
+    display: inline-flex !important; align-items: center;
+  }
+  .coach-page-back, .cw-new, .cw-snd, .cw-fab { justify-content: center; }
+  .ui-btn { min-height: 44px !important; }
+  select { min-height: 44px; }
+  .toolbar-logo { justify-content: center; }
+}
+/* The floating coach button must not cover the last lines of any page that shows it. */
+body:has(.cw-fab) { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
