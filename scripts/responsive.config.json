@@ -1,0 +1,21 @@
+{
+  "dir": "dist/Public-BlackSugar21/browser",
+  "fallback": "index.csr.html",
+  "build": "npm run build",
+  "routes": [
+    { "id": "inicio", "path": "/" },
+    { "id": "funciones", "path": "/features" },
+    { "id": "coach", "path": "/coach" },
+    { "id": "privacidad", "path": "/privacy" },
+    { "id": "guia", "path": "/guia/primera-cita" },
+    { "id": "moderacion", "path": "/moderation-policy" },
+    { "id": "ar-inicio", "path": "/", "storage": { "preferredLanguage": "ar" } },
+    { "id": "ar-guia", "path": "/guia/primera-cita", "storage": { "preferredLanguage": "ar" } },
+    { "id": "de-inicio", "path": "/", "storage": { "preferredLanguage": "de" } },
+    { "id": "de-funciones", "path": "/features", "storage": { "preferredLanguage": "de" } }
+  ],
+  "menus": [
+    { "open": ".lang-trigger", "panel": ".lang-menu" },
+    { "open": ".mobile-menu-btn", "panel": ".mobile-menu.open", "optional": true }
+  ]
+}
