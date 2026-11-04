@@ -569,8 +569,25 @@
       <div class="beta-inner">
         <h2 class="beta-title" id="beta-title">{{ t('beta.title') }}</h2>
         <p class="beta-sub">{{ t('beta.subtitle') }}</p>
+        @if (testflightUrl || androidUrl) {
+          <div class="tfcard" [class.tfcard--two]="testflightUrl && androidUrl">
+            <img src="apple-touch-icon.png" alt="" width="64" height="64" loading="lazy">
+            <span class="tfcard-txt">
+              <strong>{{ t(dlKeys.title) }}</strong>
+              <small>{{ t(dlKeys.sub) }}</small>
+            </span>
+            <span class="tfcard-actions">
+              @if (testflightUrl) {
+                <a class="tfcard-cta" [href]="testflightUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'beta'})">{{ t('beta.tf_cta') }}</a>
+              }
+              @if (androidUrl) {
+                <a class="tfcard-cta" [href]="androidUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'appDistribution', section: 'beta'})">{{ t('beta.ad_cta') }}</a>
+              }
+            </span>
+          </div>
+        }
         <ul class="beta-grid">
-          @for (c of beta; track c.key) {
+          @for (c of betaOthers; track c.key) {
             <li class="beta-card glass-panel" [class.beta-card--on]="c.href">
               <h3>{{ t('beta.ch.' + c.key + '.t') }}</h3>
               <p>{{ t('beta.ch.' + c.key + '.b') }}</p>

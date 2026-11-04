@@ -29,6 +29,13 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
    *  (both 404 on 2026-10-10), so they are hidden until those links are real. */
   protected readonly beta = betaCards();
   protected readonly testflightUrl = this.beta.find((c) => c.key === 'testflight')?.href ?? null;
+  /** El resto de canales de «Prueba la beta»: TestFlight va aparte, en su tarjeta destacada (solo con enlace real). */
+  protected readonly androidUrl = this.beta.find((c) => c.key === 'appDistribution')?.href ?? null;
+  /** Textos de la tarjeta según qué enlaces existan (ambos, solo iPhone o solo Android). */
+  protected readonly dlKeys = this.testflightUrl && this.androidUrl
+    ? { title: 'beta.both_title', sub: 'beta.both_sub' }
+    : this.androidUrl ? { title: 'beta.ad_title', sub: 'beta.ad_sub' } : { title: 'beta.tf_title', sub: 'beta.tf_sub' };
+  protected readonly betaOthers = this.beta.filter((c) => c.key !== 'testflight' && c.key !== 'appDistribution');
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);
   // R(SEO): track the current route so the homepage <main> renders by ROUTE (always in the

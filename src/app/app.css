@@ -2775,6 +2775,20 @@ button:focus-visible,
 .beta-inner { max-width: 1080px; margin: 0 auto; }
 .beta-title { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin: 0 0 10px; }
 .beta-sub { color: var(--text-muted, #B0B0B0); max-width: 60ch; margin: 0 0 28px; }
+.tfcard { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 16px; width: min(640px, 100%); margin: 0 0 24px; padding: 16px 18px; border-radius: 20px; border: 1px solid rgba(212,175,55,.45); background: rgba(255,255,255,.06); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,.25); color: inherit; text-align: start; }
+.tfcard img { width: 64px; height: 64px; border-radius: 15px; display: block; }
+.tfcard-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tfcard-txt strong { font-size: 1.0625rem; line-height: 1.25; }
+.tfcard-txt small { color: var(--text-muted, #B0B0B0); font-size: .875rem; line-height: 1.35; }
+.tfcard-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Botones de contorno dorado, del mismo tamaño: la acción principal de la página sigue siendo el CTA del hero. */
+.tfcard-cta { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: .9375rem; text-decoration: none; text-align: center; white-space: nowrap; transition: background .2s; }
+.tfcard-cta:hover { background: rgba(212,175,55,.12); }
+.tfcard-cta:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.tfcard--two { grid-template-columns: 64px minmax(0, 1fr); }
+.tfcard--two .tfcard-actions { grid-column: 1 / -1; }
+@media (max-width: 520px) { .tfcard { grid-template-columns: 56px minmax(0, 1fr); } .tfcard img { width: 56px; height: 56px; } .tfcard-actions { grid-column: 1 / -1; flex-direction: column; } .tfcard-cta { flex: 0 0 auto; width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .tfcard-cta { transition: none; } }
 .beta-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .beta-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px; border-radius: 20px; }
 .beta-card h3 { margin: 0; font-size: 1.1rem; }
