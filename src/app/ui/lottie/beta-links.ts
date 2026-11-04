@@ -22,7 +22,19 @@ export function safeTestflight(value: unknown): string | null {
   }
 }
 
+/** Firebase App Distribution: solo https y solo el host appdistribution.firebase.dev. */
+export function safeAppDistribution(value: unknown): string | null {
+  const href = safeLink(value);
+  if (!href) return null;
+  try {
+    const u = new URL(href);
+    return u.protocol === 'https:' && u.hostname === 'appdistribution.firebase.dev' ? href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cards built from src/beta-links.json (or any object with the same keys, for tests). */
 export function betaCards(source: Partial<Record<BetaChannel, unknown>> = BETA as Partial<Record<BetaChannel, unknown>>): BetaCard[] {
-  return BETA_CHANNELS.map((key) => ({ key, href: key === 'testflight' ? safeTestflight(source[key]) : safeLink(source[key]) }));
+  return BETA_CHANNELS.map((key) => ({ key, href: key === 'testflight' ? safeTestflight(source[key]) : key === 'appDistribution' ? safeAppDistribution(source[key]) : safeLink(source[key]) }));
 }

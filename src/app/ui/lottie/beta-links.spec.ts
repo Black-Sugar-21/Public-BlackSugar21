@@ -1,4 +1,4 @@
-import { betaCards, safeTestflight } from './beta-links';
+import { betaCards, safeAppDistribution, safeTestflight } from './beta-links';
 
 describe('beta-links: TestFlight', () => {
   it('acepta solo https en testflight.apple.com', () => {
@@ -17,5 +17,13 @@ describe('beta-links: TestFlight', () => {
   it('betaCards deja href nulo si el enlace de TestFlight no es válido', () => {
     expect(betaCards({ testflight: 'https://evil.test/x' }).find((c) => c.key === 'testflight')?.href).toBeNull();
     expect(betaCards({ testflight: 'https://testflight.apple.com/join/x' }).find((c) => c.key === 'testflight')?.href).toContain('testflight.apple.com');
+  });
+
+  it('App Distribution acepta solo https en appdistribution.firebase.dev', () => {
+    expect(safeAppDistribution('https://appdistribution.firebase.dev/i/abc')).toBe('https://appdistribution.firebase.dev/i/abc');
+    expect(safeAppDistribution(null)).toBeNull();
+    expect(safeAppDistribution('http://appdistribution.firebase.dev/i/abc')).toBeNull();
+    expect(safeAppDistribution('https://appdistribution.firebase.dev.evil.test/i/abc')).toBeNull();
+    expect(safeAppDistribution('https://testflight.apple.com/join/x')).toBeNull();
   });
 });
