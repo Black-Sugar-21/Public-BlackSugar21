@@ -34,6 +34,11 @@ interface Translations {
 export class TranslationService {
   currentLanguage = signal<Language>('es');
   private currentYear = new Date().getFullYear();
+
+  /** Mes y año actuales escritos en el idioma indicado. */
+  private monthIn(locale: string): string {
+    return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date());
+  }
   private currentMonth = new Date().toLocaleDateString('es', { month: 'long', year: 'numeric' });
   private currentMonthEn = new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
@@ -2922,9 +2927,9 @@ export class TranslationService {
       ru: `© ${this.currentYear} Black Sugar 21. Все права защищены.`,
       ar: `© ${this.currentYear} Black Sugar 21. جميع الحقوق محفوظة.`,
       id: `© ${this.currentYear} Black Sugar 21. Hak cipta dilindungi.`,
-      it: "© undefined Black Sugar 21. Tutti i diritti riservati.",
-      ko: "© undefined Black Sugar 21. All rights reserved.",
-      tr: "© undefined Black Sugar 21. Tüm hakları saklıdır.",
+      it: `© ${this.currentYear} Black Sugar 21. Tutti i diritti riservati.`,
+      ko: `© ${this.currentYear} Black Sugar 21. 모든 권리 보유.`,
+      tr: `© ${this.currentYear} Black Sugar 21. Tüm hakları saklıdır.`,
     },
     'footer.moderation': {
       es: 'Moderación', en: 'Moderation',
@@ -3811,16 +3816,16 @@ export class TranslationService {
       es: `Última actualización: ${this.currentMonth}`,
       pt: `Última atualização: ${this.currentMonth}`,
       en: `Last updated: ${this.currentMonthEn}`,
-      fr: "Dernière mise à jour : undefined",
-      de: "Zuletzt aktualisiert: undefined",
-      it: "Ultimo aggiornamento: undefined",
-      zh: "最近更新：undefined",
-      ja: "最終更新：undefined",
-      ko: "마지막 업데이트: undefined",
-      ru: "Последнее обновление: undefined",
-      ar: "آخر تحديث: undefined",
-      id: "Terakhir diperbarui: undefined",
-      tr: "Son güncelleme: undefined",
+      fr: `Dernière mise à jour : ${this.monthIn('fr-FR')}`,
+      de: `Zuletzt aktualisiert: ${this.monthIn('de-DE')}`,
+      it: `Ultimo aggiornamento: ${this.monthIn('it-IT')}`,
+      zh: `最近更新：${this.monthIn('zh-CN')}`,
+      ja: `最終更新：${this.monthIn('ja-JP')}`,
+      ko: `마지막 업데이트: ${this.monthIn('ko-KR')}`,
+      ru: `Последнее обновление: ${this.monthIn('ru-RU')}`,
+      ar: `آخر تحديث: ${this.monthIn('ar')}`,
+      id: `Terakhir diperbarui: ${this.monthIn('id-ID')}`,
+      tr: `Son güncelleme: ${this.monthIn('tr-TR')}`,
     },
 
     // Tester Signup Modal
