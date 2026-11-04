@@ -569,8 +569,18 @@
       <div class="beta-inner">
         <h2 class="beta-title" id="beta-title">{{ t('beta.title') }}</h2>
         <p class="beta-sub">{{ t('beta.subtitle') }}</p>
+        @if (testflightUrl) {
+          <a class="tfcard" [href]="testflightUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'beta'})">
+            <img src="apple-touch-icon.png" alt="" width="64" height="64" loading="lazy">
+            <span class="tfcard-txt">
+              <strong>{{ t('beta.tf_title') }}</strong>
+              <small>{{ t('beta.tf_sub') }}</small>
+            </span>
+            <span class="tfcard-cta">{{ t('beta.tf_cta') }}</span>
+          </a>
+        }
         <ul class="beta-grid">
-          @for (c of beta; track c.key) {
+          @for (c of betaOthers; track c.key) {
             <li class="beta-card glass-panel" [class.beta-card--on]="c.href">
               <h3>{{ t('beta.ch.' + c.key + '.t') }}</h3>
               <p>{{ t('beta.ch.' + c.key + '.b') }}</p>
