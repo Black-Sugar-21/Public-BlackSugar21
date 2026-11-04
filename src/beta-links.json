@@ -8,6 +8,6 @@
   "todo": {
     "appDistribution": "OWNER: Firebase console (black-sugar21) > App Distribution > Testers & Groups > Invite links, if Android testers should join without a Google account in the Play internal track. Not listable by API.",
     "googlePlay": "When com.black.sugar21 is public on Google Play. The Play INTERNAL test link in Remote Config (store_url_android) only works for listed testers, so it is not a public link; Android visitors keep the email request (tester modal).",
-    "appStore": "When the App Store version is live (ASC app 6756385489; the old id6470783901 in the code returns 404)."
+    "appStore": "When the App Store version is live (ASC app 6756385489; the old id6756385489 in the code returns 404)."
   }
 }

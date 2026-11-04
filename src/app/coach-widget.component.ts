@@ -117,10 +117,10 @@ const UI_I18N: Record<string, Record<string, string>> = {
   historyEmpty: {"es":"Aún no tienes conversaciones guardadas.","en":"No saved conversations yet.","pt":"Ainda não há conversas salvas.","fr":"Aucune conversation enregistrée.","de":"Noch keine gespeicherten Unterhaltungen.","it":"Nessuna conversazione salvata.","zh":"还没有保存的对话。","ja":"保存された会話はまだありません。","ko":"저장된 대화가 아직 없어요.","ru":"Пока нет сохранённых разговоров.","ar":"لا توجد محادثات محفوظة بعد.","id":"Belum ada percakapan tersimpan.","tr":"Henüz kayıtlı sohbet yok."},
   discoverHint: {"es":"✨ En la app: descubre personas compatibles","en":"✨ In the app: discover compatible people","pt":"✨ No app: descubra pessoas compatíveis","fr":"✨ Dans l'app : découvre des personnes compatibles","de":"✨ In der App: entdecke passende Menschen","it":"✨ Nell'app: scopri persone compatibili","zh":"✨ 在应用中：发现合拍的人","ja":"✨ アプリで相性の良い人を見つけよう","ko":"✨ 앱에서 잘 맞는 사람을 만나보세요","ru":"✨ В приложении: знакомься с подходящими людьми","ar":"✨ في التطبيق: اكتشف أشخاصاً متوافقين","id":"✨ Di app: temukan orang yang cocok","tr":"✨ Uygulamada: uyumlu kişileri keşfet"},
 };
-const STORE_IOS = 'https://apps.apple.com/app/id6470783901';
+const STORE_IOS = 'https://apps.apple.com/app/id6756385489';
 // NOTE: store links should be loaded from Remote Config (store_url_ios / store_url_android) at runtime.
 // These constants are production-known fallbacks used before RC resolves.
-const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21';
+const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 const SITE = 'https://blacksugar21.com';
 
 const I18N: Record<string, any> = {

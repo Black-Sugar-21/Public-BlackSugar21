@@ -291,8 +291,8 @@ const BIO_FALLBACK: Record<string, string[]> = {
 
 // Store URLs are loaded from Firebase Remote Config (store_url_ios / store_url_android) at runtime.
 // These constants are kept as fallbacks in case Remote Config is unavailable.
-const STORE_IOS_FALLBACK = 'https://apps.apple.com/app/id6470783901';
-const STORE_ANDROID_FALLBACK = 'https://play.google.com/store/apps/details?id=com.bimbask.blacksugar21';
+const STORE_IOS_FALLBACK = 'https://apps.apple.com/app/id6756385489';
+const STORE_ANDROID_FALLBACK = 'https://play.google.com/store/apps/details?id=com.black.sugar21';
 
 // Date-spot category labels (iOS category-* parity) — 13 languages.
 const PLACE_CAT_LABELS: Record<string, Record<string, string>> = {
