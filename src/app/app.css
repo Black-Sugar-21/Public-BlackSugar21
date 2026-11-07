@@ -2859,3 +2859,8 @@ button:focus-visible,
 }
 .chat-input-field, .chat-input-bar > * { min-width: 0; }
 .chat-input-field { overflow: hidden; }
+
+/* responsive: la maqueta del chat nunca es más ancha que su columna */
+@media (max-width: 600px) {
+  .chat-phone { max-width: 100%; min-width: 0; box-sizing: border-box; }
+}
