@@ -113,3 +113,11 @@ h1 {
   margin: -0.5rem 0 1.75rem;
   letter-spacing: 0.02em;
 }
+
+/* responsive: letra grande y pantallas angostas sin desborde; objetivos de 44 px */
+@media (max-width: 600px) {
+  .legal-content { padding: 1.25rem; overflow-wrap: anywhere; min-width: 0; }
+  .legal-content * { min-width: 0; }
+}
+.back-link { display: inline-flex; align-items: center; min-height: 44px; }
+.language-selector select { min-height: 44px; }

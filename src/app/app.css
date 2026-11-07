@@ -14,7 +14,7 @@
 
     /* iOS AppColor.purpleColors */
     --purple-vivid: #831bfc;
-    --purple-light: #9c59ea;
+    --purple-light: #B07DF0;
 
     /* iOS AppColor reaction colors */
     --dislike-red1: #FF6560;
@@ -2029,7 +2029,7 @@ a:hover {
   border-bottom: 1px solid rgba(255,255,255,0.06);
   gap: 8px;
 }
-.chat-nav-back { color: #831bfc; font-size: 16px; display: flex; align-items: center; gap: 2px; }
+.chat-nav-back { color: #B78BFF; font-size: 16px; display: flex; align-items: center; gap: 2px; }
 .chat-nav-profile { display: flex; align-items: center; gap: 7px; flex: 1; }
 .chat-nav-avatar {
   width: 34px; height: 34px; border-radius: 50%;
@@ -2053,7 +2053,7 @@ a:hover {
   gap: 5px;
   min-height: 180px;
 }
-.chat-date { text-align: center; font-size: 11px; color: #555; margin-bottom: 4px; }
+.chat-date { text-align: center; font-size: 11px; color: #9A9AAA; margin-bottom: 4px; }
 .chat-row { display: flex; margin-bottom: 2px; }
 .chat-sent { justify-content: flex-end; }
 .chat-received { justify-content: flex-start; }
@@ -2110,7 +2110,7 @@ a:hover {
 .chat-ai-suggestion-label {
   font-size: 10.5px;
   font-weight: 600;
-  color: #831bfc;
+  color: #B78BFF;
   margin-bottom: 5px;
 }
 .chat-ai-suggestion-text {
@@ -2121,7 +2121,7 @@ a:hover {
 }
 .chat-ai-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .chat-btn-copy {
-  font-size: 11px; color: #831bfc;
+  font-size: 11px; color: #B78BFF;
   background: rgba(131,27,252,0.1);
   border: 1px solid rgba(131,27,252,0.3);
   border-radius: 16px; padding: 5px 12px;
@@ -2848,3 +2848,14 @@ button:focus-visible,
     .chat-btn-copy, .chat-btn-use { min-height: 44px; min-width: 44px; padding-inline: 16px; font-size: 12px; }
     .lang-option, .mobile-lang-chip { min-height: 44px; }
 }
+
+/* responsive: contraste AA del coach, objetivo de 44 px del logo y sin desborde con letra grande */
+.coach-chip, .coach-label { color: #C9A7FF; }
+.toolbar-logo { min-width: 44px; min-height: 44px; justify-content: center; }
+@media (max-width: 600px) {
+  .coach-section-inner { grid-template-columns: minmax(0, 1fr); }
+  .coach-section-text, .coach-section-visual { min-width: 0; overflow-wrap: anywhere; }
+  .coach-sparkle-top { right: 0; }
+}
+.chat-input-field, .chat-input-bar > * { min-width: 0; }
+.chat-input-field { overflow: hidden; }
