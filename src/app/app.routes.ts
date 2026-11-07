@@ -34,6 +34,9 @@ export const analyticsAuthGuard = () => authStateOnce();
 export const authGuard = () => authStateOnce();
 
 export const routes: Routes = [
+  // Landing: the hero lives in App's own template, so the route has no component. Declaring it lets the
+  // SSG build discover '/' and emit a real index.html (before: only index.csr.html, so first paint waited for JS).
+  { path: '', pathMatch: 'full', children: [] },
   {
     path: 'moderation-policy',
     component: ModerationPolicyComponent,
