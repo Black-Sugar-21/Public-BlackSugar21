@@ -1,0 +1,5 @@
+Fuentes alojadas en este dominio: Outfit, Playfair Display.
+Todas se publican bajo la SIL Open Font License 1.1 (OFL), que permite el alojamiento propio y la redistribución.
+Origen: repositorio google/fonts (https://github.com/google/fonts), copiadas tal cual de Google Fonts en noviembre de 2026
+(archivos woff2 por subconjunto de Unicode; el navegador descarga solo el que necesita).
+Texto de la licencia: https://openfontlicense.org/open-font-license-official-text/
