@@ -303,7 +303,8 @@ h1 {
 /* responsive: letra grande y pantallas angostas sin desborde; objetivos de 44 px */
 @media (max-width: 600px) {
   .legal-content { padding: 1.25rem; overflow-wrap: anywhere; min-width: 0; }
-  .legal-content * { min-width: 0; }
+  .legal-content li > :not(.icon), .legal-content section, .legal-content p { min-width: 0; }
+  .legal-content .icon { flex: none; }
 }
 .back-link { display: inline-flex; align-items: center; min-height: 44px; }
 .language-selector select { min-height: 44px; }

@@ -2862,5 +2862,5 @@ button:focus-visible,
 
 /* responsive: la maqueta del chat nunca es más ancha que su columna */
 @media (max-width: 600px) {
-  .chat-phone { max-width: 100%; min-width: 0; box-sizing: border-box; }
+  .chat-phone { max-width: 100%; min-width: 0; flex-shrink: 1; box-sizing: border-box; }
 }
