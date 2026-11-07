@@ -1593,7 +1593,7 @@ a:hover {
         font-size: 1.2rem;
     }
 
-    .coach-feature-item h4 {
+    .coach-feature-item h3 {
         font-size: 0.9rem;
     }
 
@@ -1822,7 +1822,7 @@ a:hover {
     border-radius: 10px;
 }
 
-.coach-feature-item h4 {
+.coach-feature-item h3 {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
