@@ -2864,3 +2864,9 @@ button:focus-visible,
 @media (max-width: 600px) {
   .chat-phone { max-width: 100%; min-width: 0; flex-shrink: 1; box-sizing: border-box; }
 }
+
+/* responsive: las cifras de confianza no empujan la página con letra grande */
+@media (max-width: 600px) {
+  .trust-band-inner { flex-wrap: wrap; }
+  .trust-stat { overflow-wrap: anywhere; }
+}
