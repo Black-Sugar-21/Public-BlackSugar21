@@ -1,3 +1,4 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LottieDirective } from './ui/lottie/lottie.directive';
 import { betaCards } from './ui/lottie/beta-links';
 import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
@@ -122,6 +123,10 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    // La portada solo se dibuja en «/»: también al prerenderizar, para que las subpáginas no traigan su HTML.
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntilDestroyed())
+      .subscribe((e) => this.currentUrl.set(e.urlAfterRedirects));
     if (this.isBrowser) {
       const setMobile = () => this.isMobileView.set(window.innerWidth <= 600);
       setMobile();
