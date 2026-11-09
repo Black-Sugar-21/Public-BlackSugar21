@@ -89,26 +89,26 @@ jobs:
     name: Cobertura · Public functions (c8)
     needs: backend-tests
     if: ${{ !cancelled() && needs.backend-tests.result != 'skipped' }}
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.3.0
+    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.4.0
     with:
       artifact_name: coverage-functions
       report_file: lcov.info
       format: auto
       minimum: 95
-      declared_minimum: 0
+      declared_minimum: 0 # cobertura real medida 2026-11-09: 0 % (las pruebas leen el código como texto, no lo ejecutan)
       label: "Public functions (c8)"
 
   coverage-web:
     name: Cobertura · Public web (Angular)
     needs: web-tests
     if: ${{ !cancelled() && needs.web-tests.result != 'skipped' }}
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.3.0
+    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.4.0
     with:
       artifact_name: coverage-web
       report_file: lcov.info
       format: auto
       minimum: 95
-      declared_minimum: 0
+      declared_minimum: 27 # cobertura real de líneas medida 2026-11-09: 27,61 % (781/2828)
       label: "Public web (Angular)"
 
   security:
@@ -116,7 +116,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/security.yml@v1.3.0
+    uses: Bimbask-Inc/bimbask-ci/.github/workflows/security.yml@v1.4.0
     with:
       codeql: true
       codeql_languages: javascript-typescript

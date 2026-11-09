@@ -3,8 +3,7 @@
 The public site of Black Sugar 21 (`blacksugar21.com`): Angular 21 (`@angular/core ^21.2`, standalone), Firebase Hosting, the Cloud Functions in `functions/`
 (Node 22) and the admin scripts in `scripts/`. Spanish version: [README.es.md](README.es.md).
 
-- **Languages:** 13 in `src/app/translation.service.ts` (`es en pt fr de it ja ko zh ar ru id tr`, 344 keys, identical in all 13; checked 2026-10-11). The owner's
-  standard set has `hi` (Hindi) instead of `id`: **there is no Hindi** here yet (the apps do have both).
+- **Languages:** 13 in `src/app/translation.service.ts` (`es en pt fr de it ja ko zh ar hi ru tr`, 352 keys, identical in all 13; guarded by `src/app/translation.parity.spec.ts`). Hindi replaced Indonesian (`id`) to match the owner's standard set; the Hindi text has **no native review** yet.
 - **Workflows:** all of `.github/workflows/` are `workflow_dispatch` only (nothing runs by itself).
 - **CI and deploy by hand:** `gh workflow run ci.yml -R Black-Sugar-21/Public-BlackSugar21` (web and functions tests with coverage gates at 95 %, security and CodeQL; bimbask-ci v1.3.0; the repo declares no threshold yet). `gh workflow run deploy.yml -R Black-Sugar-21/Public-BlackSugar21 -f confirm=Public-BlackSugar21` (asks for the confirmation text; only the owner runs it). `e2e-smoke.yml` is the pre-release sanity check.
 - **Tests:** `npm test` (`ng test`), `functions/` has its own (`cd functions && npm test`); the scripted system is below.
