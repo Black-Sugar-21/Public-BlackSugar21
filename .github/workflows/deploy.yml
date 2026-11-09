@@ -1,41 +1,52 @@
-name: Deploy to Firebase Hosting
+# Despliegue MANUAL de Public-BlackSugar21 (sitio público blacksugar21.com (Firebase Hosting)).
+# Regla del dueño: ningún workflow se dispara solo (solo workflow_dispatch). No lo corre ningún agente: lo corre el dueño.
+#   gh workflow run deploy.yml -R <org>/Public-BlackSugar21 -f confirm=Public-BlackSugar21 [-f target=...]
+# Pide escribir el nombre de la app, despliega solo desde main, corre las pruebas antes y NUNCA usa --force.
+# Llave de la cuenta de servicio: secreto FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21 (docs/ci-secrets.es.md de Bimbask-Inc/bimbask-ci).
+# Reemplaza al deploy.yml anterior (FirebaseExtended/action-hosting-deploy sin fijar, Node 18, sin confirmación). Usa el secreto que el repo ya tiene.
+name: deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe Public-BlackSugar21 para confirmar el despliegue'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  confirm:
+    name: Confirmación
     runs-on: ubuntu-latest
-
+    timeout-minutes: 2
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Solo desde main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::Se despliega solo desde main (ref: $REF)"; exit 1; }
+      - name: Nombre de la app
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          [ "$CONFIRM" = "Public-BlackSugar21" ] || { echo "::error::Confirmación incorrecta: escribe exactamente Public-BlackSugar21"; exit 1; }
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build (prod)
-        run: npm run build:prod
-
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v1
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21 }}
-          channelId: live
-          projectId: black-sugar21
-
+  deploy:
+    name: Firebase · black-sugar21
+    needs: confirm
+    uses: Bimbask-Inc/bimbask-ci/.github/workflows/firebase-deploy.yml@v1.3.0
+    with:
+      firebase_project: black-sugar21
+      only: hosting
+      node_version: '22'
+      install_command: 'npm ci'
+      build_command: 'npm run build:prod'
+    secrets:
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21 }}
