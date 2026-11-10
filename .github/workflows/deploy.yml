@@ -2,7 +2,7 @@
 # Regla del dueño: ningún workflow se dispara solo (solo workflow_dispatch). No lo corre ningún agente: lo corre el dueño.
 #   gh workflow run deploy.yml -R <org>/Public-BlackSugar21 -f confirm=Public-BlackSugar21 [-f target=...]
 # Pide escribir el nombre de la app, despliega solo desde main, corre las pruebas antes y NUNCA usa --force.
-# Llave de la cuenta de servicio: secreto FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21 (docs/ci-secrets.es.md de Bimbask-Inc/bimbask-ci).
+# Llave de la cuenta de servicio: secreto FIREBASE_SERVICE_ACCOUNT_BLACK_SUGAR_21 (docs/ci-secrets.es.md de Black-Sugar-21/bimbask-ci).
 # Reemplaza al deploy.yml anterior (FirebaseExtended/action-hosting-deploy sin fijar, Node 18, sin confirmación). Usa el secreto que el repo ya tiene.
 name: deploy
 
@@ -52,7 +52,7 @@ jobs:
     permissions:
       contents: read
       id-token: write   # acceso sin llaves (Workload Identity)
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/firebase-deploy.yml@v1.5.1
+    uses: Black-Sugar-21/bimbask-ci/.github/workflows/firebase-deploy.yml@v1.5.1
     with:
       gcp_wif_provider: ${{ vars.GCP_WIF_PROVIDER }}
       gcp_service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}

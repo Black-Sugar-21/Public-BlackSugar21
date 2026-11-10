@@ -90,7 +90,7 @@ jobs:
     name: Cobertura · Public functions (c8)
     needs: backend-tests
     if: ${{ !cancelled() && needs.backend-tests.result != 'skipped' }}
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.5.1
+    uses: Black-Sugar-21/bimbask-ci/.github/workflows/coverage-gate.yml@v1.5.1
     with:
       artifact_name: coverage-functions
       report_file: lcov.info
@@ -103,7 +103,7 @@ jobs:
     name: Cobertura · Public web (Angular)
     needs: web-tests
     if: ${{ !cancelled() && needs.web-tests.result != 'skipped' }}
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/coverage-gate.yml@v1.5.1
+    uses: Black-Sugar-21/bimbask-ci/.github/workflows/coverage-gate.yml@v1.5.1
     with:
       artifact_name: coverage-web
       report_file: lcov.info
@@ -116,4 +116,4 @@ jobs:
     name: Seguridad
     permissions:
       contents: read
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/security.yml@v1.5.1
+    uses: Black-Sugar-21/bimbask-ci/.github/workflows/security.yml@v1.5.1
