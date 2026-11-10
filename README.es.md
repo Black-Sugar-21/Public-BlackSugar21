@@ -3,8 +3,7 @@
 El sitio público de Black Sugar 21 (`blacksugar21.com`): Angular 21 (`@angular/core ^21.2`, standalone), Firebase Hosting, las Cloud Functions de `functions/`
 (Node 22) y los scripts de administración de `scripts/`. English version: [README.md](README.md).
 
-- **Idiomas:** 13 en `src/app/translation.service.ts` (`es en pt fr de it ja ko zh ar ru id tr`, 344 claves, idénticas en los 13; verificado el 2026-10-11). El estándar del
-  dueño usa `hi` (hindi) en lugar de `id`: **aquí todavía no hay hindi** (las apps sí tienen ambos).
+- **Idiomas:** 13 en `src/app/translation.service.ts` (`es en pt fr de it ja ko zh ar hi ru tr`, 352 claves, idénticas en los 13; protegido por `src/app/translation.parity.spec.ts`). El hindi reemplazó al indonesio (`id`) para igualar el estándar del dueño; el texto en hindi **no tiene revisión nativa** todavía.
 - **Workflows:** todos los de `.github/workflows/` son solo `workflow_dispatch` (nada corre solo).
 - **Landing de producto y «Prueba la beta»:** los enlaces de prueba y de tienda viven solo en `src/beta-links.json` (`src/app/ui/lottie/beta-links.ts`); un enlace `null` no muestra botón y la
   tarjeta dice «Próximamente». Lottie propio en `public/lottie/` (`scripts/make-site-lottie.py`); fuentes en `NOTICE`.

@@ -160,7 +160,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           ko: 'Black Sugar 21은 AI 감성 지능 코치입니다. 진짜 심리학으로 진짜 연결을 만드세요. 13개 언어, 무료.',
           ru: 'Black Sugar 21 — ИИ-коуч эмоционального интеллекта. Настоящая психология для настоящих связей. 13 языков, бесплатно.',
           ar: 'Black Sugar 21 مدرب ذكاء عاطفي بالذكاء الاصطناعي. علم نفس حقيقي للتواصل الحقيقي. 13 لغة، مجاناً.',
-          id: 'Black Sugar 21 adalah coach kecerdasan emosional bertenaga AI. Psikologi nyata untuk koneksi nyata. 13 bahasa, gratis.',
+          hi: 'Black Sugar 21 एक AI भावनात्मक बुद्धिमत्ता कोच है। असली मनोविज्ञान (Gottman, Goleman, Bowlby) के साथ सच में जुड़ें — अंतहीन स्वाइप के बिना। 13 भाषाएँ, मुफ़्त।',
           tr: "Black Sugar 21, yapay zekâ destekli duygusal zekâ koçudur. Gerçek psikolojiyle gerçek bağlar kurun. 13 dil, ücretsiz.",
         };
         const titles: Record<string, string> = {
@@ -175,7 +175,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
           ko: 'Black Sugar 21 – AI 감성 지능 코치',
           ru: 'Black Sugar 21 – ИИ-коуч Эмоционального Интеллекта',
           ar: 'Black Sugar 21 – مدرب الذكاء العاطفي بالذكاء الاصطناعي',
-          id: 'Black Sugar 21 – Coach Kecerdasan Emosional AI',
+          hi: 'Black Sugar 21 – AI भावनात्मक बुद्धिमत्ता कोच',
           tr: 'Black Sugar 21 – Yapay Zekâ Duygusal Zekâ Koçu',
         };
         // Meta/Title are SSR-safe (Angular DOM abstraction) → keep them so the prerendered

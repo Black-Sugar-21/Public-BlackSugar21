@@ -38,11 +38,24 @@ jobs:
         run: |
           [ "$CONFIRM" = "Public-BlackSugar21" ] || { echo "::error::Confirmación incorrecta: escribe exactamente Public-BlackSugar21"; exit 1; }
 
+  ci:
+    name: Pruebas, cobertura y seguridad
+    needs: confirm
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   deploy:
     name: Firebase · black-sugar21
-    needs: confirm
-    uses: Bimbask-Inc/bimbask-ci/.github/workflows/firebase-deploy.yml@v1.3.0
+    needs: [confirm, ci]
+    permissions:
+      contents: read
+      id-token: write   # acceso sin llaves (Workload Identity)
+    uses: Bimbask-Inc/bimbask-ci/.github/workflows/firebase-deploy.yml@v1.5.1
     with:
+      gcp_wif_provider: ${{ vars.GCP_WIF_PROVIDER }}
+      gcp_service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
       firebase_project: black-sugar21
       only: hosting
       node_version: '22'
