@@ -1,24 +1,33 @@
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { Observable } from 'rxjs';
+import { FirebaseService } from './firebase.service';
 import { ModerationPolicyComponent } from './components/moderation-policy/moderation-policy.component';
 import { TermsComponent } from './pages/terms/terms.component';
 import { PrivacyComponent } from './pages/privacy/privacy.component';
 import { DataDeletionComponent } from './pages/data-deletion/data-deletion.component';
 import { SafetyStandardsComponent } from './pages/safety-standards/safety-standards.component';
 
-/** Resolves once with the current Firebase auth state (null = not signed in). */
-function authStateOnce(): Observable<boolean | import('@angular/router').UrlTree> {
+/**
+ * Resuelve una vez con el estado de sesión actual (sin sesión → redirige a la portada).
+ * Trae Firebase bajo demanda: estas rutas son las únicas que lo necesitan antes de pintar.
+ */
+export async function authStateOnce(): Promise<boolean | import('@angular/router').UrlTree> {
   const router = inject(Router);
-  return new Observable(subscriber => {
-    const unsubscribe = onAuthStateChanged(getAuth(), user => {
-      subscriber.next(user ? true : router.createUrlTree(['/']));
-      subscriber.complete();
-      unsubscribe();
+  const firebase = inject(FirebaseService);
+  try {
+    const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+    await firebase.ready();
+    const auth = getAuth();
+    return await new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        resolve(user ? true : router.createUrlTree(['/']));
+        unsubscribe();
+      });
     });
-  });
+  } catch {
+    return router.createUrlTree(['/']);
+  }
 }
 
 /**
