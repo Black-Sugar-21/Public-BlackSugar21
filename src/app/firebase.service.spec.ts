@@ -173,7 +173,7 @@ describe('FirebaseService (carga diferida)', () => {
     for (const n of names) {
       const out = (svc as any)[n]('x', 'y');
       if (n.startsWith('listen')) { expect(typeof out).toBe('function'); await Promise.resolve(); }
-      else expect(await out).toBe(n);
+      else expect(await out).toEqual(n === 'signIn' ? { uid: 'u-x' } : n); // signIn está declarado en FakeCore
       expect(core[n], n).toHaveBeenCalledWith('x', 'y');
     }
   });
