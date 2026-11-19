@@ -39,3 +39,6 @@
 :host, .coach-page { overscroll-behavior: none; }
 :host ::ng-deep .cw-panel.cw-embedded { overflow: hidden; }
 :host ::ng-deep .cw-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* h1 solo para lectores de pantalla y buscadores: el título visible vive dentro del widget (solo en el navegador). */
+.coach-page-h1 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
