@@ -1499,6 +1499,7 @@ export class TranslationService {
       tr: "Siteyi ve uygulamayı nasıl kullandığınızı toplu ve anonim biçimde anlayıp deneyimi iyileştirmek için analiz araçları (Google Analytics/Firebase gibi) kullanırız. Bu veriler sizi kişisel olarak tanımlamak için kullanılmaz."
     },
 
+
     // Privacy — legal gaps (R150)
     'privacy.retention': {
       es: 'Retención y eliminación de datos',

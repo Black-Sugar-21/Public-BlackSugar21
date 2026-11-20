@@ -9,6 +9,8 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { TranslationService, LANGUAGES, LanguageOption, Language } from './translation.service';
 import { FirebaseService } from './firebase.service';
+import { AnalyticsService } from './analytics.service';
+import { prefsLabel } from './analytics/prefs-label';
 import { CoachWidgetComponent } from './coach-widget.component';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -95,6 +97,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   /** Pick a language → updates UI + Coach IA demo + persists + syncs to Firebase if logged in. */
   async selectLanguage(lang: Language): Promise<void> {
     this.translate.setLanguage(lang);
+    this.analytics.trackEvent('language_change', { language: lang });
     this.langMenuOpen.set(false);
     this.gateLangMenuOpen.set(false);
     const user = this.firebase.currentUser();
@@ -117,6 +120,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     public translate: TranslationService,
     public firebase: FirebaseService,
+    public analytics: AnalyticsService,
     private router: Router,
     private meta: Meta,
     private titleService: Title,
@@ -516,49 +520,13 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
       this.syncLanguageFromFirebase();
     }
 
-    // Track page views with Firebase Analytics
+    // Analítica GA4 con consentimiento (no usa Firebase; apagada sin measurementId). Aviso + vistas de página.
+    this.analytics.start(() => this.translate.currentLanguage(), '/privacy');
     this.trackPageViews();
-
-    // Track traffic source, device, and landing info
-    this.trackVisitorInfo();
   }
 
-  private trackVisitorInfo(): void {
-    // Traffic source (UTM params or referrer)
-    const params = new URLSearchParams(window.location.search);
-    const utmSource = params.get('utm_source') || '';
-    const utmMedium = params.get('utm_medium') || '';
-    const utmCampaign = params.get('utm_campaign') || '';
-    const referrer = document.referrer || 'direct';
-
-    // Device info
-    const ua = navigator.userAgent;
-    const isMobile = /iPhone|iPad|Android|Mobile/i.test(ua);
-    const isIOS = /iPhone|iPad/i.test(ua);
-    const isAndroid = /Android/i.test(ua);
-    const platform = isIOS ? 'iOS' : isAndroid ? 'Android' : 'Desktop';
-
-    // Browser language
-    const browserLang = navigator.language || 'unknown';
-
-    // Country from timezone
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
-
-    this.firebase.logEvent('visitor_info', {
-      traffic_source: utmSource || (referrer.includes('google') ? 'google' : referrer.includes('facebook') ? 'facebook' : referrer.includes('instagram') ? 'instagram' : referrer.includes('tiktok') ? 'tiktok' : referrer === 'direct' ? 'direct' : 'other'),
-      utm_source: utmSource,
-      utm_medium: utmMedium,
-      utm_campaign: utmCampaign,
-      referrer: referrer.substring(0, 100),
-      platform,
-      is_mobile: isMobile,
-      browser_language: browserLang,
-      timezone,
-      landing_page: window.location.pathname,
-      screen_width: window.screen.width,
-      screen_height: window.screen.height,
-    });
-  }
+  /** «Preferencias de privacidad» del pie, en el idioma activo. */
+  prefsLabel(): string { return prefsLabel(this.translate.currentLanguage()); }
 
   async verifyAge() {
     this.ageVerified.set(true);
@@ -675,34 +643,15 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     // Log initial page view (landing page)
     const initialPage = this.router.url || '/';
     this.currentUrl.set(initialPage); // R(SEO): keep <main> route-gating reactive
-    this.firebase.logEvent('screen_view', {
-      page_path: initialPage,
-      page_title: this.getPageName(initialPage)
-    });
+    this.analytics.trackPageView(initialPage);
 
     // Log subsequent navigations
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
         this.currentUrl.set(event.urlAfterRedirects); // R(SEO): update route-gating
-        this.firebase.logEvent('screen_view', {
-          page_path: event.urlAfterRedirects,
-          page_title: this.getPageName(event.urlAfterRedirects)
-        });
+        this.analytics.trackPageView(event.urlAfterRedirects);
       });
-  }
-
-  private getPageName(url: string): string {
-    const pageNames: Record<string, string> = {
-      '/': 'Home',
-      '/terms': 'Terms',
-      '/privacy': 'Privacy',
-      '/data-deletion': 'Data Deletion',
-      '/moderation-policy': 'Moderation Policy',
-      '/politicas-moderacion': 'Moderation Policy',
-      '/safety-standards': 'Safety Standards'
-    };
-    return pageNames[url] ?? url;
   }
 
   /**
@@ -734,7 +683,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
       });
 
       // 2. Track event + show success (admin gets push notification via CF)
-      this.firebase.logEvent('tester_signup', { email_domain: email.split('@')[1] });
+      this.firebase.logEvent('tester_signup');
       this.testerStatus.set('success');
     } catch (err) {
       console.error('Tester signup error:', err);

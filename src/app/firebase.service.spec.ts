@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { FIREBASE_IDLE_TIMEOUT_MS, FirebaseService, MAX_QUEUED_EVENTS } from './firebase.service';
+import { FIREBASE_IDLE_TIMEOUT_MS, FirebaseService } from './firebase.service';
+import { AnalyticsService } from './analytics.service';
 import type { FirebaseState } from './firebase-core';
 
 /** Núcleo falso: registra lo que la fachada le delega, sin tocar el SDK real. */
 class FakeCore {
   static instances: FakeCore[] = [];
-  logged: Array<[string, unknown]> = [];
   signIn = vi.fn(async (email: string, _pw: string) => ({ uid: 'u-' + email }));
   listenMatches = vi.fn((_cb: (m: unknown[]) => void) => this.unsub);
   unsub = vi.fn();
@@ -21,7 +21,6 @@ class FakeCore {
       },
     });
   }
-  logEvent(name: string, params?: unknown) { this.logged.push([name, params]); }
 }
 
 class TestableFirebase extends FirebaseService {
@@ -49,20 +48,14 @@ describe('FirebaseService (carga diferida)', () => {
     expect(svc.loads).toBe(0);
   });
 
-  it('encola eventos y los entrega en orden cuando el SDK llega', async () => {
+  it('logEvent va a la analítica con consentimiento y NUNCA carga ni usa el SDK de Firebase', async () => {
     const svc = make();
+    const spy = vi.spyOn(TestBed.inject(AnalyticsService), 'trackEvent');
     svc.logEvent('a'); svc.logEvent('b', { x: 1 });
-    const core = (await svc.ready()) as unknown as FakeCore;
-    expect(core.logged).toEqual([['a', undefined], ['b', { x: 1 }]]);
-    svc.logEvent('c');
-    expect(core.logged.at(-1)).toEqual(['c', undefined]);
-  });
-
-  it('limita la cola de eventos', async () => {
-    const svc = make();
-    for (let i = 0; i < MAX_QUEUED_EVENTS + 20; i++) svc.logEvent('e' + i);
-    const core = (await svc.ready()) as unknown as FakeCore;
-    expect(core.logged.length).toBe(MAX_QUEUED_EVENTS);
+    expect(spy.mock.calls).toEqual([['a', undefined], ['b', { x: 1 }]]);
+    expect(svc.loads).toBe(0);
+    await vi.advanceTimersByTimeAsync(FIREBASE_IDLE_TIMEOUT_MS * 2);
+    expect(svc.loads).toBe(0);
   });
 
   it('ready() es idempotente y comparte el estado de señales con el núcleo', async () => {
@@ -109,7 +102,7 @@ describe('FirebaseService (carga diferida)', () => {
 
   it('la primera interacción adelanta la carga', async () => {
     const svc = make();
-    svc.logEvent('screen_view');
+    void svc.whenIdle();
     window.dispatchEvent(new Event('pointerdown'));
     await vi.advanceTimersByTimeAsync(0);
     expect(svc.loads).toBe(1);
