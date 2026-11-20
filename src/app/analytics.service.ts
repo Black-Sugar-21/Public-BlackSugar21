@@ -2,6 +2,7 @@ import { Injectable, InjectionToken, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ANALYTICS_MEASUREMENT_ID } from './analytics.config';
 import type { Analytics, Params } from './analytics/web-analytics';
+import { onFirstInteraction } from './analytics/first-interaction';
 
 /** measurementId efectivo (por defecto el de analytics.config; las pruebas lo sustituyen). */
 export const ANALYTICS_ID = new InjectionToken<string>('ANALYTICS_ID', { providedIn: 'root', factory: () => ANALYTICS_MEASUREMENT_ID });
@@ -31,16 +32,24 @@ export class AnalyticsService {
   private started = false;
   private waiting: Array<() => void> = [];
   private prefs: () => void = () => undefined;
+  private mount: (() => void) | null = null;
+  private interacted = false;
 
   /** Lo llama la app una vez, con la función que da el idioma actual. Trae el módulo y muestra el aviso si hace falta. */
   start(getLanguage: () => string, privacyHref: string): void {
     if (!this.browser || this.started || !this.id || location.pathname.startsWith('/opinion')) return;
     this.started = true;
+    // El aviso aparece en la primera interacción (no al cargar: así no puede pasar a ser el LCP). La escucha se pone ya; el aviso, cuando llega el módulo.
+    onFirstInteraction(() => { this.interacted = true; this.mount?.(); });
     void Promise.all([import('./analytics/web-analytics'), import('./analytics/consent-banner'), import('./analytics-events')]).then(([wa, banner, ev]) => {
       const api = wa.createAnalytics({ measurementId: this.id, events: ev.ANALYTICS_EVENTS, getLanguage, pageLocation: () => location.origin + pagePath(location.pathname) });
       this.api = api;
       // El sitio es siempre oscuro: el aviso también.
-      this.prefs = banner.mountConsent({ analytics: api, getLanguage, privacyHref, theme: 'dark' }).openPreferences;
+      const opts = { analytics: api, getLanguage, privacyHref, theme: 'dark' as const };
+      // «Preferencias de privacidad» del pie siempre abre el aviso.
+      this.prefs = () => { banner.closeBanner(); banner.showBanner(opts); };
+      this.mount = () => { banner.mountConsent(opts); };
+      if (this.interacted) this.mount();
       api.onConsentChange((c) => { if (c === 'granted') api.pageView(pagePath(location.pathname)); });
       api.trackScroll();
       for (const w of this.waiting.splice(0)) w();
