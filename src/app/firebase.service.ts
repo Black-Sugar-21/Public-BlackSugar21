@@ -1,1362 +1,205 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import {
-  getAuth,
-  Auth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  User,
-  GoogleAuthProvider,
-  OAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult
-} from 'firebase/auth';
-import {
-  getFirestore,
-  Firestore,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  deleteField,
-  arrayUnion,
-  serverTimestamp,
-  increment,
-  collection,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  limit as fbLimit,
-  onSnapshot,
-  Timestamp
-} from 'firebase/firestore';
-import {
-  getRemoteConfig,
-  fetchAndActivate,
-  getString,
-  getNumber,
-  getBoolean,
-  RemoteConfig
-} from 'firebase/remote-config';
-import {
-  initializeAppCheck,
-  ReCaptchaV3Provider
-} from 'firebase/app-check';
-import {
-  getAnalytics,
-  logEvent as firebaseLogEvent,
-  Analytics
-} from 'firebase/analytics';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage';
-import {
-  getFunctions,
-  httpsCallable,
-  Functions
-} from 'firebase/functions';
-import { firebaseConfig, recaptchaSiteKey, appCheckEnabled } from './firebase.config';
-import { signal } from '@angular/core';
+import type { User } from 'firebase/auth';
+import type { FirebaseCore, FirebaseState, UserProfile } from './firebase-core';
 
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  age?: number;
-  preferences?: {
-    language: string;
-  };
-  createdAt: Date;
-  lastLogin: Date;
-}
+export type { UserProfile } from './firebase-core';
 
-@Injectable({
-  providedIn: 'root'
-})
+/** Tiempo máximo tras la carga de la página para traer Firebase aunque nadie interactúe (restaura la sesión). */
+export const FIREBASE_IDLE_TIMEOUT_MS = 2500;
+/** Tope de eventos de analítica en espera antes de que Firebase esté cargado. */
+export const MAX_QUEUED_EVENTS = 50;
+
+/**
+ * Fachada de Firebase con carga diferida.
+ *
+ * Mantiene la misma API pública que antes, pero el SDK (unos 400 kB) vive en `firebase-core.ts` y se trae con
+ * `import()` dinámico: nunca en la ruta crítica de la portada. Se carga cuando (a) una función lo necesita
+ * (formularios, /app, /analytics, el coach), (b) el usuario interactúa por primera vez, o (c) pasa la ventana
+ * de inactividad tras la carga (para restaurar la sesión). Los eventos de analítica se encolan hasta entonces.
+ */
+@Injectable({ providedIn: 'root' })
 export class FirebaseService {
-  // Definite assignment: only initialized in the browser (see constructor guard). On the
-  // server (SSG prerender) these stay unset — no Firebase call runs during prerender.
-  private app!: FirebaseApp;
-  private auth!: Auth;
-  private db!: Firestore;
-  private remoteConfig!: RemoteConfig;
-  private analytics!: Analytics;
-  private functions!: Functions;
-  private storage!: ReturnType<typeof getStorage>;
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private corePromise: Promise<FirebaseCore> | null = null;
+  private core_: FirebaseCore | null = null;
+  private queued: Array<[string, Record<string, unknown> | undefined]> = [];
+  private idleScheduled = false;
+  private idleResolve!: () => void;
+  private readonly idle = new Promise<void>((r) => (this.idleResolve = r));
 
-  currentUser = signal<User | null>(null);
-  userProfile = signal<UserProfile | null>(null);
+  readonly currentUser = signal<User | null>(null);
+  readonly userProfile = signal<UserProfile | null>(null);
   /** False until the signed-in user's profile has been loaded/checked at least once — lets the UI
    *  gate onboarding WITHOUT flashing it for existing users during the async profile load. */
-  profileChecked = signal(false);
+  readonly profileChecked = signal(false);
   /** True when the last sign-in hit a soft-deleted account (blocked re-login → show a notice). */
-  accountDeleted = signal(false);
+  readonly accountDeleted = signal(false);
   /** Open-coach request bus (signal-based, reliable cross-component): increments each time something
-   *  (e.g. the landing hero CTA) asks to open the Coach widget. The widget reacts via an effect — no
-   *  fragile window CustomEvent / addEventListener that can miss if the widget mounts after the click. */
+   *  (e.g. the landing hero CTA) asks to open the Coach widget. */
   readonly coachOpenRequest = signal(0);
   requestOpenCoach(): void { this.coachOpenRequest.update((n) => n + 1); }
 
-  constructor() {
-    // Firebase (Auth, Firestore, Analytics, RemoteConfig, Storage, App Check, window.location,
-    // auth listeners) is browser-only. During SSG prerender there is no window/document — skip
-    // init entirely; every Firebase call is behind a user interaction that only runs client-side
-    // after hydration. This keeps the prerender bootstrap from throwing (getAnalytics needs DOM).
-    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-
-    this.app = initializeApp(firebaseConfig);
-    this.auth = getAuth(this.app);
-    this.db = getFirestore(this.app);
-    this.remoteConfig = getRemoteConfig(this.app);
-    this.analytics = getAnalytics(this.app);
-    this.functions = getFunctions(this.app, 'us-central1');
-    this.storage = getStorage(this.app);
-
-    // Configurar intervalo de actualización (en desarrollo puede ser bajo)
-    this.remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hora
-
-    // Configurar valores por defecto para Remote Config
-    this.remoteConfig.defaultConfig = {
-      store_url_ios: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
-      store_url_android: 'https://appdistribution.firebase.dev/i/9653bbc47bcaabe2',
-      minimum_age_by_country: JSON.stringify({ "default": 18 }),
-      // Homologado con iOS/Android RemoteConfigService (daily_likes_limit / coach_daily_credits).
-      daily_likes_limit: 100,
-      coach_daily_credits: 4,
-      daily_super_likes_limit: 5,
-      // R155: simplicity pass — wardrobe hidden by default (homologado con iOS/Android).
-      wardrobe_enabled: false
-    };
-
-    // Inicializar App Check con reCAPTCHA Enterprise.
-    if (appCheckEnabled && recaptchaSiteKey) {
-      try {
-        // En desarrollo, usar modo debug para evitar errores 403
-        const isLocalhost = window.location.hostname === 'localhost' ||
-                           window.location.hostname === '127.0.0.1';
-
-        if (isLocalhost) {
-          // Modo debug para desarrollo local
-          // Esto generará un token de debug que debe ser registrado en Firebase Console
-          (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-        }
-
-        initializeAppCheck(this.app, {
-          provider: new ReCaptchaV3Provider(recaptchaSiteKey),
-          isTokenAutoRefreshEnabled: true
-        });
-      } catch (error) {
-        // En desarrollo, no bloquear la aplicación por errores de App Check
-        console.warn('App Check initialization error (non-blocking):', error);
-      }
-    }
-
-    // Listen to auth state changes
-    onAuthStateChanged(this.auth, async (user) => {
-      this.currentUser.set(user);
-      this.profileChecked.set(false);
-      if (user) {
-        try {
-          await this.loadUserProfile(user.uid);
-          // A soft-deleted account must NOT be able to log back in — sign out immediately and
-          // surface a notice (the doc still exists during the grace period before the cron purge).
-          if (this.accountDeleted()) { await signOut(this.auth); return; }
-        } finally { this.profileChecked.set(true); }
-      } else {
-        this.userProfile.set(null);
-        this.profileChecked.set(true);
-      }
-    });
-    // Complete any pending Apple redirect sign-in (popup-blocked fallback).
-    this.handleRedirectResult();
-  }
-
-  // Authentication Methods
-  async signIn(email: string, password: string): Promise<User> {
-    const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
-    await this.updateLastLogin(userCredential.user.uid);
-    return userCredential.user;
-  }
-
-  async signUp(email: string, password: string, displayName?: string): Promise<User> {
-    const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-    const user = userCredential.user;
-
-    // Create user profile in Firestore
-    await this.createUserProfile({
-      uid: user.uid,
-      email: user.email!,
-      displayName: displayName || user.email!.split('@')[0],
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      preferences: {
-        language: 'es'
-      }
-    });
-
-    return user;
-  }
-
-  async signInWithGoogle(): Promise<User> {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const userCredential = await signInWithPopup(this.auth, provider);
-    const user = userCredential.user;
-
-    // Check if user profile exists, if not create one
-    const profileExists = await this.checkUserProfileExists(user.uid);
-    if (!profileExists) {
-      await this.createUserProfile({
-        uid: user.uid,
-        email: user.email!,
-        displayName: user.displayName || user.email!.split('@')[0],
-        photoURL: user.photoURL || undefined,
-        createdAt: new Date(),
-        lastLogin: new Date(),
-        preferences: {
-          language: 'es'
-        }
+  /** Trae Firebase ya (idempotente). Lo usan los guards de /app y /analytics antes de leer la sesión. */
+  ready(): Promise<FirebaseCore> {
+    if (!this.isBrowser) return Promise.reject(new Error('firebase-browser-only'));
+    if (!this.corePromise) {
+      const state: FirebaseState = {
+        currentUser: this.currentUser,
+        userProfile: this.userProfile,
+        profileChecked: this.profileChecked,
+        accountDeleted: this.accountDeleted,
+      };
+      this.corePromise = this.loadCore().then(({ FirebaseCore: Core }) => {
+        const core = new Core(state);
+        this.core_ = core;
+        const pending = this.queued;
+        this.queued = [];
+        for (const [name, params] of pending) core.logEvent(name, params);
+        return core;
       });
-    } else {
-      await this.updateLastLogin(user.uid);
+      // Si falla la descarga, permitir un reintento en la próxima llamada.
+      this.corePromise.catch(() => { this.corePromise = null; });
     }
-
-    return user;
+    return this.corePromise;
   }
 
-  // R64: Sign in with Apple (web). Shown only on Apple devices in the UI. Requires the Apple
-  // provider enabled in Firebase Auth console (Services ID + return URL for black-sugar21.web.app).
-  private appleProvider(): OAuthProvider {
-    const provider = new OAuthProvider('apple.com');
-    provider.addScope('email');
-    provider.addScope('name');
-    return provider;
-  }
-  /** Ensure the Firestore profile exists for an OAuth (Google/Apple) user — shared by popup + redirect paths. */
-  private async ensureOAuthProfile(user: User): Promise<void> {
-    const profileExists = await this.checkUserProfileExists(user.uid);
-    if (!profileExists) {
-      await this.createUserProfile({
-        uid: user.uid,
-        email: user.email || `${user.uid}@privaterelay.appleid.com`,
-        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario'),
-        photoURL: user.photoURL || undefined,
-        createdAt: new Date(),
-        lastLogin: new Date(),
-        preferences: { language: 'es' }
-      });
-    } else {
-      await this.updateLastLogin(user.uid);
-    }
-  }
-  async signInWithApple(): Promise<User> {
-    const userCredential = await signInWithPopup(this.auth, this.appleProvider());
-    await this.ensureOAuthProfile(userCredential.user);
-    return userCredential.user;
-  }
-  /** Full-page redirect fallback (popups blocked / Safari). Completed by handleRedirectResult() on load. */
-  async signInWithAppleRedirect(): Promise<void> {
-    await signInWithRedirect(this.auth, this.appleProvider());
-  }
-  /** Google sign-in via full-page redirect — reliable on iOS Safari, where signInWithPopup hangs
-   *  forever (Safari ITP blocks the cross-origin popup messaging between the app origin and the
-   *  authDomain). Completed by handleRedirectResult() on the next page load. */
-  async signInWithGoogleRedirect(): Promise<void> {
-    const provider = new GoogleAuthProvider();
-    // Always show the account picker so users can switch accounts (not auto-sign-in with cached session).
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithRedirect(this.auth, provider);
-  }
-  /** Popups hang on iOS Safari (ITP) → prefer the full-page redirect flow there. Desktop keeps the
-   *  nicer popup. Heuristic: any iOS device, desktop Safari, or a small/touch viewport. */
-  shouldUseRedirect(): boolean {
-    // Redirect on EVERY browser. Now that authDomain is the brand domain (blacksugar21.com, same
-    // registrable domain as the app on blacksugar21.com / www.blacksugar21.com), signInWithRedirect
-    // completes reliably (handler is first-party, no third-party-storage emptiness) — so we no longer
-    // need the popup. Dropping the popup removes the "COOP would block the window.close call" warnings
-    // (the popup-close that COOP severs cross-origin) AND the iOS-Safari popup hang. Completed by
-    // handleRedirectResult() + the widget's auth effect on the next load.
-    // (Caveat: on black-sugar21.web.app the authDomain is a different registrable domain → use the
-    //  brand domain blacksugar21.com for sign-in.)
-    return true;
-  }
-  /** Process a pending OAuth (Google/Apple) redirect sign-in on app load (creates the profile for new users). */
-  private async handleRedirectResult(): Promise<void> {
-    try {
-      const res = await getRedirectResult(this.auth);
-      if (res?.user) await this.ensureOAuthProfile(res.user);
-    } catch (e) { console.warn('redirect sign-in result error:', e); }
-  }
-
-  // R64: Phone sign-in (web) — invisible reCAPTCHA + SMS OTP, 2 steps.
-  private phoneConfirmation: ConfirmationResult | null = null;
-  private recaptchaVerifier: RecaptchaVerifier | null = null;
-
-  async startPhoneSignIn(phoneE164: string, recaptchaContainerId: string): Promise<void> {
-    // Always start from a FRESH invisible reCAPTCHA verifier. Reusing one after a failed/expired
-    // attempt makes sendVerificationCode return 400 on the retry, so clear the old one first.
-    try { this.recaptchaVerifier?.clear(); } catch { /* noop */ }
-    this.recaptchaVerifier = new RecaptchaVerifier(this.auth, recaptchaContainerId, { size: 'invisible' });
-    try {
-      this.phoneConfirmation = await signInWithPhoneNumber(this.auth, phoneE164, this.recaptchaVerifier);
-    } catch (e) {
-      try { this.recaptchaVerifier?.clear(); } catch { /* noop */ }
-      this.recaptchaVerifier = null;
-      throw e;
-    }
-  }
-
-  async confirmPhoneCode(code: string): Promise<User> {
-    if (!this.phoneConfirmation) throw new Error('no_confirmation');
-    const cred = await this.phoneConfirmation.confirm(code);
-    const user = cred.user;
-    const profileExists = await this.checkUserProfileExists(user.uid);
-    if (!profileExists) {
-      await this.createUserProfile({
-        uid: user.uid,
-        email: user.email || `${user.uid}@phone.blacksugar21`,
-        displayName: user.displayName || user.phoneNumber || 'Usuario',
-        createdAt: new Date(),
-        lastLogin: new Date(),
-        preferences: { language: 'es' }
-      });
-    } else {
-      await this.updateLastLogin(user.uid);
-    }
-    this.phoneConfirmation = null;
-    return user;
-  }
-
-  async signOutUser(): Promise<void> {
-    await signOut(this.auth);
-  }
-
-  /** Pause the account (soft, reversible) — hides the profile. Parity with iOS/Android pauseAccount(). */
-  async pauseAccount(): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    await updateDoc(doc(this.db, 'users', u.uid), { paused: true, visible: false, pausedAt: serverTimestamp() });
-  }
-  /** Reactivate a paused account (parity with iOS ReactiveAccountViewModel / Android reactivateAccount):
-   *  clear the pause flags so the profile is visible in discovery again, and reflect it locally so the
-   *  UI gate (accountPaused) clears immediately. "Pause and come back when you want." */
-  async reactivateAccount(): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    await updateDoc(doc(this.db, 'users', u.uid), { paused: false, visible: true });
-    const p: any = this.userProfile();
-    if (p) this.userProfile.set({ ...p, paused: false, visible: true });
-  }
-
-  /** Delete the account — calls the SAME callable as the apps (now a server-side SOFT delete:
-   *  hides immediately + schedules the irreversible purge after a grace period). */
-  async deleteAccount(): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    const fn = httpsCallable(this.functions, 'deleteUserData');
-    await fn({ userId: u.uid, userLanguage: this.deviceLang() });
-  }
-
-  // Locale / timezone helpers (parity with iOS/Android signup fields; used by coach lang + nudges).
-  private deviceLang(): string { try { return (navigator.language || 'en').split('-')[0].toLowerCase(); } catch { return 'en'; } }
-  private tz(): string { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } }
-  private tzOffsetMinutes(): number { try { return -new Date().getTimezoneOffset(); } catch { return 0; } }
-  private tzOffsetHours(): number { try { return -new Date().getTimezoneOffset() / 60; } catch { return 0; } }
-
-  // Firestore Methods
-  private async createUserProfile(profile: UserProfile): Promise<void> {
-    const userRef = doc(this.db, 'users', profile.uid);
-    // Seed the server-managed counters AT CREATE — the users UPDATE rule blocks accountStatus /
-    // coachMessagesRemaining, so they can ONLY be set here (parity with iOS/Android signup payload).
-    let limits = { dailyLikesLimit: 100, coachDailyCredits: 4, superLikesLimit: 5 };
-    try { limits = await this.getProfileLimits(); } catch { /* keep defaults */ }
-    await setDoc(userRef, {
-      ...profile,
-      createdAt: Timestamp.fromDate(profile.createdAt),
-      lastLogin: Timestamp.fromDate(profile.lastLogin),
-      accountStatus: 'active',
-      // CRITICAL cross-platform: Android discovery queries whereEqualTo('paused', false), which
-      // EXCLUDES docs missing the field → a web profile without `paused` is invisible on Android.
-      // Seed it (+ visibilityReduced) at create, exactly like iOS/Android signup.
-      paused: false,
-      visibilityReduced: false,
-      dailyLikesRemaining: limits.dailyLikesLimit,
-      dailyLikesLimit: limits.dailyLikesLimit,
-      superLikesRemaining: limits.superLikesLimit,
-      superLikesUsedToday: 0,
-      coachMessagesRemaining: limits.coachDailyCredits,
-      lastLikeResetDate: serverTimestamp(),
-      lastSuperLikeResetDate: serverTimestamp(),
-      lastCoachResetDate: serverTimestamp(),
-      // Locale/timezone for coach language + scheduled nudges (parity with iOS/Android signup).
-      deviceLanguage: this.deviceLang(),
-      timezone: this.tz(),
-      timezoneOffset: this.tzOffsetHours(),
-      timezoneOffsetMinutes: this.tzOffsetMinutes(),
-    });
-    this.userProfile.set(profile);
-  }
-
-  private async loadUserProfile(uid: string): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      // Soft-deleted account (server-side deleteUserData / cron grace period): treat as not-logged-in.
-      if (data['accountStatus'] === 'deleted' || data['scheduledForDeletion'] === true) {
-        this.userProfile.set(null);
-        this.accountDeleted.set(true);
-        return;
-      }
-      this.accountDeleted.set(false);
-      this.userProfile.set({
-        ...data,
-        createdAt: data['createdAt']?.toDate(),
-        lastLogin: data['lastLogin']?.toDate()
-      } as UserProfile);
-    } else {
-      // No doc yet (brand-new OAuth user before createUserProfile lands) — NOT a deleted account.
-      // Reset the flag so a prior deleted-account login can't leave a stale "deleted" notice.
-      this.accountDeleted.set(false);
-      this.userProfile.set(null);
-    }
-  }
-
-  private async checkUserProfileExists(uid: string): Promise<boolean> {
-    const userRef = doc(this.db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-    return userSnap.exists();
-  }
-
-  private async updateLastLogin(uid: string): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    await updateDoc(userRef, {
-      lastLogin: Timestamp.fromDate(new Date())
-    });
-  }
-
-  async updateUserProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    await updateDoc(userRef, data as any);
-    await this.loadUserProfile(uid);
-  }
-
-  async deleteUserProfile(uid: string): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    await deleteDoc(userRef);
-  }
-
-  // Age Verification Storage
-  async saveAgeVerification(uid: string, verified: boolean): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    await updateDoc(userRef, {
-      ageVerified: verified,
-      ageVerifiedAt: Timestamp.fromDate(new Date())
-    });
-  }
-
-  // Language Preference Sync
-  async updateLanguagePreference(uid: string, language: string): Promise<void> {
-    const userRef = doc(this.db, 'users', uid);
-    await updateDoc(userRef, {
-      'preferences.language': language
-    });
-  }
-
-  // Get user's language preference
-  async getLanguagePreference(uid: string): Promise<string | null> {
-    const profile = this.userProfile();
-    return profile?.preferences?.language || null;
-  }
-
-  /** R155: wardrobe visibility kill-switch — RC `wardrobe_enabled`, default false (simplicity pass). */
-  async isWardrobeEnabled(): Promise<boolean> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      return getBoolean(this.remoteConfig, 'wardrobe_enabled');
-    } catch {
-      return false;
-    }
-  }
-
-  /** R164: legacy swipe Discover tab gate — RC `discovery_tab_enabled`, default false (coach matchmaker replaces it). */
-  async isDiscoveryTabEnabled(): Promise<boolean> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      return getBoolean(this.remoteConfig, 'discovery_tab_enabled');
-    } catch {
-      return false;
-    }
-  }
-
-  // Minimum Age by Country (from Remote Config)
-  async getMinimumAgeByCountry(): Promise<Record<string, number>> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      const raw = getString(this.remoteConfig, 'minimum_age_by_country');
-      if (raw) {
-        return JSON.parse(raw);
-      }
-    } catch (error) {
-      console.error('Error fetching minimum_age_by_country:', error);
-    }
-    return { default: 18 };
-  }
-
-  // R64: authenticated coach chat for logged-in web users — calls the SAME dateCoachChat callable
-  // as the apps (auth + App Check attached automatically), so the web conversation persists to the
-  // user's profile + coach memory + personal agent. Anonymous visitors keep the demo endpoints.
-  async coachChat(data: Record<string, unknown>): Promise<any> {
-    const fn = httpsCallable(this.functions, 'dateCoachChat');
-    const res = await fn(data);
-    return res.data;
-  }
-
-  // R150: learning signal — record that a signed-in web user copied/shared/used a coach
-  // suggestion. Feeds the SAME learningProfile as the apps so the coach personalizes future
-  // suggestions. Fire-and-forget, auth-only (callable needs auth.uid), never throws to the UI.
-  async trackCoachSuggestionAction(action: 'copied' | 'shared' | 'used', category?: string): Promise<void> {
-    if (!this.currentUser()) return; // demo/anonymous visitors have no learning profile
-    try {
-      const fn = httpsCallable(this.functions, 'trackCoachSuggestionAction');
-      await fn(category ? { action, category } : { action });
-    } catch { /* non-critical */ }
+  /** Punto de extensión (y de prueba) para el import dinámico. */
+  protected loadCore(): Promise<{ FirebaseCore: new (s: FirebaseState) => FirebaseCore }> {
+    return import('./firebase-core');
   }
 
   /**
-   * AI image moderation (Gemini Vision) — same CF the iOS/Android apps call before accepting a
-   * profile photo. Returns {approved, reason}. Fail-OPEN on error (server-side R17 trigger is the
-   * hard gate) — matches the apps' profile-photo behavior.
+   * Se resuelve cuando la página ya pintó y conviene traer Firebase: tras `load` + inactividad, o en la primera
+   * interacción. Quien lo espere inicia la carga. Usar para trabajo de arranque que no es crítico para el LCP.
    */
-  async moderateProfileImage(imageBase64: string, expectedGender?: boolean | null, lang?: string): Promise<{ approved: boolean; reason: string; category?: string }> {
-    try {
-      const fn = httpsCallable(this.functions, 'moderateProfileImage');
-      const data: Record<string, unknown> = {
-        imageBase64,
-        userLanguage: lang || (typeof navigator !== 'undefined' ? navigator.language : 'en'),
-        isStory: false,
-      };
-      if (expectedGender != null) data['expectedGender'] = expectedGender;
-      const res: any = (await fn(data)).data;
-      return { approved: res?.approved !== false, reason: res?.reason || '', category: res?.category };
-    } catch {
-      return { approved: true, reason: '' }; // fail-open (server trigger enforces)
-    }
+  whenIdle(): Promise<void> {
+    this.scheduleIdleLoad();
+    return this.idle;
   }
 
-  // ── Coach chat SESSIONS (logged-in web → Firestore, shared with iOS/Android) ──
-  // Sessions index = users/{uid}/coachSessions/{id}; messages = users/{uid}/coachChat
-  // tagged with sessionId (same schema the apps use). Anonymous visitors stay on
-  // localStorage (handled in the widget). Returns [] when signed out.
-  /** List the user's coach sessions (newest first). */
-  async loadCoachSessions(): Promise<Array<{ id: string; title: string; createdAt: number; updatedAt: number; lastMessage: string }>> {
-    const u = this.currentUser(); if (!u) return [];
-    try {
-      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachSessions'), orderBy('updatedAt', 'desc')));
-      return snap.docs.map((d) => {
-        const x: any = d.data();
-        return {
-          id: d.id,
-          title: x.title || '',
-          createdAt: x.createdAt?.toMillis ? x.createdAt.toMillis() : 0,
-          updatedAt: x.updatedAt?.toMillis ? x.updatedAt.toMillis() : 0,
-          lastMessage: x.lastMessage || '',
-        };
-      });
-    } catch { return []; }
-  }
-  /** Create/update a session doc (title + lastMessage + timestamps). */
-  async upsertCoachSession(id: string, title: string, lastMessage: string, createdAtMs?: number): Promise<void> {
-    const u = this.currentUser(); if (!u) return;
-    const data: Record<string, unknown> = {
-      title: (title || '').slice(0, 200),
-      lastMessage: (lastMessage || '').slice(0, 120),
-      updatedAt: serverTimestamp(),
+  private scheduleIdleLoad(): void {
+    if (this.idleScheduled || !this.isBrowser) return;
+    this.idleScheduled = true;
+    const fire = () => {
+      cleanup();
+      this.idleResolve();
+      this.ready().catch(() => { /* sin red: se reintenta con la próxima llamada */ });
     };
-    if (createdAtMs) data['createdAt'] = Timestamp.fromMillis(createdAtMs);
-    await setDoc(doc(this.db, 'users', u.uid, 'coachSessions', id), data, { merge: true });
-  }
-  /** Delete a session doc + all its messages. */
-  async deleteCoachSession(id: string): Promise<void> {
-    const u = this.currentUser(); if (!u) return;
-    await deleteDoc(doc(this.db, 'users', u.uid, 'coachSessions', id));
-    try {
-      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachChat'), where('sessionId', '==', id)));
-      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
-    } catch { /* best-effort */ }
-  }
-  /** Append one chat message to coachChat (sender/message/timestamp/sessionId + rich web payload). */
-  async appendCoachMessage(sessionId: string, role: 'user' | 'coach', text: string, web?: unknown): Promise<void> {
-    const u = this.currentUser(); if (!u) return;
-    const data: Record<string, unknown> = {
-      sender: role === 'user' ? 'user' : 'coach',
-      message: (text || '').slice(0, 8000),
-      timestamp: serverTimestamp(),
-      sessionId,
+    const events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = () => {
+      events.forEach((e) => window.removeEventListener(e, fire));
+      if (timer !== undefined) clearTimeout(timer);
     };
-    if (web) { try { data['web'] = JSON.stringify(web).slice(0, 7000); } catch { /* skip rich payload */ } }
-    await addDoc(collection(this.db, 'users', u.uid, 'coachChat'), data);
-  }
-  /** Load a session's messages (sorted client-side by timestamp; no composite index needed). */
-  async loadCoachMessages(sessionId: string): Promise<Array<Record<string, unknown>>> {
-    const u = this.currentUser(); if (!u) return [];
-    try {
-      const snap = await getDocs(query(collection(this.db, 'users', u.uid, 'coachChat'), where('sessionId', '==', sessionId)));
-      const rows = snap.docs.map((d) => {
-        const x: any = d.data();
-        const ts = x.timestamp?.toMillis ? x.timestamp.toMillis() : 0;
-        if (x.web) { try { return { __ts: ts, ...JSON.parse(x.web) }; } catch { /* fallthrough */ } }
-        return { __ts: ts, role: x.sender === 'user' ? 'user' : 'coach', text: x.message || '' };
-      });
-      return rows.sort((a: any, b: any) => a.__ts - b.__ts).map((r: any) => { delete r.__ts; return r; });
-    } catch { return []; }
+    events.forEach((e) => window.addEventListener(e, fire, { passive: true, once: true }));
+    const arm = () => { timer = setTimeout(fire, FIREBASE_IDLE_TIMEOUT_MS); };
+    if (document.readyState === 'complete') arm();
+    else window.addEventListener('load', arm, { once: true });
   }
 
-  // ── Profile / onboarding (web) — same users/{uid} schema as iOS/Android ──────
-  /** Re-read the current user's profile doc into the userProfile signal. */
-  async refreshProfile(): Promise<void> { const u = this.currentUser(); if (u) await this.loadUserProfile(u.uid); }
+  private async call<T>(fn: (c: FirebaseCore) => Promise<T>): Promise<T> {
+    return fn(await this.ready());
+  }
+
+  /** Para los `listen*`: devuelve el cancelador de inmediato aunque el SDK aún se esté cargando. */
+  private listen(start: (c: FirebaseCore) => () => void): () => void {
+    let off: (() => void) | null = null;
+    let cancelled = false;
+    this.ready()
+      .then((c) => { if (!cancelled) off = start(c); })
+      .catch(() => { /* sin SDK no hay datos en vivo */ });
+    return () => { cancelled = true; off?.(); off = null; };
+  }
+
+  /** Popups hang on iOS Safari (ITP) → redirect en todos los navegadores (el dominio de auth es el de la marca). */
+  shouldUseRedirect(): boolean { return true; }
+
   /** A profile is "complete" (discovery-eligible) once it has a userType + birthDate, like the apps. */
   isProfileComplete(): boolean {
     const p: any = this.userProfile();
     return !!(p && p.userType && p.birthDate);
   }
-  /** Upload one profile photo to Storage (users/{uid}/{file}) — returns the stored filename. The
-   *  discovery feed signs these names server-side, same as photos uploaded from the apps. */
-  async uploadProfilePhoto(file: File, onProgress?: (pct: number) => void): Promise<string> {
-    const u = this.currentUser();
-    if (!u) throw new Error('not-authenticated');
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const fileName = `web_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const ref = storageRef(this.storage, `users/${u.uid}/${fileName}`);
-    // Resumable upload so we can report progress (0-100%) to the user, with a timeout guard so a
-    // flaky/blocked network never hangs the onboarding overlay indefinitely.
-    await new Promise<void>((resolve, reject) => {
-      const task = uploadBytesResumable(ref, file, { contentType: file.type || 'image/jpeg' });
-      const timer = setTimeout(() => { try { task.cancel(); } catch { /* noop */ } reject(new Error('upload-timeout')); }, 60000);
-      task.on('state_changed',
-        (snap) => { if (onProgress && snap.totalBytes) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)); },
-        (err) => { clearTimeout(timer); reject(err); },
-        () => { clearTimeout(timer); resolve(); });
-    });
-    return fileName;
-  }
-  /** Delete uploaded profile photos from Storage (used when a gender change invalidates them —
-   *  parity with Android pictureRepository.deletePictures). Best-effort; ignores missing files. */
-  async deleteProfilePhotos(names: string[]): Promise<void> {
-    const u = this.currentUser();
-    if (!u || !Array.isArray(names)) return;
-    await Promise.all(names.map(async (n) => {
-      try { await deleteObject(storageRef(this.storage, `users/${u.uid}/${n}`)); } catch { /* already gone */ }
-    }));
-  }
-  /** Resolve the current user's own photo filenames to displayable URLs (for the profile view). */
-  async getOwnPhotoUrls(names: string[]): Promise<string[]> {
-    const u = this.currentUser();
-    if (!u || !Array.isArray(names)) return [];
-    const out = await Promise.all(names.slice(0, 6).map(async (n) => {
-      try { return await getDownloadURL(storageRef(this.storage, `users/${u.uid}/${n}`)); } catch { return ''; }
-    }));
-    return out.filter(Boolean);
-  }
-  /** Standard base32 geohash encoder — produces the `g` field the discovery feed range-queries on
-   *  (homologado con GeoHashUtils.encode en iOS/Android). Precision 9 ≈ ~4.8 m. */
-  private encodeGeohash(lat: number, lng: number, precision = 9): string {
-    const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
-    let latMin = -90, latMax = 90, lngMin = -180, lngMax = 180;
-    let hash = '', bit = 0, ch = 0, even = true;
-    while (hash.length < precision) {
-      if (even) {
-        const mid = (lngMin + lngMax) / 2;
-        if (lng >= mid) { ch = (ch << 1) + 1; lngMin = mid; } else { ch = ch << 1; lngMax = mid; }
-      } else {
-        const mid = (latMin + latMax) / 2;
-        if (lat >= mid) { ch = (ch << 1) + 1; latMin = mid; } else { ch = ch << 1; latMax = mid; }
-      }
-      even = !even;
-      if (++bit === 5) { hash += BASE32[ch]; bit = 0; ch = 0; }
-    }
-    return hash;
-  }
 
-  /** Persist onboarding — writes the exact discovery-valid schema the apps read. */
-  async saveOnboarding(d: { name: string; birthDate: Date; male: boolean; userType: string; orientation: string; bio?: string; latitude?: number; longitude?: number; interests?: string[]; pictures?: string[]; minAge?: number; maxAge?: number; maxDistance?: number }): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    // NOTE: accountStatus is intentionally NOT written here — it is blocked on UPDATE by the
-    // users rule and is seeded at CREATE in createUserProfile(). Including it would reject the
-    // whole onboarding write (audited 2026-06-21).
-    const data: Record<string, unknown> = {
-      name: d.name,
-      birthDate: Timestamp.fromDate(d.birthDate),
-      male: d.male,
-      userType: d.userType,           // SUGAR_DADDY | SUGAR_MOMMY | SUGAR_BABY
-      orientation: d.orientation,     // men | women | both
-      onboardingCompleted: true,
-      // discovery search prefs (apps write these; used as the caller's feed filters)
-      minAge: d.minAge ?? 18,
-      maxAge: d.maxAge ?? 99,
-      maxDistance: d.maxDistance ?? 100,
-    };
-    if (d.bio) data['bio'] = d.bio;
-    if (Array.isArray(d.interests)) data['interests'] = d.interests;
-    if (Array.isArray(d.pictures) && d.pictures.length) data['pictures'] = d.pictures;
-    if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
-      data['latitude'] = d.latitude; data['longitude'] = d.longitude;
-      // getDiscoveryFeed range-queries on `g` — without it web users never appear in the feed.
-      const gh = this.encodeGeohash(d.latitude, d.longitude);
-      data['g'] = gh; data['geohash'] = gh;
-    }
-    data['timezone'] = this.tz();
-    data['timezoneOffset'] = this.tzOffsetHours();
-    data['timezoneOffsetMinutes'] = this.tzOffsetMinutes();
-    data['deviceLanguage'] = this.deviceLang();
-    await updateDoc(doc(this.db, 'users', u.uid), data);
-    await this.refreshProfile();
-  }
-
-  /** In-web profile edit (iOS EditProfileView parity) — writes ONLY update-legal fields
-   *  (none are in the users-update blocklist; userType is constrained to the valid enum by the rule). */
-  async updateProfile(fields: { name: string; bio: string; male: boolean; userType: string; orientation: string; interests: string[]; pictures: string[]; minAge: number; maxAge: number; maxDistance: number; latitude?: number; longitude?: number }): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    const data: Record<string, unknown> = {
-      name: fields.name,
-      bio: fields.bio,
-      male: fields.male,
-      userType: fields.userType,
-      orientation: fields.orientation,
-      interests: fields.interests,
-      pictures: fields.pictures,
-      minAge: Math.max(18, Math.min(99, Math.round(fields.minAge))),
-      maxAge: Math.max(18, Math.min(99, Math.round(fields.maxAge))),
-      maxDistance: Math.max(1, Math.min(500, Math.round(fields.maxDistance))),
-    };
-    // Location edit — write lat/lng + recompute the `g`/geohash the discovery feed range-queries on.
-    if (typeof fields.latitude === 'number' && typeof fields.longitude === 'number') {
-      data['latitude'] = fields.latitude; data['longitude'] = fields.longitude;
-      const gh = this.encodeGeohash(fields.latitude, fields.longitude);
-      data['g'] = gh; data['geohash'] = gh;
-    }
-    await updateDoc(doc(this.db, 'users', u.uid), data);
-    await this.refreshProfile();
-  }
-
-  /** Location-only update (Discovery "enable location" flow) — writes lat/lng + the `g`/geohash the
-   *  feed range-queries on. Parity with iOS updateUserLocation. */
-  async updateLocation(lat: number, lng: number): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    const gh = this.encodeGeohash(lat, lng);
-    await updateDoc(doc(this.db, 'users', u.uid), { latitude: lat, longitude: lng, g: gh, geohash: gh });
-    await this.refreshProfile();
-  }
-
-  /** R160 "Con ganas de salir esta semana" — weekly ready-to-meet flag (owner writes own doc).
-   *  ON → readyToMeetUntil = upcoming Monday 00:00 UTC (if today IS Monday → next Monday), so the
-   *  badge expires Sunday night. OFF → deleteField(). Refreshes the local profile signal so the
-   *  toggle reflects the new state immediately; throws on failure so the caller can revert. */
-  async setReadyToMeet(on: boolean): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    if (on) {
-      const now = new Date();
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-      // Days until the NEXT Monday (dow 1). Today Monday → 7 (next week's Monday).
-      const add = ((8 - d.getUTCDay()) % 7) || 7;
-      d.setUTCDate(d.getUTCDate() + add);
-      await updateDoc(doc(this.db, 'users', u.uid), { readyToMeetUntil: Timestamp.fromDate(d) });
-    } else {
-      await updateDoc(doc(this.db, 'users', u.uid), { readyToMeetUntil: deleteField() });
-    }
-    await this.refreshProfile();
-  }
-
-  /** Bio coaching — SAME getBioCoaching callable iOS uses (rewrites the bio into ready options).
-   *  Returns [] on error so the caller can fall back to static examples (parity with iOS). */
-  async getBioCoaching(bio: string, lang: string): Promise<string[]> {
-    try {
-      const fn = httpsCallable(this.functions, 'getBioCoaching');
-      const res: any = await fn({ userLanguage: lang || 'en', bio: (bio || '').slice(0, 1200) });
-      const rewrites = res?.data?.rewrites;
-      if (Array.isArray(rewrites)) return rewrites.map((r: any) => r?.text).filter((t: any) => typeof t === 'string' && t.trim());
-    } catch { /* caller falls back to static examples */ }
-    return [];
-  }
-
-  /** AI Coach icebreakers for a match — SAME generateIcebreakers callable iOS/Android use (the
-   *  Wingman). Returns tappable opener suggestions for an empty conversation. [] on error/rate-limit. */
-  async generateIcebreakers(otherUid: string, lang: string): Promise<{ message: string; emoji?: string }[]> {
-    const u = this.currentUser();
-    if (!u || !otherUid) return [];
-    // Prefer the explicit lang, else the BROWSER/device language (navigator.language) so suggestions
-    // match what the user reads — not the stored deviceLanguage. The backend generates from
-    // `language` (falls back to deviceLanguage/'en'); `userLanguage` only localizes errors.
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'generateIcebreakers');
-      const res: any = await fn({ userId1: u.uid, userId2: otherUid, language: l, userLanguage: l });
-      const arr = res?.data?.icebreakers;
-      if (Array.isArray(arr)) return arr.map((x: any) => ({ message: String(x?.message || '').trim(), emoji: x?.emoji })).filter((x: any) => x.message);
-    } catch { /* rate-limited or AI off — caller shows nothing */ }
-    return [];
-  }
-
-  /** AI Coach smart replies — SAME generateSmartReply callable iOS/Android use. Given the match's
-   *  last (incoming) message, returns up to 3 tappable reply suggestions + an engagement tip.
-   *  Generated in the browser/device language. Returns { replies:[], tip:'' } on error/rate-limit. */
-  async generateSmartReply(matchId: string, lastMessage: string, lang: string): Promise<{ replies: string[]; tip: string }> {
-    const u = this.currentUser();
-    if (!u || !matchId || !lastMessage) return { replies: [], tip: '' };
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'generateSmartReply');
-      const res: any = await fn({ matchId, lastMessage: String(lastMessage).slice(0, 1000), language: l, userLanguage: l });
-      const d = res?.data;
-      if (d?.success) {
-        const replies = Array.isArray(d.replies)
-          ? d.replies.map((r: any) => String(r?.text || '').trim()).filter(Boolean).slice(0, 3)
-          : [];
-        return { replies, tip: String(d?.suggestions?.engagementTip || '').trim() };
-      }
-    } catch { /* rate-limited or AI off — caller shows nothing */ }
-    return { replies: [], tip: '' };
-  }
-
-  /** AI Coach real-time insights for a match — SAME getRealtimeCoachTips callable iOS/Android use:
-   *  chemistry score/trend, engagement, conversation tips + a suggested action. null on error/off. */
-  async getRealtimeCoachTips(matchId: string, lang: string): Promise<{
-    chemistryScore: number; chemistryTrend: string; engagementLevel: string; preDateDetected: boolean;
-    tips: { text: string; type: string; icon: string }[]; suggestedAction: { type: string; text: string } | null;
-  } | null> {
-    const u = this.currentUser();
-    if (!u || !matchId) return null;
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'getRealtimeCoachTips');
-      const res: any = await fn({ matchId, userLanguage: l, language: l });
-      const d = res?.data;
-      if (d?.success) {
-        return {
-          chemistryScore: typeof d.chemistryScore === 'number' ? d.chemistryScore : 50,
-          chemistryTrend: d.chemistryTrend || 'stable',
-          engagementLevel: d.engagementLevel || 'medium',
-          preDateDetected: !!d.preDateDetected,
-          tips: Array.isArray(d.tips) ? d.tips.map((t: any) => ({ text: String(t?.text || '').trim(), type: t?.type || 'conversation', icon: t?.icon || 'lightbulb' })).filter((t: any) => t.text) : [],
-          suggestedAction: d.suggestedAction?.text ? { type: d.suggestedAction.type || 'ask_question', text: String(d.suggestedAction.text).trim() } : null,
-        };
-      }
-    } catch { /* rate-limited or AI off — caller shows nothing */ }
-    return null;
-  }
-
-  /** R150 Dating Journey — same getDatingJourney callable the apps use. Returns level, progress
-   *  (0..1 into the current level), and profile completeness %. null on error or not ready. */
-  async getDatingJourney(lang: string = 'es'): Promise<{ level: number; progress: number; completenessPct: number } | null> {
-    const u = this.currentUser();
-    if (!u) return null;
-    try {
-      const fn = httpsCallable(this.functions, 'getDatingJourney');
-      const res: any = await fn({ userLanguage: lang });
-      const d = res?.data;
-      if (!d) return null;
-      return {
-        level: Number(d.level) || 1,
-        progress: typeof d.progress === 'number' ? Math.max(0, Math.min(1, d.progress)) : 0,
-        completenessPct: Number(d.completenessPct) || 0,
-      };
-    } catch { return null; }
-  }
-
-  /** Photo Coach — SAME getPhotoCoachAnalysis callable iOS uses. Analyzes the user's SAVED photos
-   *  (server reads pictureNames from the doc) and returns an overall score + top recommendations. */
-  async getPhotoCoachAnalysis(lang: string): Promise<{ overallScore: number; recommendations: string[] } | null> {
-    try {
-      const fn = httpsCallable(this.functions, 'getPhotoCoachAnalysis');
-      const res: any = await fn({ userLanguage: lang || 'en' });
-      const d = res?.data || {};
-      if (d.success === false) return null;
-      return {
-        overallScore: Number(d.overallScore) || 0,
-        recommendations: Array.isArray(d.recommendations) ? d.recommendations.filter((x: any) => typeof x === 'string') : [],
-      };
-    } catch { return null; }
-  }
-
-  // Discovery feed (web) — SAME getDiscoveryFeed callable the apps use (V2 ranking, signed photo URLs).
-  async getDiscoveryFeed(limit = 20): Promise<any[]> {
-    const fn = httpsCallable(this.functions, 'getDiscoveryFeed');
-    const res: any = await fn({ limit });
-    return (res?.data?.profiles) || [];
-  }
-
-  // Record a swipe — faithfully mirrors iOS/Android `swipeUser`/`superLikeUser`:
-  //  1) liked|passed arrayUnion + dailyLikesRemaining decrement (on like)
-  //  2) swipes/{target} = {timestamp, isLike, isSuperLike} (feed exclusion)
-  //  3) liked/{target} subcollection = {exists, superLike} (on like)
-  //  4) if the other user already liked me back → create the match (same shape + matchId as the apps)
-  // Returns the matchId when a mutual match was created, else ''.
-  async recordSwipe(targetUid: string, action: 'like' | 'pass' | 'superlike'): Promise<string> {
-    const u = this.currentUser();
-    if (!u || !targetUid) return '';
-    const isLike = action === 'like' || action === 'superlike';
-    const isSuper = action === 'superlike';
-    const userRef = doc(this.db, 'users', u.uid);
-
-    const upd: Record<string, unknown> = { [isLike ? 'liked' : 'passed']: arrayUnion(targetUid) };
-    if (isLike) upd['dailyLikesRemaining'] = increment(-1);
-    if (isSuper) {
-      upd['superLiked'] = arrayUnion(targetUid);
-      // Debit the super-like quota like the apps (guard >0 so the rule's `>= 0` constraint holds).
-      const sr = (this.userProfile() as any)?.superLikesRemaining;
-      if (typeof sr === 'number' && sr > 0) {
-        upd['superLikesRemaining'] = increment(-1);
-        upd['superLikesUsedToday'] = increment(1);
-      }
-    }
-    await updateDoc(userRef, upd);
-    await setDoc(doc(this.db, 'users', u.uid, 'swipes', targetUid), { timestamp: serverTimestamp(), isLike, isSuperLike: isSuper });
-    if (isLike) await setDoc(doc(this.db, 'users', u.uid, 'liked', targetUid), { exists: true, superLike: isSuper });
-
-    if (!isLike) return '';
-    // Mutual-like check → create the match instantly (same as the apps; cron is the fallback).
-    try {
-      const otherSnap = await getDoc(doc(this.db, 'users', targetUid));
-      const other: any = otherSnap.data() || {};
-      const likedBack = Array.isArray(other.liked) && other.liked.includes(u.uid);
-      if (!likedBack) return '';
-      const matchId = u.uid > targetUid ? u.uid + targetUid : targetUid + u.uid;
-      const myType = (this.userProfile() as any)?.userType || (await getDoc(userRef)).data()?.['userType'];
-      const otherType = other.userType;
-      const data: Record<string, unknown> = {
-        users: [u.uid, targetUid],
-        usersMatched: [u.uid, targetUid],
-        timestamp: serverTimestamp(),
-        lastMessageTimestamp: serverTimestamp(),
-        messageCount: 0,
-        lastSeenTimestamps: { [u.uid]: serverTimestamp(), [targetUid]: serverTimestamp() },
-      };
-      if (myType && otherType) data['userTypesAtMatch'] = { [u.uid]: myType, [targetUid]: otherType };
-      await setDoc(doc(this.db, 'matches', matchId), data);
-      return matchId;
-    } catch { return ''; }
-  }
-
-  // ── R151 Virtual Wardrobe — same Firestore schema + CFs as the apps ──────────
-  /** Live wardrobe items for the current user (users/{uid}/wardrobe). Returns unsub fn. */
-  listenWardrobe(cb: (items: any[]) => void): () => void {
-    const u = this.currentUser();
-    if (!u) { cb([]); return () => {}; }
-    const q = query(collection(this.db, 'users', u.uid, 'wardrobe'), orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (snap) => {
-      cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, () => cb([]));
-  }
-
-  /** Catalog one garment photo via the catalogWardrobeItem CF (Gemini Vision). */
-  async wardrobeCatalog(photoBase64: string, userLanguage: string): Promise<any> {
-    const fn = httpsCallable(this.functions, 'catalogWardrobeItem');
-    const res = await fn({ photoBase64, userLanguage });
-    return res.data;
-  }
-
-  /** Ask suggestDateOutfit CF for outfit combos from the cataloged wardrobe. */
-  async wardrobeSuggest(venueType: string, userLanguage: string): Promise<any> {
-    const fn = httpsCallable(this.functions, 'suggestDateOutfit');
-    const res = await fn({ venueType, occasion: 'date', userLanguage });
-    return res.data;
-  }
-
-  // ── R161 "La segunda opinión" — bestie verdict link + results ────────────────
-  /** Create a shareable second-opinion link for a match — createSecondOpinionLink CF.
-   *  Success: {success:true, url, expiresAt}; soft errors: {success:false, error:'rate_limit_exceeded'|…}.
-   *  THROWS HttpsError on auth/membership — caller maps it to a generic toast. */
-  async createSecondOpinionLink(matchId: string, lang: string): Promise<any> {
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    const fn = httpsCallable(this.functions, 'createSecondOpinionLink');
-    const res = await fn({ matchId, userLanguage: l });
-    return res.data;
-  }
-
-  /** Live bestie verdicts (users/{uid}/secondOpinionResults — owner-only read). Each doc:
-   *  {matchId, verdict:'fire'|'hmm'|'flag', comment, votedAt}. Returns unsub fn; signed-out → cb([]).
-   *  No orderBy — docs missing votedAt must not be silently excluded; callers sort client-side. */
-  listenSecondOpinions(cb: (results: any[]) => void): () => void {
-    const u = this.currentUser();
-    if (!u) { cb([]); return () => {}; }
-    return onSnapshot(collection(this.db, 'users', u.uid, 'secondOpinionResults'), (snap) => {
-      cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, () => cb([]));
-  }
-
-  /** "Tus 3 del día" — getDailyPicks CF. {success, date, cached, picks:[{uid, name, age, photoUrl,
-   *  thumbUrl, distanceKm, compatibilityScore, reason}]}. Empty picks is a valid response. */
-  async getDailyPicks(userLanguage: string): Promise<any> {
-    const fn = httpsCallable(this.functions, 'getDailyPicks');
-    const res = await fn({ userLanguage });
-    return res.data;
-  }
-
-  /** Full public profile behind a coach suggestion card. The card payload is deliberately
-   *  minimal (never birthDate/coords), so the detail is read on demand from users/{uid} and the
-   *  photos are signed through getBatchPhotoUrls — the same pair of reads the apps perform.
-   *  Returns null on ANY failure: a detail we cannot load must never break the conversation. */
-  async getPublicProfile(uid: string): Promise<{ bio: string | null; interests: string[]; photos: string[]; age: number | null; verified: boolean } | null> {
-    try {
-      const snap = await getDoc(doc(this.db, 'users', uid));
-      if (!snap.exists()) return null;
-      const d: any = snap.data();
-      if (d['accountStatus'] && d['accountStatus'] !== 'active') return null;
-      if (d['paused'] === true) return null;
-
-      const pictureNames: string[] = Array.isArray(d['pictures']) ? d['pictures'].filter((x: any) => typeof x === 'string' && x) : [];
-      let photos: string[] = [];
-      if (pictureNames.length) {
-        try {
-          const fn = httpsCallable(this.functions, 'getBatchPhotoUrls');
-          const res: any = await fn({ photoRequests: [{ userId: uid, pictureNames: pictureNames.slice(0, 6), includeThumb: false }] });
-          photos = (res?.data?.urls?.[uid] || []).map((e: any) => e?.url).filter(Boolean);
-        } catch { /* photos are optional — the card photo still shows */ }
-      }
-
-      let age: number | null = null;
-      const bd = d['birthDate']?.toDate?.();
-      if (bd instanceof Date && !isNaN(bd.getTime())) {
-        const now = new Date();
-        age = now.getFullYear() - bd.getFullYear() - (now < new Date(now.getFullYear(), bd.getMonth(), bd.getDate()) ? 1 : 0);
-      }
-
-      return {
-        bio: typeof d['bio'] === 'string' && d['bio'].trim() ? d['bio'].trim() : null,
-        interests: Array.isArray(d['interests']) ? d['interests'].filter((x: any) => typeof x === 'string') : [],
-        photos,
-        age,
-        verified: d['verified'] === true,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  /** Own profile gender (users/{uid}.male). null when signed out or the field is missing.
-   *  Prefers the already-loaded userProfile signal (loadUserProfile spreads the raw doc) to
-   *  avoid an extra Firestore read; falls back to a one-shot doc get. */
-  async getMyGender(): Promise<boolean | null> {
-    const u = this.currentUser();
-    if (!u) return null;
-    const p: any = this.userProfile();
-    if (p && typeof p.male === 'boolean') return p.male;
-    try {
-      const snap = await getDoc(doc(this.db, 'users', u.uid));
-      const m = snap.data()?.['male'];
-      return typeof m === 'boolean' ? m : null;
-    } catch { return null; }
-  }
-
-  /** AI garment 360° preview via the generateWardrobePreview CF.
-   *  Success: {success:true, previewUrl, cached}; errors: invalid_item | item_not_found |
-   *  rate_limit_exceeded | generation_failed. First generation 10-30s; cached <2s. */
-  async wardrobePreview(itemId: string, userLanguage: string): Promise<any> {
-    const fn = httpsCallable(this.functions, 'generateWardrobePreview');
-    const res = await fn({ itemId, userLanguage });
-    return res.data;
-  }
-
-  /** Delete one wardrobe item (rules allow owner delete; create/update are CF-only). */
-  async wardrobeDelete(itemId: string): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    await deleteDoc(doc(this.db, 'users', u.uid, 'wardrobe', itemId));
-  }
-
-  // ── Matches + chat (web) — same Firestore schema the apps use ────────────────
-  /** Live matches for the current user (matches where usersMatched contains me). Returns unsub fn. */
-  listenMatches(cb: (matches: any[]) => void): () => void {
-    const u = this.currentUser();
-    if (!u) { cb([]); return () => {}; }
-    const q = query(collection(this.db, 'matches'), where('usersMatched', 'array-contains', u.uid));
-    return onSnapshot(q, (snap) => {
-      const rows = snap.docs.map((d) => {
-        const data: any = d.data();
-        const other = (data.usersMatched || []).find((x: string) => x !== u.uid) || '';
-        // computed fields AFTER the spread so they win (raw Timestamp objects must not overwrite millis).
-        return { ...data, id: d.id, otherUid: other, lastMessage: data.lastMessage || '', lastMessageTime: (data.lastMessageTimestamp?.toMillis?.() || data.lastMessageTime?.toMillis?.() || 0) };
-      }).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-      cb(rows);
-    }, () => cb([]));
-  }
-  /** Mark a match as read (iOS markMessagesAsRead parity) — sets lastSeenTimestamps.{uid}=now so the
-   *  unread badge clears and the other user sees it as read. */
-  async markMatchRead(matchId: string): Promise<void> {
-    const u = this.currentUser();
-    if (!u || !matchId) return;
-    try { await updateDoc(doc(this.db, 'matches', matchId), { [`lastSeenTimestamps.${u.uid}`]: serverTimestamp() }); } catch { /* best-effort */ }
-  }
-  /** Set/clear the user's active chat (iOS activeChat parity) — the new-message push is suppressed
-   *  server-side while the recipient is actively viewing that match. */
-  async setActiveChat(matchId: string | null): Promise<void> {
-    const u = this.currentUser();
-    if (!u) return;
-    try { await updateDoc(doc(this.db, 'users', u.uid), { activeChat: matchId || '' }); } catch { /* best-effort */ }
-  }
-
-  /** Basic profile (name) for a match row — photos need signed URLs, so we use initials in the UI. */
-  async getUserBasic(uid: string): Promise<{ name: string; photo: string } | null> {
-    try {
-      const s = await getDoc(doc(this.db, 'users', uid));
-      if (!s.exists()) return null;
-      const data: any = s.data();
-      const name = data.name || data.displayName || '';
-      // Match photo = the user's FIRST picture (iOS parity: userProfile.pictures.first). Stored as a
-      // Storage filename under users/{uid}/ — resolve to a download URL (or use it directly if already a URL).
-      let photo = '';
-      const first = Array.isArray(data.pictures) ? data.pictures[0] : '';
-      if (first) {
-        if (/^https?:\/\//i.test(first)) photo = first;
-        else { try { photo = await getDownloadURL(storageRef(this.storage, `users/${uid}/${first}`)); } catch { photo = ''; } }
-      }
-      return { name, photo };
-    } catch { return null; }
-  }
-  /** Live messages for a match (iOS pagination parity): listens to the latest `limit` messages
-   *  (desc+limit, reversed to oldest→newest). "Load older" grows `limit` and re-subscribes.
-   *  cb(msgs, hasMore) — hasMore is true when the window is full (older messages may exist). */
-  listenMessages(matchId: string, limit: number, cb: (msgs: any[], hasMore: boolean) => void): () => void {
-    const q = query(collection(this.db, 'matches', matchId, 'messages'), orderBy('timestamp', 'desc'), fbLimit(limit));
-    return onSnapshot(q, (snap) => {
-      const msgs = snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }).reverse();
-      cb(msgs, snap.size >= limit);
-    }, () => cb([], false));
-  }
-  /** Fetch one older page of messages before `beforeMs` (iOS loadOlderMessages cursor parity).
-   *  One-time get, oldest→newest. */
-  async loadOlderMessages(matchId: string, beforeMs: number, pageSize: number): Promise<any[]> {
-    const cursor = Timestamp.fromMillis(beforeMs);
-    const q = query(
-      collection(this.db, 'matches', matchId, 'messages'),
-      where('timestamp', '<', cursor),
-      orderBy('timestamp', 'desc'),
-      fbLimit(pageSize),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => { const m: any = d.data(); return { id: d.id, ...m, ts: m.timestamp?.toMillis?.() || 0 }; }).reverse();
-  }
-
-  /** Send a text message — same shape as the apps; rules enforce sender/membership/first-message gate. */
-  /** AI Coach date-spot suggestions for a match — SAME getDateSuggestions callable iOS/Android use
-   *  (ranked by the venue psychology debate, using the pair's midpoint). [] on error/off. */
-  async getDateSuggestions(matchId: string, lang: string, category?: string, opts?: { loadCount?: number; excludePlaceIds?: string[] }): Promise<{ suggestions: any[]; hasMore: boolean }> {
-    const u = this.currentUser();
-    if (!u || !matchId) return { suggestions: [], hasMore: false };
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'getDateSuggestions');
-      const res: any = await fn({ matchId, userLanguage: l, language: l, category: category || null, loadCount: opts?.loadCount || 0, excludePlaceIds: (opts?.excludePlaceIds || []).slice(0, 500) });
-      const d = res?.data;
-      if (d?.success && Array.isArray(d.suggestions)) return { suggestions: d.suggestions, hasMore: !!d.hasMore };
-    } catch { /* off / rate-limited — caller shows nothing */ }
-    return { suggestions: [], hasMore: false };
-  }
-  // ── "Pregunta del día" (daily blind question between the two matched users) ──
-  /** Fetch today's daily question for a match — SAME getDailyQuestion callable iOS/Android use.
-   *  Returns {success, date, question, myAnswer, otherAnswered, revealed, answers?, insight?}.
-   *  null on error/off — the caller hides the card and NEVER blocks the chat. */
-  async getDailyQuestion(matchId: string, lang: string): Promise<any | null> {
-    const u = this.currentUser();
-    if (!u || !matchId) return null;
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'getDailyQuestion');
-      const res: any = await fn({ matchId, userLanguage: l });
-      const d = res?.data;
-      if (d?.success && d.question) return d;
-    } catch { /* off / rate-limited — card hidden */ }
-    return null;
-  }
-  /** Submit my blind answer (≤500 chars) — returns the refreshed daily-question view (same shape as
-   *  getDailyQuestion). THROWS on failure so the card can show an inline error + retry. */
-  async answerDailyQuestion(matchId: string, date: string, answer: string, lang: string): Promise<any> {
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    const fn = httpsCallable(this.functions, 'answerDailyQuestion');
-    const res: any = await fn({ matchId, date, answer: answer.trim().slice(0, 500), userLanguage: l });
-    const d = res?.data;
-    if (d?.success && d.question) return d;
-    throw new Error('answer-daily-question-failed');
-  }
-
-  /** AI Coach Date Blueprint — SAME generateDateBlueprint callable iOS/Android use. Returns a full
-   *  date plan (title, totalDuration, icebreaker, ranked steps with places). null on error/off. */
-  async generateDateBlueprint(matchId: string, lang: string, duration: 'quick' | 'standard' | 'full' = 'standard'): Promise<any | null> {
-    const u = this.currentUser();
-    if (!u || !matchId) return null;
-    let l = (lang || '').split('-')[0];
-    if (!l) { try { l = (navigator.language || 'en').split('-')[0]; } catch { l = 'en'; } }
-    try {
-      const fn = httpsCallable(this.functions, 'generateDateBlueprint');
-      const res: any = await fn({ matchId, userLanguage: l, language: l, duration });
-      const d = res?.data;
-      if (d?.success && d.blueprint) return d.blueprint;
-    } catch { /* off / rate-limited */ }
-    return null;
-  }
-  /** Share a Date Blueprint into the chat (iOS parity): type:'date_blueprint' + blueprintData. */
-  async sendBlueprintMessage(matchId: string, bp: any): Promise<void> {
-    const u = this.currentUser();
-    if (!u || !matchId || !bp) return;
-    const steps = Array.isArray(bp.steps) ? bp.steps.map((s: any, i: number) => ({
-      order: i + 1, time: s.time || '', duration: s.duration || '', activity: s.activity || '',
-      placeName: s.place?.name || s.placeName || '', tip: s.tip || '', whyThisPlace: s.whyThisPlace || '',
-      travelTimeToNext: s.travelTimeToNext || '', photoUrl: s.place?.photos?.[0]?.url || s.photoUrl || '',
-      googleMapsUrl: s.place?.googleMapsUrl || s.googleMapsUrl || '', placeId: s.place?.placeId || s.placeId || '',
-      address: s.place?.address || s.address || '', rating: s.place?.rating || s.rating || 0,
-    })) : [];
-    const blueprintData = {
-      title: bp.title || '', totalDuration: bp.totalDuration || '', estimatedBudget: bp.estimatedBudget || '',
-      dresscode: bp.dresscode || '', icebreaker: bp.icebreaker || '', steps,
-    };
-    const preview = ('🗺️ ' + (bp.title || 'Date plan')).slice(0, 120);
-    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
-      message: (bp.icebreaker || preview).slice(0, 4000), senderId: u.uid, timestamp: serverTimestamp(),
-      type: 'date_blueprint', blueprintData, isEphemeral: false,
-    });
-    try {
-      await updateDoc(doc(this.db, 'matches', matchId), {
-        lastMessage: preview, lastMessageTime: serverTimestamp(), lastMessageTimestamp: serverTimestamp(),
-        timestamp: serverTimestamp(), lastMessageSenderId: u.uid, lastMessageSeq: increment(1), messageCount: increment(1),
-      });
-    } catch { /* best-effort */ }
-  }
-  /** Share a place into the chat (iOS sendPlaceMessage parity): type:'place' + placeData. */
-  async sendPlaceMessage(matchId: string, place: any): Promise<void> {
-    const u = this.currentUser();
-    if (!u || !matchId || !place) return;
-    const pd: any = {
-      name: String(place.name || ''), address: String(place.address || ''),
-      rating: typeof place.rating === 'number' ? place.rating : null,
-      latitude: place.latitude ?? null, longitude: place.longitude ?? null,
-      placeId: place.placeId || place.id || null,
-    };
-    if (place.googleMapsUrl) pd.googleMapsUrl = place.googleMapsUrl;
-    if (place.website || place.websiteUri) pd.website = place.website || place.websiteUri;
-    if (place.category) pd.category = place.category;
-    if (place.instagram) pd.instagram = place.instagram;
-    if (place.description) pd.description = String(place.description).slice(0, 400);
-    if (Array.isArray(place.photos)) pd.photos = place.photos.map((ph: any) => ({ url: ph?.url || '', width: ph?.width ?? null, height: ph?.height ?? null })).filter((ph: any) => ph.url).slice(0, 6);
-    const msg = ('📍 ' + pd.name).slice(0, 120);
-    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
-      message: msg, senderId: u.uid, timestamp: serverTimestamp(), type: 'place', placeData: pd, isEphemeral: false,
-    });
-    try {
-      await updateDoc(doc(this.db, 'matches', matchId), {
-        lastMessage: msg, lastMessageTime: serverTimestamp(), lastMessageTimestamp: serverTimestamp(),
-        timestamp: serverTimestamp(), lastMessageSenderId: u.uid, lastMessageSeq: increment(1), messageCount: increment(1),
-      });
-    } catch { /* match-doc update is best-effort */ }
-  }
-  async sendMessage(matchId: string, text: string): Promise<void> {
-    const u = this.currentUser();
-    const body = (text || '').trim();
-    if (!u || !matchId || !body) return;
-    await addDoc(collection(this.db, 'matches', matchId, 'messages'), {
-      message: body.slice(0, 4000), senderId: u.uid, timestamp: serverTimestamp(), type: 'text', isEphemeral: false,
-    });
-    // messageCount increment is REQUIRED: the first-message gate (firestore.rules R141) unlocks the
-    // SUGAR_BABY reply only when messageCount>0. lastMessageTimestamp/timestamp = app match-list ordering.
-    try {
-      await updateDoc(doc(this.db, 'matches', matchId), {
-        lastMessage: body.slice(0, 120),
-        lastMessageTime: serverTimestamp(),
-        lastMessageTimestamp: serverTimestamp(),
-        timestamp: serverTimestamp(),
-        lastMessageSenderId: u.uid,           // app parity (match-list sender preview)
-        lastMessageSeq: increment(1),          // app parity (iOS deterministic message ordering)
-        messageCount: increment(1),
-      });
-    } catch { /* match-doc update is best-effort */ }
-  }
-
-  // R62: date-planner config (coach_planner_config) — single source shared with iOS/Android.
-  async getCoachPlannerConfig(): Promise<any | null> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      const raw = getString(this.remoteConfig, 'coach_planner_config');
-      if (raw) {
-        const cfg = JSON.parse(raw);
-        return cfg && cfg.enabled === false ? null : cfg;
-      }
-    } catch (error) {
-      console.warn('Error fetching coach_planner_config:', error);
-    }
-    return null;
-  }
-
-  // Profile-tab limits (daily likes + coach credits) — single source shared with iOS/Android RC.
-  async getProfileLimits(): Promise<{ dailyLikesLimit: number; coachDailyCredits: number; superLikesLimit: number }> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      const likes = getNumber(this.remoteConfig, 'daily_likes_limit');
-      const coach = getNumber(this.remoteConfig, 'coach_daily_credits');
-      const supers = getNumber(this.remoteConfig, 'daily_super_likes_limit');
-      return {
-        dailyLikesLimit: likes > 0 ? likes : 100,
-        coachDailyCredits: coach > 0 ? coach : 4,
-        superLikesLimit: supers > 0 ? supers : 5
-      };
-    } catch (error) {
-      console.warn('Error fetching profile limits from Remote Config:', error);
-      return { dailyLikesLimit: 100, coachDailyCredits: 4, superLikesLimit: 5 };
-    }
-  }
-
-  // Store Links
-  async getStoreLinks(): Promise<{ ios: string; android: string }> {
-    try {
-      await fetchAndActivate(this.remoteConfig);
-      const ios = getString(this.remoteConfig, 'store_url_ios');
-      const android = getString(this.remoteConfig, 'store_url_android');
-
-      return {
-        ios: ios || 'https://apps.apple.com/app/id6756385489',
-        android: android || 'https://play.google.com/store/apps/details?id=com.black.sugar21',
-      };
-    } catch (error) {
-      console.error('Error fetching store links from Remote Config:', error);
-      return {
-        ios: 'https://apps.apple.com/app/id6756385489',
-        android: 'https://play.google.com/store/apps/details?id=com.black.sugar21',
-      };
-    }
-  }
-
-  // Analytics — anonymous usage analytics (disclosed in Terms & Privacy). No cookies.
+  /** Analítica anónima (GA4). No fuerza la carga de Firebase: se encola y sale cuando el SDK llega. */
   logEvent(eventName: string, params?: Record<string, unknown>): void {
-    try {
-      firebaseLogEvent(this.analytics, eventName, params);
-    } catch (error) {
-      console.warn('Error logging analytics event:', error);
-    }
+    if (!this.isBrowser) return;
+    if (this.core_) { this.core_.logEvent(eventName, params); return; }
+    if (this.queued.length < MAX_QUEUED_EVENTS) this.queued.push([eventName, params]);
+    this.scheduleIdleLoad();
   }
+
+  // --- Delegados: misma firma que FirebaseCore, cargan el SDK bajo demanda ---
+  signIn(...a: Parameters<FirebaseCore['signIn']>) { return this.call((c) => c.signIn(...a)); }
+  signUp(...a: Parameters<FirebaseCore['signUp']>) { return this.call((c) => c.signUp(...a)); }
+  signInWithGoogle(...a: Parameters<FirebaseCore['signInWithGoogle']>) { return this.call((c) => c.signInWithGoogle(...a)); }
+  signInWithApple(...a: Parameters<FirebaseCore['signInWithApple']>) { return this.call((c) => c.signInWithApple(...a)); }
+  signInWithAppleRedirect(...a: Parameters<FirebaseCore['signInWithAppleRedirect']>) { return this.call((c) => c.signInWithAppleRedirect(...a)); }
+  signInWithGoogleRedirect(...a: Parameters<FirebaseCore['signInWithGoogleRedirect']>) { return this.call((c) => c.signInWithGoogleRedirect(...a)); }
+  startPhoneSignIn(...a: Parameters<FirebaseCore['startPhoneSignIn']>) { return this.call((c) => c.startPhoneSignIn(...a)); }
+  confirmPhoneCode(...a: Parameters<FirebaseCore['confirmPhoneCode']>) { return this.call((c) => c.confirmPhoneCode(...a)); }
+  signOutUser(...a: Parameters<FirebaseCore['signOutUser']>) { return this.call((c) => c.signOutUser(...a)); }
+  pauseAccount(...a: Parameters<FirebaseCore['pauseAccount']>) { return this.call((c) => c.pauseAccount(...a)); }
+  reactivateAccount(...a: Parameters<FirebaseCore['reactivateAccount']>) { return this.call((c) => c.reactivateAccount(...a)); }
+  deleteAccount(...a: Parameters<FirebaseCore['deleteAccount']>) { return this.call((c) => c.deleteAccount(...a)); }
+  updateUserProfile(...a: Parameters<FirebaseCore['updateUserProfile']>) { return this.call((c) => c.updateUserProfile(...a)); }
+  deleteUserProfile(...a: Parameters<FirebaseCore['deleteUserProfile']>) { return this.call((c) => c.deleteUserProfile(...a)); }
+  saveAgeVerification(...a: Parameters<FirebaseCore['saveAgeVerification']>) { return this.call((c) => c.saveAgeVerification(...a)); }
+  updateLanguagePreference(...a: Parameters<FirebaseCore['updateLanguagePreference']>) { return this.call((c) => c.updateLanguagePreference(...a)); }
+  getLanguagePreference(...a: Parameters<FirebaseCore['getLanguagePreference']>) { return this.call((c) => c.getLanguagePreference(...a)); }
+  isWardrobeEnabled(...a: Parameters<FirebaseCore['isWardrobeEnabled']>) { return this.call((c) => c.isWardrobeEnabled(...a)); }
+  isDiscoveryTabEnabled(...a: Parameters<FirebaseCore['isDiscoveryTabEnabled']>) { return this.call((c) => c.isDiscoveryTabEnabled(...a)); }
+  getMinimumAgeByCountry(...a: Parameters<FirebaseCore['getMinimumAgeByCountry']>) { return this.call((c) => c.getMinimumAgeByCountry(...a)); }
+  coachChat(...a: Parameters<FirebaseCore['coachChat']>) { return this.call((c) => c.coachChat(...a)); }
+  trackCoachSuggestionAction(...a: Parameters<FirebaseCore['trackCoachSuggestionAction']>) { return this.call((c) => c.trackCoachSuggestionAction(...a)); }
+  moderateProfileImage(...a: Parameters<FirebaseCore['moderateProfileImage']>) { return this.call((c) => c.moderateProfileImage(...a)); }
+  loadCoachSessions(...a: Parameters<FirebaseCore['loadCoachSessions']>) { return this.call((c) => c.loadCoachSessions(...a)); }
+  upsertCoachSession(...a: Parameters<FirebaseCore['upsertCoachSession']>) { return this.call((c) => c.upsertCoachSession(...a)); }
+  deleteCoachSession(...a: Parameters<FirebaseCore['deleteCoachSession']>) { return this.call((c) => c.deleteCoachSession(...a)); }
+  appendCoachMessage(...a: Parameters<FirebaseCore['appendCoachMessage']>) { return this.call((c) => c.appendCoachMessage(...a)); }
+  loadCoachMessages(...a: Parameters<FirebaseCore['loadCoachMessages']>) { return this.call((c) => c.loadCoachMessages(...a)); }
+  refreshProfile(...a: Parameters<FirebaseCore['refreshProfile']>) { return this.call((c) => c.refreshProfile(...a)); }
+  uploadProfilePhoto(...a: Parameters<FirebaseCore['uploadProfilePhoto']>) { return this.call((c) => c.uploadProfilePhoto(...a)); }
+  deleteProfilePhotos(...a: Parameters<FirebaseCore['deleteProfilePhotos']>) { return this.call((c) => c.deleteProfilePhotos(...a)); }
+  getOwnPhotoUrls(...a: Parameters<FirebaseCore['getOwnPhotoUrls']>) { return this.call((c) => c.getOwnPhotoUrls(...a)); }
+  saveOnboarding(...a: Parameters<FirebaseCore['saveOnboarding']>) { return this.call((c) => c.saveOnboarding(...a)); }
+  updateProfile(...a: Parameters<FirebaseCore['updateProfile']>) { return this.call((c) => c.updateProfile(...a)); }
+  updateLocation(...a: Parameters<FirebaseCore['updateLocation']>) { return this.call((c) => c.updateLocation(...a)); }
+  setReadyToMeet(...a: Parameters<FirebaseCore['setReadyToMeet']>) { return this.call((c) => c.setReadyToMeet(...a)); }
+  getBioCoaching(...a: Parameters<FirebaseCore['getBioCoaching']>) { return this.call((c) => c.getBioCoaching(...a)); }
+  generateIcebreakers(...a: Parameters<FirebaseCore['generateIcebreakers']>) { return this.call((c) => c.generateIcebreakers(...a)); }
+  generateSmartReply(...a: Parameters<FirebaseCore['generateSmartReply']>) { return this.call((c) => c.generateSmartReply(...a)); }
+  getRealtimeCoachTips(...a: Parameters<FirebaseCore['getRealtimeCoachTips']>) { return this.call((c) => c.getRealtimeCoachTips(...a)); }
+  getDatingJourney(...a: Parameters<FirebaseCore['getDatingJourney']>) { return this.call((c) => c.getDatingJourney(...a)); }
+  getPhotoCoachAnalysis(...a: Parameters<FirebaseCore['getPhotoCoachAnalysis']>) { return this.call((c) => c.getPhotoCoachAnalysis(...a)); }
+  getDiscoveryFeed(...a: Parameters<FirebaseCore['getDiscoveryFeed']>) { return this.call((c) => c.getDiscoveryFeed(...a)); }
+  recordSwipe(...a: Parameters<FirebaseCore['recordSwipe']>) { return this.call((c) => c.recordSwipe(...a)); }
+  wardrobeCatalog(...a: Parameters<FirebaseCore['wardrobeCatalog']>) { return this.call((c) => c.wardrobeCatalog(...a)); }
+  wardrobeSuggest(...a: Parameters<FirebaseCore['wardrobeSuggest']>) { return this.call((c) => c.wardrobeSuggest(...a)); }
+  createSecondOpinionLink(...a: Parameters<FirebaseCore['createSecondOpinionLink']>) { return this.call((c) => c.createSecondOpinionLink(...a)); }
+  getDailyPicks(...a: Parameters<FirebaseCore['getDailyPicks']>) { return this.call((c) => c.getDailyPicks(...a)); }
+  getPublicProfile(...a: Parameters<FirebaseCore['getPublicProfile']>) { return this.call((c) => c.getPublicProfile(...a)); }
+  getMyGender(...a: Parameters<FirebaseCore['getMyGender']>) { return this.call((c) => c.getMyGender(...a)); }
+  wardrobePreview(...a: Parameters<FirebaseCore['wardrobePreview']>) { return this.call((c) => c.wardrobePreview(...a)); }
+  wardrobeDelete(...a: Parameters<FirebaseCore['wardrobeDelete']>) { return this.call((c) => c.wardrobeDelete(...a)); }
+  markMatchRead(...a: Parameters<FirebaseCore['markMatchRead']>) { return this.call((c) => c.markMatchRead(...a)); }
+  setActiveChat(...a: Parameters<FirebaseCore['setActiveChat']>) { return this.call((c) => c.setActiveChat(...a)); }
+  getUserBasic(...a: Parameters<FirebaseCore['getUserBasic']>) { return this.call((c) => c.getUserBasic(...a)); }
+  loadOlderMessages(...a: Parameters<FirebaseCore['loadOlderMessages']>) { return this.call((c) => c.loadOlderMessages(...a)); }
+  getDateSuggestions(...a: Parameters<FirebaseCore['getDateSuggestions']>) { return this.call((c) => c.getDateSuggestions(...a)); }
+  getDailyQuestion(...a: Parameters<FirebaseCore['getDailyQuestion']>) { return this.call((c) => c.getDailyQuestion(...a)); }
+  answerDailyQuestion(...a: Parameters<FirebaseCore['answerDailyQuestion']>) { return this.call((c) => c.answerDailyQuestion(...a)); }
+  generateDateBlueprint(...a: Parameters<FirebaseCore['generateDateBlueprint']>) { return this.call((c) => c.generateDateBlueprint(...a)); }
+  sendBlueprintMessage(...a: Parameters<FirebaseCore['sendBlueprintMessage']>) { return this.call((c) => c.sendBlueprintMessage(...a)); }
+  sendPlaceMessage(...a: Parameters<FirebaseCore['sendPlaceMessage']>) { return this.call((c) => c.sendPlaceMessage(...a)); }
+  sendMessage(...a: Parameters<FirebaseCore['sendMessage']>) { return this.call((c) => c.sendMessage(...a)); }
+  getCoachPlannerConfig(...a: Parameters<FirebaseCore['getCoachPlannerConfig']>) { return this.call((c) => c.getCoachPlannerConfig(...a)); }
+  getProfileLimits(...a: Parameters<FirebaseCore['getProfileLimits']>) { return this.call((c) => c.getProfileLimits(...a)); }
+  getStoreLinks(...a: Parameters<FirebaseCore['getStoreLinks']>) { return this.call((c) => c.getStoreLinks(...a)); }
+
+  // --- Escuchas en vivo ---
+  listenWardrobe(...a: Parameters<FirebaseCore['listenWardrobe']>) { return this.listen((c) => c.listenWardrobe(...a)); }
+  listenSecondOpinions(...a: Parameters<FirebaseCore['listenSecondOpinions']>) { return this.listen((c) => c.listenSecondOpinions(...a)); }
+  listenMatches(...a: Parameters<FirebaseCore['listenMatches']>) { return this.listen((c) => c.listenMatches(...a)); }
+  listenMessages(...a: Parameters<FirebaseCore['listenMessages']>) { return this.listen((c) => c.listenMessages(...a)); }
 }

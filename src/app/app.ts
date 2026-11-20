@@ -498,7 +498,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
     // Carousel starts when visible (IntersectionObserver in initGsapAnimations)
 
     // Detect legal age from Remote Config + timezone
-    this.detectAndSetLegalAge();
+    this.firebase.whenIdle().then(() => this.detectAndSetLegalAge());
 
     // Check localStorage for age verification
     if (typeof localStorage !== 'undefined') {
@@ -722,6 +722,7 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       // 1. Save to Firestore
+      await this.firebase.ready();
       const { getFirestore, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
       const db = getFirestore();
       await addDoc(collection(db, 'testerSignups'), {

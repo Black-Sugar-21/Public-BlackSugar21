@@ -1093,7 +1093,7 @@ export class CoachWidgetComponent implements OnDestroy {
         this.appleDevice = APPLE_WEB_ENABLED && /iPhone|iPad|iPod|Macintosh/i.test(ua) && !/Android/i.test(ua);
       } catch { this.appleDevice = false; }
       // R62: load the RC date-planner config once (single source shared with the apps).
-      this.firebase.getCoachPlannerConfig().then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
+      this.firebase.whenIdle().then(() => this.firebase.getCoachPlannerConfig()).then((c) => { if (c) this.rcPlanner.set(c); }).catch(() => {});
       // Open from the hero CTA (or any "Talk to the Coach" button) via the shared signal — reliable
       // regardless of mount timing and works when logged-out. Only the request counter is a dependency
       // (untracked body), so closing the panel / new messages never re-trigger an unwanted re-open.
@@ -1866,7 +1866,7 @@ export class CoachWidgetComponent implements OnDestroy {
   private loadWardrobeFlag() {
     if (this.wardrobeFlagLoaded) return;
     this.wardrobeFlagLoaded = true;
-    this.firebase.isWardrobeEnabled().then((on) => this.wardrobeOn.set(on)).catch(() => { /* stays hidden */ });
+    this.firebase.whenIdle().then(() => this.firebase.isWardrobeEnabled()).then((on) => this.wardrobeOn.set(on)).catch(() => { /* stays hidden */ });
   }
 
   /** Immutable outfit-state update — messages is an OnPush signal, so replace the Msg. */
