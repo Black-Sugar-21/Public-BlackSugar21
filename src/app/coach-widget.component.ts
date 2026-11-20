@@ -1866,7 +1866,7 @@ export class CoachWidgetComponent implements OnDestroy {
   private loadWardrobeFlag() {
     if (this.wardrobeFlagLoaded) return;
     this.wardrobeFlagLoaded = true;
-    this.firebase.isWardrobeEnabled().then((on) => this.wardrobeOn.set(on)).catch(() => { /* stays hidden */ });
+    this.firebase.whenIdle().then(() => this.firebase.isWardrobeEnabled()).then((on) => this.wardrobeOn.set(on)).catch(() => { /* stays hidden */ });
   }
 
   /** Immutable outfit-state update — messages is an OnPush signal, so replace the Msg. */
