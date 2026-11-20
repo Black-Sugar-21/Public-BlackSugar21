@@ -177,4 +177,30 @@ describe('FirebaseService (carga diferida)', () => {
       expect(core[n], n).toHaveBeenCalledWith('x', 'y');
     }
   });
+
+  describe('página aún cargando (readyState != complete)', () => {
+    const setState = (v: string) => vi.spyOn(document, 'readyState', 'get').mockReturnValue(v as DocumentReadyState);
+    afterEach(() => vi.restoreAllMocks());
+
+    it('arma la ventana de inactividad recién cuando llega el evento load', async () => {
+      setState('loading');
+      const svc = make();
+      void svc.whenIdle();
+      await vi.advanceTimersByTimeAsync(FIREBASE_IDLE_TIMEOUT_MS * 2);
+      expect(svc.loads).toBe(0);
+      window.dispatchEvent(new Event('load'));
+      await vi.advanceTimersByTimeAsync(FIREBASE_IDLE_TIMEOUT_MS + 10);
+      expect(svc.loads).toBe(1);
+    });
+
+    it('una interacción antes de load carga el SDK sin esperar el temporizador', async () => {
+      setState('loading');
+      const svc = make();
+      const idle = svc.whenIdle();
+      window.dispatchEvent(new Event('pointerdown'));
+      await idle;
+      await vi.advanceTimersByTimeAsync(0);
+      expect(svc.loads).toBe(1);
+    });
+  });
 });
