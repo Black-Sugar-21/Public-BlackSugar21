@@ -90,6 +90,7 @@ export function createAnalytics(cfg: AnalyticsConfig): Analytics {
   const enabled = /^G-[A-Z0-9]{6,}$/.test(cfg.measurementId);
   const listeners: Array<(c: Choice) => void> = [];
   let loaded = false;
+  let ready = false; // gtag.js ya pedido y 'config' ya enviado: antes de eso los eventos esperan en cola (con Signals apagados desde el primero)
   let state: Choice = 'denied';
   let pending: Array<[string, Params]> = [];
   const sent = new Set<string>();
@@ -121,6 +122,7 @@ export function createAnalytics(cfg: AnalyticsConfig): Analytics {
         user_properties: { language: cfg.getLanguage(), device_type: deviceType() },
         ...(cfg.pageLocation ? { page_location: cfg.pageLocation() } : {}),
       });
+      ready = true;
       for (const [n, p] of pending.splice(0)) window.gtag!('event', n, p);
     };
     // Diferido: tras el primer pintado, cuando el navegador está libre.
@@ -153,7 +155,7 @@ export function createAnalytics(cfg: AnalyticsConfig): Analytics {
     track(name, params = {}) {
       if (!enabled || effective() !== 'granted') return false;
       if (!validateEvent(cfg.events, name, params).ok) return false;
-      if (window.gtag && loaded && !pending.length) window.gtag('event', name, params);
+      if (ready) window.gtag!('event', name, params);
       else pending.push([name, params]);
       return true;
     },

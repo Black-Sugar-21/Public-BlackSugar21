@@ -159,6 +159,17 @@ describe('con consentimiento', () => {
   });
 });
 
+describe('orden de los comandos de gtag', () => {
+  it('ningún evento sale antes de «config» (con Signals ya apagados)', async () => {
+    const a = mk(); a.setConsent('granted');
+    a.pageView('/inicio'); a.track('flag', { on: true });
+    await flush();
+    const cmds = gtagCalls().map((c) => c[0]);
+    expect(cmds.indexOf('config')).toBeGreaterThan(-1);
+    expect(cmds.indexOf('event')).toBeGreaterThan(cmds.indexOf('config'));
+  });
+});
+
 describe('aviso', () => {
   it('una frase, enlace a privacidad y dos botones iguales', () => {
     const a = mk();

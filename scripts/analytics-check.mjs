@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Prueba de red y capturas de la analítica (Playwright + Chrome instalado). Copiable a cualquier sitio de Bimbask.
+ * Prueba de red y capturas de la analítica de los sitios de Bimbask (Playwright + Chrome instalado; PLAYWRIGHT_DIR = carpeta con node_modules/playwright).
  * Sirve una carpeta construida CON un measurementId de prueba y verifica, con la red del navegador:
  *   - sin elección, con «Solo lo necesario» y con Global Privacy Control: 0 peticiones a googletagmanager/google-analytics;
  *   - con «Aceptar»: se pide gtag.js (las peticiones a Google se cortan: no sale nada a Internet).
@@ -10,7 +10,8 @@
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+const { chromium } = createRequire((process.env.PLAYWRIGHT_DIR || process.cwd()) + '/')('playwright');
 
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
@@ -44,7 +45,10 @@ async function scenario(name, { gpc = false, click = null, init = null, vp = { w
     return route.continue();
   });
   await page.goto(base + path, { waitUntil: 'load' });
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(800);
+  await page.mouse.wheel(0, 40);
+  await page.waitForSelector('[data-analytics-banner]', { state: 'attached', timeout: gpc ? 1500 : 6000 }).catch(() => {});
+  await page.waitForTimeout(500);
   if (click !== null) {
     await page.locator('[data-analytics-banner] >> role=button').nth(click).click();
     await page.mouse.wheel(0, 800); await page.waitForTimeout(1500);
@@ -52,13 +56,24 @@ async function scenario(name, { gpc = false, click = null, init = null, vp = { w
   return { page, ctx, google, name };
 }
 
+// Antes de cualquier interacción: ni aviso ni peticiones a Google (el aviso espera a la primera interacción, para no ser el LCP).
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage(); const g = [];
+  await page.route('**/*', (route) => { const u = route.request().url(); if (GOOGLE.test(u)) { g.push(u); return route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }); } if (!u.startsWith(base) && !u.startsWith('data:')) return route.abort(); return route.continue(); });
+  await page.goto(base + path, { waitUntil: 'load' }); await page.waitForTimeout(2500);
+  check(g.length === 0 && (await page.locator('[data-analytics-banner]').count()) === 0, `antes de interactuar: sin aviso y ${g.length} peticiones a Google (debe ser 0)`);
+  await page.mouse.wheel(0, 40); await page.waitForSelector('[data-analytics-banner]', { state: 'attached', timeout: 8000 }).catch(() => {});
+  check((await page.locator('[data-analytics-banner]').count()) === 1 && g.length === 0, `tras la primera interacción: el aviso aparece y ${g.length} peticiones a Google (debe ser 0)`);
+  await ctx.close();
+}
 let r = await scenario('sin elección');
 check(r.google.length === 0, `sin elección: ${r.google.length} peticiones a Google (debe ser 0)`);
 check((await r.page.locator('[data-analytics-banner]').count()) === 1, 'sin elección: el aviso se muestra');
 await r.ctx.close();
 r = await scenario('solo lo necesario', { click: 0 });
 check(r.google.length === 0, `«Solo lo necesario»: ${r.google.length} peticiones a Google (debe ser 0)`);
-await r.page.reload(); await r.page.waitForTimeout(1000);
+await r.page.reload(); await r.page.mouse.wheel(0, 40); await r.page.waitForTimeout(1500);
 check(r.google.length === 0 && (await r.page.locator('[data-analytics-banner]').count()) === 0, 'tras recargar no vuelve a preguntar y sigue sin enviar');
 await r.ctx.close();
 r = await scenario('GPC', { gpc: true });
@@ -66,6 +81,8 @@ check(r.google.length === 0 && (await r.page.locator('[data-analytics-banner]').
 await r.ctx.close();
 r = await scenario('aceptar', { click: 1 });
 check(r.google.some((u) => /googletagmanager\.com\/gtag\/js\?id=G-/.test(u)), `«Aceptar»: se pide gtag.js (${r.google.length} peticiones a Google)`);
+const order = await r.page.evaluate(() => (window.dataLayer || []).map((a) => a[0]));
+check(order.includes('config') && order.includes('event') && order.indexOf('config') < order.indexOf('event'), `«Aceptar»: orden de gtag = ${order.join(' > ')} (ningún «event» antes de «config»)`);
 await r.ctx.close();
 
 if (out) {
@@ -78,7 +95,10 @@ if (out) {
     if (init) await ctx.addInitScript(init);
     const page = await ctx.newPage();
     await page.route('**/*', (rt) => (rt.request().url().startsWith(base) ? rt.continue() : rt.abort()));
-    await page.goto(url, { waitUntil: 'load' }); await page.waitForTimeout(1500);
+    await page.goto(url, { waitUntil: 'load' });
+    await page.mouse.wheel(0, 40);
+    await page.waitForSelector('[data-analytics-banner]', { state: 'attached', timeout: 6000 }).catch(() => {});
+    await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(600);
     await page.screenshot({ path: join(out, `aviso-${label}-${mode}.png`) });
     await ctx.close();
   }

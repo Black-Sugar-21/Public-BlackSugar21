@@ -86,6 +86,8 @@ describe('App', () => {
 
 describe('App con la analítica encendida', () => {
   beforeEach(async () => {
+    // Escuchas de otras pruebas que nunca vieron una interacción: se vacían antes de empezar (el aviso espera a la primera interacción).
+    dispatchEvent(new Event('pointerdown'));
     localStorage.clear(); document.body.querySelectorAll('[data-analytics-banner]').forEach((n) => n.remove()); closeBanner();
     delete (window as any).dataLayer;
     (window as any).IntersectionObserver ??= class { observe() {} unobserve() {} disconnect() {} };
@@ -100,6 +102,9 @@ describe('App con la analítica encendida', () => {
     await Promise.all([import('./analytics/web-analytics'), import('./analytics/consent-banner'), import('./analytics-events')]);
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.querySelector('[data-analytics-banner]')).toBeNull(); // no se pinta al cargar: espera a la primera interacción
+    dispatchEvent(new Event('pointerdown'));
     await vi.waitFor(() => expect(document.querySelector('[data-analytics-banner]')).not.toBeNull(), { timeout: 3000 });
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
@@ -109,7 +114,7 @@ describe('App con la analítica encendida', () => {
     btn.click();
     expect(document.querySelector('[data-analytics-banner]')).not.toBeNull();
     expect((window as any).dataLayer).toBeUndefined();
-  });
+  }, 20000);
 
   it('cambiar de idioma se cuenta como language_change (solo el código del idioma)', async () => {
     const fixture = TestBed.createComponent(App);

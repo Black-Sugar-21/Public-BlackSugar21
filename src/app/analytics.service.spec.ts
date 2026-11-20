@@ -13,7 +13,7 @@ const make = (id: string, platform = 'browser') => {
 };
 
 beforeEach(() => { localStorage.clear(); document.head.innerHTML = ''; document.body.innerHTML = ''; delete window.dataLayer; delete window.gtag; closeBanner(); history.replaceState(null, '', '/'); });
-afterEach(() => { TestBed.resetTestingModule(); history.replaceState(null, '', '/'); });
+afterEach(() => { dispatchEvent(new Event('pointerdown')); closeBanner(); TestBed.resetTestingModule(); history.replaceState(null, '', '/'); });
 
 describe('pagePath', () => {
   it('sin query, hash ni tokens', () => {
@@ -54,6 +54,8 @@ describe('AnalyticsService encendida', () => {
     expect(s.enabled).toBe(true);
     s.trackPageView('/'); s.trackEvent('age_verified'); // antes de que llegue el módulo: esperan en la cola
     await flush();
+    expect(document.querySelector('[data-analytics-banner]')).toBeNull(); // no se pinta al cargar (no compite con el LCP)
+    dispatchEvent(new Event('pointerdown'));
     const banner = document.querySelector('[data-analytics-banner]')!;
     expect(banner.getAttribute('data-theme')).toBe('dark');
     expect(window.dataLayer).toBeUndefined();
@@ -74,7 +76,7 @@ describe('AnalyticsService encendida', () => {
   it('un fallo dentro de gtag no rompe la página', async () => {
     const s = make('G-TEST123456');
     s.start(() => 'es', '/privacy');
-    await flush();
+    await flush(); dispatchEvent(new Event('keydown'));
     (document.querySelector('[data-analytics-banner]')!.shadowRoot!.querySelectorAll('button')[1] as HTMLButtonElement).click();
     await flush();
     window.gtag = () => { throw new Error('boom'); };
@@ -83,7 +85,7 @@ describe('AnalyticsService encendida', () => {
   it('«Solo lo necesario»: nunca pide gtag', async () => {
     const s = make('G-TEST123456');
     s.start(() => 'en', '/privacy');
-    await flush();
+    await flush(); dispatchEvent(new Event('scroll'));
     (document.querySelector('[data-analytics-banner]')!.shadowRoot!.querySelectorAll('button')[0] as HTMLButtonElement).click();
     s.trackEvent('age_verified');
     await flush();
@@ -115,5 +117,31 @@ describe('AnalyticsService encendida', () => {
     expect((s as unknown as { waiting: unknown[] }).waiting.length).toBe(50);
     await flush();
     expect((s as unknown as { waiting: unknown[] }).waiting.length).toBe(0);
+  });
+  it('una interacción ANTES de que llegue el módulo también muestra el aviso, y «Preferencias» lo abre sin interacción', async () => {
+    const a = make('G-TEST123456');
+    a.start(() => 'es', '/privacy');
+    dispatchEvent(new Event('touchstart')); // el módulo aún no llegó
+    await flush();
+    expect(document.querySelector('[data-analytics-banner]')).not.toBeNull();
+    closeBanner();
+    TestBed.resetTestingModule();
+    const b = make('G-TEST123456');
+    b.start(() => 'es', '/privacy');
+    await flush();
+    expect(document.querySelector('[data-analytics-banner]')).toBeNull();
+    b.openPreferences();
+    expect(document.querySelector('[data-analytics-banner]')).not.toBeNull();
+  });
+  it('tras «Aceptar» ningún evento sale antes de «config»', async () => {
+    const s = make('G-TEST123456');
+    s.start(() => 'es', '/privacy');
+    await flush(); dispatchEvent(new Event('wheel'));
+    (document.querySelector('[data-analytics-banner]')!.shadowRoot!.querySelectorAll('button')[1] as HTMLButtonElement).click();
+    s.trackEvent('age_verified');
+    await flush();
+    const cmds = gtag().map((c) => c[0]);
+    expect(cmds.indexOf('config')).toBeGreaterThan(-1);
+    expect(cmds.indexOf('event')).toBeGreaterThan(cmds.indexOf('config'));
   });
 });
