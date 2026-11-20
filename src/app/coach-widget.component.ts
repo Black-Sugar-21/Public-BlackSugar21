@@ -1117,9 +1117,9 @@ export class CoachWidgetComponent implements OnDestroy {
     }
   }
 
-  /** Google Analytics (GA4) event — country + user counts come automatically from GA. */
-  private ga(event: string, params: Record<string, unknown> = {}) {
-    try { this.firebase.logEvent(event, { ...params, source: 'coach_demo' }); } catch { /* noop */ }
+  /** Evento GA4 (con consentimiento; lista cerrada en `analytics-events.ts`). País y usuarios los da GA solo. */
+  private ga(event: string, params: Record<string, string | number | boolean> = {}) {
+    try { this.firebase.logEvent(event, params); } catch { /* noop */ }
   }
 
   toggle() {
@@ -1293,7 +1293,7 @@ export class CoachWidgetComponent implements OnDestroy {
     this.messages.update((arr) => arr.map((x, i) => i === msgIdx ? { ...x, fb: rating } : x));
     const intent = m.mv ? 'multiverse' : m.sim ? 'simulate' : m.places ? 'place' : m.phrases ? 'phrase' : 'general';
     const answer = m.mv ? (m.mv.compatibilityLabel || 'multiverse') : m.sim ? (m.sim.approaches?.[0]?.phrase || 'simulation') : (m.text || '');
-    this.ga('coach_demo_feedback', { rating, intent, lang: this.lang() });
+    this.ga('coach_demo_feedback', { rating, intent });
     if (this.isBrowser) {
       fetch(FB_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1303,7 +1303,7 @@ export class CoachWidgetComponent implements OnDestroy {
   }
   /** R37: log which venue (and which psychology perspectives) the visitor taps — analytics to improve selection. Never blocks the link. */
   placeClick(p: PlaceCard, rank: number) {
-    this.ga('coach_demo_place_click', { lang: this.coachLang(), fit: p.score ?? null, rank });
+    this.ga('coach_demo_place_click', { rank: Math.min(Math.max(0, Math.trunc(rank)), 50) });
     if (this.isBrowser) {
       try {
         fetch(PLACE_CLICK_ENDPOINT, {
@@ -1342,7 +1342,7 @@ export class CoachWidgetComponent implements OnDestroy {
   /** Multi-agent simulation: 5 perspectives analyze the visitor's situation. */
   private async runSim(situation: string) {
     this.busy.set(true); this.loadingMode.set('situation'); this.simLoading.set(true); this.scroll();
-    this.ga('coach_demo_simulate', { lang: this.lang() });
+    this.ga('coach_demo_simulate');
     try {
       const res = await fetch(SIM_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1365,7 +1365,7 @@ export class CoachWidgetComponent implements OnDestroy {
   /** Multi-universe simulation: the 5-stage relationship trajectory + compatibility. */
   private async runMultiverse(context: string) {
     this.busy.set(true); this.loadingMode.set('multiverse'); this.simLoading.set(true); this.scroll();
-    this.ga('coach_demo_multiverse', { lang: this.lang() });
+    this.ga('coach_demo_multiverse');
     try {
       const res = await fetch(MV_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1970,7 +1970,7 @@ export class CoachWidgetComponent implements OnDestroy {
       this.lastCoachText = reply;
       // GA: one event per query (count = cantidad de consultas; geo/country auto from GA4).
       const intent = data?.places?.length ? 'place' : data?.phrases?.length ? 'phrase' : data?.needLocation ? 'place_need_loc' : 'general';
-      this.ga('coach_demo_message', { intent, lang: this.lang() });
+      this.ga('coach_demo_message', { intent });
       if (data?.limited) this.ga('coach_demo_limited');
       if (data?.places?.length || data?.phrases?.length || data?.needLocation || data?.areaEvents?.length) {
         // structured result — show immediately with attachments (no typewriter)
@@ -2074,7 +2074,7 @@ export class CoachWidgetComponent implements OnDestroy {
     const q = query || this.t().placeQuery;
     this.lastUserMsg = q;
     this.messages.update((m) => [...m, { role: 'user', text: label || this.t().placeChip }]);
-    this.ga('coach_demo_place_chip', { lang: this.coachLang(), cat: label ? 'category' : 'general' });
+    this.ga('coach_demo_place_chip', { cat: label ? 'category' : 'general' });
 
     if (!this.isBrowser || !navigator.geolocation) {
       // No GPS API (SSR / old browser) → proceed to backend; IP fallback handles location.

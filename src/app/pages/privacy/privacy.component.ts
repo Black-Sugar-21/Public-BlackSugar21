@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslationService } from '../../translation.service';
 import { RouterModule } from '@angular/router';
 import { SeoService } from '../../services/seo.service';
+import { ANALYTICS_CONSENT_TEXT } from './analytics-consent-text';
 
 @Component({
   selector: 'app-privacy',
@@ -21,6 +22,11 @@ export class PrivacyComponent implements OnInit {
       description: 'Política de privacidad de Black Sugar 21. Cómo protegemos tus datos personales y tu información.',
       url: '/privacy'
     });
+  }
+
+  /** Párrafo de analítica con consentimiento, en el idioma activo. */
+  analyticsConsent(): string {
+    return ANALYTICS_CONSENT_TEXT[this.translate.currentLanguage()] ?? ANALYTICS_CONSENT_TEXT.es;
   }
 
   t(key: string): string {

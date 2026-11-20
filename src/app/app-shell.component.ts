@@ -813,15 +813,15 @@ export class AppShellComponent implements OnDestroy {
 
   lang(): Language { return this.translate.currentLanguage(); }
   s(key: string): string { const m = SHELL_I18N[key]; return (m && (m[this.lang()] || m['en'])) || key; }
-  /** Firebase Analytics (GA4) — logs for ALL visitors, logged-in or anonymous (GA4 client_id).
-   *  Tagged auth state + platform=web so the web app is comparable to iOS/Android in Firebase. */
-  private track(event: string, params: Record<string, unknown> = {}) {
-    try { this.firebase.logEvent(event, { ...params, platform: 'web', surface: 'app', authed: !!this.firebase.currentUser() }); } catch { /* analytics best-effort */ }
+  /** Hitos de uso de la web app para GA4: con consentimiento y de la lista cerrada (`analytics-events.ts`); jamás conducta
+   *  íntima (swipes, matches, mensajes), tipo de perfil ni identificadores. */
+  private track(event: string, params: Record<string, string | number | boolean> = {}) {
+    try { this.firebase.logEvent(event, params); } catch { /* analytics best-effort */ }
   }
   go(sec: Section) {
     if (this.needsOnboarding()) { this.section.set('profile'); return; }  // can't leave onboarding until complete
     this.section.set(sec);
-    this.track('screen_view', { firebase_screen: sec, screen_name: sec });
+    this.track('app_section', { section: sec });
     if (sec === 'discovery' && !this.discoLoaded() && this.firebase.currentUser() && this.hasLocation()) this.loadDiscovery();
     if (sec === 'discovery') this.loadDailyPicks();   // internally guarded: signed-in + location + once
     if (sec === 'chats' && !this.unsubMatches && this.firebase.currentUser()) this.subscribeMatches();
@@ -896,7 +896,6 @@ export class AppShellComponent implements OnDestroy {
     this.readySaving.set(true);
     try {
       await this.firebase.setReadyToMeet(next);
-      this.track('ready_to_meet_toggle', { on: next });
     } catch { /* write failed → profile signal untouched → switch stays in its previous state */ }
     finally { this.readySaving.set(false); }
   }
@@ -1059,8 +1058,7 @@ export class AppShellComponent implements OnDestroy {
   swipe(action: 'like' | 'pass' | 'superlike') {
     const p = this.currentProfile();
     if (!p || this.swiping()) return;
-    this.track('discovery_swipe', { action });
-    this.firebase.recordSwipe(p.userId, action).then((matchId) => { if (matchId) this.track('new_match'); }).catch(() => { /* best-effort */ });
+    this.firebase.recordSwipe(p.userId, action).catch(() => { /* best-effort */ });
     this.swiping.set(action === 'pass' ? 'pass' : 'like');
     this.dragY.set(0);
     this.deckUp.set(true);                       // slide the deck up (≈380ms)
@@ -1170,7 +1168,7 @@ export class AppShellComponent implements OnDestroy {
     this.chatText = '';
     this.chatError.set('');
     // Surface send failures (e.g. first-message gate) instead of silently restoring — iOS parity.
-    try { await this.firebase.sendMessage(m.id, t); this.track('message_sent'); } catch { this.chatText = t; this.chatError.set(this.s('chatSendErr')); }
+    try { await this.firebase.sendMessage(m.id, t); } catch { this.chatText = t; this.chatError.set(this.s('chatSendErr')); }
   }
 
   // ── Profile + onboarding ─────────────────────────────────────────────────────
@@ -1558,7 +1556,7 @@ export class AppShellComponent implements OnDestroy {
         minAge: this.ob.minAge, maxAge: this.ob.maxAge, maxDistance: this.ob.maxDistance,
         pictures: this.obPhotos().map((p) => p.name),
       });
-      this.track('onboarding_complete', { userType });
+      this.track('onboarding_complete');
       this.obStep.set(0);
       // Load the just-uploaded photos so the profile avatar shows the FIRST uploaded photo
       // (never the Google/login photo), then play an elegant success flourish.

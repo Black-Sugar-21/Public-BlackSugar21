@@ -651,6 +651,7 @@
           <a routerLink="/moderation-policy">{{ t('footer.moderation') }}</a>
           <a routerLink="/features">{{ getCurrentLanguage() === 'es' ? 'Funciones' : 'Features' }}</a>
           <a routerLink="/safety-standards">{{ getCurrentLanguage() === 'es' ? 'Seguridad infantil' : 'Child Safety' }}</a>
+          @if (analytics.enabled) { <button type="button" class="footer-prefs" (click)="analytics.openPreferences()">{{ prefsLabel() }}</button> }
         </div>
         <div class="footer-copyright">
           <p>{{ t('footer.copyright') }}</p>

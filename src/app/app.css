@@ -1380,8 +1380,29 @@ a:hover {
     transition: width 0.3s ease;
 }
 
-.footer-links a:hover {
+.footer-links a:hover,
+.footer-links .footer-prefs:hover {
     color: var(--gold);
+}
+
+.footer-links .footer-prefs {
+    background: none;
+    border: 0;
+    padding: 0;
+    min-height: 44px;
+    font: inherit;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.footer-links .footer-prefs:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
 }
 
 .footer-links a:hover::after {

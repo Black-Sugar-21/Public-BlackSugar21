@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { FirebaseService } from './firebase.service';
+import { ANALYTICS_ID, AnalyticsService } from './analytics.service';
+import { closeBanner } from './analytics/consent-banner';
 
 /** Sin red: la descarga del SDK nunca termina, así la prueba no inicializa Firebase de verdad. */
 class OfflineFirebase extends FirebaseService {
@@ -79,5 +81,41 @@ describe('App', () => {
     await app.requestBetaAccess();
     expect(ready).toHaveBeenCalledTimes(1);
     expect(app.testerStatus()).toBe('error');
+  });
+});
+
+describe('App con la analítica encendida', () => {
+  beforeEach(async () => {
+    localStorage.clear(); document.body.querySelectorAll('[data-analytics-banner]').forEach((n) => n.remove()); closeBanner();
+    delete (window as any).dataLayer;
+    (window as any).IntersectionObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter([]), { provide: FirebaseService, useClass: OfflineFirebase }, { provide: ANALYTICS_ID, useValue: 'G-TEST123456' }],
+    }).compileComponents();
+  });
+  afterEach(() => { closeBanner(); localStorage.clear(); });
+
+  it('muestra el aviso (oscuro), el enlace «Preferencias de privacidad» del pie en el idioma activo y no manda nada sin aceptar', async () => {
+    await Promise.all([import('./analytics/web-analytics'), import('./analytics/consent-banner'), import('./analytics-events')]);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(document.querySelector('[data-analytics-banner]')).not.toBeNull(), { timeout: 3000 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const btn = el.querySelector('.footer-prefs') as HTMLButtonElement;
+    expect(btn.textContent).toContain((fixture.componentInstance as any).prefsLabel());
+    closeBanner(); document.querySelectorAll('[data-analytics-banner]').forEach((n) => n.remove());
+    btn.click();
+    expect(document.querySelector('[data-analytics-banner]')).not.toBeNull();
+    expect((window as any).dataLayer).toBeUndefined();
+  });
+
+  it('cambiar de idioma se cuenta como language_change (solo el código del idioma)', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const spy = vi.spyOn(TestBed.inject(AnalyticsService), 'trackEvent');
+    await (fixture.componentInstance as any).selectLanguage('en');
+    expect(spy).toHaveBeenCalledWith('language_change', { language: 'en' });
   });
 });

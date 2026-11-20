@@ -2,13 +2,12 @@ import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { User } from 'firebase/auth';
 import type { FirebaseCore, FirebaseState, UserProfile } from './firebase-core';
+import { AnalyticsService } from './analytics.service';
 
 export type { UserProfile } from './firebase-core';
 
 /** Tiempo máximo tras la carga de la página para traer Firebase aunque nadie interactúe (restaura la sesión). */
 export const FIREBASE_IDLE_TIMEOUT_MS = 2500;
-/** Tope de eventos de analítica en espera antes de que Firebase esté cargado. */
-export const MAX_QUEUED_EVENTS = 50;
 
 /**
  * Fachada de Firebase con carga diferida.
@@ -16,14 +15,15 @@ export const MAX_QUEUED_EVENTS = 50;
  * Mantiene la misma API pública que antes, pero el SDK (unos 400 kB) vive en `firebase-core.ts` y se trae con
  * `import()` dinámico: nunca en la ruta crítica de la portada. Se carga cuando (a) una función lo necesita
  * (formularios, /app, /analytics, el coach), (b) el usuario interactúa por primera vez, o (c) pasa la ventana
- * de inactividad tras la carga (para restaurar la sesión). Los eventos de analítica se encolan hasta entonces.
+ * de inactividad tras la carga (para restaurar la sesión). La analítica ya NO pasa por aquí (ver `AnalyticsService`: GA4 con
+ * consentimiento, sin el SDK de Firebase).
  */
 @Injectable({ providedIn: 'root' })
 export class FirebaseService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private corePromise: Promise<FirebaseCore> | null = null;
   private core_: FirebaseCore | null = null;
-  private queued: Array<[string, Record<string, unknown> | undefined]> = [];
+  private readonly analytics = inject(AnalyticsService);
   private idleScheduled = false;
   private idleResolve!: () => void;
   private readonly idle = new Promise<void>((r) => (this.idleResolve = r));
@@ -53,9 +53,6 @@ export class FirebaseService {
       this.corePromise = this.loadCore().then(({ FirebaseCore: Core }) => {
         const core = new Core(state);
         this.core_ = core;
-        const pending = this.queued;
-        this.queued = [];
-        for (const [name, params] of pending) core.logEvent(name, params);
         return core;
       });
       // Si falla la descarga, permitir un reintento en la próxima llamada.
@@ -121,12 +118,9 @@ export class FirebaseService {
     return !!(p && p.userType && p.birthDate);
   }
 
-  /** Analítica anónima (GA4). No fuerza la carga de Firebase: se encola y sale cuando el SDK llega. */
-  logEvent(eventName: string, params?: Record<string, unknown>): void {
-    if (!this.isBrowser) return;
-    if (this.core_) { this.core_.logEvent(eventName, params); return; }
-    if (this.queued.length < MAX_QUEUED_EVENTS) this.queued.push([eventName, params]);
-    this.scheduleIdleLoad();
+  /** Analítica (GA4 con consentimiento) vía `AnalyticsService`. Nunca carga Firebase. Solo eventos de la lista cerrada. */
+  logEvent(eventName: string, params?: Record<string, string | number | boolean>): void {
+    this.analytics.trackEvent(eventName, params);
   }
 
   // --- Delegados: misma firma que FirebaseCore, cargan el SDK bajo demanda ---

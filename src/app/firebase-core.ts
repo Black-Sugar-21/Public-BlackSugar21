@@ -52,11 +52,6 @@ import {
   ReCaptchaV3Provider
 } from 'firebase/app-check';
 import {
-  getAnalytics,
-  logEvent as firebaseLogEvent,
-  Analytics
-} from 'firebase/analytics';
-import {
   getStorage,
   ref as storageRef,
   uploadBytes,
@@ -101,7 +96,6 @@ export class FirebaseCore {
   private auth!: Auth;
   private db!: Firestore;
   private remoteConfig!: RemoteConfig;
-  private analytics!: Analytics;
   private functions!: Functions;
   private storage!: ReturnType<typeof getStorage>;
 
@@ -120,7 +114,6 @@ export class FirebaseCore {
     this.auth = getAuth(this.app);
     this.db = getFirestore(this.app);
     this.remoteConfig = getRemoteConfig(this.app);
-    this.analytics = getAnalytics(this.app);
     this.functions = getFunctions(this.app, 'us-central1');
     this.storage = getStorage(this.app);
 
@@ -1326,15 +1319,6 @@ export class FirebaseCore {
         ios: 'https://apps.apple.com/app/id6756385489',
         android: 'https://play.google.com/store/apps/details?id=com.black.sugar21',
       };
-    }
-  }
-
-  // Analytics — anonymous usage analytics (disclosed in Terms & Privacy). No cookies.
-  logEvent(eventName: string, params?: Record<string, unknown>): void {
-    try {
-      firebaseLogEvent(this.analytics, eventName, params);
-    } catch (error) {
-      console.warn('Error logging analytics event:', error);
     }
   }
 }
