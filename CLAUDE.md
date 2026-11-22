@@ -1,5 +1,7 @@
 # BlackSugar21 — Workspace Principal
 
+**Diseño:** antes de tocar cualquier interfaz, lee `DESIGN.md` (tokens y reglas de la casa de este producto). Si cambias un token, actualízalo en el mismo cambio y corre `npx -y @google/design.md@0.4.0 lint DESIGN.md`.
+
 ## Proyectos incluidos
 - **Backend principal (CoachFish)**: `/Users/daniel/IdeaProjects/CoachFish` (Firebase Functions Node.js — Cloud Functions actuales)
 - **Web/Angular + backend legacy**: `/Users/daniel/IdeaProjects/Public-BlackSugar21` (sitio público + Firestore/Storage rules — fuente de verdad → copiar a CoachFish al cambiar)
