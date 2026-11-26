@@ -2896,3 +2896,17 @@ button:focus-visible,
   .trust-band-inner { flex-wrap: wrap; }
   .trust-stat { overflow-wrap: anywhere; }
 }
+
+/* Letra al 200 % en teléfono: títulos, cifras y maqueta del chat topan con el ancho para no partir palabras. */
+@media (max-width: 479px) {
+  .trust-stat { min-width: min(100%, 8rem); }
+  .trust-stat-label { max-width: min(100%, 9rem); }
+  .coach-title { font-size: min(1.9rem, 9vw); }
+  .coach-feature-item { flex-wrap: wrap; }
+  .coach-feature-item > div:not(.coach-feature-icon) { flex: 1 1 9rem; min-width: 0; }
+  .coach-feature-item h3 { font-size: min(0.95rem, 6vw); }
+  .coach-feature-item p { font-size: min(0.85rem, 5.5vw); }
+  .coach-phone-screen { padding: 1.5rem min(1.2rem, 4vw); }
+  .coach-chat-bubble { padding: 0.75rem min(1rem, 3vw); font-size: min(0.82rem, 4.4vw); }
+  .coach-chip { padding: 0.3rem min(0.7rem, 2vw); font-size: min(0.75rem, 3.8vw); }
+}
