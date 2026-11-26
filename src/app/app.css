@@ -2801,7 +2801,12 @@ button:focus-visible,
 .tfcard-txt small { color: var(--text-muted, #B0B0B0); font-size: .875rem; line-height: 1.35; }
 .tfcard-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 /* Botones de contorno dorado, del mismo tamaño: la acción principal de la página sigue siendo el CTA del hero. */
-.tfcard-cta { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: .9375rem; text-decoration: none; text-align: center; white-space: nowrap; transition: background .2s; }
+.tfcard-cta { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: flex-start; gap: 12px; min-height: 52px; padding: 6px 16px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: .9375rem; text-decoration: none; text-align: start; transition: background .2s; }
+/* Logo de marca a la izquierda (Simple Icons, CC0), monocromo del color del texto; plataforma arriba y canal abajo. */
+.tfcard-ico { flex: none; width: 20px; height: 20px; fill: currentColor; stroke: none; }
+.tfcard-cta__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.tfcard-cta__txt strong { font-size: .9375rem; font-weight: 700; }
+.tfcard-cta__txt small { font-size: .75rem; font-weight: 500; }
 .tfcard-cta:hover { background: rgba(212,175,55,.12); }
 .tfcard-cta:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .tfcard--two { grid-template-columns: 64px minmax(0, 1fr); }
@@ -2890,4 +2895,19 @@ button:focus-visible,
 @media (max-width: 600px) {
   .trust-band-inner { flex-wrap: wrap; }
   .trust-stat { overflow-wrap: anywhere; }
+}
+
+/* Letra al 200 % en teléfono: títulos, cifras y maqueta del chat topan con el ancho para no partir palabras. */
+@media (max-width: 479px) {
+  .toolbar-brand { font-size: min(1.2rem, 4.4vw); white-space: normal; line-height: 1.15; }
+  .trust-stat { min-width: min(100%, 8rem); }
+  .trust-stat-label { max-width: min(100%, 9rem); }
+  .coach-title { font-size: min(1.9rem, 9vw); }
+  .coach-feature-item { flex-wrap: wrap; }
+  .coach-feature-item > div:not(.coach-feature-icon) { flex: 1 1 9rem; min-width: 0; }
+  .coach-feature-item h3 { font-size: min(0.95rem, 6vw); }
+  .coach-feature-item p { font-size: min(0.85rem, 5.5vw); }
+  .coach-phone-screen { padding: 1.5rem min(1.2rem, 4vw); }
+  .coach-chat-bubble { padding: 0.75rem min(1rem, 3vw); font-size: min(0.82rem, 4.4vw); }
+  .coach-chip { padding: 0.3rem min(0.7rem, 2vw); font-size: min(0.75rem, 3.8vw); }
 }
