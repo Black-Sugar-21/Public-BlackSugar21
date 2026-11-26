@@ -1,0 +1,107 @@
+<div class="legal-page-container">
+  <div class="legal-header">
+    <div class="logo-small"><img src="logo-21.png" alt="Black Sugar 21" width="50" height="50" /></div>
+    <a routerLink="/" class="back-link"><span class="back-arrow" aria-hidden="true">←</span> {{ t('footer.home') }}</a>
+  </div>
+
+  <section class="and" [attr.aria-busy]="view() === 'loading'">
+    <header class="and__head">
+      <div>
+        <p class="and__kicker">Black Sugar 21</p>
+        <h1>{{ t('android.title') }}</h1>
+        <p class="and__lead">{{ t('android.lead') }}</p>
+      </div>
+    </header>
+
+    @switch (view()) {
+      @case ('loading') {
+        <div class="and__card and__skel" role="status">
+          <span class="and__bar"></span><span class="and__bar and__bar--s"></span>
+          <p class="and__muted">{{ t('android.loading') }}</p>
+        </div>
+      }
+      @case ('neutral') {
+        <div class="and__card" data-view="neutral">
+          <h2>{{ t('android.neutral.t') }}</h2>
+          <p>{{ t('android.neutral.b') }}</p>
+          @if (testflightUrl) { <a class="and__btn and__btn--ghost" [href]="testflightUrl" rel="noopener">{{ t('android.ios.cta') }}</a> }
+        </div>
+      }
+      @case ('play') {
+        <div class="and__card" data-view="play">
+          <h2>{{ t('android.play.t') }}</h2>
+          <p>{{ t('android.play.b') }}</p>
+          <a class="and__btn" [href]="playUrl" rel="noopener">{{ t('android.play.cta') }}</a>
+        </div>
+      }
+      @case ('inApp') {
+        <div class="and__card" data-view="inApp">
+          <h2>{{ t('android.inapp.t') }}</h2>
+          <p>{{ t('android.inapp.b') }}</p>
+          @if (chromeIntent) { <a class="and__btn" [href]="chromeIntent">{{ t('android.inapp.cta') }}</a> }
+          <div class="and__copy">
+            <input #field class="and__field" type="text" readonly [value]="pageUrlText" [attr.aria-label]="t('android.inapp.copy')" (focus)="field.select()" />
+            <button type="button" class="and__btn and__btn--ghost" (click)="copyLink(field)">{{ copied() ? t('android.inapp.copied') : t('android.inapp.copy') }}</button>
+          </div>
+        </div>
+      }
+      @case ('tooOld') {
+        <div class="and__card" data-view="tooOld" role="alert">
+          <h2>{{ t('android.old.t') }}</h2>
+          <p>{{ minText() }}</p>
+        </div>
+      }
+      @case ('offline') {
+        <div class="and__card" data-view="offline" role="alert">
+          <h2>{{ t('android.offline.t') }}</h2>
+          <p>{{ t('android.offline.b') }}</p>
+          <button type="button" class="and__btn" (click)="retry()">{{ t('android.offline.retry') }}</button>
+        </div>
+      }
+      @case ('unavailable') {
+        <div class="and__card" data-view="unavailable">
+          <h2>{{ t('android.unavailable.t') }}</h2>
+          <p>{{ t('android.unavailable.b') }}</p>
+          <button type="button" class="and__btn and__btn--ghost" (click)="retry()">{{ t('android.offline.retry') }}</button>
+        </div>
+      }
+      @case ('ready') {
+        <div class="and__card" data-view="ready">
+          <p class="and__ver">{{ versionText() }}</p>
+          @if (dateText()) { <p class="and__muted">{{ t('android.updated', { date: '\u2068' + dateText() + '\u2069' }) }}</p> }
+          @if (onAndroid) {
+            <a class="and__btn" [href]="apkHref()" download>{{ t('android.download') }}</a>
+          }
+          <details class="and__check">
+            <summary>{{ t('android.checkT') }}</summary>
+            <p>{{ t('android.checkB') }}</p>
+            <code>{{ release()?.sha256 }}</code>
+          </details>
+        </div>
+        @if (onAndroid) {
+          <div class="and__steps">
+            <h2>{{ t('android.stepsT') }}</h2>
+            <ol>
+              @for (s of steps; track s; let i = $index) {
+                <li><span class="and__n" aria-hidden="true">{{ i + 1 }}</span><div><strong>{{ t('android.steps.' + s + '.t') }}</strong><p>{{ t('android.steps.' + s + '.b') }}</p></div></li>
+              }
+            </ol>
+          </div>
+        }
+      }
+    }
+
+    @if (showShare && qrSrc()) {
+      <div class="and__card and__qr" data-view="qr">
+        <img [src]="qrSrc()" [alt]="t('android.qr.alt')" width="160" height="160" />
+        <div><h2>{{ t('android.qr.t') }}</h2><p>{{ t('android.qr.b') }}</p><p class="and__muted and__url">{{ pageUrlText }}</p></div>
+      </div>
+    }
+    @if (showTestflight && view() !== 'neutral') {
+      <div class="and__card and__ios" data-view="ios">
+        <p>{{ t('android.ios.b') }}</p>
+        <a class="and__btn and__btn--ghost" [href]="testflightUrl" target="_blank" rel="noopener">{{ t('android.ios.cta') }}</a>
+      </div>
+    }
+  </section>
+</div>

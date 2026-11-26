@@ -32,8 +32,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
    *  (both 404 on 2026-10-10), so they are hidden until those links are real. */
   protected readonly beta = betaCards();
   protected readonly testflightUrl = this.beta.find((c) => c.key === 'testflight')?.href ?? null;
-  /** El resto de canales de «Prueba la beta»: TestFlight va aparte, en su tarjeta destacada (solo con enlace real). */
-  protected readonly androidUrl = this.beta.find((c) => c.key === 'appDistribution')?.href ?? null;
+  /** Android (beta): la página /android de este sitio (descarga directa del APK). Siempre existe; ella dice si ya hay versión. */
+  protected readonly androidUrl = '/android';
   /** Textos de la tarjeta según qué enlaces existan (ambos, solo iPhone o solo Android). */
   protected readonly dlKeys = this.testflightUrl && this.androidUrl
     ? { title: 'beta.both_title', sub: 'beta.both_sub' }
@@ -51,10 +51,6 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   private carouselInterval: any;
   private readonly totalSlides = 7;
 
-  showTesterModal = signal(false);
-  testerEmail = signal('');
-  testerStatus = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
-  testerJoinedGroup = signal(false);
 
   // ── Language selector (13 idiomas, auto-detectado al entrar, cambiable) ──
   readonly languages: LanguageOption[] = LANGUAGES;
@@ -625,7 +621,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
   readonly showCoachWidget = computed(() => {
     const u = (this.currentUrl() || '/').split('?')[0].split('#')[0];
     const inApp = u === '/app' || u.startsWith('/app/');
-    return !inApp && u !== '/coach';
+    // /android: una sola acción (descargar); el botón flotante del Coach taparía el botón y los pasos.
+    return !inApp && u !== '/coach' && u !== '/android';
   });
 
   /** Phone-sized screen → the coach opens as the fullscreen /coach page; desktop keeps the card. */
@@ -658,39 +655,6 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
    * Detect the user's country from timezone and fetch the legal age
    * from Firebase Remote Config (minimum_age_by_country).
    */
-  async requestBetaAccess() {
-    const email = this.testerEmail().trim().toLowerCase();
-    // Validate email format: user@domain.ext
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!email || !emailRegex.test(email)) {
-      this.testerStatus.set('error');
-      return;
-    }
-
-    this.testerStatus.set('loading');
-
-    try {
-      // 1. Save to Firestore
-      await this.firebase.ready();
-      const { getFirestore, collection, addDoc, serverTimestamp } = await import('firebase/firestore');
-      const db = getFirestore();
-      await addDoc(collection(db, 'testerSignups'), {
-        email,
-        platform: 'android',
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        language: this.translate.currentLanguage(),
-      });
-
-      // 2. Track event + show success (admin gets push notification via CF)
-      this.firebase.logEvent('tester_signup');
-      this.testerStatus.set('success');
-    } catch (err) {
-      console.error('Tester signup error:', err);
-      this.testerStatus.set('error');
-    }
-  }
-
   private async detectAndSetLegalAge(): Promise<void> {
     const country = this.detectCountryFromTimezone();
 

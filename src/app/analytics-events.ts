@@ -9,7 +9,7 @@ export const ANALYTICS_EVENTS = {
   age_verified: {},
   click_try_coach: { section: { type: 'enum', values: ['hero'] } },
   click_beta_link: {
-    channel: { type: 'enum', values: ['testflight', 'android_request', 'appDistribution', 'googlePlay', 'appStore'] },
+    channel: { type: 'enum', values: ['testflight', 'android_request', 'android', 'appDistribution', 'googlePlay', 'appStore'] },
     section: HERO_COACH_BETA,
   },
   tester_signup: {},

@@ -39,6 +39,7 @@
     "geofire-common": "^6.0.0",
     "gsap": "^3.14.2",
     "libphonenumber-js": "^1.13.7",
+    "qrcode-generator": "^2.0.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

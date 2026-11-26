@@ -146,7 +146,7 @@
             @if (testflightUrl) {
               <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'hero'})">{{ t('beta.iphone') }}</a>
             }
-            <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'hero'})">{{ t('beta.androidAsk') }}</button>
+            <a routerLink="/android" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'hero'})">{{ t('beta.android_cta') }}</a>
           </div>
         </div>
        </div>
@@ -336,7 +336,7 @@
               @if (testflightUrl) {
                 <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'coach'})">{{ t('beta.iphone') }}</a>
               }
-              <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'coach'})">{{ t('beta.androidAsk') }}</button>
+              <a routerLink="/android" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'coach'})">{{ t('beta.android_cta') }}</a>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@
                 <a class="tfcard-cta" [href]="testflightUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'beta'})">{{ t('beta.tf_cta') }}</a>
               }
               @if (androidUrl) {
-                <a class="tfcard-cta" [href]="androidUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'appDistribution', section: 'beta'})">{{ t('beta.ad_cta') }}</a>
+                <a class="tfcard-cta" [routerLink]="androidUrl" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'beta'})">{{ t('beta.android_cta') }}</a>
               }
             </span>
           </div>
@@ -599,7 +599,6 @@
             </li>
           }
         </ul>
-        <p class="beta-android">{{ t('beta.androidNote') }} <button type="button" class="beta-link" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'beta'})">{{ t('beta.androidAsk') }}</button></p>
       </div>
     </section>
 
@@ -661,7 +660,6 @@
 
   </main>
 
-  <!-- Tester Signup Modal -->
   <!-- Profile modal — the signed-in user's account info (from Firebase). -->
   @if (showProfileModal() && firebase.currentUser(); as u) {
     <div class="modal-overlay" (click)="showProfileModal.set(false)">
@@ -698,43 +696,6 @@
           <button class="confirm-cancel" (click)="showSignOutConfirm.set(false)">{{ getCurrentLanguage()==='es' ? 'Cancelar' : 'Cancel' }}</button>
           <button class="confirm-ok" (click)="signOut()">{{ getCurrentLanguage()==='es' ? 'Cerrar sesión' : 'Sign out' }}</button>
         </div>
-      </div>
-    </div>
-  }
-
-  @if (showTesterModal()) {
-    <div class="modal-overlay" (click)="showTesterModal.set(false)">
-      <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
-        <button class="modal-close" (click)="showTesterModal.set(false)" [attr.aria-label]="getCurrentLanguage() === 'es' ? 'Cerrar' : 'Close'">×</button>
-
-        <div class="modal-icon">💎</div>
-        <h2 class="modal-title">{{ t('tester.title') }}</h2>
-        <p class="modal-subtitle">{{ t('tester.subtitle') }}</p>
-
-        @if (testerStatus() === 'success') {
-          <div style="margin-top:20px; text-align:center;">
-            <div class="success-lot lot-host" aria-hidden="true"><span class="success-poster">✅</span><span appLottie="lottie/success.json"></span></div>
-            <p class="modal-success-text">{{ t('tester.success') }}</p>
-            <p style="color: rgba(255,255,255,0.6); font-size:14px; margin-top:12px; line-height:1.6;">{{ t('tester.instructions') }}</p>
-            <button class="modal-button" style="margin-top:20px; width:100%;" (click)="showTesterModal.set(false)">OK</button>
-          </div>
-        } @else {
-          <div style="margin-top:20px;">
-            <input #testerInput type="email" class="modal-input" [placeholder]="t('tester.placeholder')" (input)="testerEmail.set(testerInput.value)" (keydown.enter)="requestBetaAccess()">
-            <button class="modal-button" style="margin-top:12px; width:100%;" [disabled]="testerStatus() === 'loading'" (click)="requestBetaAccess()">
-              @if (testerStatus() === 'loading') {
-                ...
-              } @else {
-                {{ t('tester.button') }}
-              }
-            </button>
-            @if (testerStatus() === 'error') {
-              <p class="modal-error-text">{{ t('tester.error') }}</p>
-            }
-          </div>
-        }
-
-        <p class="modal-footer-text">{{ t('tester.footer') }}</p>
       </div>
     </div>
   }

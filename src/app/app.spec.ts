@@ -58,6 +58,15 @@ describe('App', () => {
     expect(fixture.componentInstance.isHomeRoute()).toBe(false);
   });
 
+  it('en /android el botón flotante del Coach no se dibuja (no tapa la descarga)', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as any;
+    app.currentUrl.set('/terms');
+    expect(app.showCoachWidget()).toBe(true);
+    app.currentUrl.set('/android');
+    expect(app.showCoachWidget()).toBe(false);
+  });
+
   it('detecta la edad legal solo cuando Firebase está en reposo (diferido)', async () => {
     const fb = TestBed.inject(FirebaseService) as OfflineFirebase;
     let release!: () => void;
@@ -71,23 +80,13 @@ describe('App', () => {
     await Promise.resolve();
     expect(spy).toHaveBeenCalled();
   });
-
-  it('requestBetaAccess trae Firebase antes de escribir el registro', async () => {
-    const fb = TestBed.inject(FirebaseService) as OfflineFirebase;
-    const ready = vi.spyOn(fb, 'ready').mockRejectedValue(new Error('sin red'));
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance as any;
-    app.testerEmail.set('a@b.co');
-    await app.requestBetaAccess();
-    expect(ready).toHaveBeenCalledTimes(1);
-    expect(app.testerStatus()).toBe('error');
-  });
 });
 
 describe('App con la analítica encendida', () => {
   beforeEach(async () => {
     // Escuchas de otras pruebas que nunca vieron una interacción: se vacían antes de empezar (el aviso espera a la primera interacción).
     dispatchEvent(new Event('pointerdown'));
+    await new Promise((r) => setTimeout(r, 150)); // los avisos que esas escuchas arman son asíncronos: se esperan antes de limpiar
     localStorage.clear(); document.body.querySelectorAll('[data-analytics-banner]').forEach((n) => n.remove()); closeBanner();
     delete (window as any).dataLayer;
     (window as any).IntersectionObserver ??= class { observe() {} unobserve() {} disconnect() {} };
