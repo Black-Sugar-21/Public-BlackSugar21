@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslationService } from '../../translation.service';
 import { SeoService } from '../../services/seo.service';
 import { ANDROID_ENV, ANDROID_STORES } from './android-env';
+import { ANDROID_REQUEST_EMAIL, ANDROID_REQUEST_URL, ANDROID_SITE_MODE } from './android-mode';
 import {
   AndroidRelease, DEFAULT_DOWNLOADS_PATH, DEFAULT_MIN_ANDROID, androidApkUrl, androidLatestUrl, formatApkSize, formatPublished, parseAndroidRelease,
 } from './android-release.util';
@@ -14,6 +15,7 @@ type ReleaseState =
 
 /**
  * Lo que muestra la página:
+ * - `request`: modo «solicitud» (ver `android-mode.ts`): solo «Pide acceso», sin descarga ni lectura de `latest.json`;
  * - `neutral`: robots, TV, KaiOS… solo texto y enlaces, nunca un botón de descarga;
  * - `play`: Google Play ya es público y gana sobre la descarga directa;
  * - `inApp`: Android dentro de otra app (las descargas suelen fallar) → abrir en Chrome;
@@ -21,7 +23,7 @@ type ReleaseState =
  * - `offline` / `unavailable`: sin conexión, o `latest.json`/el APK faltan o no se leen;
  * - `ready`: hay versión publicada y su APK existe.
  */
-export type AndroidPageView = 'loading' | 'neutral' | 'play' | 'inApp' | 'tooOld' | 'offline' | 'unavailable' | 'ready';
+export type AndroidPageView = 'request' | 'loading' | 'neutral' | 'play' | 'inApp' | 'tooOld' | 'offline' | 'unavailable' | 'ready';
 
 const COPIED_MS = 2200;
 /** FSI/PDI: aísla cada dato (versión, tamaño, fecha) para que en árabe no se mezcle con el orden de la frase. */
@@ -40,6 +42,11 @@ export class AndroidPageComponent {
   private readonly translate = inject(TranslationService);
   private readonly seo = inject(SeoService);
 
+  /** Modo «solicitud»: el interruptor del sitio apaga la descarga directa. */
+  readonly asking = inject(ANDROID_SITE_MODE) === 'solicitud';
+  readonly requestUrl = ANDROID_REQUEST_URL;
+  /** En dos partes: con letra grande el correo se corta después de la «@», nunca en medio del dominio. */
+  readonly emailParts = ANDROID_REQUEST_EMAIL.split('@');
   readonly downloadsPath = DEFAULT_DOWNLOADS_PATH;
   readonly pagePath = '/android';
   /** Enlaces públicos de las tiendas, solo si existen de verdad (`src/beta-links.json`). */
@@ -60,6 +67,7 @@ export class AndroidPageComponent {
   private readonly neutral = this.platform === 'bot' || this.platform === 'other';
 
   readonly view = computed<AndroidPageView>(() => {
+    if (this.asking) return 'request';
     if (this.neutral) return 'neutral';
     if (this.playUrl) return 'play';
     if (this.onAndroid && this.visitor.inAppBrowser) return 'inApp';
@@ -85,20 +93,22 @@ export class AndroidPageComponent {
   readonly pageUrlText = this.pageUrl.replace(/^https?:\/\//i, '');
   readonly chromeIntent = chromeIntentUrl(this.pageUrl);
   /** En computador: QR para seguir en el teléfono. */
-  readonly showShare = this.onComputer && !this.neutral;
+  readonly showShare: boolean;
   /** iPhone, iPad y computadores: el enlace de TestFlight, si existe. */
-  readonly showTestflight = !!this.testflightUrl && !this.onAndroid && !this.neutral;
+  readonly showTestflight: boolean;
 
   private copiedTimer: ReturnType<typeof setTimeout> | undefined;
   private loadId = 0;
 
   constructor() {
+    this.showShare = !this.asking && this.onComputer && !this.neutral;
+    this.showTestflight = !this.asking && !!this.testflightUrl && !this.onAndroid && !this.neutral;
     effect(() => {
       this.translate.currentLanguage();
-      this.seo.update({ title: this.t('android.seoT'), description: this.t('android.seoD'), url: this.pagePath });
+      this.seo.update({ title: this.t(this.asking ? 'android.ask.seoT' : 'android.seoT'), description: this.t(this.asking ? 'android.ask.b' : 'android.seoD'), url: this.pagePath });
     });
     effect(() => {
-      const wants = !this.neutral && !this.playUrl && !(this.onAndroid && this.visitor.inAppBrowser);
+      const wants = !this.asking && !this.neutral && !this.playUrl && !(this.onAndroid && this.visitor.inAppBrowser);
       if (wants && untracked(this.releaseState).status === 'idle') void this.loadRelease();
     });
     if (this.showShare) {
