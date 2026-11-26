@@ -1,7 +1,7 @@
 <div class="legal-page-container">
   <div class="legal-header">
     <div class="logo-small"><img src="logo-21.png" alt="Black Sugar 21" width="50" height="50" /></div>
-    <a routerLink="/" class="back-link">← {{ t('footer.home') }}</a>
+    <a routerLink="/" class="back-link"><span class="back-arrow" aria-hidden="true">←</span> {{ t('footer.home') }}</a>
   </div>
 
   <section class="and" [attr.aria-busy]="view() === 'loading'">
@@ -68,7 +68,7 @@
       @case ('ready') {
         <div class="and__card" data-view="ready">
           <p class="and__ver">{{ versionText() }}</p>
-          @if (dateText()) { <p class="and__muted">{{ t('android.updated', { date: dateText() }) }}</p> }
+          @if (dateText()) { <p class="and__muted">{{ t('android.updated', { date: '\u2068' + dateText() + '\u2069' }) }}</p> }
           @if (onAndroid) {
             <a class="and__btn" [href]="apkHref()" download>{{ t('android.download') }}</a>
           }

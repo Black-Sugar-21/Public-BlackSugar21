@@ -24,6 +24,8 @@ type ReleaseState =
 export type AndroidPageView = 'loading' | 'neutral' | 'play' | 'inApp' | 'tooOld' | 'offline' | 'unavailable' | 'ready';
 
 const COPIED_MS = 2200;
+/** FSI/PDI: aísla cada dato (versión, tamaño, fecha) para que en árabe no se mezcle con el orden de la frase. */
+const isolate = (v: string | number): string => (v === '' ? '' : `\u2068${v}\u2069`);
 
 /** `/android` — descarga directa del APK de prueba que sirve este mismo sitio desde `/descargas/android/`. */
 @Component({
@@ -124,11 +126,11 @@ export class AndroidPageComponent {
 
   versionText(): string {
     const r = this.release();
-    return r ? this.t('android.version', { version: r.versionName, size: formatApkSize(r.sizeBytes, this.translate.currentLanguage()) }) : '';
+    return r ? this.t('android.version', { version: isolate(r.versionName), size: isolate(formatApkSize(r.sizeBytes, this.translate.currentLanguage())) }) : '';
   }
 
   minText(): string {
-    return this.t('android.old.b', { min: this.release()?.minAndroid ?? DEFAULT_MIN_ANDROID });
+    return this.t('android.old.b', { min: isolate(this.release()?.minAndroid ?? DEFAULT_MIN_ANDROID) });
   }
 
   /** Lee `latest.json` y comprueba (HEAD) que su APK exista: un manifiesto viejo nunca se vuelve un botón roto. Nunca lanza. */

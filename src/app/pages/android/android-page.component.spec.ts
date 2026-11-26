@@ -48,7 +48,7 @@ describe('AndroidPageComponent · vistas', () => {
     expect(cmp.view()).toBe('ready');
     const a = el.querySelector('a[download]') as HTMLAnchorElement;
     expect(a.getAttribute('href')).toBe('/descargas/android/render-1.4.0.apk');
-    expect(el.textContent).toContain('Versión 1.4.0');
+    expect(el.textContent?.replace(/[\u2068\u2069]/g, '')).toContain('Versión 1.4.0');
     expect(el.textContent).toContain('98');
     expect(el.textContent).toContain('Actualizada el');
     expect(el.querySelector('code')?.textContent).toBe(SHA);
@@ -128,7 +128,7 @@ describe('AndroidPageComponent · vistas', () => {
     const { f, el, cmp } = make({ ua: UA.android10, fetch: async (_u, i) => (i?.method === 'HEAD' ? resp(200) : resp(200, latest({ minAndroid: 12 }))) });
     await flush(f);
     expect(cmp.view()).toBe('tooOld');
-    expect(el.querySelector('[data-view=tooOld]')?.textContent).toContain('Android 12');
+    expect(el.querySelector('[data-view=tooOld]')?.textContent?.replace(/[\u2068\u2069]/g, '')).toContain('Android 12');
     expect(el.querySelector('a[download]')).toBeNull();
   });
 
@@ -136,7 +136,7 @@ describe('AndroidPageComponent · vistas', () => {
     const { f, el, cmp } = make({ ua: UA.android7, fetch: async () => resp(404) });
     await flush(f);
     expect(cmp.view()).toBe('tooOld');
-    expect(el.querySelector('[data-view=tooOld]')?.textContent).toContain('Android 8');
+    expect(el.querySelector('[data-view=tooOld]')?.textContent?.replace(/[\u2068\u2069]/g, '')).toContain('Android 8');
   });
 
   it('Android 8 en el límite sí puede instalar', async () => {
