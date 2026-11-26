@@ -1,7 +1,8 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LottieDirective } from './ui/lottie/lottie.directive';
 import { betaCards } from './ui/lottie/beta-links';
-import { Component, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { ANDROID_REQUEST_URL, ANDROID_SITE_MODE } from './pages/android/android-mode';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -32,12 +33,14 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
    *  (both 404 on 2026-10-10), so they are hidden until those links are real. */
   protected readonly beta = betaCards();
   protected readonly testflightUrl = this.beta.find((c) => c.key === 'testflight')?.href ?? null;
-  /** Android (beta): la página /android de este sitio (descarga directa del APK). Siempre existe; ella dice si ya hay versión. */
-  protected readonly androidUrl = '/android';
+  /** Interruptor de Android (`pages/android/android-mode.ts`). */
+  protected readonly androidAsk = inject(ANDROID_SITE_MODE) === 'solicitud';
+  /** Botón Android: en «solicitud», el correo para pedir acceso; en «descarga», la página /android de este sitio. */
+  protected readonly androidUrl: string = this.androidAsk ? ANDROID_REQUEST_URL : '/android';
   /** Textos de la tarjeta según qué enlaces existan (ambos, solo iPhone o solo Android). */
   protected readonly dlKeys = this.testflightUrl && this.androidUrl
     ? { title: 'beta.both_title', sub: 'beta.both_sub' }
-    : this.androidUrl ? { title: 'beta.ad_title', sub: 'beta.ad_sub' } : { title: 'beta.tf_title', sub: 'beta.tf_sub' };
+    : this.androidUrl ? { title: this.androidAsk ? 'android.ask.t' : 'beta.ad_title', sub: this.androidAsk ? 'beta.ad_sub_ask' : 'beta.ad_sub' } : { title: 'beta.tf_title', sub: 'beta.tf_sub' };
   protected readonly betaOthers = this.beta.filter((c) => c.key !== 'testflight' && c.key !== 'appDistribution');
   protected readonly mobileMenuOpen = signal(false);
   protected readonly legalAge = signal(18);

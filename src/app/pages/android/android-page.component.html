@@ -8,12 +8,18 @@
     <header class="and__head">
       <div>
         <p class="and__kicker">Black Sugar 21</p>
-        <h1>{{ t('android.title') }}</h1>
-        <p class="and__lead">{{ t('android.lead') }}</p>
+        <h1>{{ t(asking ? 'android.ask.t' : 'android.title') }}</h1>
+        <p class="and__lead">{{ t(asking ? 'android.ask.b' : 'android.lead') }}</p>
       </div>
     </header>
 
     @switch (view()) {
+      @case ('request') {
+        <div class="and__card and__ask" data-view="request">
+          <a class="and__btn" [href]="requestUrl">{{ t('android.ask.cta') }}</a>
+          <p class="and__muted"><bdi dir="ltr">{{ emailParts[0] }}@<wbr />{{ emailParts[1] }}</bdi></p>
+        </div>
+      }
       @case ('loading') {
         <div class="and__card and__skel" role="status">
           <span class="and__bar"></span><span class="and__bar and__bar--s"></span>

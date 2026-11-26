@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { TranslationService, type Language } from '../../translation.service';
 import { ANDROID_ENV, ANDROID_STORES, AndroidEnv } from './android-env';
 import { AndroidPageComponent } from './android-page.component';
+import { ANDROID_MODE, ANDROID_REQUEST_URL, ANDROID_SITE_MODE, AndroidMode } from './android-mode';
 
 const UA = {
   android13: 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
@@ -23,9 +24,9 @@ type Fetch = AndroidEnv['fetch'];
 const happy: Fetch = async (url, init) => (init?.method === 'HEAD' ? resp(200) : resp(200, latest()));
 const flush = async (f: ComponentFixture<unknown>) => { for (let i = 0; i < 4; i++) { await new Promise((r) => setTimeout(r, 0)); f.detectChanges(); } };
 
-function make(opts: { ua?: string; touch?: number; fetch?: Fetch; online?: boolean; play?: string | null; tf?: string | null; lang?: Language } = {}) {
+function make(opts: { ua?: string; touch?: number; fetch?: Fetch; online?: boolean; play?: string | null; tf?: string | null; mode?: AndroidMode | 'defecto'; lang?: Language } = {}) {
   const env: AndroidEnv = { userAgent: opts.ua ?? UA.android13, maxTouchPoints: opts.touch ?? 0, online: () => opts.online ?? true, origin: 'https://blacksugar21.com', fetch: opts.fetch ?? happy };
-  TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ANDROID_ENV, useValue: env }, { provide: ANDROID_STORES, useValue: { testflight: opts.tf ?? null, googlePlay: opts.play ?? null } }] });
+  TestBed.configureTestingModule({ providers: [provideRouter([]), ...(opts.mode === 'defecto' ? [] : [{ provide: ANDROID_SITE_MODE, useValue: opts.mode ?? 'descarga' }]), { provide: ANDROID_ENV, useValue: env }, { provide: ANDROID_STORES, useValue: { testflight: opts.tf ?? null, googlePlay: opts.play ?? null } }] });
   TestBed.inject(TranslationService).setLanguage(opts.lang ?? 'es');
   const f = TestBed.createComponent(AndroidPageComponent);
   f.detectChanges();
@@ -149,7 +150,7 @@ describe('AndroidPageComponent · vistas', () => {
     let online = false;
     const calls = vi.fn(happy);
     const env: AndroidEnv = { userAgent: UA.android13, online: () => online, origin: 'https://x.test', fetch: calls };
-    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ANDROID_ENV, useValue: env }] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ANDROID_SITE_MODE, useValue: 'descarga' }, { provide: ANDROID_ENV, useValue: env }] });
     const f = TestBed.createComponent(AndroidPageComponent); f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     await flush(f);
@@ -169,7 +170,7 @@ describe('AndroidPageComponent · vistas', () => {
   it('el botón Reintentar de «sin conexión» vuelve a pedir', async () => {
     let online = false;
     const env: AndroidEnv = { userAgent: UA.android13, online: () => online, origin: 'https://x.test', fetch: happy };
-    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ANDROID_ENV, useValue: env }] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ANDROID_SITE_MODE, useValue: 'descarga' }, { provide: ANDROID_ENV, useValue: env }] });
     const f = TestBed.createComponent(AndroidPageComponent); f.detectChanges(); await flush(f);
     online = true;
     (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-view=offline] button')!.click();
@@ -278,3 +279,50 @@ describe('AndroidPageComponent · textos, idiomas y SEO', () => {
   });
 });
 
+
+describe('AndroidPageComponent · interruptor «solicitud» / «descarga»', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('por defecto el sitio está en «solicitud»', () => {
+    expect(ANDROID_MODE).toBe('solicitud');
+  });
+
+  it('solicitud: solo «Pide acceso» por correo; no lee latest.json ni ofrece descarga, QR o pasos', async () => {
+    for (const ua of [UA.android13, UA.android7, UA.facebook, UA.iphone, UA.mac, UA.bot]) {
+      const calls: string[] = [];
+      const { f, el, cmp } = make({ ua, mode: 'defecto', tf: 'https://testflight.apple.com/join/x', fetch: async (url, init) => { calls.push(url); return happy(url, init); } });
+      await flush(f);
+      expect(cmp.view()).toBe('request');
+      expect(el.querySelector('h1')?.textContent?.trim()).toBe('Android: pide acceso');
+      const a = el.querySelector('[data-view="request"] a') as HTMLAnchorElement;
+      expect(a.getAttribute('href')).toBe(ANDROID_REQUEST_URL);
+      expect(a.textContent?.trim()).toBe('Pide acceso');
+      expect(el.querySelectorAll('[data-view]').length).toBe(1);
+      expect(el.querySelector('a[download], a[href*=".apk"], .and__steps, img[src^="data:"]')).toBeNull();
+      expect(el.innerHTML).not.toContain('.apk');
+      expect(el.querySelector('section')?.getAttribute('aria-busy')).toBe('false');
+      expect(calls).toEqual([]);
+      expect(TestBed.inject(Title).getTitle()).toContain('Android: pide acceso');
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('solicitud en los 13 idiomas: título y botón propios, sin claves crudas', () => {
+    const seen = new Set<string>();
+    for (const lang of ['es', 'en', 'pt', 'fr', 'de', 'it', 'ja', 'ko', 'zh', 'ar', 'hi', 'ru', 'tr'] as Language[]) {
+      const { el } = make({ mode: 'solicitud', lang });
+      const text = el.querySelector('section')?.textContent ?? '';
+      expect(text, lang).not.toMatch(/(android|beta)\.[a-z]+[._]/);
+      seen.add(el.querySelector('h1')!.textContent!.trim());
+      TestBed.resetTestingModule();
+    }
+    expect(seen.size).toBe(13);
+  });
+
+  it('descarga (una línea): vuelve el botón con el APK', async () => {
+    const { f, el } = make({ mode: 'descarga' });
+    await flush(f);
+    expect(el.querySelector('a[download]')?.getAttribute('href')).toBe('/descargas/android/render-1.4.0.apk');
+    expect(el.querySelector('[data-view="request"]')).toBeNull();
+  });
+});

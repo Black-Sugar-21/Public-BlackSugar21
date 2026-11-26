@@ -1,3 +1,5 @@
+import { ANDROID_REQUEST_URL, ANDROID_SITE_MODE } from './pages/android/android-mode';
+import { TranslationService } from './translation.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
@@ -59,6 +61,33 @@ describe('App', () => {
       expect(b.querySelector('.tfcard-cta__txt small')?.textContent?.trim()).toBeTruthy();
       expect(b.textContent).not.toMatch(/beta\.btn_/);
     }
+  });
+
+  it('Android por defecto («solicitud»): los tres botones dicen «Pide acceso», escriben por correo y no hay /android ni .apk', async () => {
+    TestBed.inject(TranslationService).setLanguage('es');
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const btns = Array.from(el.querySelectorAll<HTMLAnchorElement>('a[data-test="beta-android"]'));
+    expect(btns.length).toBe(3);
+    for (const b of btns) {
+      expect(b.getAttribute('href')).toBe(ANDROID_REQUEST_URL);
+      expect(b.querySelector('strong')?.textContent?.trim()).toBe('Android');
+      expect(b.querySelector('small')?.textContent?.trim()).toBe('Pide acceso');
+    }
+    expect(el.querySelector('a[href="/android"], a[href*=".apk"]')).toBeNull();
+    expect(el.textContent).not.toContain('descarga directa');
+  });
+
+  it('Android con «descarga»: los tres botones vuelven a /android', async () => {
+    TestBed.overrideProvider(ANDROID_SITE_MODE, { useValue: 'descarga' });
+    TestBed.inject(TranslationService).setLanguage('es');
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('a[href="/android"]').length).toBe(3);
+    expect(el.querySelector(`a[href="${ANDROID_REQUEST_URL}"]`)).toBeNull();
+    expect(el.querySelector('.tfcard a[href="/android"] small')?.textContent?.trim()).toBe('Descarga directa');
   });
 
   it('subpáginas: no dibujan la portada ni su h1 (un solo h1 por página)', async () => {

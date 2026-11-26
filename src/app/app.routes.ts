@@ -1,3 +1,4 @@
+import { ANDROID_MODE } from './pages/android/android-mode';
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
@@ -74,7 +75,7 @@ export const routes: Routes = [
   {
     path: 'android',
     loadComponent: () => import('./pages/android/android-page.component').then(m => m.AndroidPageComponent),
-    title: 'Android (beta) · Black Sugar 21'
+    title: ANDROID_MODE === 'solicitud' ? 'Android: pide acceso · Black Sugar 21' : 'Android (beta) · Black Sugar 21'
   },
   {
     path: 'safety-standards',
