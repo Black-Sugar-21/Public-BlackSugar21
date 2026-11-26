@@ -2801,7 +2801,12 @@ button:focus-visible,
 .tfcard-txt small { color: var(--text-muted, #B0B0B0); font-size: .875rem; line-height: 1.35; }
 .tfcard-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 /* Botones de contorno dorado, del mismo tamaño: la acción principal de la página sigue siendo el CTA del hero. */
-.tfcard-cta { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: .9375rem; text-decoration: none; text-align: center; white-space: nowrap; transition: background .2s; }
+.tfcard-cta { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: flex-start; gap: 12px; min-height: 52px; padding: 6px 16px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: .9375rem; text-decoration: none; text-align: start; transition: background .2s; }
+/* Logo de marca a la izquierda (Simple Icons, CC0), monocromo del color del texto; plataforma arriba y canal abajo. */
+.tfcard-ico { flex: none; width: 20px; height: 20px; fill: currentColor; stroke: none; }
+.tfcard-cta__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.tfcard-cta__txt strong { font-size: .9375rem; font-weight: 700; }
+.tfcard-cta__txt small { font-size: .75rem; font-weight: 500; opacity: .8; }
 .tfcard-cta:hover { background: rgba(212,175,55,.12); }
 .tfcard-cta:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .tfcard--two { grid-template-columns: 64px minmax(0, 1fr); }

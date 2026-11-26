@@ -5,6 +5,11 @@ Software
     https://github.com/airbnb/lottie-web/blob/master/LICENSE.md
     Loaded lazily by src/app/ui/lottie/lottie.directive.ts (browser only; nothing runs during SSR/prerender).
 
+Brand icons (src/app/app.html, tarjeta «Descarga la beta»: logo de Apple en el botón de TestFlight y robot de Android en el de descarga directa)
+  Simple Icons 13.21.0 (https://simpleicons.org) — the SVG paths are CC0 1.0 (public domain).
+  Apple and the Apple logo are trademarks of Apple Inc.; Android and the Android robot are trademarks of Google LLC.
+  Used only to tell people which phone each button is for, not to suggest endorsement.
+
 Animations (public/lottie/) — © Bimbask Inc., our own artwork; no third-party animation assets
   step-profile.json, step-coach.json, step-date.json, hero-spark.json, success.json
     hand-built with scripts/make-site-lottie.py (scripts/lottie_kit.py, no expressions).

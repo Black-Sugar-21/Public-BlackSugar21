@@ -47,6 +47,20 @@ describe('App', () => {
     expect(compiled.querySelector('h1')?.textContent).toContain('Your Personal AI Coach.');
   });
 
+  it('la tarjeta de la beta lleva el logo a la izquierda y el texto en dos líneas (plataforma y canal) en cada botón', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const btns = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.tfcard a.tfcard-cta'));
+    expect(btns.length).toBeGreaterThan(0);
+    for (const b of btns) {
+      expect(b.firstElementChild?.tagName.toLowerCase()).toBe('svg');
+      expect(b.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
+      expect(b.querySelector('.tfcard-cta__txt strong')?.textContent?.trim()).toBeTruthy();
+      expect(b.querySelector('.tfcard-cta__txt small')?.textContent?.trim()).toBeTruthy();
+      expect(b.textContent).not.toMatch(/beta\.btn_/);
+    }
+  });
+
   it('subpáginas: no dibujan la portada ni su h1 (un solo h1 por página)', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
