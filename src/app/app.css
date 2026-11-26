@@ -2899,6 +2899,7 @@ button:focus-visible,
 
 /* Letra al 200 % en teléfono: títulos, cifras y maqueta del chat topan con el ancho para no partir palabras. */
 @media (max-width: 479px) {
+  .toolbar-brand { font-size: min(1.2rem, 4.4vw); white-space: normal; line-height: 1.15; }
   .trust-stat { min-width: min(100%, 8rem); }
   .trust-stat-label { max-width: min(100%, 9rem); }
   .coach-title { font-size: min(1.9rem, 9vw); }
