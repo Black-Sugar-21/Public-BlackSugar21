@@ -2806,7 +2806,7 @@ button:focus-visible,
 .tfcard-ico { flex: none; width: 20px; height: 20px; fill: currentColor; stroke: none; }
 .tfcard-cta__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .tfcard-cta__txt strong { font-size: .9375rem; font-weight: 700; }
-.tfcard-cta__txt small { font-size: .75rem; font-weight: 500; opacity: .8; }
+.tfcard-cta__txt small { font-size: .75rem; font-weight: 500; }
 .tfcard-cta:hover { background: rgba(212,175,55,.12); }
 .tfcard-cta:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .tfcard--two { grid-template-columns: 64px minmax(0, 1fr); }
