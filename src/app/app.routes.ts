@@ -72,6 +72,11 @@ export const routes: Routes = [
     title: 'Eliminación de Datos - Black Sugar 21'
   },
   {
+    path: 'android',
+    loadComponent: () => import('./pages/android/android-page.component').then(m => m.AndroidPageComponent),
+    title: 'Android (beta) · Black Sugar 21'
+  },
+  {
     path: 'safety-standards',
     component: SafetyStandardsComponent,
     title: 'Estándares de Seguridad Infantil - Black Sugar 21'

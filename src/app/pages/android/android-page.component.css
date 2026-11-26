@@ -1,0 +1,46 @@
+:host { display: block; }
+.legal-page-container { min-height: 100vh; min-height: 100dvh; padding: 2rem; background: var(--gradient-main); background-attachment: fixed; color: var(--text-primary); font-family: 'Outfit', sans-serif; }
+.legal-header { display: flex; justify-content: space-between; align-items: center; margin: 0 auto 2rem; max-width: 680px; }
+.back-link { color: var(--gold); text-decoration: none; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+.back-link:hover { color: var(--gold-star); }
+.and { max-width: 680px; margin: 0 auto; display: grid; gap: 18px; }
+.and__head { display: flex; gap: 18px; align-items: center; }
+.and__icon { width: 72px; height: 72px; border-radius: 18px; flex: none; }
+.and__kicker { margin: 0 0 4px; color: var(--gold); font-size: .8125rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.and h1 { margin: 0; font-size: clamp(1.7rem, 1.2rem + 2vw, 2.4rem); line-height: 1.15; }
+.and h2 { margin: 0 0 6px; font-size: 1.15rem; line-height: 1.25; }
+.and__lead, .and p { margin: 6px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+.and__lead { color: var(--text-secondary); }
+.and__muted { color: var(--text-muted); font-size: .9rem; }
+.and__card { padding: 20px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 20px; background: rgba(255, 255, 255, .08); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); display: grid; gap: 10px; justify-items: start; }
+.and__ver { font-weight: 700; font-size: 1.125rem; margin: 0; }
+.and__btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid transparent; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #120c00; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; text-align: center; }
+.and__btn:hover { background: linear-gradient(135deg, var(--gold-star), var(--gold)); }
+.and__btn--ghost { background: rgba(212, 175, 55, .08); color: var(--gold); border-color: rgba(212, 175, 55, .35); }
+.and__btn--ghost:hover { background: rgba(212, 175, 55, .16); border-color: var(--gold); }
+.and__btn:focus-visible, .and__field:focus-visible, .and a:focus-visible, .and summary:focus-visible, .back-link:focus-visible { outline: 3px solid var(--gold-star); outline-offset: 3px; }
+.and__copy { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+.and__field { flex: 1 1 200px; min-width: 0; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(0, 0, 0, .25); color: var(--text-primary); font: inherit; }
+.and__check { width: 100%; font-size: .9rem; color: var(--text-muted); }
+.and__check summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; }
+.and__check code { display: block; margin-top: 6px; padding: 10px; border-radius: 10px; background: rgba(0, 0, 0, .3); color: var(--text-primary); overflow-wrap: anywhere; font-size: .8rem; }
+.and__steps ol { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 12px; }
+.and__steps li { display: flex; gap: 14px; align-items: flex-start; }
+.and__steps li p { margin: 2px 0 0; color: var(--text-secondary); }
+.and__n { flex: none; width: 32px; height: 32px; border-radius: 50%; background: rgba(212, 175, 55, .16); color: var(--gold); display: grid; place-items: center; font-weight: 700; }
+.and__qr { grid-template-columns: auto 1fr; align-items: center; }
+.and__qr img { width: 160px; height: 160px; border-radius: 12px; background: white; padding: 8px; }
+.and__url { overflow-wrap: anywhere; }
+.and__ios { grid-template-columns: 1fr auto; align-items: center; }
+.and__ios p { margin: 0; }
+.and__skel { min-height: 120px; }
+.and__bar { display: block; height: 18px; width: 60%; border-radius: 8px; background: rgba(255, 255, 255, .14); }
+.and__bar--s { width: 40%; }
+@media (max-width: 520px) {
+  .legal-page-container { padding: 1.25rem; }
+  .and__head { flex-direction: column; align-items: flex-start; }
+  .and__qr, .and__ios { grid-template-columns: 1fr; }
+  .and__card .and__btn { width: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) { .and__bar { animation: and-pulse 1.4s ease-in-out infinite; } }
+@keyframes and-pulse { 50% { opacity: .5; } }

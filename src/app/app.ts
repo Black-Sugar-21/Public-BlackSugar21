@@ -32,8 +32,8 @@ export class App implements OnInit, OnDestroy, AfterViewInit {
    *  (both 404 on 2026-10-10), so they are hidden until those links are real. */
   protected readonly beta = betaCards();
   protected readonly testflightUrl = this.beta.find((c) => c.key === 'testflight')?.href ?? null;
-  /** El resto de canales de «Prueba la beta»: TestFlight va aparte, en su tarjeta destacada (solo con enlace real). */
-  protected readonly androidUrl = this.beta.find((c) => c.key === 'appDistribution')?.href ?? null;
+  /** Android (beta): la página /android de este sitio (descarga directa del APK). Siempre existe; ella dice si ya hay versión. */
+  protected readonly androidUrl = '/android';
   /** Textos de la tarjeta según qué enlaces existan (ambos, solo iPhone o solo Android). */
   protected readonly dlKeys = this.testflightUrl && this.androidUrl
     ? { title: 'beta.both_title', sub: 'beta.both_sub' }

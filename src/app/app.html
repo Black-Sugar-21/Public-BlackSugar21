@@ -146,7 +146,7 @@
             @if (testflightUrl) {
               <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'hero'})">{{ t('beta.iphone') }}</a>
             }
-            <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'hero'})">{{ t('beta.androidAsk') }}</button>
+            <a routerLink="/android" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'hero'})">{{ t('beta.android_cta') }}</a>
           </div>
         </div>
        </div>
@@ -336,7 +336,7 @@
               @if (testflightUrl) {
                 <a [href]="testflightUrl" target="_blank" rel="noopener" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'coach'})">{{ t('beta.iphone') }}</a>
               }
-              <button type="button" class="beta-pill" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'coach'})">{{ t('beta.androidAsk') }}</button>
+              <a routerLink="/android" class="beta-pill beta-pill--on" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'coach'})">{{ t('beta.android_cta') }}</a>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@
                 <a class="tfcard-cta" [href]="testflightUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'testflight', section: 'beta'})">{{ t('beta.tf_cta') }}</a>
               }
               @if (androidUrl) {
-                <a class="tfcard-cta" [href]="androidUrl" target="_blank" rel="noopener" (click)="firebase.logEvent('click_beta_link', {channel: 'appDistribution', section: 'beta'})">{{ t('beta.ad_cta') }}</a>
+                <a class="tfcard-cta" [routerLink]="androidUrl" (click)="firebase.logEvent('click_beta_link', {channel: 'android', section: 'beta'})">{{ t('beta.android_cta') }}</a>
               }
             </span>
           </div>
@@ -599,7 +599,6 @@
             </li>
           }
         </ul>
-        <p class="beta-android">{{ t('beta.androidNote') }} <button type="button" class="beta-link" (click)="showTesterModal.set(true); firebase.logEvent('click_beta_link', {channel: 'android_request', section: 'beta'})">{{ t('beta.androidAsk') }}</button></p>
       </div>
     </section>
 
